@@ -1,0 +1,58 @@
+source_system: sejm
+description: "Sejm API (api.sejm.gov.pl): terms 9 and 10 sittings, sitting days, votings with totals, prints, MPs (allowlisted fields)"
+
+# Extraction strategy (docs/landing.md). Register PLG-024. The Sejm publishes a public JSON API without key, documented
+# at https://api.sejm.gov.pl/sejm.html; no bulk file exists, and every list used here is one complete answer (no
+# paging: /prints returns the whole term, 3,592 prints in 1.9 MB). robots.txt ("User-agent: * Allow: /") is read
+# first in every run. One request at a time, 2 s apart, user agent of the bulk_file pattern, bounded retries
+# (ingestion/to_landing/sejm/). Entities: terms; per term proceedings, voting_days, prints; one votings answer per
+# sitting; term10_mps reduced before Landing to id, active, club, districtNum, districtName, voivodeship (no names,
+# birth data, e-mails, professions or photos land). Version = download time (no Last-Modified); a copy lands only
+# when its SHA-256 changed. Term 9 (ended 12 Nov 2023) and the votings of finished sittings are read once; the
+# lists of term 10 and the votings of its two newest sittings are read every run. Restart unit: one answer.
+# Size (Dev probe 43797117724, 16 Nov 2026): term 10 has 89 proceedings entries (planned sittings with number 0),
+# 171 voting days in 68 sittings, 3,592 prints; votings of sitting 1: 147 in 88 KB; MP list 499 MPs (260 KB raw);
+# term 9: 177 voting days, 4,142 prints. First load about 160 requests, later runs about 8.
+# History: HISTORY_TRIAL
+extraction:
+  initial: api
+  production: snapshot                    # each answer is the complete current list
+  incremental_policy: changed_since_last  # SHA-256; ended term and finished sittings read once
+  schedule: # UTC; the Sejm sits every two to three weeks, votes mostly on Wednesday to Friday; weekly, Saturday off-peak
+    - {cron: "20 4 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/sejm/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze:
+  - bronze.sejm_terms
+  - bronze.sejm_proceedings
+  - bronze.sejm_voting_days
+  - bronze.sejm_votings
+  - bronze.sejm_prints
+  - bronze.sejm_mps
+  - bronze.sejm_rejected_files
+silver: [silver.sejm_sitting_days, silver.sejm_votings, silver.sejm_prints, silver.sejm_mps]
+gold: [gold.parliament_sejm_sitting_days, gold.parliament_sejm_votings, gold.parliament_sejm_prints, gold.parliament_sejm_mps, gold.build_sejm, gold.metrics_sejm_sitting_days, gold.metrics_sejm_votings, gold.metrics_sejm_prints]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  sejm_sitting_days: {rows: 600}  # TRIAL
+  sejm_votings: {rows: 30000}  # TRIAL
+  sejm_prints: {rows: 12000}  # TRIAL
+  sejm_mps: {rows: 750}  # TRIAL
+  parliament_sejm_sitting_days: {rows: 600}  # TRIAL
+  parliament_sejm_votings: {rows: 30000}  # TRIAL
+  parliament_sejm_prints: {rows: 12000}  # TRIAL
+  parliament_sejm_mps: {rows: 750}  # TRIAL
+  poc_build_sejm: {rows: 500}  # TRIAL
+  poc_metrics_sejm_sitting_days: {rows: 150}  # TRIAL
+  poc_metrics_sejm_votings: {rows: 150}  # TRIAL
+  poc_metrics_sejm_prints: {rows: 150}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): about 160 small answers for two terms, a few changed answers per week, no
+# changed-since filter in the API; Silver and Gold are a few tens of thousands of rows: small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #481"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

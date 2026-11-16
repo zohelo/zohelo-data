@@ -12,7 +12,8 @@ framework")::
             format: zip              # zip | gzip | 7z | json (must parse) | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
-            reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
+            reduce: news_feed        # optional: land only the allowed part of the file (news: headline items;
+                                     # or a source's own "ingestion.to_landing.<source>:<function>", bytes → bytes)
           - entity: treasury_debt_series   # a file whose URL changes per release
             url_from:                # instead of url: find the link on a stable page
               page: https://www.gov.pl/web/finanse/szeregiczasowe
@@ -358,6 +359,11 @@ def reducer(kind: str) -> Any:
         from ingestion.to_bronze.news_feeds.load import reduce_feed
 
         return reduce_feed
+    if kind.startswith("ingestion.to_landing.") and ":" in kind:  # a source's own reducer, "<module>:<function>"
+        import importlib
+
+        module, name = kind.split(":", 1)
+        return getattr(importlib.import_module(module), name)
     raise ValueError(f"unknown reduce: {kind!r}")
 
 

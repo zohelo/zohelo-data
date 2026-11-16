@@ -1,0 +1,79 @@
+version: 2
+models:
+  - name: sejm_sitting_days
+    description: >-
+      Sejm API (register PLG-024), terms 9 and 10: one row per day of a numbered sitting. Grain: term x
+      sitting_number x day_date. Days as the proceedings list gives them (later days of a running or planned sitting
+      have is_held false); votings_listed = votings the API lists for the day (empty on a day without votes).
+      History and trial run: ingestion/sources/sejm.yaml.
+    tests:
+      - unique:
+          column_name: "term || '|' || sitting_number || '|' || day_date"
+    columns:
+      - name: term
+        tests: [not_null, {accepted_values: {arguments: {values: [9, 10]}}}]
+      - name: sitting_number
+        tests: [not_null]
+      - name: day_date
+        tests: [not_null]
+      - name: is_held
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: sejm_votings
+    description: >-
+      Sejm API (register PLG-024), terms 9 and 10: one row per voting. Grain: term x sitting_number x voting_number.
+      Time, kind, majority, title, topic, description and totals as published; yes, no and abstain are empty for a
+      list vote (is_list_vote), whose per-option result is not loaded. Individual MPs' votes are not read.
+    tests:
+      - unique:
+          column_name: "term || '|' || sitting_number || '|' || voting_number"
+    columns:
+      - name: term
+        tests: [not_null, {accepted_values: {arguments: {values: [9, 10]}}}]
+      - name: sitting_number
+        tests: [not_null]
+      - name: voting_number
+        tests: [not_null]
+      - name: voted_at
+        tests: [not_null]
+      - name: kind
+        tests: [not_null, {accepted_values: {arguments: {values: KINDS_TRIAL}}}]
+      - name: majority_type
+        tests: [not_null, {accepted_values: {arguments: {values: MAJORITY_TRIAL}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: sejm_prints
+    description: >-
+      Sejm API (register PLG-024), terms 9 and 10: one row per print (druk). Grain: term x print_number. Title and
+      dates as published; prints_listed = the number of prints /sejm/term lists for the term.
+    tests:
+      - unique:
+          column_name: "term || '|' || print_number"
+    columns:
+      - name: term
+        tests: [not_null, {accepted_values: {arguments: {values: [9, 10]}}}]
+      - name: print_number
+        tests: [not_null]
+      - name: title
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: sejm_mps
+    description: >-
+      Sejm API (register PLG-024), term 10: one row per MP, allowlisted fields only (no names or other personal
+      data). Grain: term x mp_id. Club code, constituency number and name, voivodeship, active flag as published.
+    tests:
+      - unique:
+          column_name: "term || '|' || mp_id"
+    columns:
+      - name: term
+        tests: [not_null, {accepted_values: {arguments: {values: [10]}}}]
+      - name: mp_id
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+      - name: district_num
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
