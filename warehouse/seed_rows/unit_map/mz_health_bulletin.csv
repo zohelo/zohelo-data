@@ -1,0 +1,10 @@
+source_system,unit_code,measure_key_pattern,unit_key
+mz_health_bulletin,persons,,persons
+mz_health_bulletin,per_10k_population,,per_10k_population
+mz_health_bulletin,hospitals,,facilities
+mz_health_bulletin,beds,,beds
+mz_health_bulletin,cases,,cases
+mz_health_bulletin,cases_per_bed,,cases_per_bed
+mz_health_bulletin,thousand_patient_days,,thousand_patient_days
+mz_health_bulletin,days,,days
+mz_health_bulletin,pct,,pct
