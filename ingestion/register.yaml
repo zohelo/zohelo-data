@@ -5448,7 +5448,8 @@ sources:
   name: Justice system statistical database (ISWS)
   short_name: ISWS justice statistics
   provider: Ministry of Justice
-  status: approved
+  source_system: ms_isws
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -5500,7 +5501,9 @@ sources:
     blockers:
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): hub, both listings and three
       workbook downloads answered 200 to a GitHub runner; workbook layout and byte format (.xls) not inspected.'
-    - Pick the caseload workbooks from the 88 titles at the build (only the first seven titles were read).
+    - 'Build (#2968): Dev probe 43797252172 (16 Nov 2026) read all 88 workbooks; four are landed (caseload, duration,
+      adoptions, notarial acts; .xlsx except notarial acts .xls). Adult convictions are left out: the 1946-2019 table
+      is a Word document and the 2002-2020 workbook is no longer extended.'
     references:
     - https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/
     - https://isws.ms.gov.pl/pl/baza-statystyczna/publikacje/

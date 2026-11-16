@@ -1,0 +1,39 @@
+source_system: ms_isws
+description: "Ministry of Justice ISWS — multi-year justice statistics workbooks (common courts' caseload and case duration, adoptions, notarial acts), Poland, annual"
+
+# Extraction strategy (docs/landing.md). Register PLG-031. Bulk feature: the Ministry of Justice's statistical
+# information service lists its multi-year workbooks ("Opracowania wieloletnie",
+# https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/, 88 on 16 Nov 2026) as download,2853,<n>.html
+# links whose text is the workbook title; <n> is the list position, so the entity is a curated code matched by the
+# title (ingestion/to_landing/ms_isws/, SELECTION). Four workbooks are landed (smallest selection of the register
+# entry): caseload, duration, adoptions, notarial_acts. Version = download time (no Last-Modified); every selected
+# workbook is downloaded on every run and lands only when its SHA-256 changed. Restart unit: one file. Bronze reads
+# .xlsx with ingestion/common/xlsx_cells.py and .xls with xlrd (requirements.txt). Probe: Dev run 43797252172.
+extraction:
+  initial: bulk
+  production: snapshot                  # every workbook is the complete multi-year table as published
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; the workbooks are extended by a year in the spring (2025 present on 12 Nov 2026); monthly check
+    - {cron: "47 5 9 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/ms_isws/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.ms_isws_cells, bronze.ms_isws_rejected_files]
+silver: [silver.ms_isws_tables]
+gold: [gold.build_ms_isws, gold.metrics_court_cases_received, gold.metrics_court_cases_resolved,
+       gold.metrics_court_case_duration]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  ms_isws_tables: {rows: 900}  # TRIAL_SILVER
+  poc_build_ms_isws: {rows: 900}  # TRIAL_GOLD
+  poc_metrics_court_cases_received: {rows: 50}  # 15 years, Poland
+  poc_metrics_court_cases_resolved: {rows: 50}  # 15 years, Poland
+  poc_metrics_court_case_duration: {rows: 50}  # 15 years, Poland
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): four workbooks of a few thousand cells; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2968"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
