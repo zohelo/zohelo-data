@@ -15,9 +15,34 @@ models:
       - name: publication_year
         tests: [not_null]
       - name: notice_type
-        tests: [not_null]
+        description: >-
+          eForms notice subtype as published; the closed list holds the 19 types found in Dev trial 43344674034
+          (2025-01-02 to 2026-11-12). Severity warn: the eForms list has rarer types not yet seen for Polish buyers
+          (two seen only once), and a new one must show up without stopping the daily build.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['cn-standard', 'can-standard', 'can-modif', 'pin-rtl', 'veat', 'can-social', 'can-desg',
+                         'cn-social', 'pin-tran', 'pin-only', 'pin-buyer', 'compl', 'cn-desg', 'qu-sy',
+                         'pin-cfc-standard', 'pmc', 'can-tran', 'brin-ecs', 'pin-cfc-social']
+              config: {severity: warn}
       - name: form_type
-        tests: [not_null]
+        description: eForms form type as published; closed list from Dev trial 43344674034.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['competition', 'result', 'cont-modif', 'planning', 'dir-awa-pre', 'completion',
+                         'consultation', 'bri']
+      - name: procedure_type
+        description: eForms procedure type as published (null for notice types without a procedure); closed list from
+          Dev trial 43344674034.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['open', 'neg-wo-call', 'restricted', 'oth-single', 'neg-w-call', 'comp-dial', 'oth-mult',
+                         'comp-tend', 'innovation', 'exp-int-rail']
       - name: publication_date
         tests: [not_null]
       - name: buyer_countries

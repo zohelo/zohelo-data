@@ -168,8 +168,8 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('internet_users', 'undata', '%', 0, 100),
     -- Current health expenditure, % of GDP: 4.9 to 12.9 (DE), Poland 2022 = 6.4.
     ('health_expenditure_gdp', 'undata', '%', 0, 30),
-    -- TED notices of Polish buyers per publication month (#2976): Poland TRIAL_PL, largest voivodeship TRIAL_WOJ
-    -- (Dev trial TRIAL_RUN); about 115,000 a year in 2025
+    -- TED notices of Polish buyers per publication month (#2976): Poland 7,513 to 12,578, largest voivodeship
+    -- 3,448 (Mazowieckie, Oct 2025) (Dev trial 43344674034); about 115,000 a year in 2025
     ('procurement_notices', 'ted_notices', '%', 0, 1e5),
     -- The new sources of KPIs whose metrics models are not in the union below (their other sources have no bound
     -- either): documentation until those models join it. Dev trial 43290214779: reer 9.59 to 519.14 (AR; index,
