@@ -5579,7 +5579,8 @@ sources:
   name: Police Statistics portal
   short_name: Police statistics
   provider: Polish Police Headquarters
-  status: approved
+  source_system: policja_statistics
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -5620,7 +5621,10 @@ sources:
       New KPIs: recorded offences per 100,000 residents and detection rate (%), annual, Poland and voivodeships (population
       from GUS). Caveat stated on the portal: for 2013-2016 offences of the central units (BSW KGP, CBŚP) are assigned to
       voivodeship units, earlier years to garrisons. Police units are not one-to-one with voivodeships (a separate Warsaw
-      metropolitan command is expected; to confirm in the workbook). Effort S.'
+      metropolitan command is expected; to confirm in the workbook). Effort S. Built 16 Nov 2026 (#2969, Dev trial 43806377026):
+      the workbooks print Polska, the 16 voivodeships (Mazowieckie as one row) and the two police areas that split Mazowieckie
+      (KSP Warszawa, KWP Radom); the voivodeships add up to Poland. Gold: Poland and voivodeships; KPIs recorded_offences
+      and offence_detection_rate (draft); the rate per 100,000 residents and the other eight categories are not built yet.'
     overlap: GUS BDL publishes Police crime statistics by voivodeship and powiat, more current than the portal workbooks;
       keep both series (O31).
   research:
@@ -7559,7 +7563,8 @@ sources:
   name: Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ) public search and API
   short_name: GUNB RWDZ building register
   provider: Główny Urząd Nadzoru Budowlanego (GUNB)
-  status: approved
+  source_system: gunb_rwdz
+  status: built
   family: H
   kpi: false
   geography: Poland
@@ -7586,7 +7591,11 @@ sources:
       The GUGiK announcement https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
       (22 Apr 2022) states no licence; the GUNB site was in maintenance, so its terms are unread. Internal build only. Attribution
       if used: "Źródło: Główny Urząd Nadzoru Budowlanego, Rejestr Wniosków, Decyzji i Zgłoszeń (usługa GUGiK)". Personal data:
-      the attribute list of the features was not read; fields naming natural persons are left out at Bronze.'
+      the attribute list of the features was not read; fields naming natural persons are left out at Bronze. Dev probe
+      43345366257 (13 Nov 2026) read https://wyszukiwarka.gunb.gov.pl/pobranie.html and the home page: no licence, reuse or
+      terms text on either. The bulk files name investors, designers (name, licence number), addresses and plots: Bronze
+      keeps only register numbers, authority, dates, decision number, voivodeship, TERYT code, kind of investment, object
+      category and cubature (docs/sources/gunb_rwdz.md).'
   updates: Registry updates follow authority filings; the refresh rhythm of the WFS and of the bulk files is not stated.
   ingestion:
     history: 'Official alternative route, tested: the GUGiK WFS on GUNB data, https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
