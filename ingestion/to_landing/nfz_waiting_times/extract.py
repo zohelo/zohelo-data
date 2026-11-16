@@ -19,7 +19,7 @@ moves while the entity is read; a read whose record count differs from ``meta.co
 twice is read again (at most READS times; still inconsistent, the entity fails and the next run reads it again);
 the receipt records the counts and reads of the copy landed.
 
-Polite access (terms v1.3 section III: at most 10 requests per second per IP): one request at a time,
+Polite access (terms section III, v1.4 statute page: at most 10 requests per second per IP): one request at a time,
 PAUSE_SECONDS between requests, an identifying User-Agent, timeouts, bounded retries with backoff on 429, 5xx and
 timeouts (Retry-After honoured); FAIL_STREAK entities failing in a row stop the run (the API is down: never
 hammered). Time-budgeted: no entity is started in the last MARGIN_MINUTES.
