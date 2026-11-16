@@ -248,8 +248,11 @@ def setup_dbt(work: Path, arrow) -> tuple[dict, list[str]]:
         n = nodes.get(p) or sources[p]
         schema, name = n["schema"], n.get("alias") or n.get("identifier") or n["name"]
         con.execute(f"create schema if not exists {schema}")
-        con.execute(f'create view {schema}."{name}" as select * from lake.{schema}."{name}"')
-        views.append(f"{schema}.{name}")
+        try:
+            con.execute(f'create view {schema}."{name}" as select * from lake.{schema}."{name}"')
+            views.append(f"{schema}.{name}")
+        except duckdb.CatalogException:  # not in production yet (an optional parent, poc_optional_ref)
+            views.append(f"missing:{schema}.{name}")
     con.close()
     aliases = {m: (nodes[f"model.zohelo.{m}"]["schema"], nodes[f"model.zohelo.{m}"]["alias"]) for m in SELECT}
     return aliases, views + [f"read_only_attach={attach.get('read_only', False)}"]
@@ -280,7 +283,8 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
     rel = {m: f'{s}."{a}"' for m, (s, a) in aliases.items()}
     q, mo, b = rel["nfz_waiting_times_queues"], rel["nfz_waiting_times_monthly"], rel["poc_build_nfz_waiting_times"]
     dbt_summary = {"runs": runs, "second_build_same_tables": fingerprints[0] == fingerprints[1],
-                   "rows": {m: v[0] for m, v in fingerprints[0].items()}, "views_onto_production": len(views),
+                   "rows": {m: v[0] for m, v in fingerprints[0].items()}, "views_onto_production": len([v for v in views if not v.startswith("missing:")]),
+                   "parents_missing_in_production": [v for v in views if v.startswith("missing:")],
                    "silver_identifier_columns": {m: sorted(FORBIDDEN & {r[0] for r in con.sql(f"describe {rel[m]}").fetchall()})
                                                  for m in SILVER}}
     if any(dbt_summary["silver_identifier_columns"].values()):
