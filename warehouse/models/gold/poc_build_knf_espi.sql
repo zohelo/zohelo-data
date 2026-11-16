@@ -23,17 +23,37 @@ window_months as (
     from reports
 ),
 
-counted as (
+by_type as (
     select
         cast(date_trunc('month', r.received_date) as date) as date_key,
-        coalesce(r.report_type, '_T') as report_type,
+        r.report_type,
         count(*) as reports,
         max(r.source_version) as source_version,
+        max(r.ingested_at) as ingested_at,
         arg_max(r.raw_sha256, r.ingested_at) as raw_sha256
     from reports as r
     cross join window_months as w
     where r.received_date >= w.first_month and r.received_date < w.open_month
-    group by grouping sets ((date_trunc('month', r.received_date), r.report_type), (date_trunc('month', r.received_date)))
+    group by date_trunc('month', r.received_date), r.report_type
+),
+
+counted as (
+    select
+        date_key,
+        report_type,
+        reports,
+        source_version,
+        raw_sha256
+    from by_type
+    union all
+    select
+        date_key,
+        '_T' as report_type,
+        sum(reports) as reports,
+        max(source_version) as source_version,
+        arg_max(raw_sha256, ingested_at) as raw_sha256
+    from by_type
+    group by date_key
 )
 
 select

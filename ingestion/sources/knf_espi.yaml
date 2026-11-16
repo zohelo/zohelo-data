@@ -2,7 +2,7 @@ source_system: knf_espi
 description: "KNF OAM list of ESPI issuer reports (regulated information of issuers on the regulated market): one row per report — issuer, day received, form code, report id, link"
 
 # Extraction strategy (docs/landing.md). No bulk feature, API or feed: the public copy of ESPI is KNF's OAM list,
-# https://moam.knf.gov.pl/moam.nsf (Lotus Domino HTML; robots.txt 404). Route (decision D36): its own view by day
+# https://moam.knf.gov.pl/moam.nsf (Lotus Domino HTML; robots.txt 404). Route (decision D37): its own view by day
 # of receipt, mOAM?readForm&RestrictToCategory=<YYYY-MM-DD>&start=<n>&count=20, list pages only, one request at a
 # time 5 s apart, the platform's User-Agent, bounded retries; a 4xx stops the run. Never a report page or file.
 # Each day lands as one reduced JSON document (issuer, day, the form code of the title, document id, link; no

@@ -1,6 +1,6 @@
 """Issuer report lists (KNF OAM: ESPI reports, CD-006; GPW report list: EBI reports, CD-007), shared code.
 
-Both sources are public HTML lists of issuer reports, read politely (decision D36): list pages only, one request
+Both sources are public HTML lists of issuer reports, read politely (decision D37): list pages only, one request
 at a time, PAUSE_SECONDS apart, the platform's identified User-Agent, bounded retries, never a report document or
 an attachment. A refusal (4xx, robots.txt, bot protection) stops the day; it is never tried another way.
 
@@ -271,6 +271,8 @@ def read_gpw_since(reader: Reader, floor: date) -> tuple[dict[date, list[dict[st
     for page in range(MAX_PAGES):
         form = [*GPW_FORM, ("offset", str(page * GPW_PAGE_ROWS)), ("limit", str(GPW_PAGE_ROWS))]
         found = parse_gpw(reader.fetch("POST", GPW_AJAX, data=form, headers={"X-Requested-With": "XMLHttpRequest"}))
+        if page == 0 and not found:  # the EBI list holds reports back to 2011: an empty top is a changed request
+            raise Layout("GPW list answered no report rows on its first page")
         for row in found:
             moment = gpw_moment(row)
             if previous is not None and moment > previous:

@@ -3,9 +3,10 @@
    publication (Warsaw time as listed), Poland. Fact kind: event counts. measure_key gpw_ebi:reports:reports,
    monthly only; breakdown category (as listed: Current, Quarterly, …) and the total (category _T, is_total). Only
    complete months: after the month of the oldest report held (the first run reads back to a floor, so that month
-   can be partial) and before the current month (still open). The list is read from the top without gaps, so a
-   complete month without an EBI report is a published 0 in the total (no category row); a month outside the range
-   has no row. Provenance: the newest version and the newest day document of the month (of the source, for a 0). #}
+   can be partial) and before the current month (still open). A month without a report held has no row, never a 0:
+   an empty answer of the list cannot be told from a month without reports. A report is counted once, on its day of
+   publication; a correction is its own report. Provenance: the newest version and the newest day document of the
+   month. #}
 with reports as (
     select
         published_date,
@@ -19,41 +20,41 @@ with reports as (
 window_months as (
     select
         cast(date_trunc('month', min(published_date)) + interval 1 month as date) as first_month,
-        cast(date_trunc('month', current_date) as date) as open_month,
-        max(source_version) as source_version,
-        arg_max(raw_sha256, ingested_at) as raw_sha256
+        cast(date_trunc('month', current_date) as date) as open_month
     from reports
 ),
 
-months as (
+by_category as (
     select
-        cast(unnest(generate_series(w.first_month, w.open_month - interval 1 month, interval 1 month)) as date)
-            as date_key
-    from window_months as w
-    where w.first_month < w.open_month
+        cast(date_trunc('month', r.published_date) as date) as date_key,
+        r.category,
+        count(*) as reports,
+        max(r.source_version) as source_version,
+        max(r.ingested_at) as ingested_at,
+        arg_max(r.raw_sha256, r.ingested_at) as raw_sha256
+    from reports as r
+    cross join window_months as w
+    where r.published_date >= w.first_month and r.published_date < w.open_month
+    group by date_trunc('month', r.published_date), r.category
 ),
 
 counted as (
     select
-        cast(date_trunc('month', r.published_date) as date) as date_key,
-        coalesce(r.category, '_T') as category,
-        count(*) as reports,
-        max(r.source_version) as source_version,
-        arg_max(r.raw_sha256, r.ingested_at) as raw_sha256
-    from reports as r
-    group by grouping sets ((date_trunc('month', r.published_date), r.category), (date_trunc('month', r.published_date)))
-),
-
-complete as (
+        date_key,
+        category,
+        reports,
+        source_version,
+        raw_sha256
+    from by_category
+    union all
     select
-        m.date_key,
-        coalesce(c.category, '_T') as category,
-        coalesce(c.reports, 0) as reports,
-        coalesce(c.source_version, w.source_version) as source_version,
-        coalesce(c.raw_sha256, w.raw_sha256) as raw_sha256
-    from months as m
-    cross join window_months as w
-    left join counted as c on m.date_key = c.date_key
+        date_key,
+        '_T' as category,
+        sum(reports) as reports,
+        max(source_version) as source_version,
+        arg_max(raw_sha256, ingested_at) as raw_sha256
+    from by_category
+    group by date_key
 )
 
 select
@@ -78,4 +79,4 @@ select
     'ok' as observation_status_key,
     source_version,
     raw_sha256
-from complete
+from counted

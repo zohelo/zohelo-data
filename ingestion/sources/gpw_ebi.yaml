@@ -2,7 +2,7 @@ source_system: gpw_ebi
 description: "GPW report list, EBI rows (reports of NewConnect and Catalyst issuers): one row per report — time, category, number, issuer with ISIN, report id, link"
 
 # Extraction strategy (docs/landing.md). No bulk feature, API or feed for EBI reports (https://www.gpw.pl/ebi answers
-# 403 to automated clients and is not used). Route (decision D36): the public list https://www.gpw.pl/espi-ebi-reports
+# 403 to automated clients and is not used). Route (decision D37): the public list https://www.gpw.pl/espi-ebi-reports
 # through the page's own "Show more" request (the form posted to https://www.gpw.pl/ajaxindex.php, only "EBI"
 # ticked, 15 rows a request, newest first; robots.txt allows it), one request at a time 5 s apart, the platform's
 # User-Agent, bounded retries; a 4xx stops the run. Never a report page or attachment. ESPI rows of the same list

@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+crossref,CD-029,Crossref: publikacje z afiliacją zawierającą Poland lub Polska,Crossref: works with affiliation text naming Poland or Polska,Crossref,signal,api,community-academic,crossref_metadata,https://www.crossref.org/documentation/retrieve-metadata/rest-api/
