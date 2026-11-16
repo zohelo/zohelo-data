@@ -56,7 +56,7 @@ def get(url: str) -> requests.Response:
     return r
 
 
-def show_xlsx(name: str, body: bytes, max_rows: int, max_cols: int = 18) -> dict:
+def show_xlsx(name: str, body: bytes, max_rows: int, max_cols: int = 26) -> dict:
     by_sheet: dict[str, dict[int, list]] = {}
     for c in xlsx_cells.cells(body):
         by_sheet.setdefault(c["sheet_name"], {}).setdefault(c["row_number"], []).append(
@@ -74,7 +74,7 @@ def show_xlsx(name: str, body: bytes, max_rows: int, max_cols: int = 18) -> dict
     return out
 
 
-def show_xls(name: str, body: bytes, max_rows: int, max_cols: int = 18) -> dict:
+def show_xls(name: str, body: bytes, max_rows: int, max_cols: int = 26) -> dict:
     import xlrd
 
     book = xlrd.open_workbook(file_contents=body, on_demand=True)
@@ -181,7 +181,7 @@ def main() -> int:
         label = "newest" if n == 0 else "oldest" if n == len(tables) - 1 else f"t{n}"
         z = zipfile.ZipFile(io.BytesIO(get(h).content))
         print(f"== standard tables {label} {t!r}: {len(z.infolist())} entries", flush=True)
-        rows, detail = (45, 80) if label in ("newest", "oldest") else (0, 0)
+        rows, detail = (70, 80) if label in ("newest", "oldest") else (0, 0)
         members = walk(z, "", rows, detail)
         if label in ("newest", "oldest"):
             res[label] = {"link": t[:60], "members": members}
