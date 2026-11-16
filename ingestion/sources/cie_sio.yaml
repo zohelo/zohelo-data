@@ -25,12 +25,12 @@ archive_policy:
 bronze: [bronze.cie_sio_cells, bronze.cie_sio_rejected_files]
 silver: [silver.cie_sio_teachers, silver.cie_sio_schools, silver.cie_sio_graduates]
 gold: [gold.build_cie_sio, gold.metrics_teachers]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); counts from Dev trial (see docs/sources/cie_sio.md)
-  cie_sio_teachers: {rows: 900}
-  cie_sio_schools: {rows: 4000}
-  cie_sio_graduates: {rows: 9000}
-  poc_build_cie_sio: {rows: 13000}
-  poc_metrics_teachers: {rows: 100}
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 43807333288 (test/446-sio-trial)
+  cie_sio_teachers: {rows: 900}  # 580: Poland 13 dates x 20 + 16 voivodeships x 20
+  cie_sio_schools: {rows: 5700}  # 3,804
+  cie_sio_graduates: {rows: 16000}  # 10,656
+  poc_build_cie_sio: {rows: 22500}  # 15,040
+  poc_metrics_teachers: {rows: 50}  # 29: Poland 2006-2018 + 16 voivodeships 2018
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): 11 workbooks of at most 1 MB, a closed archive; small, rebuilt in full.
