@@ -36,7 +36,7 @@
     "@radix-ui/react-tabs": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
     "@tailwindcss/typography": "^0.5.20",
-    "@tailwindcss/vite": "^4.3.4",
+    "@tailwindcss/vite": "^4.3.5",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.14.26",
     "apache-arrow": "^17.0.0",
@@ -51,7 +51,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-error-boundary": "^6.1.6",
-    "react-hook-form": "^7.91.0",
+    "react-hook-form": "^7.92.0",
     "react-resizable-panels": "^3.0.6",
     "react-router": "^7.18.4",
     "sonner": "^2.0.8",
@@ -59,7 +59,7 @@
     "tailwind-merge": "^3.7.0",
     "uplot": "^1.6.32",
     "zod": "^4.6.7",
-    "zustand": "^5.0.16"
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
@@ -73,11 +73,11 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^16.5.0",
     "playwright": "1.65.0",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.72.0",
-    "vite": "^7.3.7"
+    "typescript-eslint": "^8.72.2",
+    "vite": "^7.3.8"
   },
   "description": "Zohelo Data's browser-based catalogue and DuckDB SQL workspace.",
   "repository": {
