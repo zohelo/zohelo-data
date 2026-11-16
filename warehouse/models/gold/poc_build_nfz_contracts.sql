@@ -4,8 +4,9 @@
    These are zohelo calculations over the published register, not values NFZ publishes: agreements (rows of the
    register), providers (distinct NFZ provider codes; a code belongs to one branch, so Poland is the sum of the
    branches and a provider contracting with two branches counts twice) and contracted amount (sum of the published
-   agreement amounts in PLN; agreements without an amount are left out of the sum, never counted as 0; a contract
-   ceiling for the year, not expenditure). Poland ('all_branches') is the sum over the 16 branches. Breakdown:
+   agreement amounts in PLN; agreements without an amount, all of service type 12 (medical devices), are left out of
+   the sum and named in measure_name, never counted as 0; published amounts of 0.00 are summed as published; a
+   contract ceiling for the year, not expenditure). Poland ('all_branches') is the sum over the 16 branches. Breakdown:
    service type (NFZ code as published) and the total over the types (is_total). #}
 with agreements as (
     select
@@ -109,7 +110,9 @@ select
         when 'providers'
             then 'Healthcare providers with an NFZ agreement in the contract year (NFZ provider codes, zohelo count)'
         when 'contracted_amount'
-            then 'Contracted amount of NFZ agreements in the contract year (PLN, zohelo sum of published amounts)'
+            then
+                'Contracted amount of NFZ agreements in the contract year (PLN, zohelo sum of published amounts; '
+                || 'service type 12, medical devices, has no published amounts and is not included)'
     end as measure_name,
     m.measure_code as measure_codes,
     m.unit_code,
