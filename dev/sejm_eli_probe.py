@@ -1,6 +1,6 @@
 """Read-only reachability and layout probe of the Sejm API and the ELI API (PLG-024 #481, PLG-026 #483).
 
-GET only, one request at a time, three seconds apart, at most 45 requests. robots.txt first: a disallow of
+GET only, one request at a time, three seconds apart, at most 40 requests. robots.txt first: a disallow of
 /sejm/ or /eli/ stops the probe. A rejection page on /robots.txt alone (the API host may not serve the file) is
 recorded and the documented API calls go on; a refusal of an API call (401, 403, a "Request Rejected" page)
 stops the probe and is never retried. A plain 503 or a timeout gets one retry after 60 seconds. Prints status,
@@ -15,7 +15,7 @@ import urllib.robotparser
 
 UA = "zohelo-data/1.0 (+https://zohelo.com; open-data research)"
 BASE = "https://api.sejm.gov.pl"
-BUDGET = [45]
+BUDGET = [40]
 RP = urllib.robotparser.RobotFileParser()
 STOP = [False]
 
@@ -113,61 +113,89 @@ def robots():
     return all(RP.can_fetch(UA, BASE + p) for p in ("/sejm/term10", "/eli/acts/DU/2025"))
 
 
+def keys_only(doc, label):
+    """Personal-data-safe summary: count, key union and the counts of a few closed fields; no values."""
+    if not isinstance(doc, list):
+        return
+    keys = set()
+    for d in doc:
+        if isinstance(d, dict):
+            keys |= set(d)
+    print(f"--- {label}: items {len(doc)}; union of keys: {sorted(keys)}")
+    for f in ("club", "active", "voivodeship", "districtNum"):
+        vals = {}
+        for d in doc:
+            if isinstance(d, dict):
+                vals[str(d.get(f))] = vals.get(str(d.get(f)), 0) + 1
+        print(f"--- {label} {f}: {len(vals)} values; " + json.dumps(dict(sorted(vals.items())[:60]), ensure_ascii=False)[:900])
+
+
+def eli_year(pub, year, head=600):
+    d = show(f"{BASE}/eli/acts/{pub}/{year}", 300)
+    if isinstance(d, dict):
+        items = d.get("items") or []
+        print(f"--- {pub} {year}: count={d.get('count')} totalCount={d.get('totalCount')} offset={d.get('offset')} items={len(items)}")
+        first_last(items, head)
+        for f in ("type", "status", "inForce"):
+            vals = {}
+            for it in items:
+                vals[str(it.get(f))] = vals.get(str(it.get(f)), 0) + 1
+            print(f"--- {pub} {year} {f}: " + json.dumps(vals, ensure_ascii=False)[:900])
+
+
 def main():
     if not robots():
         print("STOP after robots.txt")
         return
-    # the four calls of the brief, in order
-    term = show(f"{BASE}/sejm/term10", 3000)
-    acts = show(f"{BASE}/eli/acts", 3000)
-    du = show(f"{BASE}/eli/acts/DU/2025", 1200)
-    if isinstance(du, dict):
-        items = du.get("items") or []
-        print(f"--- DU 2025: count={du.get('count')} totalCount={du.get('totalCount')} offset={du.get('offset')} items={len(items)}")
-        first_last(items, 900)
-    if STOP[0]:
-        print("STOP: refused")
-        return
-
-    # ELI layout: paging, another publisher, the oldest year, changed-since, one act's detail
-    mp = show(f"{BASE}/eli/acts/MP/2025", 400)
-    if isinstance(mp, dict):
-        print(f"--- MP 2025: count={mp.get('count')} totalCount={mp.get('totalCount')} items={len(mp.get('items') or [])}")
-        first_last(mp.get("items") or [], 700)
-    old = show(f"{BASE}/eli/acts/DU/1918", 400)
-    if isinstance(old, dict):
-        print(f"--- DU 1918: count={old.get('count')} totalCount={old.get('totalCount')} items={len(old.get('items') or [])}")
-        first_last(old.get("items") or [], 500)
-    show(f"{BASE}/eli/acts/DU/2025?limit=10&offset=5", 600)
-    show(f"{BASE}/eli/acts/DU/2025/1", 2500)
-    show(f"{BASE}/eli/changes/acts?since=2026-11-10", 800)
-    show(f"{BASE}/eli/statuses", 800)
-    show(f"{BASE}/eli/types", 800)
-    if STOP[0]:
-        print("STOP: refused")
-        return
-
-    # Sejm layout: entity lists of term 10
-    for res in ("MP", "clubs", "committees", "proceedings", "votings"):
-        d = show(f"{BASE}/sejm/term10/{res}", 600)
-        first_last(d, 900)
-        if STOP[0]:
-            print("STOP: refused")
-            return
-    d = show(f"{BASE}/sejm/term10/votings/1", 400)
-    first_last(d, 1200)
-    for res in ("prints", "processes", "interpellations"):
-        d = show(f"{BASE}/sejm/term10/{res}?limit=5&offset=0", 400)
-        first_last(d, 1200)
-        d = show(f"{BASE}/sejm/term10/{res}?limit=500&offset=0", 200)
-        first_last(d, 300)
-        if STOP[0]:
-            print("STOP: refused")
-            return
-    show(f"{BASE}/sejm/term10/prints?limit=5&offset=100000", 300)
-    show(f"{BASE}/sejm/term10/processes/1", 2500)
     show(f"{BASE}/sejm/term", 1500)
-    show(f"{BASE}/eli/acts/DU", 1500)
+    show(f"{BASE}/sejm/term10", 3000)
+    d = show(f"{BASE}/sejm/term10/proceedings", 300)
+    first_last(d, 700)
+    d = show(f"{BASE}/sejm/term10/votings", 300)
+    first_last(d, 400)
+    d = show(f"{BASE}/sejm/term10/votings/1", 300)
+    first_last(d, 1500)
+    d = show(f"{BASE}/sejm/term10/votings/1/1", 200)
+    if isinstance(d, dict):
+        print(f"--- voting detail keys: {sorted(d)}; votes list {len(d.get('votes') or [])}")
+    if STOP[0]:
+        print("STOP: refused")
+        return
+    d = show(f"{BASE}/sejm/term10/prints", 300)
+    first_last(d, 1200)
+    if isinstance(d, list):
+        print("--- prints documentDate range: " + str(min((x.get("documentDate") or "~") for x in d)) + " .. " + str(max((x.get("documentDate") or "") for x in d)))
+    show(f"{BASE}/sejm/term10/prints?limit=5&offset=0", 300)
+    _s, _h, body = get(f"{BASE}/sejm/term10/MP")
+    try:
+        keys_only(json.loads(body), "MP term10")
+    except ValueError:
+        print("--- MP: not JSON")
+    d = show(f"{BASE}/sejm/term10/clubs", 300)
+    first_last(d, 500)
+    d = show(f"{BASE}/sejm/term9/votings", 200)
+    first_last(d, 300)
+    d = show(f"{BASE}/sejm/term9/prints?limit=1", 200)
+    if STOP[0]:
+        print("STOP: refused")
+        return
+
+    show(f"{BASE}/eli/acts", 2000)
+    show(f"{BASE}/eli/acts/DU", 3000)
+    show(f"{BASE}/eli/acts/MP", 3000)
+    eli_year("DU", 2025, 1500)
+    eli_year("MP", 2025, 900)
+    eli_year("DU", 2026, 300)
+    eli_year("DU", 1918, 600)
+    eli_year("MP", 1918, 600)
+    eli_year("DU", 1990, 300)
+    show(f"{BASE}/eli/acts/DU/2025?limit=10&offset=5", 300)
+    d = show(f"{BASE}/eli/acts/DU/2025/1", 300)
+    if isinstance(d, dict):
+        print(f"--- act detail keys: {sorted(d)}")
+    show(f"{BASE}/eli/changes/acts?since=2026-11-10", 800)
+    show(f"{BASE}/eli/statuses", 1500)
+    show(f"{BASE}/eli/types", 2500)
     print("\nrequests left", BUDGET[0])
 
 
