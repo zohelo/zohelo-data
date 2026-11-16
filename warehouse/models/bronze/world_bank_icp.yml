@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: world_bank_icp
+  description: World Bank International Comparison Program (ICP 2021, API v2 source 90) — one JSON page per series
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_icp/
+    loaded_by: ingestion/to_bronze/world_bank_icp/
+    config: ingestion/sources/world_bank_icp.yaml
+  tables:
+  - name: icp_observations
+    description: >-
+      One row per record with a value of the newest page of every series: country, classification, series and time codes and labels, value as the exact JSON number text; partitioned by entity (series_<id>).
+  - name: icp_rejected_files
+    description: >-
+      ICP Landing pages the Bronze decoder rejected, with the reason.

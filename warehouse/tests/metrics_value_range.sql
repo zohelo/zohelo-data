@@ -28,6 +28,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- GUS publication tables (#2893), counts per year; Poland is the largest area: museum visits 46,242,767 (2025),
     -- cinema admissions 61,949,490 (2019), library users 5,983,725 (2019), tourists 42,738,329, overnight stays
     -- 104,692,301, bed places 887,158 (2025) (Dev trial 43298219762); survey shares are % of persons 15+
+    -- RAD-on / POL-on (#2990), counts on the download day; Poland is the largest area: 840 institutions of every
+    -- status and 11,696 study programmes of every status in the register (Dev probe 43328619935)
+    ('higher_education_institutions', 'radon', '%', 0, 2000),
+    ('study_programmes', 'radon', '%', 0, 30000),
     ('museum_visitors', 'gus_culture', '%', 0, 2e8),
     ('cinema_admissions', 'gus_culture', '%', 0, 2e8),
     ('public_library_users', 'gus_culture', '%', 0, 3e7),
@@ -36,6 +40,10 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('tourist_bed_places', 'gus_tourism', '%', 0, 5e6),
     ('museum_visiting_share', 'gus_culture_participation', '%', 0, 100),
     ('theatre_attendance_share', 'gus_culture_participation', '%', 0, 100),
+    -- RPWDL register counts (#2958), Poland the largest area: active healthcare providers 29,845 ledgers and
+    -- practices 234,327 in the 16 November 2026 files (Dev trials 43796970764, 43813074556)
+    ('healthcare_providers', 'rpwdl', '%', 0, 2e5),
+    ('medical_practices', 'rpwdl', '%', 0, 1e6),
     -- GUS census tables (#2897): urban share in %; holdings PL 2010 = 1,509,148; ha per holding, highest 22.22
     -- (lubuskie 2020) (Dev trial 43288120956)
     ('urban_population_share', 'gus_nsp2021', '%', 0, 100),
@@ -43,6 +51,22 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     ('average_farm_area', 'gus_psr2020', '%', 0, 100),
     -- MRPiPS-03 (#2910): persons granted social assistance, PL 2019 = 1,205,506 (Dev trial 43293740538)
     ('social_assistance_recipients', 'mrpips_social_assistance', '%', 0, 1e7),
+    -- GUGiK PRNG (#2971): localities in the register, Poland is the largest area: 124,236 (export 2026-11-12, Dev
+    -- probe 43328622271)
+    ('localities', 'gugik_prng', '%', 0, 5e5),
+    -- MRiRW ZSRIR (#2484), monthly purchase prices as published, Poland: raw milk zł/100 kg 91.28 (2004-04) to 274.01
+    -- (2022-11); pigs zł/kg live weight 4.25-9.16 (2022-2026); consumption wheat zł/t up to 1,590 (Dev probe 43856647230)
+    ('milk_purchase_price', 'mrirw_zsrir', '%', 0, 1000),
+    ('pig_purchase_price', 'mrirw_zsrir', '%', 0, 30),
+    ('wheat_purchase_price', 'mrirw_zsrir', '%', 0, 5000),
+    -- Crossref works with affiliation text naming Poland or Polska per publication year (#553): largest PL 2022 =
+    -- 29,413 works (Dev trial 43336945209)
+    ('scholarly_works_pl_affiliation', 'crossref', '%', 0, 2e5),
+    -- ISWS (#2968): common courts, all cases, Poland; largest 2019 = 17,728,993 received, 16,400,377 resolved;
+    -- average duration in months, 2011-2025 between 4.05 and 7.15 (ISWS workbooks, Dev trial 43804846162)
+    ('court_cases_received', 'ms_isws', '%', 0, 5e7),
+    ('court_cases_resolved', 'ms_isws', '%', 0, 5e7),
+    ('court_case_duration', 'ms_isws', '%', 0, 60),
     ('inflation', 'eurostat', '%', -100, 3000),
     ('inflation', 'world_bank_wdi', '%', -100, 100000),
     ('unemployment_rate', 'eurostat', '%', 0, 60),
@@ -88,6 +112,11 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- UNHCR (#2415): persons; highest refugees 4,404,995 (all asylum countries 1951-2025, Dev trial 43282453427).
     -- Documentation only (no metrics_refugees_hosted model yet).
     ('refugees_hosted', 'unhcr', '%', 0, 2e7),
+    -- Police statistics portal (#2969): offences; Poland is the largest area, highest 1,466,643 (2003, all
+    -- offences; Dev trial 43806377026); % detected as published, 15.5 to 83.0 there, bound 0-100. Documentation
+    -- only (no metrics models yet).
+    ('recorded_offences', 'policja_statistics', '%', 0, 5e6),
+    ('offence_detection_rate', 'policja_statistics', '%', 0, 100),
     -- EEA GovReg (#2424): published in Gg (kt) CO2e, metrics in Mt CO2e (D33, ÷ 1000); highest member DE 1,253,128 kt
     -- = 1,253.1 Mt (total excl. LULUCF, 1990-2024, Dev trial 43282453427). Documentation only until
     -- metrics_ghg_emissions joins the metrics union below.
@@ -191,7 +220,14 @@ with bounds (concept_key, source_system, measure_key_pattern, value_min, value_m
     -- seasonally adjusted unemployment rate 0.5 to 36.7 (MK).
     ('unemployment_rate_monthly_sa', 'unece', '%', 0, 80),
     ('cpi_annual_rate', 'unece', '%', -50, 1e5),
-    ('ppi_annual_rate', 'unece', '%', -80, 1e5)
+    ('ppi_annual_rate', 'unece', '%', -80, 1e5),
+    -- Our World in Data (CD-031, #2982): consumption-based CO2 in tonnes per person (Global Carbon Budget); the V-Dem
+    -- electoral democracy index, 0 to 1 by definition; Maddison GDP per capita in international-$ at 2011 prices
+    -- (bounds as checked in the Dev trial of #2982 on every Gold row). CO2 starts above 0: an exact 0 is a missing
+    -- value for a populated country and poc_build_owid does not build it.
+    ('co2_consumption_per_capita', 'owid', '%', 1e-6, 100),
+    ('electoral_democracy_index', 'owid', '%', 0, 1),
+    ('gdp_per_capita', 'owid', '%', 100, 300000)
 ),
 
 metrics as (
@@ -463,6 +499,24 @@ metrics as (
         geography_key,
         date_key,
         value
+    from {{ ref('poc_metrics_healthcare_providers') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_medical_practices') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
     from {{ ref('poc_metrics_urban_population_share') }}
     union all
     select
@@ -580,6 +634,33 @@ metrics as (
         geography_key,
         date_key,
         value
+    from {{ ref('poc_metrics_court_cases_received') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_court_cases_resolved') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_court_case_duration') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
     from {{ ref('poc_metrics_internet_users') }}
     union all
     select
@@ -590,6 +671,87 @@ metrics as (
         date_key,
         value
     from {{ ref('poc_metrics_health_expenditure_gdp') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_localities') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_milk_purchase_price') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_pig_purchase_price') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_wheat_purchase_price') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_scholarly_works_pl_affiliation') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_co2_consumption_per_capita') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_electoral_democracy_index') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_higher_education_institutions') }}
+    union all
+    select
+        concept_key,
+        source_system,
+        measure_key,
+        geography_key,
+        date_key,
+        value
+    from {{ ref('poc_metrics_study_programmes') }}
 )
 
 select

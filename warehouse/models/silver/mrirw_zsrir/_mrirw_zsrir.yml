@@ -1,0 +1,30 @@
+version: 2
+models:
+  - name: mrirw_zsrir_prices
+    description: >-
+      MRiRW ZSRIR market bulletins (zsrir.minrol.gov.pl, register PLS-032): monthly average purchase prices, Poland,
+      from the monthly sheet of the newest XLSX issue of the cereals, milk and pork bulletins. Grain: one row per
+      market x product_code x period_start (first day of the month). Values, unit and currency as published (unit
+      from the sheet title); cells without a price ('---', 'nld', ...) keep value null and their text in
+      value_flag. History and trial run: see ingestion/sources/mrirw_zsrir.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', market, product_code, period_start)"
+    columns:
+      - name: market
+        tests: [not_null, {accepted_values: {arguments: {values: [cereals, milk, pork]}}}]
+      - name: product_code
+        description: Null when a cereals column header is not a known grain (the test then fails).
+        tests: [not_null]
+      - name: period_start
+        description: Null when a row or column label is not a month of the grid (the test then fails).
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: [M]}}}]
+      - name: unit_code
+        description: Null when the sheet title names no known unit (the test then fails).
+        tests: [not_null]
+      - name: value_flag
+        description: The text of a cell that holds no number; null when value is a number.
+      - name: raw_sha256
+        tests: [not_null]

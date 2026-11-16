@@ -1,0 +1,25 @@
+version: 2
+models:
+  - name: ms_krs_entities
+    description: >-
+      KRS entities from the Open KRS API (Ministry of Justice, terms not established: internal only), newest copy
+      of each Landing part. Grain: krs_number (one row per number asked for). Selection: the KRS numbers GLEIF
+      lists for entities with an LEI, loaded over several runs; not the whole register. Entity-level fields only
+      (register, legal form, registered name, NIP, REGON, seat down to the town, dates, share capital, main PKD
+      code, liquidation and bankruptcy flags); persons, addresses and PESEL are dropped before Landing.
+    columns:
+      - name: krs_number
+        description: The ten-digit KRS number (the register's own id).
+        tests: [not_null, unique]
+      - name: has_current_extract
+        description: False when neither register holds a current extract of the number (the other columns are null).
+        tests: [not_null]
+      - name: register
+        description: RejP (register of entrepreneurs) or RejS (associations and other organisations), as published.
+        tests: [{accepted_values: {arguments: {values: ['RejP', 'RejS']}}}]
+      - name: requested_on
+        description: Warsaw date of the request that gave this record.
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source file (lineage to Landing/Archive).
+        tests: [not_null]

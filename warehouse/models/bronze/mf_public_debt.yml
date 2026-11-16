@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: mf_public_debt
+  description: Ministry of Finance public debt workbook (public finance sector, general government EDP, debt to GDP)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_public_debt/
+    loaded_by: ingestion/to_bronze/mf_public_debt/
+    config: ingestion/sources/mf_public_debt.yaml
+  tables:
+  - name: mf_public_debt_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity public_debt): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_public_debt_rejected_files
+    description: mf_public_debt Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.
