@@ -8,11 +8,15 @@ why: >-
   The owner's analyst portfolio needs realistic enterprise data (sales, finance, HR, supply chain,
   CRM) on the same engine, without mixing it into the public KPI catalogue.
 outcome: >-
-  Family K datasets (AdventureWorks DW, WideWorldImporters DW, Northwind, Chinook, TPC-H SF1,
-  synthetic ERP/CRM/SME ledgers) land in demo_* namespaces with their own Gold models and manifest.
+  The owner's career data desk: family K datasets (register DM-001 to DM-009: AdventureWorks DW and OLTP,
+  Contoso V2, Wide World Importers, SAP Datasphere samples, Power BI department samples, Oracle sample
+  schemas, Northwind, a synthetic Xero-shaped SME ledger) land in demo_* namespaces with Gold stars for every
+  standard department (sales, finance and controlling, HR, procurement, supply chain, production,
+  marketing and CRM, customer service, IT) and are served to Power BI.
 in_scope:
   - demo ingestion through the normal Landing → Bronze → Silver flow into demo_* namespaces
   - demo Gold models and manifest_demo.json
+  - a read endpoint for Power BI on the demo Gold tables (owner request 17 Nov 2026)
   - synthetic generators with Polish identifiers (NIP, TERYT, PKD)
 out_of_scope:
   - re-publishing non-MIT vendor data as files (dashboards only)
@@ -66,12 +70,60 @@ deliverables:
     depends_on: [data/warehouse/demo/namespaces]
     done_when:
       - each family K source has a declaration and lands into 01_landing/demo_<name>/
-    todo:
-      - "One source Epic per dataset under data/src-k (generated from the register once entries exist)"
+    tasks:
+      - key: data/warehouse/demo/ingestion/register
+        type: Task
+        title: Register the career-desk demo sources (family K, DM-001 … DM-009)
+        effort: M
+        state: open
+        contract: false
+        context: >-
+          Owner request (chat, 17 Nov 2026): a career data desk next to the platform work, with sample
+          enterprise data for every standard department of a big company, modelled into demo_silver and
+          demo_gold and served to Power BI. Family K had no register entries, so the sync generated no
+          source Epics for it.
+        files:
+          - create: ingestion/register/demo.yaml
+          - create: ingestion/common/register.py
+          - edit: ops/repo_check.py
+          - edit: ops/backlog_sync.py
+          - edit: ops/tracker.py
+          - edit: ops/notify_failure.py
+          - edit: .github/backlog/assets/register-fields.md
+          - edit: docs/architecture.md
+        steps:
+          - "ingestion/register.yaml (680 KB) is too large for the agent's file API, so take the first step of Epic
+            data/ingestion/register-restructure: ingestion/common/register.py loads register.yaml plus
+            ingestion/register/*.yaml, and the four readers use it (backlog_sync passes each entry's file as {register_file})."
+          - "Write entries DM-001 … DM-009 (family K, kpi false, status approved, licence terms after `Terms:`) to
+            ingestion/register/demo.yaml; add their rows to register-fields.md."
+        acceptance:
+          - "python -m ops.repo_check passes"
+          - "backlog_sync plan generates nine Epics data/src-dm-001 … data/src-dm-009 under data/src-k"
+        verify:
+          - run: python -m ops.repo_check
+            expect: all checks ok
+        out_of_scope: [declarations, loaders and models of the sources (their generated stage Tasks)]
   - key: data/warehouse/demo/models
     title: Demo Gold models and manifest
     depends_on: [data/warehouse/demo/ingestion]
     done_when:
-      - demo_gold stars for sales, finance, HR, supply chain, CRM, SME accounting; manifest_demo.json
+      - demo_gold stars for sales, finance and controlling, HR, procurement, supply chain, production, marketing and CRM,
+        customer service, IT and SME accounting; manifest_demo.json
     todo:
       - "Model per subject area; generate manifest_demo.json in catalog.py"
+      - "Department x source map: sales DM-001/003/007/008; finance DM-001 (FactFinance), DM-005 (FI), DM-009; HR DM-001/002/005/006/007;
+        procurement DM-002/004/006; supply chain and inventory DM-001/002/004; production DM-002; marketing and CRM DM-001/006;
+        customer service DM-001 (call centre); IT DM-006; AR/AP DM-004, DM-009"
+  - key: data/warehouse/demo/serving
+    title: Power BI endpoint for the demo Gold tables
+    depends_on: [data/warehouse/demo/models]
+    done_when:
+      - every demo_gold table is readable from Power BI Desktop and refreshable in the Power BI service without a gateway
+      - the endpoint serves demo data only (never public catalogue tables) and no writer credential reaches it
+    todo:
+      - "demo.publish activity (warehouse.yaml): after each demo Gold build write one Parquet file per demo_gold table and
+        manifest.json (tables, columns, row counts, licence and attribution per source) to 06_published/demo/v1/"
+      - "Read-only HTTPS route for 06_published/demo/v1/ outside Cloudflare Access (Power BI cannot sign in through Access);
+        hostname is an owner decision; Power Query: Parquet.Document(Web.Contents(base, [RelativePath = ...]))"
+      - "Optional Fabric route: OneLake shortcut (S3-compatible) to the demo_gold Iceberg tables, needs a Fabric capacity (owner decision)"

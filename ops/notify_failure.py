@@ -199,7 +199,7 @@ def main(argv=None) -> int:
 
 
 def hidden_failure(failed: list[str]) -> bool:
-    """True when the run would end \"success\" despite the failures: every failed job is an extract leg,
+    """True when the run would end "success" despite the failures: every failed job is an extract leg,
     which continues on error. The scheduler's catch-up would then treat the slot as done, so this job
     fails to give the run its true conclusion; any other failed job already fails the run."""
     return bool(failed) and all(name.startswith(CONTINUE_ON_ERROR) for name in failed)
