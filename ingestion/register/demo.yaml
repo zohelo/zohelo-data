@@ -1,0 +1,400 @@
+# Source register, family K: demo and training data for the career data desk (Epic data/warehouse/demo).
+# Same fields as ingestion/register.yaml (docs/sources.md); loaded with it by ingestion/common/register.py.
+# Demo data lives in demo_* namespaces and never reaches the public KPI catalogue.
+sources:
+- id: DM-001
+  name: AdventureWorks DW sample data warehouse (data-warehouse install script CSV files)
+  short_name: AdventureWorks DW
+  provider: Microsoft
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional company; sales territories in North America, Europe and Australia
+  provider_type: commercial
+  domains: [sales, finance, human resources, customer service, supply chain, marketing, treasury]
+  entities: [order line, account, employee, customer, reseller, product, call-centre shift]
+  granularity: Star schema of a bicycle manufacturer. Internet and reseller sales lines (about 60,000 each), general ledger by
+    account x organisation x department group x scenario (actual, budget, forecast) per month, sales quotas per
+    employee and quarter, daily product inventory (about 776,000 rows), daily call-centre shifts, currency rates,
+    survey responses, promotions and sales reasons.
+  coverage: Fictional years 2010-2014 (dates as published); one complete release, not updated since the 2012 version.
+  access:
+    endpoint: https://github.com/microsoft/sql-server-samples/tree/master/samples/databases/adventure-works/data-warehouse-install-script
+    kind: bulk_file
+    interfaces: [CSV]
+    auth: public
+    cost: free
+    limits: One CSV per table at raw.githubusercontent.com/microsoft/sql-server-samples/master/samples/databases/adventure-works/data-warehouse-install-script/<Table>.csv
+      (UTF-8, pipe-delimited, no header row; column names and types are in instawdbdw.sql of the same folder, landed with them).
+  licence:
+    status: open
+    notes: 'Terms: MIT License, https://github.com/microsoft/sql-server-samples/blob/master/license.txt ("Copyright (c) Microsoft
+      Corporation ... MIT License"). Attribution: "AdventureWorks sample database, Microsoft (MIT License)". Commercial
+      use, modification and redistribution allowed with the copyright and licence notice. Demo data: never in the public
+      KPI catalogue (demo_* namespaces).'
+  updates: Static sample; the files have not changed in substance since 2012. Monthly SHA-256 check is enough.
+  ingestion:
+    history: Snapshot; every file kept once in Landing/Archive.
+    incremental: None; a changed file replaces its table.
+    identifiers: Table name + the table's surrogate keys (ProductKey, CustomerKey, DateKey ...).
+  modelling:
+    notes: Already a star schema. demo_silver = typed, snake_case copies with the DDL types; demo_gold = department stars
+      (sales, finance with account and organisation parent-child hierarchies, HR, inventory, call centre) sharing
+      dim_date, dim_product, dim_geography, dim_employee. Finance amounts follow DimAccount.Operator / AccountType sign rules.
+    overlap: DM-002 is the operational database of the same fictional company; its dimensions conform to these.
+  research:
+    priority: review-first
+    evidence: tested
+    connection: tested
+    blockers: []
+    references:
+    - https://github.com/microsoft/sql-server-samples/releases/tag/adventureworks
+    - https://github.com/microsoft/sql-server-samples/blob/master/license.txt
+- id: DM-002
+  name: AdventureWorks OLTP sample database (OLTP install script CSV files)
+  short_name: AdventureWorks OLTP
+  provider: Microsoft
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional company; sales territories in North America, Europe and Australia
+  provider_type: commercial
+  domains: [production, purchasing, human resources, sales, inventory]
+  entities: [work order, purchase order, sales order, employee, vendor, product, inventory transaction]
+  granularity: Operational tables of the same bicycle manufacturer. Production work orders (about 72,000) with routing
+    steps, scrap reasons and bills of materials; purchase orders (about 4,000 headers, 8,800 lines) and vendors; sales
+    orders (about 31,000 headers, 121,000 lines); inventory transactions (about 200,000); employees with pay and
+    department history and job candidates.
+  coverage: Fictional years 2011-2014; one complete release.
+  access:
+    endpoint: https://github.com/microsoft/sql-server-samples/tree/master/samples/databases/adventure-works/oltp-install-script
+    kind: bulk_file
+    interfaces: [CSV]
+    auth: public
+    cost: free
+    limits: One CSV per table at raw.githubusercontent.com/microsoft/sql-server-samples/master/samples/databases/adventure-works/oltp-install-script/<Table>.csv
+      plus instawdb.sql (column names and types). Large binary/XML columns (ProductPhoto, Document, Illustration,
+      Password, CreditCard) are not landed.
+  licence:
+    status: open
+    notes: 'Terms: MIT License, https://github.com/microsoft/sql-server-samples/blob/master/license.txt. Attribution:
+      "AdventureWorks sample database, Microsoft (MIT License)". Commercial use, modification and redistribution allowed
+      with the notice. Personal-looking names and e-mails are fictional; credit cards and passwords are not landed.'
+  updates: Static sample; monthly SHA-256 check.
+  ingestion:
+    history: Snapshot.
+    incremental: None; a changed file replaces its table.
+    identifiers: Table name + primary key from instawdb.sql.
+  modelling:
+    notes: demo_gold adds what DM-001 lacks - production (work orders, scrap, routing time and cost), purchasing (PO lines,
+      vendor lead time, receipt and rejection), HR history (headcount, pay, tenure) - conformed to DM-001 dim_product and dim_employee.
+    overlap: Same company as DM-001; sales orders duplicate DM-001 sales facts (DM-001 is the sales source of record).
+  research:
+    priority: review-first
+    evidence: tested
+    connection: tested
+    blockers: []
+    references:
+    - https://github.com/microsoft/sql-server-samples/releases/tag/adventureworks
+- id: DM-003
+  name: Contoso Data Generator V2 ready-to-use data (SQLBI)
+  short_name: Contoso V2
+  provider: SQLBI
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional retailer; customers and stores in about 8 countries, several currencies
+  provider_type: community-academic
+  domains: [sales, retail, e-commerce, treasury]
+  entities: [order, order line, customer, store, product, currency rate]
+  granularity: Retail sales orders and lines with order and delivery dates, store, customer, product and currency, plus
+    daily exchange rates. Published in sizes 10K, 100K, 1M, 10M and 100M orders as CSV, Parquet and Delta.
+  coverage: Fictional years (about ten years, generated); one release (ready-to-use-data, 2025-09).
+  access:
+    endpoint: https://github.com/sql-bi/Contoso-Data-Generator-V2-Data/releases/tag/ready-to-use-data
+    kind: bulk_file
+    interfaces: [Parquet, CSV, Delta, 7z]
+    auth: public
+    cost: free
+    limits: Release assets {format}-{size}.7z; parquet-1m.7z is 66 MB (verified 17 Nov 2026). Start with 1M orders; 10M only
+      when a demo needs volume (performance tuning showcase).
+  licence:
+    status: open
+    notes: 'Terms: MIT License, https://github.com/sql-bi/Contoso-Data-Generator-V2-Data (licence MIT). Attribution: "Contoso
+      data, generated with the SQLBI Contoso Data Generator V2 (MIT License)". Commercial use, modification and
+      redistribution allowed with the notice.'
+  updates: Releases are rare (2024-06, 2025-09). Monthly check of the asset.
+  ingestion:
+    history: Snapshot per release.
+    incremental: None; a new release replaces the tables.
+    identifiers: Asset name + table + keys (OrderKey, LineNumber, CustomerKey, StoreKey, ProductKey).
+  modelling:
+    notes: Classic SQLBI retail star; demo_gold keeps it as the multi-currency retail model (sales in local and reporting
+      currency, delivery lead time) and the volume model for performance demos.
+    overlap: None.
+  research:
+    priority: review-first
+    evidence: tested
+    connection: tested
+    blockers: []
+    references:
+    - https://github.com/sql-bi/Contoso-Data-Generator-V2
+    - https://github.com/sql-bi/Contoso-Data-Generator-V2-Data/releases
+- id: DM-004
+  name: Wide World Importers sample databases (OLTP and DW)
+  short_name: Wide World Importers
+  provider: Microsoft
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional wholesale distributor in the United States
+  provider_type: commercial
+  domains: [sales, purchasing, warehouse, logistics, accounts receivable, accounts payable]
+  entities: [order, invoice, purchase order, stock movement, customer transaction, supplier transaction]
+  granularity: Wholesale novelty-goods distributor - customer orders and invoices, purchase orders, stock item holdings
+    and movements, customer and supplier transactions (receivables and payables), deliveries; temporal tables.
+  coverage: Fictional years 2013-2016; one release (v1.0).
+  access:
+    endpoint: https://github.com/microsoft/sql-server-samples/releases/tag/wide-world-importers-v1.0
+    kind: bulk_file
+    interfaces: [SQL Server backup (.bak)]
+    auth: public
+    cost: free
+    limits: Only .bak/.bacpac files (DW 50 MB, OLTP 127 MB). Bronze restores the backup in a SQL Server container on the
+      runner (mcr.microsoft.com/mssql/server, Developer edition) and exports each table to Parquet; Landing keeps the .bak.
+  licence:
+    status: open
+    notes: 'Terms: MIT License, https://github.com/microsoft/sql-server-samples/blob/master/license.txt. Attribution:
+      "Wide World Importers sample database, Microsoft (MIT License)". The SQL Server Developer edition container used to
+      restore it is licensed for development and test only, which is this use (no production database).'
+  updates: Static since 2016; monthly SHA-256 check.
+  ingestion:
+    history: Snapshot.
+    incremental: None.
+    identifiers: Schema.Table + primary keys.
+  modelling:
+    notes: demo_gold - order-to-cash (orders, invoices, receivables ageing), procure-to-pay (POs, payables), warehouse stock
+      and movements; the only family K source with AR/AP transactions.
+    overlap: None.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers:
+    - Needs a SQL Server container step in the Bronze loader; the first trial measures restore time on a hosted runner.
+    references:
+    - https://github.com/microsoft/sql-server-samples/tree/master/samples/databases/wide-world-importers
+- id: DM-005
+  name: SAP Datasphere sample content (SAP-samples/datasphere-content)
+  short_name: SAP Datasphere samples
+  provider: SAP
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional SAP company codes and sites
+  provider_type: commercial
+  domains: [finance, controlling, human resources, sales, retail, procurement, telecommunications]
+  entities: [GL line item, profit centre, employee, position, sales order, POS transaction, supplier]
+  granularity: 'SAP-style tables with text tables and hierarchies - FI: financial transactions (13 MB) by GL account,
+    profit centre, customer and product with account, profit-centre and product hierarchies; HR: headcount,
+    performance, positions, jobs, departments; Sales: sales orders and items, business partners; Retail POS
+    transactions and line items by site; Ariba procurement adoption metrics; Telco customer value management.'
+  coverage: Fictional; one repository state.
+  access:
+    endpoint: https://github.com/SAP-samples/datasphere-content
+    kind: bulk_file
+    interfaces: [CSV]
+    auth: public
+    cost: free
+    limits: One CSV per table at raw.githubusercontent.com/SAP-samples/datasphere-content/main/<folder>/CSV/<file>.csv
+  licence:
+    status: open
+    notes: 'Terms: Apache License 2.0, https://github.com/SAP-samples/datasphere-content/blob/main/LICENSE. Attribution:
+      "SAP Datasphere sample content, SAP SE (Apache License 2.0)". Commercial use, modification and redistribution
+      allowed with the licence and NOTICE; changes must be stated.'
+  updates: Occasional repository changes (last push 2026-05). Monthly SHA-256 check.
+  ingestion:
+    history: Snapshot.
+    incremental: None.
+    identifiers: Folder + file + SAP keys (company code, GL account, profit centre, employee id).
+  modelling:
+    notes: The SAP-shaped finance model of the desk - GL actuals with parent-child account and profit-centre hierarchies
+      (text tables give language-dependent names), HR headcount and performance; shows SAP-to-Power BI modelling.
+    overlap: None.
+  research:
+    priority: review-first
+    evidence: tested
+    connection: tested
+    blockers: []
+    references:
+    - https://github.com/SAP-samples/datasphere-content/blob/main/README.md
+- id: DM-006
+  name: Microsoft Power BI department samples (Excel workbooks)
+  short_name: Power BI department samples
+  provider: Microsoft
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional companies (VanArsdel, Contoso, Fabrikam and others)
+  provider_type: commercial
+  domains: [human resources, IT, procurement, retail, sales and marketing, quality, customer profitability, sales pipeline]
+  entities: [employee, invoice, purchase, store sales, product sales, defect, opportunity, account]
+  granularity: Eight workbooks, one per department - Human Resources (hires, separations, headcount), IT Spend Analysis
+    (plan vs actual by cost element), Procurement Analysis (invoices by vendor and category), Retail Analysis (store
+    sales vs last year), Sales and Marketing (VanArsdel market share), Supplier Quality (defects and downtime),
+    Customer Profitability (P&L by customer and executive), Opportunity Tracking (pipeline by stage).
+  coverage: Fictional; one repository state.
+  access:
+    endpoint: https://github.com/microsoft/powerbi-desktop-samples/tree/main/powerbi-service-samples
+    kind: bulk_file
+    interfaces: [XLSX]
+    auth: public
+    cost: free
+    limits: Eight *-no-PV.xlsx files, 0.7-15 MB each, at raw.githubusercontent.com/microsoft/powerbi-desktop-samples/main/powerbi-service-samples/
+  licence:
+    status: open
+    notes: 'Terms: MIT License, https://github.com/microsoft/powerbi-desktop-samples/blob/main/LICENSE. Attribution: "Power BI
+      sample data, Microsoft (MIT License)". Commercial use, modification and redistribution allowed with the notice.'
+  updates: Occasional repository changes (2026 samples revamp). Monthly SHA-256 check.
+  ingestion:
+    history: Snapshot.
+    incremental: None.
+    identifiers: Workbook + sheet + row keys of each sheet.
+  modelling:
+    notes: Gives the departments the other sources miss (IT spend, supplier quality, customer profitability, opportunity
+      pipeline); one small star per workbook in demo_gold.
+    overlap: Retail Analysis and Sales and Marketing overlap DM-003 in subject only.
+  research:
+    priority: review-first
+    evidence: tested
+    connection: tested
+    blockers: []
+    references:
+    - https://learn.microsoft.com/power-bi/create-reports/sample-datasets
+- id: DM-007
+  name: Oracle Database sample schemas (HR, OE, SH, CO)
+  short_name: Oracle sample schemas
+  provider: Oracle
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional company; customers in many countries
+  provider_type: commercial
+  domains: [human resources, order management, sales history, customer orders]
+  entities: [employee, job history, order, sales fact, customer, product, channel, promotion]
+  granularity: HR (employees, departments, jobs, job history, locations); OE (orders, order items, inventories,
+    warehouses); SH (sales history star, about 918,000 sales rows by channel, promotion and customer, plus costs);
+    CO (customer orders, shipments, stores).
+  coverage: Fictional years 1998-2001 (SH) and others; one repository state.
+  access:
+    endpoint: https://github.com/oracle-samples/db-sample-schemas
+    kind: bulk_file
+    interfaces: [CSV, SQL scripts]
+    auth: public
+    cost: free
+    limits: SH as plain CSV files per table (sales.csv 74 MB, customers.csv 13 MB, costs, promotions, times) at
+      raw.githubusercontent.com/oracle-samples/db-sample-schemas/main/sales_history/<table>.csv with columns in sh_create.sql;
+      HR, OE and CO as SQL INSERT scripts in their folders.
+  licence:
+    status: open
+    notes: 'Terms: MIT License, https://github.com/oracle-samples/db-sample-schemas/blob/main/LICENSE.txt. Attribution: "Oracle
+      Database sample schemas, Oracle (MIT License)". Commercial use, modification and redistribution allowed with the notice.'
+  updates: Occasional (last push 2025-06). Monthly SHA-256 check.
+  ingestion:
+    history: Snapshot.
+    incremental: None.
+    identifiers: Schema + table + primary keys.
+  modelling:
+    notes: SH is the largest family K sales fact after Contoso, with sales channels and promotions; HR complements HR models.
+    overlap: None.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers: []
+    references:
+    - https://github.com/oracle-samples/db-sample-schemas/blob/main/README.md
+- id: DM-008
+  name: Northwind Traders sample database
+  short_name: Northwind
+  provider: Microsoft
+  status: approved
+  family: K
+  kpi: false
+  geography: fictional trading company; customers in 21 countries
+  provider_type: commercial
+  domains: [sales, purchasing, logistics]
+  entities: [order, order line, customer, supplier, shipper, employee, territory]
+  granularity: About 830 orders and 2,155 order lines with freight, shippers, suppliers, employees and territories.
+  coverage: Fictional years 1996-1998; one script.
+  access:
+    endpoint: https://github.com/microsoft/sql-server-samples/tree/master/samples/databases/northwind-pubs
+    kind: bulk_file
+    interfaces: [SQL script]
+    auth: public
+    cost: free
+    limits: instnwnd.sql (1 MB) with CREATE TABLE and INSERT statements; Bronze parses the INSERTs.
+  licence:
+    status: open
+    notes: 'Terms: MIT License, https://github.com/microsoft/sql-server-samples/blob/master/license.txt. Attribution:
+      "Northwind sample database, Microsoft (MIT License)".'
+  updates: Static; monthly SHA-256 check.
+  ingestion:
+    history: Snapshot.
+    incremental: None.
+    identifiers: Table + primary key.
+  modelling:
+    notes: Small, well-known model for tutorials and DAX examples (shipping lead time, freight per order).
+    overlap: None.
+  research:
+    priority: review-next
+    evidence: documented
+    connection: tested
+    blockers: []
+    references:
+    - https://github.com/microsoft/sql-server-samples/blob/master/samples/databases/northwind-pubs/readme.md
+- id: DM-009
+  name: zohelo synthetic SME accounting ledger (Xero-shaped, Polish identifiers)
+  short_name: Synthetic SME ledger
+  provider: zohelo (generated)
+  status: approved
+  family: K
+  kpi: false
+  geography: Poland (fictional companies with NIP, TERYT and PKD codes)
+  provider_type: community-academic
+  domains: [accounting, accounts receivable, accounts payable, cash, VAT]
+  entities: [contact, invoice, bill, invoice line, payment, bank transaction, manual journal, account]
+  granularity: Objects shaped like the Xero Accounting API (Contacts, Invoices ACCREC/ACCPAY with line items, Payments,
+    BankTransactions, ManualJournals, Accounts) for a few fictional Polish SMEs, generated with a fixed seed; Polish
+    chart of accounts and VAT rates (23/8/5/0 %).
+  coverage: Generated; rolling 36 months ending in the current month.
+  access:
+    endpoint: generated in this repository by the source's Landing code (fixed seed, deterministic)
+    kind: bulk_file
+    interfaces: [JSON]
+    auth: public
+    cost: free
+    limits: None; Landing writes the generated JSON files like downloaded ones (receipt, SHA-256).
+  licence:
+    status: open
+    notes: 'Terms: generated by zohelo, copyright Radoslaw Utkala; no third-party data. Attribution: "Synthetic data generated by
+      zohelo". The field names follow the public Xero Accounting API documentation
+      (https://developer.xero.com/documentation/api/accounting/overview); no Xero data is used. The real Xero Demo
+      Company would need the owner''s Xero developer account (owner decision, not planned).'
+  updates: Regenerated monthly so the latest month is always current.
+  ingestion:
+    history: Snapshot per generation month.
+    incremental: None; each month regenerates the whole ledger.
+    identifiers: Company NIP + object type + generated id.
+  modelling:
+    notes: The SME accounting model of the desk - P&L and balance sheet from journals, AR/AP ageing, cash flow, VAT; the
+      Xero-to-Power BI story for small clients.
+    overlap: None.
+  research:
+    priority: review-next
+    evidence: none
+    connection: not-tested
+    blockers:
+    - The generator is written in the declaration Task (seeded, deterministic, documented distributions).
+    references:
+    - https://developer.xero.com/documentation/api/accounting/overview
