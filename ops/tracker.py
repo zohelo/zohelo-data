@@ -37,6 +37,7 @@ from typing import Any
 import requests
 import yaml
 
+from ingestion.common import register as register_files
 from ingestion.common.bronze_files import retry
 from ingestion.common.r2 import catalog, get_with_backoff, req, s3, sources
 from ingestion.common.report import annotate, step_summary
@@ -446,7 +447,7 @@ def main(argv=None) -> int:
     gold_declared = len([n for n in shared_gold if n != "gold.coverage"])
     build = newest("Pipeline · platform · silver/gold: build")
     extra_snapshots = sum(max(0, t["snapshots"] - 1) for t in tables.values())
-    register = yaml.safe_load((ROOT / "ingestion" / "register.yaml").read_text()).get("sources", [])
+    register = register_files.entries(ROOT)
     not_onboarded = sum(1 for e in register if not e.get("source_system"))
 
     lines = [
@@ -476,7 +477,7 @@ def main(argv=None) -> int:
         namespaces_line += " — ⚠️ scratch left: " + ", ".join(ns["scratch_namespaces"] + ns["scratch_folders"])
     lines += [
         "",
-        f"Plus **{not_onboarded} researched sources** in `ingestion/register.yaml` that are not onboarded yet.",
+        f"Plus **{not_onboarded} researched sources** in the register that are not onboarded yet.",
         "",
         "## Platform",
         "",
