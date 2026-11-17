@@ -49,6 +49,8 @@ rules in [landing.md](landing.md); per-source routes in [sources.md](sources.md)
 - **Semantic layer** — metric definitions on Gold.
 - **Published** — small files under `06_published/v1/` (zohelo.com) and `06_published/v2/` (zohelo-bi); contract in [published.md](published.md).
 - **Demo** (phase 2) — sample enterprise data in namespaces demo_bronze, demo_silver, demo_gold (warehouse.yaml demo_namespaces); never in the public catalogue.
+  Sources: register family K in `ingestion/register/demo.yaml` (DM-001 …; the register's per-provider files are
+  read together with `ingestion/register.yaml` by `ingestion/common/register.py`).
 
 Today's Silver and Gold: the dbt project in `warehouse/models/` builds them for NBP,
 TERYT, PRG, World Bank WDI, Eurostat and GUS BDL (see [model.md](model.md), "Built").

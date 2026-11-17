@@ -189,3 +189,12 @@ that become catalogue KPIs; registers, geodata services, event feeds and unlicen
 | EX-003 | F | PSP fire-service statistics | true |
 | EX-004 | J | EPO Open Patent Services | false |
 | EX-005 | E | OpenData organisations | false |
+| DM-001 | K | AdventureWorks DW | false |
+| DM-002 | K | AdventureWorks OLTP | false |
+| DM-003 | K | Contoso V2 | false |
+| DM-004 | K | Wide World Importers | false |
+| DM-005 | K | SAP Datasphere samples | false |
+| DM-006 | K | Power BI department samples | false |
+| DM-007 | K | Oracle sample schemas | false |
+| DM-008 | K | Northwind | false |
+| DM-009 | K | Synthetic SME ledger | false |

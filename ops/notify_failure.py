@@ -32,12 +32,14 @@ import sys
 import requests
 import yaml
 
+from ingestion.common import register as register_files
+
 API = "https://api.github.com"
 LABEL = "alert"
 CANCELLED_BY_DESIGN = ("gold.publish",)  # a newer queued publish replaces an older queued one
 CONTINUE_ON_ERROR = "landing.extract"  # pipeline.yml: the extract legs continue on error
 REOPEN_DAYS = 14
-REGISTER = Path(__file__).resolve().parent.parent / "ingestion" / "register.yaml"
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def failed_jobs(session: requests.Session, repo: str, run_id: str) -> list[str]:
@@ -98,10 +100,9 @@ def recently_closed(issue: dict, now: datetime | None = None) -> bool:
     return (now or datetime.now(UTC)) - closed_at < timedelta(days=REOPEN_DAYS)
 
 
-def epic_key(source: str, register: Path = REGISTER) -> str | None:
+def epic_key(source: str, root: Path = ROOT) -> str | None:
     """Backlog key of the source's Epic: the register entry whose source_system is `source` -> data/src-<id lower>."""
-    entries = (yaml.safe_load(register.read_text()) or {}).get("sources") or []
-    for entry in entries:
+    for entry in register_files.entries(root):
         if entry.get("source_system") == source and entry.get("id"):
             return f"data/src-{str(entry['id']).lower()}"
     return None
@@ -198,7 +199,7 @@ def main(argv=None) -> int:
 
 
 def hidden_failure(failed: list[str]) -> bool:
-    """True when the run would end "success" despite the failures: every failed job is an extract leg,
+    """True when the run would end \"success\" despite the failures: every failed job is an extract leg,
     which continues on error. The scheduler's catch-up would then treat the slot as done, so this job
     fails to give the run its true conclusion; any other failed job already fails the run."""
     return bool(failed) and all(name.startswith(CONTINUE_ON_ERROR) for name in failed)
