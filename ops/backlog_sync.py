@@ -42,6 +42,7 @@ FILE_OPS = {"edit", "create", "delete"}
 BANNED = re.compile(r"(?<!\w)(investigate|consider|as needed|etc\.)(?!\w)", re.IGNORECASE)
 MAX_TASK_BYTES = 3000
 REGISTER = "ingestion/register.yaml"
+REGISTER_FOLDER = "ingestion/register"  # per-provider register files, read after register.yaml (no imports here)
 EPIC_FIELDS = ["key", "area", "title", "phase", "priority", "why", "outcome", "in_scope", "out_of_scope", "done_when"]
 TASK_FIELDS = [
     "key",
@@ -199,7 +200,7 @@ def contained(entry: dict) -> bool:
 LICENCE_EVIDENCE = "Terms:"  # how a reviewed entry's licence.notes records the provider's terms (stages.yaml, stage 1)
 
 
-def review_done(entry: dict) -> dict[str, str]:
+def review_done(entry: dict, register_file: str = REGISTER) -> dict[str, str]:
     """The stage-1 Tasks that the register entry itself shows as done, with the evidence line for the issue (#2907).
 
     A review is delivered as a register change, often many entries in one pull request, so the register is what
@@ -210,14 +211,14 @@ def review_done(entry: dict) -> dict[str, str]:
     if status in REVIEW_ONLY:
         return {}
     licence = entry.get("licence") if isinstance(entry.get("licence"), dict) else {}
-    proof = f"register entry {entry['id']} in {REGISTER} on main: status {status}, licence {licence.get('status')}"
+    proof = f"register entry {entry['id']} in {register_file} on main: status {status}, licence {licence.get('status')}"
     done = {"decide": proof}
     if LICENCE_EVIDENCE in str(licence.get("notes") or ""):
         done["licence"] = proof + f", licence.notes records the terms (`{LICENCE_EVIDENCE}`)"
     return done
 
 
-def source_epic(entry: dict, stages: list[dict]) -> dict:
+def source_epic(entry: dict, stages: list[dict], register_file: str = REGISTER) -> dict:
     """The Epic of a register entry without a hand-written file: stage 1 with its Tasks, and stage 2 with its Tasks
     once the entry is approved or later (registered, reviewing and parked entries get stage 1 only; owner #2230,
     Bug #2337).
@@ -233,11 +234,11 @@ def source_epic(entry: dict, stages: list[dict]) -> dict:
         # an importable fallback until the stage-2 declaration Task adds source_system to the register (#2337)
         "source_system": str(entry.get("source_system") or low.replace("-", "_")),
         "family_area": f"data/src-{str(entry['family']).lower()}",
-        "register_file": REGISTER,
+        "register_file": register_file,
     }
     status = str(entry.get("status") or "registered")
     last_stage = 1 if status in REVIEW_ONLY else 2
-    done = review_done(entry)
+    done = review_done(entry, register_file)
     deliverables = []
     for stage in stages:
         if stage.get("n") not in range(1, last_stage + 1):
@@ -283,13 +284,16 @@ def load_sources(plan: Plan, root: Path, read) -> None:
     """Add a generated Epic for every register entry that has no epics/src-<id lower>.yaml, except a parked entry
     whose data another loaded source holds (`contained`; docs/backlog.md §3; owner O36, 11 Nov: every source is
     onboarded, so every source keeps its issues; the sync closes the issues of a contained entry as not planned)."""
-    register = read(root / REGISTER)
     stages = read(root / ".github" / "backlog" / "stages.yaml")
-    entries = (register or {}).get("sources") if isinstance(register, dict) else None
-    if not entries or not isinstance(stages, dict):
+    registered = []
+    for path in [root / REGISTER, *sorted((root / REGISTER_FOLDER).glob("*.yaml"))]:
+        data = read(path)
+        file = path.relative_to(root).as_posix()
+        registered += [(file, entry) for entry in ((data or {}).get("sources") or [] if isinstance(data, dict) else [])]
+    if not registered or not isinstance(stages, dict):
         return
     files = {p.stem for p in (root / ".github" / "backlog" / "epics").glob("src-*.yaml")}
-    for entry in entries:
+    for register_file, entry in registered:
         ident = str(entry.get("id", "?"))
         if str(entry.get("status")) == "parked" and not contained(entry):
             plan.parked.add(f"data/src-{ident.lower()}")
@@ -301,7 +305,8 @@ def load_sources(plan: Plan, root: Path, read) -> None:
             plan.sources["no_family"].append(ident)
         else:
             plan.sources["generated"] += 1
-            plan.epics.append((str(root), f"{REGISTER} (generated)", source_epic(entry, stages.get("stages") or [])))
+            epic = source_epic(entry, stages.get("stages") or [], register_file)
+            plan.epics.append((str(root), f"{register_file} (generated)", epic))
 
 
 def check_epic(plan: Plan, root: str, file: str, epic: dict) -> None:
