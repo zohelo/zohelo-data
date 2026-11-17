@@ -611,8 +611,10 @@ REQUIRED = ("family", "kpi", "short_name")
 
 
 def register(files: list[Path]) -> list[str]:
-    """The source register (ingestion/register.yaml) and the source declarations agree."""
-    entries = yaml.safe_load((ROOT / "ingestion/register.yaml").read_text())["sources"]
+    """The source register (ingestion/register.yaml, ingestion/register/*.yaml) and the source declarations agree."""
+    from ingestion.common import register as register_files
+
+    entries = register_files.entries(ROOT)
     problems, ids = [], [e.get("id") for e in entries]
     problems += [f"register: duplicate id {i}" for i in sorted({i for i in ids if ids.count(i) > 1})]
     problems += [
