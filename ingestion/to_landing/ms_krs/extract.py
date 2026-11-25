@@ -5,7 +5,9 @@ ten digits); the API has no list of numbers, so the list comes from a source alr
 a time with a pause: register P (entrepreneurs) first and, when it answers 204 or 404 (no current extract there),
 register S (associations and other organisations); no extract in either is recorded as a number without a
 current extract (``http_status`` of the last answer), so it is not asked again every run. Many such answers in a
-row stop the run and are not kept: that is what a moved endpoint would look like.
+row are checked against a number that answered with an extract: if it still does, the endpoint works and the
+answers are kept (GLEIF lists KRS ids that are not KRS numbers, e.g. above the register's range); if it does not,
+the run stops and they are not kept, as a moved endpoint would look like that.
 
 Personal data: a full answer names board members, partners, proxies and liquidators (with PESEL). ``reduce``
 copies only the allowlisted entity-level fields into a new record; everything else, every section about
@@ -49,9 +51,10 @@ FLUSH_RECORDS = 500  # new records between Landing writes, so a failed run loses
 RETRY_WAITS = (10, 30)  # seconds before the second and third attempt
 RETRY_STATUSES = {408, 500, 502, 503, 504}  # 429 and 403 are refusals: the run stops
 NO_EXTRACT = {204, 404}  # the register holds no current extract of the number (P answers 204, S answers 404)
-NO_EXTRACT_RUN = 50  # numbers in a row without an extract that stop a run (about 1 in 4 has none)
+NO_EXTRACT_RUN = 50  # numbers in a row without an extract that need a check (about 1 in 4 has none)
 
-# The allowlist: reduced field → path in the answer below ``odpis``. Nothing else is kept.
+# The allowlist: reduced field → path in the answer below ``odpis``. Nothing else is kept. A branch of a foreign
+# entrepreneur (oddział przedsiębiorcy zagranicznego) has its entity data under other section names (FOREIGN).
 HEADER = {
     "register": "naglowekA.rejestr",
     "extract_kind": "rodzaj",
@@ -73,6 +76,10 @@ HEADER = {
     "share_capital": "dane.dzial1.kapital.wysokoscKapitaluZakladowego.wartosc",
     "share_capital_currency": "dane.dzial1.kapital.wysokoscKapitaluZakladowego.waluta",
 }
+FOREIGN = (
+    ("dane.dzial1.danePodmiotu.", "dane.dzial1.danePodmiotuZagranicznego."),
+    ("dane.dzial1.siedzibaIAdres.", "dane.dzial1.siedzibaIAdresPodmiotuZagranicznego."),
+)
 # Derived from allowlisted paths: codes of the main activity, and how many entries a status section holds
 # (and how many of them carry an end), never the entries themselves (they name liquidators and trustees).
 DERIVED = (
@@ -113,7 +120,11 @@ def reduce(krs: str, document: Any, requested_on: str) -> dict[str, Any]:
         raise ValueError(f"answer is not the extract of {krs}")
     record: dict[str, Any] = {"krs_number": krs, "requested_on": requested_on, "http_status": 200}
     for field, path in HEADER.items():
-        record[field] = _scalar(_at(odpis, path))
+        value = _scalar(_at(odpis, path))
+        for domestic, foreign in FOREIGN:
+            if value is None and path.startswith(domestic):
+                value = _scalar(_at(odpis, foreign + path[len(domestic) :]))
+        record[field] = value
     main = _items(_at(odpis, "dane.dzial3.przedmiotDzialalnosci.przedmiotPrzewazajacejDzialalnosci"))
     record["main_pkd"] = [
         ".".join(str(item.get(key) or "") for key in ("kodDzial", "kodKlasa", "kodPodklasa")) for item in main
@@ -318,6 +329,11 @@ def extract(
     landed, error, since_flush = 0, None, 0
 
     without: list[tuple[str, dict[str, Any] | None]] = []  # the current run of numbers without an extract
+    checks: list[dict[str, Any]] = []  # endpoint checks after NO_EXTRACT_RUN answers without an extract
+    # numbers to check the endpoint with: the one that last answered with an extract in this run, then the three
+    # highest held numbers with an extract (one of them may have been struck off since)
+    spare = sorted((krs for krs, r in held.items() if r.get("http_status") == 200), reverse=True)[:3]
+    canary: list[str | None] = [None]
 
     def ask(krs: str) -> None:
         record, outcome = api.extract(krs, requested_on)
@@ -327,14 +343,27 @@ def extract(
             without.append((krs, records.get(krs)))
         else:
             without.clear()
+            canary[0] = krs
         records[krs] = record
         if len(without) >= NO_EXTRACT_RUN:
+            check: dict[str, Any] = {"from": without[0][0], "to": without[-1][0], "asked": {}}
+            checks.append(check)
+            for number in dict.fromkeys(n for n in [canary[0], *spare] if n):
+                answer, outcome = api.extract(number, requested_on)
+                check["asked"][number] = outcome
+                if outcome != "none":  # the endpoint answers: these numbers have no current extract, kept
+                    parts[part_of(number)]["records"][number] = answer
+                    without.clear()
+                    return
             for number, previous in without:  # not kept: put back what was held before
                 if previous is None:
                     del parts[part_of(number)]["records"][number]
                 else:
                     parts[part_of(number)]["records"][number] = previous
-            raise Stop(f"{NO_EXTRACT_RUN} numbers in a row without an extract, from {without[0][0]}: not kept")
+            raise Stop(
+                f"{NO_EXTRACT_RUN} numbers in a row without an extract, from {without[0][0]}, and no check number "
+                f"answered with one ({', '.join(check['asked']) or 'none held'}): not kept"
+            )
 
     def flush() -> int:
         return sum(_land(client, bucket, part, landing_root) for part in parts.values())
@@ -356,6 +385,9 @@ def extract(
         for day in days:
             listed = api.bulletin(day) & set(held)
             again |= {krs for krs in listed if date.fromisoformat(held[krs]["requested_on"]) <= day}
+        # extracts reduced before the allowlist knew their layout (no name): asked again until they have one (#3196)
+        unnamed = {krs for krs, r in held.items() if r.get("http_status") == 200 and r.get("name") is None}
+        again |= unnamed
         settled = True
         for krs in sorted(again):
             if time.monotonic() > deadline:
@@ -369,7 +401,8 @@ def extract(
             {
                 "bulletin_days": [days[0].isoformat(), days[-1].isoformat()] if days else [],
                 "bulletin_days_unread": unread,
-                "listed_again": len(again),
+                "listed_again": len(again - unnamed),
+                "unnamed_again": len(unnamed),
                 "asked_again": sum(outcomes.values()),
                 "bulletin_settled": settled,
             }
@@ -399,6 +432,7 @@ def extract(
                 "no_current_extract": outcomes["none"],
             },
             "requests": api.requests,
+            "no_extract_checks": checks[-5:],
             "parts_landed": landed,
             "held_after": sum(len(part["records"]) for part in parts.values()),
             "seconds": round(time.monotonic() - started),

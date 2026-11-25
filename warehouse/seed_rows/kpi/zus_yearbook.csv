@@ -1,0 +1,2 @@
+kpi_key,name_en,name_pl,unit_key,subgroup_key,frequency_default,status,definition_en,definition_pl
+zus_contribution_payers,Contribution payers (ZUS),Płatnicy składek (ZUS),payers,labour.employment,A,draft,"Contribution payers with an active account in ZUS at 31 December (ZUS yearbook: active accounts).","Płatnicy składek z aktywnym kontem w ZUS, stan w dniu 31 grudnia (Rocznik statystyczny ZUS: konta aktywne)."

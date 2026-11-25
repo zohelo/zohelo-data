@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+xbrl_filings,CD-013,filings.xbrl.org: raporty roczne ESEF,filings.xbrl.org ESEF annual financial reports,XBRL International,registry,file,international-public,unresolved,https://filings.xbrl.org/
