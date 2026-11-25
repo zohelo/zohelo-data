@@ -397,13 +397,23 @@ def main(argv: list[str] | None = None) -> int:
 
 def _annotate_throttling(source: str, activity: str) -> None:
     """Storage requests R2 throttled in this activity (#2985): a notice when every one went through
-    after waiting, a warning when one was given up. Nothing when no request was throttled."""
+    after waiting, a warning when one was given up. Nothing when no request was throttled. Then the R2 Data
+    Catalog requests the activity sent, by kind (#3133)."""
     r2 = sys.modules.get("ingestion.common.r2")
     report = r2.THROTTLE.report() if r2 else {}
     if report:
         from ingestion.common.report import annotate
 
         annotate("warning" if report["gave_up"] else "notice", f"{source} {activity} storage throttling", report)
+    calls = dict(sorted(r2.CATALOG_CALLS.items())) if r2 else {}
+    if calls:  # R2 Data Catalog requests of this process (#3133); DuckDB's own are not counted
+        from ingestion.common.report import annotate, step_summary
+
+        summary = {"total": sum(calls.values()), **calls}
+        annotate("notice", f"{source} {activity} catalog calls", summary)
+        step_summary(
+            f"## {source} {activity} · R2 Data Catalog calls\n\n```json\n{json.dumps(summary, indent=2)}\n```\n"
+        )
 
 
 def _annotate_crash(source: str, activity: str, error: BaseException) -> None:
