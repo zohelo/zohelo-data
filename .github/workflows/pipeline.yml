@@ -334,7 +334,7 @@ jobs:
     needs: [plan, archive-prune, build-queue]
     if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.decision != 'covered' && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
     name: silver_gold.build
-    # One model build at a time (platform runs: the two scheduled builds a day and manual ones, #878, #3133). GitHub
+    # One model build at a time (platform runs: the weekly scheduled build and manual ones, #878, #3133, O46). GitHub
     # replaces a waiting job of this group when another arrives; build-queue lets a run in only while no build
     # waits, so that should not happen. If it does, the newer changed-only build still sees every change.
     concurrency:
@@ -410,12 +410,16 @@ jobs:
   gold-observations:
     # The per-block Gold load (warehouse/observations.py, docs/gold-coverage.md, D35), after the model build, the
     # publish and the index, so the geography map it reads is the newest and the published files do not wait for
-    # it. A source's own run `gold: observations` (a first load, with a filter) is one job; the platform's morning
+    # it. A source's own run `gold: observations` (a first load, with a filter) is one job; the platform's weekly
     # run is one job per source that has a load (the plan's observation_sources), one after another and without
     # a filter, so each only continues a load already started. A job that reaches its budget ends green with a
-    # warning and the next run continues.
+    # warning and the next run continues. The index is a need for the order only: its failure (R2 throttling, #2947)
+    # does not hold back a week of loads (O46); a failed build or publish does.
     needs: [plan, build-queue, silver-gold-build, gold-publish, serving-refresh-index]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.observations') }}"
+    if: >-
+      ${{ !cancelled() && needs.plan.result == 'success' && needs.build-queue.result != 'failure'
+      && needs.silver-gold-build.result != 'failure' && needs.gold-publish.result != 'failure'
+      && contains(fromJSON(needs.plan.outputs.activities), 'gold.observations') }}
     name: "gold.observations · ${{ matrix.source }}"
     strategy:
       fail-fast: false

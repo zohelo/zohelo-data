@@ -32,9 +32,13 @@ extraction:
   # term, one request per run (three-hourly, slower than the source): the slot at minute 5 is dispatched by the
   # scheduler's :17 pass, so the fetch lands about 20 minutes after the term and a late start still stays within
   # the term's hour (Dev probe 43336937240 saw hour 0 at 00:26). The 21:05 run also loads and builds the day.
-  schedule:
-    - {cron: "5 0,3,6,9,12,15,18 * * *", run: "landing: extract"}
-    - {cron: "5 21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; synop observations are hourly, the main synoptic terms are 00, 03, ..., 21 UTC. A snapshot after each main
+    # term, one request per run (three-hourly, slower than the source): the slot at minute 5 is dispatched by the
+    # scheduler's :17 pass, so the fetch lands about 20 minutes after the term and a late start still stays within
+    # the term's hour (Dev probe 43336937240 saw hour 0 at 00:26). The API keeps no history, so the snapshots stay
+    # eight a day; they accumulate in Landing and are loaded once a week (O46, weekly until production use; was the daily 21:05 full run)
+    - {cron: "5 0,3,6,9,12,15,18,21 * * *", run: "landing: extract"}
+    - {cron: "35 21 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/imgw_api/
 archive_policy:

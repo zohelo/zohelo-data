@@ -17,9 +17,11 @@ extraction:
   initial: api
   production: snapshot                  # each pass is a complete copy of the API's three-day window
   incremental_policy: changed_since_last  # station and sensor lists by SHA-256; one measurement pass per UTC day
-  schedule: # UTC; hourly values, the API keeps three days, so a daily pass loses nothing and revises each hour up to
-    # three times. 02:40 UTC (03:40 CET / 04:40 CEST): the previous local day is complete.
-    - {cron: "40 2 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; hourly values, the API keeps three days: the daily Landing pass stays (each pass is its own
+    # entity, so every pass is loaded later), 02:40 UTC (03:40 CET / 04:40 CEST) when the previous local
+    # day is complete; Bronze, Silver once a week (O46, weekly until production use; was the daily full run)
+    - {cron: "40 2 * * *", run: "landing: extract"}
+    - {cron: "10 3 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gios_air_quality/
 archive_policy:

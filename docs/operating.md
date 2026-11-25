@@ -31,16 +31,31 @@ whose YAML sets `extraction.kind` (for example `bulk_file`) runs the shared patt
 | `serving.refresh_index` | `portal/publish_index.py` | platform: rebuild the portal file index, after the publish of a platform run; skipped in a run whose model build is covered by another run, which refreshes the index after its build; refreshes run one at a time (concurrency group `zohelo-pipeline-index` with `queue: max`, so a waiting refresh is kept, not cancelled), and a bucket list page that R2 throttles (`ServiceUnavailable`, `SlowDown`) is read again after 15 to 240 s, at most 10 minutes of waiting per run, with a warning annotation (#2947); dbt temporary and backup tables (`__dbt_tmp`, `__dbt_backup`) are not shown, and listed tables that a concurrent `silver_gold.build` swaps away (not found again after one 15 s re-check of all misses) are skipped with a warning annotation and shown by the next refresh; more than 3 skipped tables or more than 10% of those listed fail the job (R2 answers the same 404 for a bad credential); any other error fails the job (#2825) |
 
 A Pipeline run is one activity or a source's `full dataflow: landing → bronze → silver → gold → portal`
-(owner direction 20 Oct, #875). **A source's run ends with Silver** (orchestrator order of 25 Nov, #3133): Landing,
-Bronze (entity sources such as Eurostat and GUS BDL write Silver with Bronze), archive and retention; the run name
-is kept so the declared schedules and the run history still match. **Gold is built twice a day by the platform**
-(`warehouse/warehouse.yaml` `schedule`): `silver/gold: build models, then gold observations` at 05:43 UTC and
-`silver/gold: build models` at 17:41 UTC. Each is the changed-only model build of every source whose inputs changed
-since the last build (dbt Silver and Gold models, semantic layer, data catalog), then the published files
-(gold.publish), then the portal index; the morning run then continues the per-block Gold load of every source that
-has one (gold.observations, one job per source, one after another, no filter). Gold and the published files are
-therefore at most about 12 hours behind Silver. Before 26 Nov every source run ended with its own model build, about
-30 builds a day and about 4,000 R2 Data Catalog operations each (1 million a month is free). Scheduled source runs are
+(owner direction 20 Oct, #875). **A source's run ends with Bronze, or with Silver for the sources whose loaders
+write Silver** (entity sources such as Eurostat and GUS BDL; orchestrator order of 25 Nov, #3133): Landing, Bronze,
+archive and retention. The run name still says "gold → portal" on purpose: the declared schedules, the scheduler's
+retry of a missed slot (#839) and the run history match runs by that name. **Schedules are weekly until production
+use (O46, owner decision of 25 Nov):** every source has at most one scheduled run a week that goes past Landing,
+spread over Monday to Saturday at different hours; a source whose producer keeps only a short window (news_feeds,
+GIOŚ air quality, the IMGW API) keeps a Landing-only `landing: extract` slot as often as before, and those copies
+accumulate in Landing and are loaded by the weekly run (Landing fetches make no R2 Data Catalog calls).
+`run.py schedule --check` refuses a source with two runs past Landing within any 7 days. **Gold is built once a week
+by the platform** (`warehouse/warehouse.yaml` `schedule`): `silver/gold: build models, then gold observations`,
+Sunday 09:41 UTC, after the week's source runs. It is the changed-only model build of every source whose inputs
+changed since the last build (dbt Silver and Gold models, semantic layer, data catalog), then the published files
+(gold.publish), then the portal index, then the per-block Gold load of every source that has one
+(gold.observations, one job per source, one after another, no filter; an index failure does not stop the loads, a
+failed build or publish does). Gold and the published files are therefore up to a week behind Silver. Consequences
+to know: **a failed platform build leaves Gold, the published files and the per-block loads a week old** until the
+next Sunday run or a manual `silver/gold: build models, then gold observations` dispatch of source `platform` (the
+alert issue says so); a source's own `gold: observations` run does not refresh the portal index, so its blocks show
+in the portal after the next platform run; GitHub keeps one waiting run per concurrency group and drops an older
+waiting one without notice, so a manual platform dispatch made while the long Sunday run holds
+`zohelo-pipeline-platform` can be dropped (dispatch it after that run ends); mf_biala_lista keeps the list of one
+day a week, the days between are not loaded. Before 26 Nov every source run ended with its own model build, about
+30 builds a day and about 4,000 R2 Data Catalog operations each (1 million a month is free); the weekly build is
+the measured cost to report on #3133 after the first cycle. A manual dispatch of any source or of the platform
+build stays possible. Scheduled source runs are
 full dataflow runs; a source's first per-block load is its own run `gold: observations` with a filter. An activity runs only when
 it is implemented and listed under `activities:` in `ingestion/sources/<source>.yaml`
 (platform activities: `warehouse/warehouse.yaml`, `portal/portal.yaml`). Activities are idempotent and resume from durable

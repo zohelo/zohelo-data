@@ -10,8 +10,9 @@ extraction:
   incremental_policy: changed_since_last # listing "last update" vs Landing version
   # UTC; daily 04:40 (05:40 Warsaw in winter). The initial load is done (25 Oct 2026); a run
   # renews each indicator's listing and lands only files whose last-update date is newer.
-  schedule: # UTC; release: no fixed calendar, indicators change on GUS publication dates; check on working days (GUS publishes Monday to Friday; #3133: was daily) 05:40 Warsaw (winter), 06:40 (summer)
-    - {cron: "40 4 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; release: no fixed calendar, indicators change on GUS publication dates; one run a week (O46, weekly until production use; was daily),
+    # Tuesday 05:40 Warsaw (winter), 06:40 (summer)
+    - {cron: "40 4 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
   # Indicators the website cannot serve, skipped with a reason (counted as indicators_excluded),
   # so a known failure does not fail every run; any other failing indicator still fails the run
   # and alerts. Remove an entry to try the indicator again.

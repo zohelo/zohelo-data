@@ -59,9 +59,11 @@ extraction:
   initial: bulk
   production: snapshot                  # each copy is the feed as served; copies accumulate in Bronze
   incremental_policy: changed_since_last  # SHA-256
-  schedule: # UTC; twice a day, before the platform's two model builds (05:43, 17:41) rebuild the topics (orchestrator
-    # order of 25 Nov, #3133: was every 3 hours); each run fetches each feed once
-    - {cron: "5 5,17 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; the feeds keep 20 hours to 6 days of items, so the Landing fetch stays twice a day (each copy
+    # is kept and loaded later; one request per feed); Bronze and Silver once a week, Saturday, after the
+    # evening fetch (O46, weekly until production use; was every 3 hours, full)
+    - {cron: "5 5,17 * * *", run: "landing: extract"}
+    - {cron: "35 17 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/news_feeds/
 archive_policy:

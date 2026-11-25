@@ -13,12 +13,12 @@ published_v2: true
 # latest.json period is newer than in the previously published latest.json (same source and frequency); the brief
 # stays for window_days after it was first detected. extreme: highest/lowest for at least extreme_min_periods observed values back.
 briefs: {window_days: 45, extreme_min_periods: 12, geographies: [PL, EU27]}
-# Declared schedules (UTC), dispatched by run.py schedule. Source runs end with Silver; Gold is built and published
-# twice a day for every source whose inputs changed since the last build (orchestrator order of 25 Nov, #3133: R2 Data
-# Catalog operations, about 30 builds a day before). The morning run then continues the per-block Gold loads.
+# Declared schedules (UTC), dispatched by run.py schedule. Source runs end with Bronze or Silver; Gold is built and
+# published once a week, Sunday, after the week's source runs (Monday to Saturday), for every source whose inputs
+# changed since the last build, then the per-block Gold loads continue (O46, weekly until production use; #3133: R2
+# Data Catalog operations, about 30 builds a day before).
 schedule:
-  - {cron: "43 5 * * *", run: "silver/gold: build models, then gold observations"}
-  - {cron: "41 17 * * *", run: "silver/gold: build models"}
+  - {cron: "41 9 * * 0", run: "silver/gold: build models, then gold observations"}
 
 # Transient catalog errors: a build whose failed models all failed on HTTP 429 from the R2 Data
 # Catalog or on Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped

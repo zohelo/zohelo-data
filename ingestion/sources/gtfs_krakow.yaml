@@ -26,8 +26,8 @@ extraction:
   initial: bulk
   production: snapshot                  # each file is the whole timetable of its window
   incremental_policy: changed_since_last  # SHA-256 of the download
-  schedule: # UTC; the portal marks the dataset daily; Monday and Thursday so no service day is lost even after one failed run
-    - {cron: "45 3 * * 1,4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; one run a week (O46, weekly until production use; was Monday and Thursday)
+    - {cron: "45 3 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gtfs_krakow/
 archive_policy:

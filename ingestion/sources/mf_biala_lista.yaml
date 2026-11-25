@@ -16,9 +16,9 @@ extraction:
   initial: bulk
   production: snapshot                    # each file is the complete list for its day
   incremental_policy: changed_since_last  # a new file every day
-  schedule:                               # UTC; once a day, 04:50/05:50 Warsaw: hours after the evening publish, so a
-    # late publish is still caught, and before the platform's morning model build (#3133: was two slots a day)
-    - {cron: "50 3 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; 04:50/05:50 Warsaw, hours after the evening publish; one run a week (O46, weekly until production use; was 23:50 and 05:50
+    # daily): the list of that day only, the days between are not kept
+    - {cron: "50 3 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/mf_biala_lista/
 archive_folder: 05_archive/mf_biala_lista/

@@ -63,7 +63,7 @@ WRITES = {
 
 # The full dataflow of a source ends with Silver (orchestrator order of 25 Nov, #3133: R2 Data Catalog operations):
 # the model build, the published files, the per-block Gold load and the portal index are platform runs, scheduled
-# twice a day in warehouse/warehouse.yaml. Its name is kept so the declared schedules and run history still match.
+# once a week in warehouse/warehouse.yaml (O46). Its name is kept so the declared schedules and run history still match.
 SOURCE_DATAFLOW = "full dataflow: landing → bronze → silver → gold → portal"
 MODELS_RUN = "silver/gold: build models"
 MODELS_AND_OBSERVATIONS_RUN = "silver/gold: build models, then gold observations"
@@ -85,7 +85,7 @@ RUNS = {
         "archive.prune",
     ],
     # Platform: the changed-only model build of every source whose inputs changed since the last build, the
-    # published files, then the portal index; the morning run also continues every source's per-block Gold load.
+    # published files, then the portal index; the weekly run (O46) also continues every source's per-block Gold load.
     MODELS_RUN: ["silver_gold.build", "gold.publish", "serving.refresh_index"],
     MODELS_AND_OBSERVATIONS_RUN: ["silver_gold.build", "gold.publish", "serving.refresh_index", "gold.observations"],
     "gold: publish": ["gold.publish"],
