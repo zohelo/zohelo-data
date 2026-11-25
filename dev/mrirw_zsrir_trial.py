@@ -27,11 +27,17 @@ from ingestion.to_landing.patterns import bulk_file
 SOURCE = "mrirw_zsrir"
 SCRATCH = "zz_dev_mrirw_zsrir"
 NOTES = {"left": 9}
-KPIS = {  # kpi: (measure key, bound) as in seed_rows/kpi_measure and tests/metrics_value_range.sql
-    "milk_purchase_price": ("mrirw_zsrir:purchase_prices:PLN_100KG:milk.raw_milk", 1000),
-    "pig_purchase_price": ("mrirw_zsrir:purchase_prices:PLN_KG_LW:pork.live_pigs", 30),
-    "wheat_purchase_price": ("mrirw_zsrir:purchase_prices:PLN_T:cereals.wheat_consumption", 5000),
+MEASURES = {  # kpi: measure key, as in seed_rows/kpi_measure/mrirw_zsrir.csv
+    "milk_purchase_price": "mrirw_zsrir:purchase_prices:PLN_100KG:milk.raw_milk",
+    "pig_purchase_price": "mrirw_zsrir:purchase_prices:PLN_KG_LW:pork.live_pigs",
+    "wheat_purchase_price": "mrirw_zsrir:purchase_prices:PLN_T:cereals.wheat_consumption",
 }
+
+
+def bounds() -> dict[str, tuple[float, float]]:
+    """{kpi: (min, max)} from warehouse/macros/value_range/mrirw_zsrir.sql (what metrics_value_range applies)."""
+    text = Path("warehouse/macros/value_range/mrirw_zsrir.sql").read_text()
+    return {k: (float(lo), float(hi)) for k, lo, hi in re.findall(r"\['(\w+)', '%', '([-0-9.e]+)', '([-0-9.e]+)'\]", text)}
 
 
 def note(title: str, data, level: str = "notice") -> None:
@@ -125,6 +131,10 @@ def trial(cat) -> None:
             "market", "product_code", "period_start", "frequency", "unit_code", "raw_sha256")) + " from silver_p"),
         "complete": q(con, render("warehouse/tests/mrirw_zsrir_prices_complete.sql",
                                   {"mrirw_zsrir_prices": "silver_p"}, {})),
+        "entities_in_silver": q(con, render("warehouse/tests/mrirw_zsrir_entities_in_silver.sql",
+                                            {"mrirw_zsrir_prices": "silver_p"}, {"mrirw_zsrir_cells": "bronze_b"})),
+        "accepted_market": one(con, "select count(*) from silver_p where market not in ('cereals', 'milk', 'pork')"),
+        "accepted_frequency": one(con, "select count(*) from silver_p where frequency <> 'M'"),
     }
     note("zsrir silver", {
         "rows_two_builds": rows, "tests": tests,
@@ -136,7 +146,9 @@ def trial(cat) -> None:
         "null_keys_sample": q(con, "select market, sheet_name, source_row, source_column, product_name, value_flag "
                                    "from silver_p where product_code is null or period_start is null or unit_code is "
                                    "null limit 8"),
-        "issue_labels": q(con, "select market, issue_label, count(*) from silver_p group by all")})
+        "issue_labels": q(con, "select market, issue_label, count(*) from silver_p group by all"),
+        "rows_by_market": q(con, "select market, count(*), count(value), min(period_start), max(period_start) "
+                                 "from silver_p group by 1 order by 1")})
 
     geo_cols = ("geography_key", "level_name", "name_pl")
     con.register("geo_a", cat.load_table(("gold", "dim_geography")).scan(selected_fields=geo_cols).to_arrow())
@@ -162,17 +174,26 @@ def trial(cat) -> None:
         "columns": [r[0] for r in con.execute("describe gold_t").fetchall()]})
 
     metrics = {}
-    for kpi, (key, bound) in KPIS.items():
+    limits = bounds()
+    for kpi, key in MEASURES.items():
+        lo, hi = limits[kpi]
         r = con.execute(
-            "select count(*), max(n), count(*) filter (where v < 0 or v > ?), min(date_key), max(date_key) from ("
+            "select count(*), max(n), count(*) filter (where v < ? or v > ?), min(date_key), max(date_key) from ("
             "select geography_key, date_key, count(*) n, max(value) v from gold_t where measure_key = ? group by all)",
-            [bound, key]).fetchone()
+            [lo, hi, key]).fetchone()
         metrics[kpi] = {"rows": r[0], "max_rows_per_area_period": r[1], "out_of_bound": r[2], "from": str(r[3]),
-                        "to": str(r[4])}
+                        "to": str(r[4]), "bound": [lo, hi]}
     note("zsrir gold spot values and metrics", {
         "metrics": metrics,
-        "latest_poland": q(con, "select measure_key, date_key, value from gold_t qualify rank() over (partition by "
-                                "measure_key order by date_key desc) = 1 order by 1"),
+        "latest_poland_as_shown": q(con, "select g.measure_codes, g.date_key, round(g.value, 4), b.number_format "
+                                         "from gold_t g join silver_p s on g.raw_sha256 = s.raw_sha256 and "
+                                         "g.measure_codes = s.market || '.' || s.product_code and g.date_key = "
+                                         "s.period_start join bronze_b b on b.raw_sha256 = s.raw_sha256 and "
+                                         "b.sheet_name = s.sheet_name and b.row_number = s.source_row and "
+                                         "b.column_number = s.source_column where g.measure_codes in "
+                                         "('milk.raw_milk', 'pork.live_pigs', 'cereals.wheat_consumption') "
+                                         "qualify rank() over (partition by g.measure_key order by g.date_key desc) "
+                                         "<= 2 order by 1, 2"),
         "spot": q(con, "select measure_key, date_key, value from gold_t where (measure_key like '%milk.raw_milk' and "
                        "date_key in ('2004-04-01', '2022-11-01', '2026-09-01')) or (measure_key like '%live_pigs' and "
                        "date_key in ('2022-01-01', '2026-09-01')) or (measure_key like '%wheat_consumption' and "
