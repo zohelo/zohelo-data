@@ -7,7 +7,7 @@ models:
       insured persons (Tabl. 9) by voivodeship, 31 December, Poland and the 16 voivodeships, 2009-2023. Grain:
       measure_code x area_name x period_year (each edition covers three years; editions do not overlap). Tables found by title, the
       table's half of a two-page spread by the title's column, values by the header's years; ZUS signs kept as
-      cell_status without a value. History and trial run: see ingestion/sources/zus_yearbook.yaml.
+      cell_status without a value. Dev trial 45708846339: 510 rows, 0 duplicate or null keys, no ZUS signs.
     tests:
       - unique:
           column_name: "concat_ws('|', measure_code, area_name, period_year)"
