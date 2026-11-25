@@ -1,6 +1,6 @@
 # ZUS social insurance statistical yearbook (`zus_yearbook`)
 
-**Built (16 Nov 2026, register PLS-010, #2464).** ZUS publishes "Rocznik Statystyczny Ubezpieczeń Społecznych" every
+**Built (16 Nov 2026, register PLS-010, #434).** ZUS publishes "Rocznik Statystyczny Ubezpieczeń Społecznych" every
 three years as one PDF per edition on
 https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych; there is no XLSX, CSV, API or
 dane.gov.pl copy (Dev probe 43326914693), and robots.txt of www.zus.pl allows every path. Route: the yearbook page and

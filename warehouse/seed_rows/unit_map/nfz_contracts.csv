@@ -1,0 +1,4 @@
+source_system,unit_code,measure_key_pattern,unit_key
+nfz_contracts,agreements,,agreements
+nfz_contracts,healthcare_providers,,healthcare_providers
+nfz_contracts,pln,,pln

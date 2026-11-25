@@ -26,6 +26,8 @@ archive_policy:
 bronze: [bronze.gdelt_timeline, bronze.gdelt_rejected_files]
 silver: [silver.topic_volume]
 gold: []
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  topic_volume: {rows: 50000}  # 35 topics × days since the first landing
 
 # Refresh policy for all layers (owner decision #875): some 70 small files a day; Silver rebuilt in full.
 refresh: {mode: full, decided: "#875"}

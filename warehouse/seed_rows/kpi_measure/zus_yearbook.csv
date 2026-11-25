@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+zus_contribution_payers,zus_yearbook,zus_yearbook:payers_voiv:payers:payers,"active contribution payers at 31 December, ZUS statistical yearbook, Poland and voivodeships",1,
+zus_insured_persons,zus_yearbook,zus_yearbook:insured_voiv:persons:insured,"persons insured in pension insurance at 31 December by the payer seat, ZUS statistical yearbook, Poland and voivodeships",2,
