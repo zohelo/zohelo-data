@@ -32,7 +32,7 @@ the same way.
 | News volume | GDELT 2.0 DOC API (CD-030): per topic query, daily article volume and tone in Polish-language and Poland-located coverage | topic, day, volume, normalised volume, tone | daily |
 | Public attention | Wikimedia pageviews REST API (CD-025): daily views of the Polish (and English) Wikipedia articles listed per topic | article, day, views | daily |
 
-As built (routes and terms in [sources.md](sources.md)): `news_feeds` (TP-001…TP-008, one register entry per
+As built (routes and terms in `docs/sources/<source_system>.md`): `news_feeds` (TP-001…TP-008, one register entry per
 outlet; PAP parked, its feed is behind bot protection), a full dataflow every 3 hours from 00:05 UTC that fetches,
 loads and rebuilds the topics, so the ranking follows the day; `wikimedia_pageviews` (CD-025, 04:10 UTC) and `gdelt`
 (CD-030, 04:30 UTC, best effort: GDELT refuses shared runner addresses for long stretches), both built from the seed

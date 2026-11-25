@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """World Bank GEM Landing: selected Global Economic Monitor series (API source 15) for the EU27 members.
 
-Route (docs/sources.md, World Bank GEM; decision of 12 Nov 2026: the World Bank API like world_bank_icp). The GEM
+Route (docs/sources/world_bank_gem.md; decision of 12 Nov 2026: the World Bank API like world_bank_icp). The GEM
 bulk file on DataBank (GemDataEXTR.zip) was last modified in March 2024 while the source was updated on
 2026-09-08, so it is stale; the API serves the current data. A request for every economy (``country/all``) or for
 several series at once does not finish (HTTP 524 after 300 s, Dev probes 43270092150, 43275104514, 43278796642),
