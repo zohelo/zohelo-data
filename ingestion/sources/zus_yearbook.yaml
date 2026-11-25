@@ -32,6 +32,6 @@ full_rebuild:   # model: {rows: ceiling} (owner policy #822)
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): five PDF editions of 2-8 MB, one new every three years, a few hundred Silver
 # rows; small, rebuilt in full.
-refresh: {mode: full, decided: "D32 + #2464"}
+refresh: {mode: full, decided: "D32 + #434"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -21,8 +21,12 @@ with lines as (
         entity as edition,
         page_number,
         line_number,
-        -- 'Tabl.' (any case) becomes a five-character marker, so a split keeps every column in place
-        regexp_replace(line_text, '[Tt][Aa][Bb][Ll]\.', '§§§§§', 'g') as line_text,
+        -- 'Tabl.' (any case) becomes a five-character marker, so a split keeps every column in place; the narrow and
+        -- fixed-width spaces of the newer editions (thousands separator U+2005, footnote gap U+2002) become one space
+        regexp_replace(
+            regexp_replace(line_text, '[\x{00A0}\x{2000}-\x{200A}\x{202F}]', ' ', 'g'),
+            '[Tt][Aa][Bb][Ll]\.', '§§§§§', 'g'
+        ) as line_text,
         raw_sha256,
         source_version
     from {{ source('zus_yearbook', 'zus_yearbook_lines') }}
@@ -36,7 +40,9 @@ marks as (
         l.page_number,
         l.line_number,
         length(array_to_string(list_slice(string_split(l.line_text, '§§§§§'), 1, s.k), '§§§§§')) + 1 as col,
-        string_split(l.line_text, '§§§§§')[s.k + 1] as after_mark
+        string_split(l.line_text, '§§§§§')[s.k + 1] as after_mark,
+        -- the table number; the English title repeats it under the Polish one (2021-2023 layout)
+        nullif(regexp_extract(string_split(l.line_text, '§§§§§')[s.k + 1], '^\s*([0-9]+)', 1), '') as table_number
     from lines as l,
         generate_series(1, len(string_split(l.line_text, '§§§§§')) - 1) as s (k)
 ),
@@ -47,6 +53,7 @@ titles as (
         page_number,
         line_number,
         col,
+        table_number,
         case
             when regexp_matches(after_mark, '^\s*[0-9]+\.?\s+(?i:płatnicy\s+według\s+województw)') then 'payers'
             when regexp_matches(after_mark, '^\s*[0-9]+\.?\s+(?i:ubezpieczeni\s+według\s+województw)') then 'insured'
@@ -54,8 +61,8 @@ titles as (
     from marks
 ),
 
--- the table's half and its lines: up to the next mark further right on the page, and the next mark in the same
--- half below the title
+-- the table's half and its lines: up to the next mark further right on the page, and the next mark of another table
+-- in the same half below the title
 bands as (
     select
         t.edition,
@@ -71,7 +78,7 @@ bands as (
             select min(m.line_number) from marks as m
             where
                 m.edition = t.edition and m.page_number = t.page_number and m.line_number > t.line_number
-                and abs(m.col - t.col) <= 20
+                and abs(m.col - t.col) <= 20 and m.table_number is distinct from t.table_number
         ), 100000) as line_to
     from titles as t
     where t.measure_code is not null
