@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_ulc_airports
+    description: >-
+      Build stage — ULC airport traffic (register PL-ENV-026): passengers handled and passenger flight operations in
+      regular and charter traffic per quarter, per Polish airport (breakdown airport = ICAO code, geography = the
+      airport's voivodeship) and for all listed airports (Poland, is_total). Values and units as published.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

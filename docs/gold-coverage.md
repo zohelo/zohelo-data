@@ -72,6 +72,21 @@ A **block** is the unit of rebuild: a Silver entity (Eurostat dataset, BDL subgr
 entities (DBW: the files of one block), or, for a source whose Silver is a dbt table, the table
 itself; a table too large for one block is split by an entity column first.
 
+**A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
+UNdata and UNECE so far) declares them in the
+builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
+build stage, because two tables of one source rarely share a shape. The block's Silver files are the
+table's current data files, taken from the table's file list, so the plan still reads metadata only.
+dbt writes new files whenever it rebuilds a table, so the block is rebuilt in Gold whenever the changed-only
+build rebuilt its Silver table, also when the rows came out the same (a rebuild after a change of shared
+code); for tables of this size that costs one read of the table. A declared table that is missing or holds
+no file stops the run: that is a fault of the build, never a block that left the source, and nothing is
+removed from Gold for it (with a handful of blocks the removal cap of D35 would not protect them). A model
+build of another run replaces a dbt table by drop and rename, so a table not found is read again every
+30 s for up to 9 minutes first, as `gold.publish` does (#2834). The
+load order needs no read for these sources. Whole tables as blocks hold up to the size one worker builds
+alone (WDI: about 9 M rows); a larger table gets an entity column and per-entity Silver files first.
+
 ### 3. Layout: four tables per source, one file per block
 
 | Table | One row is | Columns |
@@ -159,6 +174,31 @@ one. It is retried when its recipe changes.
   dimension slot with the most positions named like Polish areas in the block's own dictionary; the
   other dimensions are breakdowns, DBW's dimension and position ids as published. Detail:
   [sources.md](sources.md), GUS DBW.
+- **World Bank WDI.** `world_bank_wdi:wdi_observations:_Z:<indicator code>@A`: an indicator code is one
+  measure whole (WDI's codes for a sex or an age band are its own indicators), so no series has a
+  breakdown. The unit is not in the key (`_Z`): WDI states it in the indicator's name and in a metadata
+  field that is filled or corrected without the indicator changing. The unit code stays the metadata
+  field as published, else `as named`.
+- **OECD.** `oecd:oecd_cli:<UNIT_MEASURE>:<MEASURE>:<ADJUSTMENT>:<TRANSFORMATION>:<METHODOLOGY>@<FREQ>`:
+  every dimension of the dataflow other than the area and the frequency defines the measure.
+- **NBP.** `nbp:nbp_fx_rates:PLN:<table>:<mid|bid|ask>@D` with the currency as the breakdown;
+  `nbp:nbp_gold_fixings:PLN/g:price@D`. No area (`_Z`).
+- **BIS.** `bis:bis_observations:<UNIT_MEASURE>[*10^<UNIT_MULT>]:<selection>:<series codes>@<FREQ>`: the
+  series key as published without FREQ and the area (REF_AREA, or BORROWERS_CTY in the credit dataflows);
+  every other dimension defines the measure. The BIS aggregates (4T, 5R, 5A, G2, XW) stay `_X` with their code.
+- **ILOSTAT.** `ilostat:ilostat_observations:<unit>:<indicator>@<FREQ>` (unit `PC` for the `_RT` indicators);
+  sex, `classif1`, `classif2` and the survey (`source`) are breakdowns as published, so two surveys of one
+  area and period are two series, never one chosen value. ILO aggregates (`X01` …) stay `_X`.
+- **UNDP HDR.** `undp_hdr:undp_hdr_indices:_Z:<indicator>@A`: an indicator (column name without the year) is
+  one measure whole (`hdi_f`, `gii_rank` are the HDR's own indicators); unit `as named`. HDR groups and
+  regions (`ZZA` … `ZZJ`) stay `_X`.
+- **UNdata.** `undata:undata_syb_values:<unit>:<table>:<series>@A`: the Yearbook's series text is the measure
+  code, its last brackets the unit as published (`millions of US dollars`), else `as named`. M49 codes are
+  mapped by rule in `gold_undata_map.sql` (a country's M49 code is its ISO 3166-1 numeric code, through
+  alpha-3 to the country; the curated map's rows win); M49 regions stay `_X`.
+- **UNECE.** `unece:unece_observations:_Z:<table id>[:<codes>]@<freq>`: the value codes of every variable other
+  than the area define the measure; frequency from the period (`1990`, `2025Q2`, `2025M07`); unit `as named`
+  (the value labels). The UNECE groupings (CIS, CWG, EAEU, ECE, NA, ST7) stay `_X`.
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -191,6 +231,18 @@ rule-based build stages apply the rules the curated stages already apply:
   "Nie dotyczy") is not loaded, a non-zero number with such a sign is loaded as `flagged`; a value whose
   `id_tajnosci` is not 43 "Dane jawne" is loaded with status `confidential`; `id_flaga` gives
   `provisional`, `estimated`, `break`, `low_reliability` and `forecast` (30 "Prognoza").
+- World Bank WDI: an empty cell is not loaded; a year after the year of the archive's version is a
+  projection and is not loaded. OECD: a period without a number is not loaded; `OBS_STATUS` becomes the
+  status (`A` or none ok, `P`, `E`, `B`, `D`, `U`, `N`; any other code `flagged`, never silently ok), and
+  `F` (forecast) is not loaded. NBP: a rate a table does not publish (bid and ask in A and B, mid in C)
+  is no row; table B is published weekly and its days in between are not filled.
+- BIS: `NaN` (OBS_STATUS M) is no value; OBS_STATUS A/none ok, B, P, E; any other code `flagged`. ILOSTAT,
+  UNECE: a period that had not ended on the day of the file's version is a projection or an incomplete
+  period and is not loaded (the ILO aggregates carry years ahead). UNECE: a 0 in a series whose value labels
+  name no rate, growth, change, per cent or balance (an index, a level, an exchange rate) is a value below
+  the printed precision or a cell without a value and is not loaded, as in the curated stage; a rate of 0 is
+  kept. UNdata: a row footnoted as a projection is not loaded; footnotes give `definition_differs` or
+  `estimated` as in the curated stage. UNDP HDR: no flags, `ok`.
 
 **GUS BDL geography by code.** A BDL unit id carries the TERYT code of its area, so Poland, a
 voivodeship, a powiat and a gmina are mapped by that code through the map's rows of the 7-digit
