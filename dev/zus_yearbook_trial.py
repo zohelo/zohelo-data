@@ -161,7 +161,11 @@ def main(argv) -> int:
             "null_keys": one(f"select count(*) from {s} where edition is null or table_code is null or measure_code is null or unit_code is null or area_name is null or period_year is null or cell_status is null or raw_sha256 is null"),
             "not_accepted": one(f"select count(*) from {s} where area_name not in ({quoted}) or measure_code not in ('payers', 'insured') or table_code not in ('payers_voiv', 'insured_voiv') or cell_status not in ('ok', 'nil', 'missing', 'not_applicable')"),
             "cell_status": one(f"select string_agg(cell_status || '=' || c, ' ') from (select cell_status, count(*) c from {s} group by 1)"),
-            "non_numeric_values": one(f"select coalesce(string_agg(value_text || '=' || c, ' '), 'none') from (select value_text, count(*) c from {s} where not regexp_full_match(value_text, '[0-9]{{1,3}}( [0-9]{{3}})*') group by 1)"),
+            "non_numeric_values": one(f"select coalesce(string_agg(value_text || '=' || c, ' '), 'none') from (select value_text, count(*) c from {s} where not regexp_full_match(value_text, '[0-9]{{1,3}}( [0-9]{{3}})*|[0-9]+') group by 1)"),
+            "values_without_digit_group_spaces": one(f"select count(*) from {s} where regexp_full_match(value_text, '[0-9]{{4,}}')"),
+            "value_joined": one(f"select coalesce(string_agg(edition || ':' || measure_code || ':' || period_year || '=' || value_text, ' '), 'none') from {s} where value_joined"),
+            "area_basis": one(f"select string_agg(x, '; ' order by x) from (select measure_code || ':' || area_basis || ' ' || min(period_year) || '-' || max(period_year) x from {s} group by measure_code, area_basis)"),
+            "voivodeships_share_of_poland": one(f"select min(r) || '..' || max(r) from (select round(sum(value) filter (where area_name <> 'polska') / sum(value) filter (where area_name = 'polska'), 4) r from {s} group by measure_code, period_year)"),
             "zeros": one(f"select count(*) from {s} where value = 0"),
         })
         show(con, "silver per edition and measure",
@@ -206,9 +210,9 @@ def main(argv) -> int:
         })
         show(con, "gold Poland", "select measure_codes, period_label, value, unit_code, geography_key from build where geography_key = 'PL' order by 1, 2")
         ANNOTATE("notice", "zus_yearbook trial gold Poland spot values", {
-            m: one(f"select string_agg(period_label || '=' || cast(value as bigint), ' ' order by period_label) from build where geography_key = 'PL' and measure_codes = '{m}'")
+            m: one(f"select string_agg(period_label || '=' || cast(value as bigint), ' ' order by period_label) from build where geography_key = 'PL' and measure_codes like '{m}%'")
             for m in ("payers", "insured")
-        })
+        } | {"mazowieckie_2023": one("select string_agg(measure_codes || '=' || cast(value as bigint), ' ') from build where geography_source_code = 'mazowieckie' and period_label = '2023'")})
         lic = licence(con)
         print("LICENCE", lic, flush=True)
         ANNOTATE("notice", "zus_yearbook trial licence", lic)
