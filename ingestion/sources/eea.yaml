@@ -24,7 +24,10 @@ archive_policy:
   prune: report
 bronze: [bronze.eea_ghg_inventory, bronze.eea_rejected_files]
 silver: [silver.eea_ghg_inventory]
-gold: [gold.build_eea]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.eea_ghg_inventory by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table eea_ghg_inventory.
+gold: [gold.build_eea, gold.eea_observations, gold.eea_series, gold.eea_measures, gold.eea_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   eea_ghg_inventory: {rows: 1000000}  # 692,640: 33 areas × 9 pollutants × 166 sectors, 1990-2024 (Dev trial 43282453427); D32: one dataset replaced whole a few times a year
   poc_build_eea: {rows: 10000}  # 6,615: 27 countries × 7 sectors × 1990-2024, values only (Dev trial 43282453427)
@@ -34,4 +37,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # year and offers no changed-since filter; a new version replaces the entity and Silver is rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2424"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
