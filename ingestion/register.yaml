@@ -8611,7 +8611,8 @@ sources:
   name: ESEF annual financial reports via national OAMs
   short_name: ESEF annual reports
   provider: EU national Officially Appointed Mechanisms
-  status: approved
+  source_system: xbrl_filings
+  status: built
   family: I
   kpi: false
   geography: multicountry-Europe
@@ -8619,8 +8620,8 @@ sources:
   domains: [corporate-filings, company-fundamentals]
   entities: [issuer, annual-report, reported-fact]
   granularity: Annual financial report package, usually XHTML with inline XBRL facts and issuer-specific extensions.
-  coverage: The first Polish filing in filings.xbrl.org has period end 2021-12-31; 877 filings from the Polish source (PAP
-    Biznes) on its source page; the repository says it is not complete.
+  coverage: 876 Polish filings of 326 issuers through the API, period ends 2020-12-31 to 2024-03-31, added 2021-06-08 to
+    2024-07-30 (Dev trial 43838478762); the repository says it is not complete.
   access:
     endpoint: https://filings.xbrl.org/docs/api
     kind: api
