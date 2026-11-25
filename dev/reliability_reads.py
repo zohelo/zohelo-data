@@ -172,7 +172,7 @@ with b as (
         count(*) filter (where http_status = '200' and name is null) as ext_no_name,
         count(distinct krs_number) as numbers
     from {{ source('ms_krs', 'ms_krs_extracts') }}
-    group by all
+    group by entity, source_version, ingested_at
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
 ),
 s as (
@@ -189,7 +189,6 @@ KRS_ROWS = """
 select krs_number, http_status, register, extract_kind, name is null as name_null, source_version
 from {{ source('ms_krs', 'ms_krs_extracts') }}
 where http_status = '200' and (register is null or name is null)
-limit 20
 """
 
 KRS_VERSIONS = """
@@ -252,7 +251,29 @@ def eea() -> None:
     annotate("notice", "4 eea catalogue", out)
 
 
+ENTSOG_ROWS = """
+with f as (
+    select * from {{ ref('entsog_physical_flow') }} where point_key = 'ITP-00543' and direction_key = 'exit'
+)
+select a.period_from, a.period_to, a.value_kwh_d as v, a.flow_status as st, a.last_update_utc as upd,
+    a.tso_item_identifier as item, a.point_label, a.operator_label, a.id_point_type,
+    b.period_from as from_05, b.value_kwh_d as v_05, b.flow_status as st_05, b.tso_item_identifier as item_05,
+    b.last_update_utc as upd_05
+from f as a
+left join f as b on b.gas_day = a.gas_day and substr(b.period_from, 12, 2) = '05'
+where substr(a.period_from, 12, 2) = '07'
+order by a.period_from
+"""
+
+
 def main() -> int:
+    if os.environ.get("ONLY") or True:
+        steps = [
+            ("3a ms_krs parts", lambda: show("3a ms_krs Bronze newest vs Silver per part", KRS_PARTS)),
+            ("3b ms_krs rows", lambda: show("3b ms_krs extracts without register or name", KRS_ROWS)),
+            ("3f entsog rows", lambda: show("3f entsog ITP-00543 exit 07:00 records", ENTSOG_ROWS, 100)),
+        ]
+        return max((_run(n, s) for n, s in steps), default=0)
     steps = [
         ("1 gleif", gleif),
         ("2 ms_krs", krs),
@@ -271,6 +292,15 @@ def main() -> int:
             failed += 1
             annotate("error", f"{name} crashed", traceback.format_exc()[-1500:])
     return 1 if failed else 0
+
+
+def _run(name, step) -> int:
+    try:
+        step()
+        return 0
+    except Exception:
+        annotate("error", f"{name} crashed", traceback.format_exc()[-1500:])
+        return 1
 
 
 if __name__ == "__main__":
