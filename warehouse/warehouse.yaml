@@ -1,7 +1,9 @@
 # Warehouse activities the Pipeline may run (source "platform"); owner authorization.
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
 #   gold.publish          writes 06_published/v1/ from Gold (warehouse/publish.py)
-activities: [silver_gold.build, gold.publish]
+#   gold.observations     continues the per-block Gold load of every source that has one and authorizes it in its
+#                         own YAML (one job per source, warehouse/observations.py; a first load is the source's own run)
+activities: [silver_gold.build, gold.publish, gold.observations]
 
 # Published contract v2 for zohelo-bi (docs/published.md, "Published layer contract v2"): gold.publish writes
 # 06_published/v2/ (warehouse/publish_v2.py) after the v1 files; v1 is unchanged and zohelo.com reads v1 only.
@@ -11,10 +13,12 @@ published_v2: true
 # latest.json period is newer than in the previously published latest.json (same source and frequency); the brief
 # stays for window_days after it was first detected. extreme: highest/lowest for at least extreme_min_periods observed values back.
 briefs: {window_days: 45, extreme_min_periods: 12, geographies: [PL, EU27]}
-# Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
-# loads. Eurostat and BDL observations are not dbt models: their loaders write Silver (#875).
+# Declared schedules (UTC), dispatched by run.py schedule. Source runs end with Silver; Gold is built and published
+# twice a day for every source whose inputs changed since the last build (orchestrator order of 25 Nov, #3133: R2 Data
+# Catalog operations, about 30 builds a day before). The morning run then continues the per-block Gold loads.
 schedule:
-  - {cron: "30 7 * * *", run: "silver/gold: build models"}
+  - {cron: "43 5 * * *", run: "silver/gold: build models, then gold observations"}
+  - {cron: "41 17 * * *", run: "silver/gold: build models"}
 
 # Transient catalog errors: a build whose failed models all failed on HTTP 429 from the R2 Data
 # Catalog or on Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped

@@ -33,8 +33,8 @@ the same way.
 | Public attention | Wikimedia pageviews REST API (CD-025): daily views of the Polish (and English) Wikipedia articles listed per topic | article, day, views | daily |
 
 As built (routes and terms in [sources.md](sources.md)): `news_feeds` (TP-001…TP-008, one register entry per
-outlet; PAP parked, its feed is behind bot protection), a full dataflow every 3 hours from 00:05 UTC that fetches,
-loads and rebuilds the topics, so the ranking follows the day; `wikimedia_pageviews` (CD-025, 04:10 UTC) and `gdelt`
+outlet; PAP parked, its feed is behind bot protection), a full dataflow twice a day (05:05 and 17:05 UTC) that fetches
+and loads the feeds, before the platform's two model builds (05:43, 17:41 UTC) rebuild the topics (#3133: was every 3 hours); `wikimedia_pageviews` (CD-025, 04:10 UTC) and `gdelt`
 (CD-030, 04:30 UTC, best effort: GDELT refuses shared runner addresses for long stretches), both built from the seed
 `topic_signal.csv`, early so the day starts with yesterday's complete attention data; `release_calendars` (Eurostat
 euro indicators, GUS kalendarium, ECB; TP-010, TP-011, TP-014; 05:00 UTC, before the day's releases). NBP and

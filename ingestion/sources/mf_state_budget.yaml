@@ -29,8 +29,8 @@ extraction:
   initial: bulk
   production: snapshot                  # each report is cumulative year to date
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: # UTC; release: the monthly report appears about three weeks after the month; one file per year, unchanged bytes skipped; weekday check
-    - {cron: "35 13 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; release: the monthly report appears about three weeks after the month; one file per year, unchanged bytes skipped; checked Monday and Thursday (#3133: was every weekday)
+    - {cron: "35 13 * * 1,4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/mf_state_budget/
 archive_policy:

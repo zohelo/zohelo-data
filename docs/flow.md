@@ -30,7 +30,7 @@ The orchestrator session runs on **Opus 5.5** as product owner and DevOps lead.
 | 5 | Review | `flow:review` | an independent review agent that did not write the change: `data-quality-reviewer` (source and Gold), `publish-contract-reviewer` (published layer and its readers), `code-reviewer` (everything else), plus `ux-designer` for a change users see | verdict merge / merge after fixes / do not merge, with file:line findings |
 | 6 | Rework | `flow:rework` | the same builder, resumed with the findings | fixes pushed as follow-up commits, checks green; back to Review only if the reviewer asked for it or a blocker was fixed |
 | 7 | Merge | `merge:check` (on the PR) | orchestrator (O34: `check` green on the final head, no blockers, and the head SHA is the one the reviewer named) | merged; the owner is told what went in |
-| 8 | Verify | `flow:verify` | orchestrator; `clerk` extracts the run evidence | the next scheduled production run proves it (data), or the deploy and UI suite do (portal); then the issue closes |
+| 8 | Verify | `flow:verify` | orchestrator; `clerk` extracts the run evidence | the next scheduled production run proves it (data: the source's run for Landing to Silver, the next platform build at 05:43 or 17:41 UTC for Gold and the published files; docs/operating.md), or the deploy and UI suite do (portal); then the issue closes |
 | – | Owner | `flow:owner` | owner | business, legal, public, AGENTS.md and "Ask the owner first" items; at most three on the "where we are" page |
 
 ## Rules
@@ -134,6 +134,9 @@ and stale merges of a shared file were a review finding.
   its URLs in one run. Before dispatching, an agent counts the queued and running Dev runs
   (`gh api "repos/zohelo/zohelo-data/actions/runs?status=queued&per_page=50"`, the same with `in_progress`) and
   waits when four are in flight or any Pipeline run is queued: scheduled production runs go first.
+- **Gold twice a day (#3133):** source runs end with Silver; the platform builds and publishes Gold at 05:43 and
+  17:41 UTC. A builder does not dispatch extra `silver/gold: build models` runs to see a change in Gold sooner: each
+  build costs about 4,000 R2 Data Catalog operations, and 1 million a month is the free tier.
 - **Waiting is cheap, polling is not:** an agent that waits for a run checks it once a minute at most, and reads
   the annotations once, when the run has ended.
 - **One writer per shared file at merge time:** PRs that touch the same shared file merge one at a time; the next

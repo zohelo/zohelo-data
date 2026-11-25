@@ -20,8 +20,8 @@ extraction:
   initial: bulk
   production: snapshot                  # each workbook holds the complete series
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: # UTC; release: monthly, about six weeks after the month end; one small file, weekday check
-    - {cron: "45 13 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; release: monthly, about six weeks after the month end; one small file, checked Monday and Thursday (#3133: was every weekday)
+    - {cron: "45 13 * * 1,4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/mf_treasury_debt/
 archive_policy:

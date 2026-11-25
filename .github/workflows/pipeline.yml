@@ -17,7 +17,7 @@ on:
       source:
         # Free text, not a choice list: a list would need a line per source in this file. The plan job
         # refuses anything that is not ingestion/sources/<source>.yaml or platform (docs/source-registration.md).
-        description: "Source id: the file name in ingestion/sources/ without .yaml (e.g. eurostat, nbp); platform for silver/gold and serving"
+        description: "Source id: the file name in ingestion/sources/ without .yaml (e.g. eurostat, nbp); platform for silver/gold, publish and serving"
         required: true
         type: string
         default: eurostat
@@ -36,6 +36,7 @@ on:
           - "archive: apply retention"
           - "full dataflow: landing → bronze → silver → gold → portal"
           - "silver/gold: build models"
+          - "silver/gold: build models, then gold observations"
           - "gold: publish"
           - "gold: observations"
           - "serving: refresh portal index"
@@ -122,6 +123,7 @@ jobs:
     outputs:
       activities: ${{ steps.plan.outputs.activities }}
       extract_matrix: ${{ steps.plan.outputs.extract_matrix }}
+      observation_sources: ${{ steps.plan.outputs.observation_sources }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -157,6 +159,7 @@ jobs:
           echo "$plan"
           echo "activities=$(jq -c .activities <<<"$plan")" >> "$GITHUB_OUTPUT"
           echo "extract_matrix=$(jq -c .extract_matrix <<<"$plan")" >> "$GITHUB_OUTPUT"
+          echo "observation_sources=$(jq -c .observation_sources <<<"$plan")" >> "$GITHUB_OUTPUT"
           echo "::notice title=pipeline plan::$(jq -c '{source: env.SOURCE, run: env.RUN, activities}' <<<"$plan")"
 
   landing-inspect:
@@ -331,7 +334,7 @@ jobs:
     needs: [plan, archive-prune, build-queue]
     if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.decision != 'covered' && contains(fromJSON(needs.plan.outputs.activities), 'silver_gold.build') }}"
     name: silver_gold.build
-    # One model build at a time across all sources (each source's full dataflow ends with one, #878). GitHub
+    # One model build at a time (platform runs: the two scheduled builds a day and manual ones, #878, #3133). GitHub
     # replaces a waiting job of this group when another arrives; build-queue lets a run in only while no build
     # waits, so that should not happen. If it does, the newer changed-only build still sees every change.
     concurrency:
@@ -377,40 +380,16 @@ jobs:
           source: ${{ inputs.source }}
           activity: gold.publish
 
-  gold-observations:
-    # The source's per-block Gold load (warehouse/observations.py, docs/gold-coverage.md, D35): after the model
-    # build and the publish, so the geography map it reads is the newest and the published files do not wait
-    # for it. It runs in a covered run too (the tables it writes are the source's own). A run that reaches its
-    # budget ends green with a warning and the next run continues.
-    needs: [plan, archive-prune, build-queue, silver-gold-build, gold-publish]
-    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.observations') }}"
-    name: gold.observations
-    runs-on: ubuntu-24.04
-    timeout-minutes: 350
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-          # The newest main, not the run's start commit: the Gold SQL is part of every block's recipe, and a
-          # full dataflow can reach this job hours after it started (#2201).
-          ref: main
-      - uses: ./.github/actions/activity
-        with:
-          source: ${{ inputs.source }}
-          activity: gold.observations
-          filter: ${{ inputs.filter }}
-          budget-minutes: "300"
-
   serving-refresh-index:
-    needs: [plan, build-queue, gold-publish, gold-observations]
-    # Not in a run whose build is covered by another source's run: that run refreshes the index after its build.
-    # Covered runs of one scheduler batch refreshed it at the same time and failed on R2's limit of concurrent
-    # requests for one object (#2947).
+    needs: [plan, build-queue, gold-publish]
+    # Not in a run whose build is covered by another run: that run refreshes the index after its build. Covered
+    # runs of one scheduler batch refreshed it at the same time and failed on R2's limit of concurrent requests for
+    # one object (#2947).
     if: "${{ !cancelled() && !failure() && needs.build-queue.outputs.index != 'covered' && contains(fromJSON(needs.plan.outputs.activities), 'serving.refresh_index') }}"
     name: serving.refresh_index
-    # One refresh at a time for the runs that still refresh (covered by a platform run, or not covered).
-    # `queue: max` keeps every waiting job (up to 100) and runs them one after another; without it GitHub
-    # keeps one waiting job per group and cancels the older one, which would end its run cancelled (#2932).
+    # One refresh at a time. `queue: max` keeps every waiting job (up to 100) and runs them one after another;
+    # without it GitHub keeps one waiting job per group and cancels the older one, which would end its run
+    # cancelled (#2932).
     concurrency:
       group: zohelo-pipeline-index
       cancel-in-progress: false
@@ -421,13 +400,49 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-          # The newest main, not the run's start commit: a full dataflow can reach this job hours after
-          # it started, and building with that older code overwrote Gold v1 tables (#2201).
+          # The newest main, not the run's start commit (#2201).
           ref: main
       - uses: ./.github/actions/activity
         with:
           source: ${{ inputs.source }}
           activity: serving.refresh_index
+
+  gold-observations:
+    # The per-block Gold load (warehouse/observations.py, docs/gold-coverage.md, D35), after the model build, the
+    # publish and the index, so the geography map it reads is the newest and the published files do not wait for
+    # it. A source's own run `gold: observations` (a first load, with a filter) is one job; the platform's morning
+    # run is one job per source that has a load (the plan's observation_sources), one after another and without
+    # a filter, so each only continues a load already started. A job that reaches its budget ends green with a
+    # warning and the next run continues.
+    needs: [plan, build-queue, silver-gold-build, gold-publish, serving-refresh-index]
+    if: "${{ !cancelled() && !failure() && contains(fromJSON(needs.plan.outputs.activities), 'gold.observations') }}"
+    name: "gold.observations · ${{ matrix.source }}"
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        source: ${{ fromJSON(needs.plan.outputs.observation_sources) }}
+    # One writer of a source's Gold tables: the platform run and a source's own run never load at the same time.
+    concurrency:
+      group: zohelo-pipeline-observations
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          # The newest main, not the run's start commit: the Gold SQL is part of every block's recipe, and a
+          # run can reach this job hours after it started (#2201).
+          ref: main
+      - uses: ./.github/actions/activity
+        with:
+          source: ${{ matrix.source }}
+          activity: gold.observations
+          # In a platform run the filter is the model build's dbt selector, not block ids.
+          filter: ${{ inputs.source != 'platform' && inputs.filter || '' }}
+          budget-minutes: "300"
 
   notify:
     # A failed or cancelled run opens (or comments on) an `alert` issue, so the owner gets an

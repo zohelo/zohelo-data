@@ -59,9 +59,9 @@ extraction:
   initial: bulk
   production: snapshot                  # each copy is the feed as served; copies accumulate in Bronze
   incremental_policy: changed_since_last  # SHA-256
-  schedule: # UTC; every 3 hours the full dataflow fetches each feed once, loads it and rebuilds the topics, so the
-    # ranking follows the day (11 Nov; the build rebuilds only the topic models that changed)
-    - {cron: "5 0,3,6,9,12,15,18,21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; twice a day, before the platform's two model builds (05:43, 17:41) rebuild the topics (orchestrator
+    # order of 25 Nov, #3133: was every 3 hours); each run fetches each feed once
+    - {cron: "5 5,17 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/news_feeds/
 archive_policy:

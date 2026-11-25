@@ -344,10 +344,10 @@ Per source, one number the portal can show:
 ### 11. Running in production
 
 The Pipeline activity `gold.observations` (authorized per source in its `activities:`) runs the
-builder for the source; [operating.md](operating.md) has the run rules. It is the last data step of
-the source's full dataflow, after the model build and the publish, so a new block version reaches
-Gold in the run that loaded it, and it is its own run `gold: observations` for a first load or a
-catch-up.
+builder for the source; [operating.md](operating.md) has the run rules. It is the last step of the
+platform's morning run (`silver/gold: build models, then gold observations`, 05:43 UTC; one job per source,
+after the model build and the publish), so a new block version reaches Gold by the next morning (#3133: source
+runs end with Silver), and it is the source's own run `gold: observations` for a first load or a catch-up.
 
 - **Budget and resuming.** A run builds within its time budget (300 minutes of a 350-minute job),
   commits finished blocks every 200 blocks or 10 minutes, and ends green with a warning when blocks
