@@ -1,9 +1,10 @@
 -- zus_yearbook: every measure has all 17 areas (Poland and the 16 voivodeships) in every year between its first and
--- last year, with a value, and the 16 voivodeships add up exactly to Poland (they do in every edition: each payer and
--- each insured person is assigned to the voivodeship of the payer's seat). A title that stops matching in a new
--- edition, a row that no longer gives one value per year (the Silver model then yields nothing for it), a lost half
--- of a two-page spread or a value read from the wrong column fails here instead of thinning or bending the series.
--- One test per Silver model, reading only that model.
+-- last year, with a value, and the 16 voivodeships add up to between 95 % and 100 % of Poland (exactly 100 % in the
+-- 2009-2011 edition, 96.9-99.6 % from 2012: the tables leave some payers and persons in no voivodeship; Dev trial
+-- 45706080697). A title that stops matching in a new edition, a row that no longer gives one value per year (the
+-- Silver model then yields nothing for it), a lost half of a two-page spread or a value read from the wrong column
+-- or with a lost digit group fails here instead of thinning or bending the series. One test per Silver model,
+-- reading only that model.
 with t as (
     select * from {{ ref('zus_yearbook_tables') }}
 ),
@@ -36,4 +37,4 @@ select
     c.voivodeships
 from periods as p
 left join counts as c on p.measure_code = c.measure_code and p.period_year = c.period_year
-where coalesce(c.n, 0) <> 17 or c.poland is distinct from c.voivodeships
+where coalesce(c.n, 0) <> 17 or not coalesce(c.voivodeships between 0.95 * c.poland and c.poland, false)

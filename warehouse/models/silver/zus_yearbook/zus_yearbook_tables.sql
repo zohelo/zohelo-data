@@ -4,15 +4,18 @@
    Tables, found by title, never by page number:
      payers_voiv   "Tabl. 8. Płatnicy według województw. Stan w dniu 31 grudnia": active contribution payers (accounts)
      insured_voiv  "Tabl. 9. Ubezpieczeni według województw. Stan w dniu 31 grudnia": persons insured in old-age and
-                   disability pension insurance, assigned to the voivodeship of the payer's seat
-   Layout: the table occupies one half of a page (newer editions print two pages on one PDF page, so a line holds
-   both halves); its half runs from the title's column to the next title further right on the page, its lines from
-   the title to the next title below it. The header line gives the three years; every area row is the area name
-   (Polska and the 16 voivodeships, as printed, footnote letters dropped) followed by exactly one value per year.
-   Values are split on runs of two or more spaces; a value is digits in groups of three separated by one space, or
-   a ZUS sign ('-' or '–' nothing, '.' no data, 'x' not applicable): signs are kept as cell_status with no value,
-   never 0. A row whose value count differs from the year count yields nothing (tests/zus_yearbook_tables_complete.sql
-   then fails). The Polska row prints its values on the following line ("POLAND ..."). #}
+                   disability pension insurance; area_basis from the table's footnote: the payer's seat (editions
+                   2009-2011) or the insured person's registered residence (from 2012-2014)
+   From 2012 the voivodeships add up to 97-100 % of Poland (persons and payers the table assigns to no voivodeship).
+   Layout: the table occupies one half of a page (the 2021-2023 edition prints two pages on one PDF page, so a line
+   holds both halves); its half runs from the title's column to the next title further right on the page, its lines
+   from the title to the next title of another table below it (the English title repeats the number). The header
+   line gives the three years; every area row is the area name (Polska and the 16 voivodeships, as printed, footnote
+   letters dropped) followed by exactly one value per year. Values are split on runs of two or more spaces; a value
+   is digits in groups of three separated by one space, digits without spaces (2015-2017 edition), or a ZUS sign
+   ('-' or '–' nothing, '.' no data, 'x' not applicable): signs are kept as cell_status with no value, never 0
+   (none occur in 2009-2023). A row whose value count differs from the year count yields nothing
+   (tests/zus_yearbook_tables_complete.sql then fails). #}
 {% set areas = ['polska', 'dolnośląskie', 'kujawsko-pomorskie', 'lubelskie', 'lubuskie', 'łódzkie', 'małopolskie',
     'mazowieckie', 'opolskie', 'podkarpackie', 'podlaskie', 'pomorskie', 'śląskie', 'świętokrzyskie',
     'warmińsko-mazurskie', 'wielkopolskie', 'zachodniopomorskie'] %}
@@ -150,7 +153,34 @@ area_rows as (
     from parsed as p
 ),
 
--- the Polska row may print its values on the next line of the region (after the English name)
+-- the line after each area row (the Polska row is followed by the English "POLAND")
+with_next as (
+    select
+        a.*,
+        (
+            select min_by(n.tokens, n.line_number) from parsed as n
+            where
+                n.edition = a.edition and n.measure_code = a.measure_code and n.page_number = a.page_number
+                and n.line_number between a.line_number + 1 and a.line_number + 2 and len(n.tokens) > 0
+                and n.word not in {{ areas | replace('[', '(') | replace(']', ')') }}
+        ) as next_tokens
+    from area_rows as a
+    where a.area_name = 'polska'
+),
+
+polska_next as (
+    select
+        *,
+        len(next_tokens) = 1 and regexp_full_match(next_tokens[1], '[0-9]{1,3}')
+        and len(tokens) > 0 and regexp_full_match(tokens[1], '[0-9]{4,}') as joined
+    from with_next
+),
+
+-- The Polska row prints its values either on its own line or on the "POLAND" line below it. The 2015-2017 edition's
+-- text layer prints them on the Polska line without digit-group spaces and moves the leading digit group of the
+-- first year alone to the "POLAND" line ("392685 ..." / "2" for 2 392 685): that group is put back only when the
+-- "POLAND" line holds exactly one group of 1-3 digits and the first value has 4 or more digits without a space;
+-- tests/zus_yearbook_tables_complete.sql bounds Poland by the sum of the voivodeships.
 rows_with_values as (
     select
         a.edition,
@@ -159,19 +189,36 @@ rows_with_values as (
         a.line_number,
         a.area_name,
         case
+            when len(a.tokens) > 0 and coalesce(w.joined, false)
+                then list_concat([w.next_tokens[1] || a.tokens[1]], list_slice(a.tokens, 2, len(a.tokens)))
             when len(a.tokens) > 0 then a.tokens
-            else (
-                select min_by(n.tokens, n.line_number) from parsed as n
-                where
-                    n.edition = a.edition and n.measure_code = a.measure_code and n.page_number = a.page_number
-                    and n.line_number between a.line_number + 1 and a.line_number + 2 and len(n.tokens) > 0
-                    and n.word not in {{ areas | replace('[', '(') | replace(']', ')') }}
-            )
+            else w.next_tokens
         end as tokens,
+        coalesce(w.joined, false) as value_joined,
         a.raw_sha256,
         a.source_version
     from area_rows as a
+    left join polska_next as w
+        on
+            a.edition = w.edition and a.measure_code = w.measure_code and a.page_number = w.page_number
+            and a.line_number = w.line_number
     where a.area_name is not null
+),
+
+-- how the table assigns persons to voivodeships, from its footnote: the payer's seat (2009-2011 editions) or the
+-- insured person's registered residence (from 2012-2014); the payers table states no rule
+basis as (
+    select
+        edition,
+        measure_code,
+        page_number,
+        case
+            when measure_code = 'payers' then 'not_stated'
+            when bool_or(regexp_matches(lower(text), 'siedzib\w*\s+płatnik')) then 'payer_seat'
+            when bool_or(regexp_matches(lower(text), 'miejsca\s+zameldowania')) then 'residence'
+        end as area_basis
+    from region
+    group by edition, measure_code, page_number
 ),
 
 cells as (
@@ -183,16 +230,22 @@ cells as (
         r.area_name,
         y.years[s.k] as period_year,
         r.tokens[s.k] as value_text,
+        r.value_joined and s.k = 1 as value_joined,
+        b.area_basis,
         r.raw_sha256,
         r.source_version
     from rows_with_values as r
     inner join years as y
-        on r.edition = y.edition and r.measure_code = y.measure_code and r.page_number = y.page_number,
+        on r.edition = y.edition and r.measure_code = y.measure_code and r.page_number = y.page_number
+    inner join basis as b
+        on r.edition = b.edition and r.measure_code = b.measure_code and r.page_number = b.page_number,
         generate_series(1, len(y.years)) as s (k)
     where
         len(r.tokens) = len(y.years)
         and list_bool_and(
-            list_transform(r.tokens, lambda x: regexp_matches(x, '^([0-9]{1,3}( [0-9]{3})*|[-–.x])$'))  -- noqa: RF02
+            list_transform(
+                r.tokens, lambda x: regexp_matches(x, '^([0-9]{1,3}( [0-9]{3})*|[0-9]+|[-–.x])$')  -- noqa: RF02
+            )
         )
 )
 
@@ -203,6 +256,7 @@ select
     measure_code,
     case measure_code when 'payers' then 'payers' else 'persons' end as unit_code,
     area_name,
+    area_basis,
     period_year,
     value_text,
     case
@@ -216,6 +270,7 @@ select
         when value_text = 'x' then 'not_applicable'
         else 'ok'
     end as cell_status,
+    value_joined,
     page_number,
     line_number,
     source_version,
