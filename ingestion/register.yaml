@@ -2520,7 +2520,9 @@ sources:
   name: Rocznik Statystyczny Ubezpieczeń Społecznych
   short_name: ZUS social insurance yearbook
   provider: Zakład Ubezpieczeń Społecznych (ZUS)
-  status: approved
+  source_system: zus_yearbook
+  current: true
+  status: built
   family: B
   kpi: true
   geography: Poland and regional breakdowns, edition-dependent
@@ -2537,8 +2539,11 @@ sources:
     cost: free
     limits: Unknown.
   licence:
-    status: open-conditional
-    notes: 'Terms: ZUS re-use terms
+    status: unresolved
+    notes: 'Terms not stated for the yearbook page or in the PDF editions (no re-use statement in the 2009-2011 and
+      2021-2023 front matter, Dev trial 43856643415), as for psz.zus.pl (review of #2846): the ZUS re-use terms cover
+      information on its BIP and dane.gov.pl, and the yearbook page www.zus.pl/baza-wiedzy is neither. Earlier reading,
+      kept for the owner: ZUS re-use terms
       https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
       everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
       names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
@@ -2558,8 +2563,16 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
+    - 'Built (#434): the PDF editions 2009-2011 to 2021-2023 landed whole (ingestion/to_landing/zus_yearbook), their
+      text layer in Bronze line by line (pypdf layout mode), Silver tables found by title: contribution payers (Tabl.
+      8) and insured persons (Tabl. 9) by voivodeship at 31 December, 2009-2023. No XLSX, CSV or dane.gov.pl copy of
+      the yearbook was found (Dev probe 43326914693); psz.zus.pl has insured persons and payers by voivodeship only
+      for the current year''s quarters, so the annual history is not contained in zus_psz. robots.txt of www.zus.pl:
+      "User-Agent: *", empty "Disallow:" (Dev trial 43856643415). Not built: the pension tables by voivodeship
+      (Tabl. 37 (59) of 2021-2023; their numbers break apart in the layout text of the 2009-2011 edition), finance,
+      benefits, medical certification and rehabilitation tables.'
     - 'Dev probe 43087698750: the yearbook page offers PDF editions only (1999-2002 to 2021-2023), no XLSX or CSV; the same figures are on the ZUS statistical portal (PLS-009) as XLSX. Build from PLS-009; PDF table extraction not planned.'
     - Verify downloadable formats and earliest edition
     references:
@@ -3658,7 +3671,8 @@ sources:
   name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
   short_name: MRiRW ZSRIR market information
   provider: Ministerstwo Rolnictwa i Rozwoju Wsi
-  status: approved
+  source_system: mrirw_zsrir
+  status: built
   family: B
   kpi: true
   geography: Poland and macroregions/markets, commodity-dependent
@@ -3669,15 +3683,19 @@ sources:
     market bulletin.
   coverage: Legacy bulletin archive plus new portal from 2025; exact starts differ by commodity.
   access:
-    endpoint: https://www.gov.pl/web/rolnictwo/biuletyny-informacyjne
+    endpoint: https://zsrir.minrol.gov.pl/api/ZsrirData/GetReportFileList?id=<report>
     kind: bulk_file
     interfaces: [HTML, PDF, XLSX]
-    auth: Public bulletins; new portal access conditions require review.
+    auth: Public; the portal's report list and file download need no sign-in (other endpoints answer 401).
     cost: free
-    limits: Unknown.
+    limits: None stated; one request at a time.
   licence:
-    status: open-conditional
-    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    status: unresolved
+    notes: 'Terms: the site read, zsrir.minrol.gov.pl, states no terms of use; each workbook only says "PUBLIKOWANIE
+      DANYCH POCHODZĄCYCH Z RAPORTU MOŻLIWE JEST WYŁĄCZNIE Z PODANIEM ŹRÓDŁA" (publishing data from the report is
+      allowed only with the source named; Dev trial 45705794335, milk workbook row 34), which names no commercial reuse
+      or modification terms, so the status is unresolved and the source stays internal (#2484). Earlier reading of the
+      gov.pl pages, which do not cover the portal: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
       https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
       (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
       attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
@@ -3695,10 +3713,10 @@ sources:
     overlap: KOWR republishes/analyses ZSRIR market data; do not treat both as independent observations.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Dev probes 43087126643 and 43087698750: the new ZSRIR portal (zsrir.minrol.gov.pl) fails TLS certificate verification from GitHub runners (unable to get local issuer certificate); TLS checks are never disabled, so it is unreachable until its certificate chain is fixed. The legacy gov.pl market bulletins (rynek-zboz, rynek-mleka, ...) point to dane.gov.pl.'
+    - 'Route found (Dev probes 43813028487 to 43856647230 on test/zsrir, 16 Nov 2026): zsrir.minrol.gov.pl sends its leaf certificate without the intermediate (Certum DV TLS G2 R39 CA); with the CA''s own published intermediate added to certifi''s roots the chain verifies to Certum Trusted Root CA, verification on. The portal''s public endpoints list and serve every bulletin (XLSX and PDF) since August 2024; the legacy gov.pl market pages point to dane.gov.pl, which does not answer runners. The portal states no terms of use.'
     - Open new portal technical/terms pages
     - Inventory structured export
     - Resolve series breaks in 2025 migration
@@ -6193,7 +6211,8 @@ sources:
   name: 'Public Data API: synoptic, hydrological, meteorological and warning feeds'
   short_name: IMGW public data API
   provider: Instytut Meteorologii i Gospodarki Wodnej–PIB (IMGW-PIB)
-  status: approved
+  source_system: imgw_api
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6210,13 +6229,18 @@ sources:
     cost: Generally free under stated reuse conditions.
     limits: None published on the API page.
   licence:
-    status: open-conditional
-    notes: 'Terms: IMGW data-sharing rules ("Regulamin udostępniania danych", section on https://danepubliczne.imgw.pl/apiinfo
-      (page read 11 Nov 2026 from a GitHub runner)): "Każdemu przysługuje prawo do ponownego wykorzystania informacji sektora
-      publicznego" (everyone may re-use the public sector information), data are offered through https://danepubliczne.imgw.pl/
-      and www.meteo.imgw.pl. The existing note records that commercial reuse is possible with attribution: keep "Źródło: Instytut
-      Meteorologii i Gospodarki Wodnej - Państwowy Instytut Badawczy" and mark processed values as processed; re-read the
-      regulation attribution clause when writing the declaration.'
+    status: unresolved
+    notes: 'Terms: IMGW-PIB "Regulamin udostępniania danych" on https://danepubliczne.imgw.pl/apiinfo (read 13 Nov 2026 from
+      a GitHub runner, Dev probe 43336937240); it covers the data offered through https://danepubliczne.imgw.pl/ (API
+      and file archive alike, §1). §1: "Każdemu przysługuje prawo do ponownego wykorzystania informacji sektora
+      publicznego". §5: "Korzystający może używać nieodpłatnie udostępnionych danych do celów prywatnych, a w przypadku
+      danych o wysokiej wartości w każdym celu" (free use for private purposes, for high-value data for any purpose);
+      use for business activity ("cel działalności gospodarczej", including publication on websites with advertising,
+      §2) needs an agreement under §3 unless the data are high-value data (Regulation (EU) 2023/138). Attribution (§5):
+      "Źródłem pochodzenia danych jest Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy";
+      processed data also "Dane Instytutu Meteorologii i Gospodarki Wodnej – Państwowego Instytutu Badawczego zostały
+      przetworzone". The page does not say which of its datasets are high-value data, so reuse beyond private purposes
+      is not established from the page: unresolved (internal) until the owner reads it (#2959).'
   updates: Observations/warnings refresh operationally; endpoint-specific cadence unknown.
   ingestion:
     history: 'Current-state endpoints only (the API has no history): https://danepubliczne.imgw.pl/api/data/synop (hourly
@@ -6232,6 +6256,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Owner: may IMGW synoptic observations (archive files and API) be treated as high-value datasets under Regulation
+      (EU) 2023/138, so that §5 of the IMGW Regulamin allows their reuse for any purpose with the attribution sentence
+      (licence then open-conditional), or should zohelo ask IMGW (biznes@imgw.pl)?'
     - Confirm endpoint schemas, retention, timestamps, quotas and attribution wording.
     references:
     - https://danepubliczne.imgw.pl/apiinfo
@@ -6239,7 +6266,8 @@ sources:
   name: Public observational file archive
   short_name: IMGW observation archive
   provider: IMGW-PIB
-  status: approved
+  source_system: imgw_archive
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6256,10 +6284,18 @@ sources:
     cost: Generally free under IMGW reuse rules.
     limits: Unknown; no bulk-download rate policy was confirmed.
   licence:
-    status: open-conditional
-    notes: 'Terms: same IMGW rules as PL-ENV-008 (https://danepubliczne.imgw.pl/apiinfo): "Każdemu przysługuje prawo do ponownego
-      wykorzystania informacji sektora publicznego". Attribution as in PL-ENV-008; verify the clause covers every archive
-      sub-product.'
+    status: unresolved
+    notes: 'Terms: IMGW-PIB "Regulamin udostępniania danych" on https://danepubliczne.imgw.pl/apiinfo (read 13 Nov 2026 from
+      a GitHub runner, Dev probe 43336937240); it covers the data offered through https://danepubliczne.imgw.pl/ (API
+      and file archive alike, §1). §1: "Każdemu przysługuje prawo do ponownego wykorzystania informacji sektora
+      publicznego". §5: "Korzystający może używać nieodpłatnie udostępnionych danych do celów prywatnych, a w przypadku
+      danych o wysokiej wartości w każdym celu" (free use for private purposes, for high-value data for any purpose);
+      use for business activity ("cel działalności gospodarczej", including publication on websites with advertising,
+      §2) needs an agreement under §3 unless the data are high-value data (Regulation (EU) 2023/138). Attribution (§5):
+      "Źródłem pochodzenia danych jest Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy";
+      processed data also "Dane Instytutu Meteorologii i Gospodarki Wodnej – Państwowego Instytutu Badawczego zostały
+      przetworzone". The page does not say which of its datasets are high-value data, so reuse beyond private purposes
+      is not established from the page: unresolved (internal) until the owner reads it (#2959).'
   updates: Files appear in period-based directories; publication lag and revisions are series-specific.
   ingestion:
     history: 'Directory listing with dane_aktynometryczne/, dane_hydrologiczne/ and dane_meteorologiczne/ (zipped per year/period;
@@ -6274,6 +6310,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Owner: may IMGW synoptic observations (archive files and API) be treated as high-value datasets under Regulation
+      (EU) 2023/138, so that §5 of the IMGW Regulamin allows their reuse for any purpose with the attribution sentence
+      (licence then open-conditional), or should zohelo ask IMGW (biznes@imgw.pl)?'
     - Establish per-series years, format dictionaries and revision policy.
     references:
     - https://danepubliczne.imgw.pl/apiinfo
@@ -7747,7 +7786,8 @@ sources:
   name: internet.gov.pl broadband coverage database and UKE market aggregates
   short_name: internet.gov.pl broadband
   provider: Ministerstwo Cyfryzacji / Instytut Łączności–PIB; UKE for market reports
-  status: approved
+  source_system: internet_gov_broadband
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -7815,7 +7855,7 @@ sources:
     incremental: 'Entity = edition (reference quarter) x report file; version = the reference date printed in the report (the
       attachment''s Last-Modified as a check). Each quarter adds a new set; an already loaded edition is fetched again only
       when its bytes change (snapshot, changed_since_last). Whether earlier editions are ever revised is not known. Refresh
-      full (small source). Schedule: monthly check around the 20th, new seed row in January, April, July and October.'
+      full (small source). Schedule: quarterly, the 20th of January, April, July and October, with a new seed row each quarter.'
     identifiers: 'Reference quarter; TERC code in the section headers of the voivodeship PDFs ("TERC: 16" voivodeship, "TERC:
       1601" powiat, "TERC: 1601011" gmina); voivodeship name in the national tables; bandwidth class in Mb/s; medium; service
       type. No address-point identifiers are published.'
@@ -8590,7 +8630,8 @@ sources:
   name: ESEF annual financial reports via national OAMs
   short_name: ESEF annual reports
   provider: EU national Officially Appointed Mechanisms
-  status: approved
+  source_system: xbrl_filings
+  status: built
   family: I
   kpi: false
   geography: multicountry-Europe
@@ -8598,8 +8639,8 @@ sources:
   domains: [corporate-filings, company-fundamentals]
   entities: [issuer, annual-report, reported-fact]
   granularity: Annual financial report package, usually XHTML with inline XBRL facts and issuer-specific extensions.
-  coverage: The first Polish filing in filings.xbrl.org has period end 2021-12-31; 877 filings from the Polish source (PAP
-    Biznes) on its source page; the repository says it is not complete.
+  coverage: 876 Polish filings of 326 issuers through the API, period ends 2020-12-31 to 2024-03-31, added 2021-06-08 to
+    2024-07-30 (Dev trial 43838478762); the repository says it is not complete.
   access:
     endpoint: https://filings.xbrl.org/docs/api
     kind: api

@@ -400,14 +400,24 @@ RECEIPTS_REPORTED = 1000  # receipt reads in one activity at or above which the 
 
 def _annotate_throttling(source: str, activity: str) -> None:
     """Storage requests R2 throttled in this activity (#2985): a notice when every one went through
-    after waiting, a warning when one was given up. Nothing when no request was throttled. Then the Landing
-    receipts read from R2 and from memory, for an activity that read many (#3133)."""
+    after waiting, a warning when one was given up. Nothing when no request was throttled. Then the R2 Data
+    Catalog requests the activity sent, by kind, and the Landing receipts read from R2 and from memory, for an
+    activity that read many (#3133)."""
     r2 = sys.modules.get("ingestion.common.r2")
     report = r2.THROTTLE.report() if r2 else {}
     if report:
         from ingestion.common.report import annotate
 
         annotate("warning" if report["gave_up"] else "notice", f"{source} {activity} storage throttling", report)
+    calls = dict(sorted(r2.CATALOG_CALLS.items())) if r2 else {}
+    if calls:  # R2 Data Catalog requests of this process (#3133); DuckDB's own are not counted
+        from ingestion.common.report import annotate, step_summary
+
+        summary = {"total": sum(calls.values()), **calls}
+        annotate("notice", f"{source} {activity} catalog calls", summary)
+        step_summary(
+            f"## {source} {activity} · R2 Data Catalog calls\n\n```json\n{json.dumps(summary, indent=2)}\n```\n"
+        )
     reads = dict(r2.RECEIPT_READS) if r2 else {}
     if sum(reads.values()) >= RECEIPTS_REPORTED:  # Landing receipts read once per process (#3133)
         from ingestion.common.report import annotate

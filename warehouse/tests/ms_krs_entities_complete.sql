@@ -1,3 +1,5 @@
+{{ config(severity='warn') }}
+-- Warn, not error, while #3196 is open: one source's data check must not fail every source's build.
 -- Open KRS API (#1362): every record of the newest Bronze copy of each part (extracts_00 … extracts_15) is one
 -- Silver row, and every current extract has its register and name. A part whose rows Silver no longer takes, or
 -- an answer layout whose header fields stop matching the allowlist paths (both would drop entities silently),

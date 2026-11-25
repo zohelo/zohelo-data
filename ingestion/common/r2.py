@@ -384,6 +384,47 @@ CATALOG_RETRY = {"total": 5, "other": 0, "backoff_factor": 2, "status_forcelist"
 CATALOG_OPEN_DELAYS = (5, 20)
 
 
+# R2 Data Catalog operations are billed per request beyond 1 million a month (#3133). Every request this process
+# sends through catalog() is counted by kind; run.py annotates the counts per activity. A request urllib3 repeats
+# after a 429 or 5xx counts once; DuckDB's own catalog requests (dbt builds, ATTACH ... TYPE iceberg) are not seen.
+CATALOG_CALLS: dict[str, int] = {}
+_catalog_calls_lock = threading.Lock()
+_TABLE_PATH = re.compile(r"/namespaces/[^/]+/tables/[^/]+$")
+
+
+def _catalog_call(kind: str) -> None:
+    with _catalog_calls_lock:
+        CATALOG_CALLS[kind] = CATALOG_CALLS.get(kind, 0) + 1
+
+
+def catalog_call_kind(method: str, path: str) -> str:
+    """A catalog request's kind, from its method and URL path (Iceberg REST spec)."""
+    path = path.split("?", 1)[0].rstrip("/")
+    if _TABLE_PATH.search(path):
+        return {"GET": "load_table", "HEAD": "table_exists", "POST": "commit", "DELETE": "drop_table"}.get(
+            method, f"{method} table"
+        )
+    if path.endswith("/tables"):
+        return {"GET": "list_tables", "POST": "create_table"}.get(method, f"{method} tables")
+    if path.endswith("/namespaces"):
+        return {"GET": "list_namespaces", "POST": "create_namespace"}.get(method, f"{method} namespaces")
+    if path.endswith("/transactions/commit"):
+        return "commit_transaction"
+    if path.endswith("/tables/rename"):
+        return "rename_table"
+    if path.endswith("/config"):
+        return "config"
+    if path.endswith("/oauth/tokens"):
+        return "token"
+    return f"{method} other"
+
+
+def _count_catalog_response(response, *args, **kwargs):
+    from urllib.parse import urlsplit
+
+    _catalog_call(catalog_call_kind(response.request.method or "", urlsplit(response.request.url or "").path))
+
+
 def catalog():
     """The R2 Data Catalog (Apache Iceberg REST) holding bronze, silver and gold."""
     import time
@@ -408,13 +449,16 @@ def catalog():
                     "s3.retry-strategy-impl": "ingestion.common.s3_retry.R2S3RetryStrategy",
                 },
             )
+            _catalog_call("config")  # the constructor's GET /v1/config, sent before the hook below exists
             break
         except (requests.ConnectionError, requests.Timeout):
+            _catalog_call("config")
             if attempt == len(CATALOG_OPEN_DELAYS):
                 raise
             time.sleep(CATALOG_OPEN_DELAYS[attempt])
     retry = Retry(allowed_methods=frozenset({"GET", "HEAD"}), raise_on_status=False, **CATALOG_RETRY)
     cat._session.mount("https://", HTTPAdapter(max_retries=retry))
+    cat._session.hooks.setdefault("response", []).append(_count_catalog_response)
     return cat
 
 
