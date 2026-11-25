@@ -3,10 +3,20 @@
    silver.zus_yearbook_tables. One block per yearbook table, one measure_key per measure, frequency A only (stocks at
    31 December, date_key = 1 January of the year as for every annual fact):
      payers_voiv   active contribution payers (accounts), unit payers
-     insured_voiv  persons insured in old-age and disability pension insurance, by the payer's seat, unit persons
+     insured_voiv  persons insured in old-age and disability pension insurance, unit persons; one measure per rule
+                   that assigns persons to voivodeships (area_basis: the payer's seat in 2009-2011, the registered
+                   residence from 2012), so the change of rule is a new series, not a jump in one
    The area is the voivodeship name or 'polska', mapped in poc_map_geography (TERYT names). Cells with a ZUS sign
    instead of a number (cell_status other than 'ok') carry no value and are not loaded. #}
-with geo as (
+with s as (
+    select
+        *,
+        measure_code || case when area_basis in ('payer_seat', 'residence') then ':' || area_basis else '' end
+            as measure_codes
+    from {{ ref('zus_yearbook_tables') }}
+),
+
+geo as (
     select
         source_code,
         geography_key
@@ -21,12 +31,13 @@ select
         when 'payers_voiv' then 'ZUS yearbook: contribution payers by voivodeship, 31 December'
         when 'insured_voiv' then 'ZUS yearbook: insured persons by voivodeship, 31 December'
     end as block_name,
-    'zus_yearbook:' || s.table_code || ':' || s.unit_code || ':' || s.measure_code as measure_key,
-    case s.measure_code
+    'zus_yearbook:' || s.table_code || ':' || s.unit_code || ':' || s.measure_codes as measure_key,
+    case s.measure_codes
         when 'payers' then 'Contribution payers (active accounts) in ZUS, 31 December'
-        when 'insured' then 'Persons insured in ZUS pension insurance, by payer seat, 31 December'
+        when 'insured:payer_seat' then 'Persons insured in ZUS pension insurance, by payer seat, 31 December'
+        when 'insured:residence' then 'Persons insured in ZUS pension insurance, by residence, 31 December'
     end as measure_name,
-    s.measure_code as measure_codes,
+    s.measure_codes,
     s.unit_code,
     case s.unit_code
         when 'payers' then 'contribution payers'
@@ -45,6 +56,6 @@ select
     'ok' as observation_status_key,
     s.source_version,
     s.raw_sha256
-from {{ ref('zus_yearbook_tables') }} as s
+from s
 left join geo as g on s.area_name = g.source_code
 where s.cell_status = 'ok'
