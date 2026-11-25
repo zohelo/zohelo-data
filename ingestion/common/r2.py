@@ -217,8 +217,42 @@ def head_sha256(client, bucket: str, keys: list[str]) -> dict[str, str]:
         return dict(pool.map(head, keys))
 
 
+# ----------------------------------------------------------------------------- Landing receipts
+# A Landing receipt is written once and never changed (docs/landing.md: Landing is never overwritten), and every
+# reader GETs all of a source's receipts (#3133: GUS BDL about 40,000, read 8 to 11 times per run, most of the R2
+# Class B bill). Within one process each receipt is read from R2 once; later readers get the same bytes.
+RECEIPT_SUFFIX = ".receipt.json"
+_receipts: dict[tuple[str, str], bytes] = {}
+_receipts_lock = threading.Lock()
+RECEIPT_READS = {"from_storage": 0, "from_memory": 0}
+
+
+def read_receipt(client, bucket: str, key: str, fetch=None) -> bytes:
+    """The bytes of a Landing receipt, from R2 at most once per process. ``fetch`` reads it when it is not held
+    (default: get_with_backoff's own GET); any other key is read every time."""
+    if not key.endswith(RECEIPT_SUFFIX):
+        return fetch() if fetch else _get_with_backoff(client, bucket, key)
+    with _receipts_lock:
+        body = _receipts.get((bucket, key))
+        if body is not None:
+            RECEIPT_READS["from_memory"] += 1
+            return body
+    body = fetch() if fetch else _get_with_backoff(client, bucket, key)
+    with _receipts_lock:
+        _receipts[(bucket, key)] = body
+        RECEIPT_READS["from_storage"] += 1
+    return body
+
+
 def get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
-    """GET an object, waiting out R2 throttling (ServiceUnavailable / SlowDown) with backoff."""
+    """GET an object, waiting out R2 throttling (ServiceUnavailable / SlowDown) with backoff. A Landing receipt
+    is read from R2 once per process (read_receipt)."""
+    if key.endswith(RECEIPT_SUFFIX):
+        return read_receipt(client, bucket, key, lambda: _get_with_backoff(client, bucket, key, attempts))
+    return _get_with_backoff(client, bucket, key, attempts)
+
+
+def _get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
     import time
 
     from botocore.exceptions import ClientError
