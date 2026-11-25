@@ -23,6 +23,7 @@ their printed shares of all address points. No share is calculated. KPIs (draft)
 `broadband_100mbps_points`, `broadband_gigabit_points`, `broadband_no_coverage_share`. Schedule: quarterly, the
 20th of January, April, July and October (06:40 UTC), like the report; a new seed row is followed by one run
 dispatched by hand. Quarterly only: the report prints no annual figure, and none is derived.
+Dev trial 45705348125 (25 Nov 2026): 10 files, 14,941,344 bytes; 1,810 Bronze cells (181 per edition), 0 rejected; Silver 520 rows, reference dates 30 June 2024 to 30 September 2026; Gold 440 rows; a second Landing, Bronze and dbt run changed nothing.
 Licence: `unresolved` (gov.pl terms say nothing about attached files), so the source stays internal.
 Left out: the report's tables by medium, kind of service and investment plans; the voivodeship PDFs (about 255 MB per
 edition); the UKE annual market report.

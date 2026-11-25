@@ -49,8 +49,8 @@ bronze: [bronze.internet_gov_broadband_cells, bronze.internet_gov_broadband_reje
 silver: [silver.internet_gov_broadband_coverage]
 gold: [gold.build_internet_gov_broadband]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  internet_gov_broadband_coverage: {rows: 800}  # 520 rows, 10 editions x 52 (Dev trial TRIALRUN)
-  poc_build_internet_gov_broadband: {rows: 700}  # 440 rows, 10 quarters x 44 (Dev trial TRIALRUN)
+  internet_gov_broadband_coverage: {rows: 800}  # 520 rows, 10 editions x 52 (Dev trial 45705348125, 25 Nov 2026)
+  poc_build_internet_gov_broadband: {rows: 700}  # 440 rows, 10 quarters x 44 (Dev trial 45705348125, 25 Nov 2026)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): ten PDF files of about 1.4 MB, one new a quarter, 181 Bronze cells per
