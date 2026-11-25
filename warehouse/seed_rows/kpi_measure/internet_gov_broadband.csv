@@ -1,0 +1,5 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+broadband_coverage_points,internet_gov_broadband,internet_gov_broadband:coverage:address_points:covered,"internet.gov.pl report, end of quarter, Poland and voivodeships",1,
+broadband_100mbps_points,internet_gov_broadband,internet_gov_broadband:coverage:address_points:covered_100plus,"internet.gov.pl report, bandwidth classes from 100 Mb/s summed, Poland",1,
+broadband_gigabit_points,internet_gov_broadband,internet_gov_broadband:coverage:address_points:covered_1000plus,"internet.gov.pl report, bandwidth classes from 1000 Mb/s summed, Poland",1,
+broadband_no_coverage_share,internet_gov_broadband,internet_gov_broadband:coverage:pct:no_coverage_share,"internet.gov.pl report, printed share of all address points, Poland",1,
