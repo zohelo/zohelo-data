@@ -1,0 +1,27 @@
+version: 2
+sources:
+- name: eurostat
+  description: Eurostat data distributions from the bulk download (Files API); Comext excluded
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/eurostat/
+    loaded_by: ingestion/to_bronze/eurostat/
+    config: ingestion/sources/eurostat.yaml
+  tables:
+  - name: eurostat_observations
+    description: >-
+      One row per series × period as published (Eurostat .tsv.gz), newest Landing version
+      of every dataset, one file per dataset (design #875); partitioned by dataset_id. value_text is the source lexeme
+      (numbers, ':' for not available, '' for empty), status_code the flag; series_key
+      holds the codes in the order of series_dimensions. Cast values in Silver.
+  - name: eurostat_rejected_files
+    description: Landing files the Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).
+  - name: eurostat_structure_items
+    description: >-
+      SDMX structure metadata per dataset as published (dataflow, data structure and its
+      components, concept schemes, code lists and codes), one row per artefact or item;
+      names, descriptions and annotations as JSON by language. Code lists repeat across
+      datasets; partitioned by dataset_id.
+  - name: eurostat_structure_rejected_files
+    description: Structure messages the decoder rejected, with the reason.

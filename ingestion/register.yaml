@@ -1785,70 +1785,88 @@ sources:
   name: Climate Data Store (CDS)
   short_name: Copernicus Climate Data Store
   provider: Copernicus Climate Change Service / ECMWF
-  status: reviewing
+  status: approved
   family: G
   kpi: true
   geography: worldwide
   provider_type: international-public
   domains: [climate, weather, reanalysis, projections]
   entities: [grid-cell, station, country-derived]
-  granularity: Dataset grid/level/variable/time/member; often hourly and gridded.
-  coverage: Earth past, present and projections; ERA5 pressure-level time series is documented from 1940-present; other datasets
-    differ.
+  granularity: 'Route chosen: ERA5 0.25-degree reanalysis aggregated by the World Bank Climate Change Knowledge Portal (CCKP)
+    to countries (ISO3) and first-level sub-national units, per variable and month (also seasonal and annual). The CDS itself
+    serves gridded fields (dataset/grid/level/variable/time/member).'
+  coverage: 'CCKP ERA5 country series: monthly 1950-01 to 2024-12 (900 values for Poland, Dev probe run 43831903004); 246
+    countries and territories in one all-countries answer. CDS ERA5-Land monthly: 1950 to 2026-10 (catalogue, 12 Nov 2026).'
   access:
-    endpoint: https://cds.climate.copernicus.eu/api
+    endpoint: https://cckpapi.worldbank.org/cckp/v1/era5-x0.25_timeseries_tas_timeseries_monthly_1950-2024_mean_historical_era5_x0.25_mean/POL?_format=json
     kind: api
-    interfaces: [HTML, API, GRIB, NetCDF, cloud workspace]
-    auth: registration, personal access token, and manual acceptance of each dataset's terms on its page
+    interfaces: [REST API, JSON, XLS, NetCDF on S3]
+    auth: none
     cost: free
-    limits: 'No numeric quota on the how-to page. ECMWF forum (2019, may be outdated): "For ERA5 monthly data on the CDS,
-      a request is limited to 10,000 fields"; requests are queued and limits are adjusted with system load.'
+    limits: 'None published on the pages read. The World Bank data-catalogue API answered HTTP 429 to the first metadata
+      request of the probe (datacatalogapi.worldbank.org/ddhxext/DatasetView), so pace requests: one at a time, several
+      seconds apart, bounded retries honouring Retry-After. A full load is about 2 variables x 2 aggregations x (1 all-countries
+      request + 1 sub-national request for Poland) = 8 requests.'
   licence:
     status: open-conditional
-    notes: 'Terms: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ for Copernicus Products in the Climate Data Store
-      since 2 July 2025 (ECMWF announcement https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464,
-      replacing the Licence to Use Copernicus Products): reuse, modification and commercial use allowed with attribution and
-      indication of changes; non-Copernicus datasets in the CDS keep their own licence, shown on each dataset page and accepted
-      per dataset with the personal token. Disclaimer to show: neither the European Commission nor ECMWF is responsible for
-      any use made of the information. Attribution: "Generated using Copernicus Climate Change Service information <year>"
-      ("Contains modified Copernicus Climate Change Service information <year>" when modified), plus the dataset''s citation
-      from its References section.'
-  updates: 'Per dataset. ERA5-Land monthly averaged data: "Monthly with a delay of 2-3 months relatively to the actual date";
-    the catalogue showed data to 2026-10-01 on 12 Nov 2026.'
+    notes: 'Terms: World Bank Data Catalog page of the dataset "Climate Change Knowledge Portal: Observed Climate Data, ERA5
+      0.25 degree", https://datacatalog.worldbank.org/search/dataset/0065626/climate-change-knowledge-portal-observed-climate-data-era5-0-25-degree
+      (desk fetch 16 Nov 2026): "License: Creative Commons Attribution 4.0" and "This dataset is licensed under Creative
+      Commons Attribution 4.0". Commercial reuse and modification: allowed with attribution (CC BY 4.0). No attribution
+      sentence is given on the page; used: "Source: World Bank Climate Change Knowledge Portal, ERA5 0.25-degree (derived
+      from Copernicus Climate Change Service ERA5), CC BY 4.0". The CCKP site''s own "Terms of Use" page linked from https://climateknowledgeportal.worldbank.org/download-data
+      was not read. Upstream ERA5 is CC BY 4.0 in the CDS since 2 July 2025 (ECMWF announcement, https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464),
+      attribution "Generated using Copernicus Climate Change Service information <year>" and the disclaimer that neither
+      the European Commission nor ECMWF is responsible for any use made of the information.'
+  updates: 'CCKP: not stated; the ERA5 country series ended at 2024-12 on 16 Nov 2026 (README of the AWS collection still
+    says 1950-2022), so roughly a yearly update with a lag of up to two years. Check monthly whether a newer period path
+    (for example 1950-2025) answers; the period is part of the dataset id. CDS ERA5-Land monthly: "Monthly with a delay of
+    2-3 months relatively to the actual date".'
   ingestion:
-    history: 'API only, no anonymous bulk: the catalogue is public (https://cds.climate.copernicus.eu/api/catalogue/v1/collections/reanalysis-era5-land-monthly-means
-      answered 200 with licence CC-BY-4.0 and extent 1950-01-01 to 2026-10-01 from a GitHub runner, Dev probe run 43203166665
-      (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)), but a retrieval needs the personal token and the accepted
-      dataset terms. Smallest load: ERA5-Land monthly averaged 2 m temperature and total precipitation, 1950 to present, cut
-      to the area of Poland and the EU (0.1 degree grid, GRIB); about 920 months x 2 variables = 1,840 fields, inside one
-      or two requests; size not measured.'
-    incremental: Entity = dataset x variable, version = the catalogue's updated date; request the new months monthly and re-request
-      the last three (the newest months are preliminary). Chunk by dataset/variable/time with a manifest and the licence text.
-    identifiers: Dataset short name + variable + level + grid coordinates + valid/reference time + ensemble member.
+    history: 'API, tested (Dev probe run 43831903004, job 133178972022, branch test/src-r13-probe, script dev/src_r13_probe.py,
+      16 Nov 2026): https://cckpapi.worldbank.org/cckp/v1/era5-x0.25_timeseries_tas_timeseries_monthly_1950-2024_mean_historical_era5_x0.25_mean/POL?_format=json
+      answered 200 JSON (14,044 bytes; {"metadata": {"apiVersion": "v1", "status": "success"}, "data": {"POL": {"1950-01":
+      "-6.84", ...}}}, last value 2024-12 = 2.46 degC); the same id with `pr` (precipitation, 14,427 bytes) and the annual
+      aggregation answered too; `all_countries` in place of POL returned 246 geographies in 3,492,157 bytes. The sub-national
+      code tried (POL.2593) returned an empty data object: the codes of the 16 voivodeships are not known yet (the portal
+      documents the form USA.2593214). CCKP''s download page documents the same ids under https://datacatalogapi.worldbank.org/ddhxext/v3/cckp/<id>/<geocode>?_format=json
+      (not tried). The gridded NetCDF collection is in the public S3 bucket wbg-cckp (listing answered; the ERA5 file paths
+      were not resolved). Smallest load: monthly mean air temperature (tas) and precipitation (pr), 1950 to the newest
+      year, all countries plus the voivodeships of Poland: about 8 requests, under 10 MB (3.5 MB per all-countries monthly answer, measured).'
+    incremental: Entity = dataset id x geography request (the id carries variable, aggregation and period), version = the
+      period in the id (1950-2024) plus download time. Snapshot replaced whole when a newer period id answers (refresh full,
+      small source). The CDS route stays documented below for native ERA5-Land monthly fields if a token is ever provided.
+    identifiers: CCKP dataset id (collection, variable, product, aggregation, period, statistic, scenario) + ISO3 or CCKP
+      sub-national code + period (YYYY-MM).
   modelling:
-    notes: 'Gridded fields need CRS, grid and version; a country value needs reproducible area weighting over PRG/NUTS polygons,
-      which the pipeline does not have yet (GRIB decoding plus spatial averaging: effort L). Smallest Gold selection: mean
-      air temperature and precipitation total per month for Poland, the voivodeships and EU countries, with the anomaly against
-      1991-2020 as a metric, as new KPIs in environment.climate.'
+    notes: 'Values are as published by CCKP (tas in degC and pr in mm, units to confirm from the CCKP metadata), area means over land computed by the World
+      Bank; no suppression markers seen (empty data object for an unknown code; missing months to be checked as absent keys,
+      never 0). Smallest Gold selection: monthly and annual mean air temperature and precipitation total for Poland (and
+      the voivodeships once their codes are found), with EU countries from the all-countries answer, as new draft KPIs in
+      environment.climate; the anomaly against 1991-2020 as a metric. Frequencies: M and A are separate measure_keys.
+      Projections (CMIP6) are not observations and are out of scope.'
     overlap: No KPI of kpi.csv is published here yet. IMGW station archives (PL-ENV-009) are the national observations; Eurostat
       heating and cooling degree days derive from the same reanalysis; raw reanalysis is not an official country observation.
+      World Bank WDI (loaded) carries no monthly climate series.
   research:
     priority: specialist
-    evidence: documented
+    evidence: tested
     connection: tested
     blockers:
-    - 'Owner: will you create a free ECMWF account for the Climate Data Store, accept the CC-BY licence on the dataset page
-      "ERA5-Land monthly averaged data from 1950 to present", and add the personal access token as the organisation secret
-      SOURCE_CDS_API_TOKEN?'
-    - Current request limits are not published on the pages read; measure in the Dev trial.
-    - GRIB decoding and area weighting to countries and voivodeships are not in the pipeline (design before Landing).
+    - 'robots.txt of cckpapi.worldbank.org answered HTTP 500 in the probe (a server error, not a rule); RFC 9309 treats an
+      unreachable robots.txt as a full disallow, so the Landing trial re-reads it first and, if it still fails, reads the
+      same ids from the documented datacatalogapi.worldbank.org/ddhxext/v3/cckp/ host (its robots.txt answered 404 = no
+      rules).'
+    - Voivodeship codes of CCKP's sub-national units are unknown; find them in the CCKP metadata or the all-sub-nationals
+      answer during the Landing trial.
+    - 'Does not block this route: native ERA5-Land monthly fields from the CDS would need a free ECMWF account and personal
+      token that only the owner can create (the former owner question); not needed for country and voivodeship series.'
     references:
-    - https://cds.climate.copernicus.eu/
-    - https://cds.climate.copernicus.eu/how-to-api
+    - https://climateknowledgeportal.worldbank.org/download-data
+    - https://datacatalog.worldbank.org/search/dataset/0065626/climate-change-knowledge-portal-observed-climate-data-era5-0-25-degree
+    - https://worldbank.github.io/climateknowledgeportal/README.html
     - https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means?tab=overview
-    - https://www.ecmwf.int/en/terms-use
     - https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464
-    - https://forum.ecmwf.int/t/cdsapi-limitations-and-restrictions/1639
 - id: GL-037
   name: EEA Datahub
   short_name: EEA Datahub
@@ -2599,7 +2617,8 @@ sources:
   name: API Statystyki NFZ – Świadczenia
   short_name: 'NFZ statistics: services'
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_services
+  status: built
   family: B
   kpi: true
   geography: Poland; provider/clinical group tables
@@ -2644,7 +2663,8 @@ sources:
     blockers:
     - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
       values are shown unchanged'
-    - Enumerate history
+    - 'Built for basic-data only (Poland and NFZ branches, 2009-2024, #2929): the other table types and the hospital-type
+      splits are not loaded'
     references:
     - https://api.nfz.gov.pl/app-stat-api-jgp/
     - https://api.nfz.gov.pl/app-stat-api-jgp/terms
@@ -2706,7 +2726,8 @@ sources:
   name: API Umowy NFZ
   short_name: NFZ contracts
   provider: Narodowy Fundusz Zdrowia (NFZ)
-  status: approved
+  source_system: nfz_contracts
+  status: built
   family: B
   kpi: true
   geography: Poland; NFZ branch and provider
@@ -2857,7 +2878,8 @@ sources:
   name: Biuletyn Statystyczny ochrony zdrowia
   short_name: MZ health statistics bulletin
   provider: Ministerstwo Zdrowia / Centrum e-Zdrowia
-  status: approved
+  source_system: mz_health_bulletin
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, table-dependent
@@ -3001,7 +3023,8 @@ sources:
   name: Rejestr Podmiotów Wykonujących Działalność Leczniczą (RPWDL)
   short_name: RPWDL healthcare providers
   provider: Minister Zdrowia / Centrum e-Zdrowia
-  status: approved
+  source_system: rpwdl
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -3024,7 +3047,8 @@ sources:
       to download the data held in RPWDL 2.0 as files); the guide states no licence. Register content is public by the Medical
       Activity Act, but no attribution text is given: licence stays unresolved (internal only); exclude personal and contact
       data.'
-  updates: Operational register; update cadence/history unknown.
+  updates: Operational register, changed every working day; the public files are regenerated by the application (no
+    validator, no change history offered).
   ingestion:
     history: 'Download the register files from "Pliki do pobrania" (register type: healthcare entities, individual and group
       medical practices, nursing practices) and keep each file as received; no history of changes is offered, so keep one
@@ -3041,9 +3065,14 @@ sources:
     connection: tested
     blockers:
     - 'Licence unresolved: public register, no attribution or reuse text found'
-    - 'Download section is an interactive form: verify the file format (XML/CSV/XLSX) and whether a scripted request can fetch
-      it (Dev probe against rpwdl2.ezdrowie.gov.pl)'
-    - Define public-field allowlist and history policy (personal data)
+    - 'Resolved (#2958): the download buttons call a public GET endpoint (/api/rpwdl-public-resource/ledgers-zip/initial,
+      CSV in ZIP, one file per register type and ledger state, no login); scripted downloads work (Dev probes 43322217479
+      to 43339211206)'
+    - 'Define public-field allowlist and history policy (personal data). Open, owner question on #3117: may person-level
+      records (sole-trader providers, individual practices) ever be loaded, and may Landing and the Archive keep the ZIPs
+      with wspolnicy.csv (names, licence numbers) for newest + 30 days. Until then #2958 loads counts only: no names, NIP,
+      REGON, book numbers, ledger or practice ids, addresses or contacts; seat and correspondence TERYT cut to the
+      voivodeship; wspolnicy.csv and adresy_swiadczen.csv not read; one snapshot per weekly run, latest-only in Bronze'
     references:
     - https://rpwdl.ezdrowie.gov.pl/
 - id: PLS-021
@@ -3103,7 +3132,8 @@ sources:
   name: SIO public and archival education statistics
   short_name: SIO education statistics
   provider: Centrum Informatyczne Edukacji / Ministerstwo Edukacji Narodowej
-  status: approved
+  source_system: cie_sio
+  status: built
   family: B
   kpi: true
   geography: Poland by voivodeship (two-digit GUS voivodeship id in the workbooks opened); no powiat, gmina or school level
@@ -3173,8 +3203,8 @@ sources:
     connection: tested
     blockers:
     - 'Licence unresolved: cie.gov.pl states no reuse terms, so the source stays internal until CIE states them.'
-    - 'Build task, not a review blocker: 64 of the 94 files are .xls (old binary format) and the pipeline has no reader
-      for them yet; the 30 .xlsx files (2016-2018) load with the shared decoder.'
+    - 'Resolved in the build (#3130): the 64 .xls files decode with xlrd (as mrpips_social_assistance); all 94 files
+      decoded in Dev probe 43800731510 (715,454 cells, 0 rejected).'
     - Closed archive (last data 30 September 2018); later SIO compilations on dane.gov.pl were not opened (the fetch tool
       was refused; dane.gov.pl is PLG-030).
     references:
@@ -3191,7 +3221,8 @@ sources:
   name: RAD-on public data and POL-on APIs
   short_name: RAD-on / POL-on
   provider: Ośrodek Przetwarzania Informacji – Państwowy Instytut Badawczy (OPI PIB)
-  status: approved
+  source_system: radon
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -3206,8 +3237,9 @@ sources:
     interfaces: [REST API, HTML, interactive reports]
     auth: Public portal; current account/API conditions and quotas need specification review.
     cost: free
-    limits: Not published on the pages read; the API page is a single-page app (swagger at /swagger-ui/index.html answers
-      200).
+    limits: 'Not published on the pages read (help centre searched for "limit", "regulamin", "licencja", 12 Nov 2026). The
+      open-data API is https://radon.nauka.gov.pl/opendata/polon/<resource>?resultNumbers=<n>&token=<cursor>, no key; the
+      swagger page and the /api catalogue are single-page apps without a reachable OpenAPI file (Dev probe 43328619935).'
   licence:
     status: unresolved
     notes: 'Terms: https://polon.nauka.gov.pl/en/public-data/ says "We make part of the data from the POL-on system publicly
@@ -3230,9 +3262,12 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Licence unresolved: no licence text on the public-data page; look in the RAD-on help centre and API terms'
-    - 'Open the OpenAPI specification (swagger-ui is a single-page app: find the api-docs URL in a Dev probe)'
-    - Document quotas and history filters
+    - 'Built for institutions and study programmes (courses with their launches), #2990; branches, doctoral schools,
+      evaluation, projects, investments and patents are not loaded yet. Persons (staff, doctoral students, project managers,
+      promotion procedures, publication authors) are out of scope.'
+    - 'Licence unresolved: no licence text on the public-data page or in the RAD-on help centre pages read (Dev probe
+      43328619935); internal only until OPI PIB states terms'
+    - 'No quota and no changed-since filter documented: full snapshot weekly'
     references:
     - https://radon.nauka.gov.pl/api
     - https://radon.nauka.gov.pl/pomoc/tag/api/page/2/
@@ -3333,7 +3368,8 @@ sources:
   name: Ewidencja zabytków nieruchomych / heritage monument datasets
   short_name: NID heritage register
   provider: Narodowy Instytut Dziedzictwa (NID)
-  status: approved
+  source_system: nid_monuments
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -3344,15 +3380,19 @@ sources:
     heritage law.
   coverage: Current nationwide dataset; historical versions/update archive not verified.
   access:
-    endpoint: https://dane.gov.pl/pl/dataset/2627
+    endpoint: https://nid.pl/zasoby/rejestr-zabytkow-zasoby/
     kind: bulk_file
     interfaces: [open-data catalogue, bulk files, HTML/maps]
     auth: Public catalogue/download; authentication not indicated.
     cost: free
-    limits: Unknown.
+    limits: Unknown. dane.gov.pl times out from GitHub Actions (Dev probes 43343138018, 43797381655); the NID lists
+      on nid.pl answer (17 PDF files, 0.8-1.7 MB each).
   licence:
-    status: open-conditional
-    notes: 'Terms: dane.gov.pl dataset 2627 ''Ewidencja zabytków nieruchomych'' (provider Narodowy Instytut Dziedzictwa,
+    status: unresolved
+    notes: 'Terms: the route read is NID''s page https://nid.pl/zasoby/rejestr-zabytkow-zasoby/ ("Wykaz zabytków
+      nieruchomych wpisanych do rejestru zabytków (księga A)", PDF lists per voivodeship); it states no licence, and
+      the site footer reads "Copyright © 2020 Narodowy Instytut Dziedzictwa All rights reserved." (16 Nov 2026), so
+      the source stays internal (licence row unresolved). The same register on dane.gov.pl dataset 2627 ''Ewidencja zabytków nieruchomych'' (provider Narodowy Instytut Dziedzictwa,
       https://dane.gov.pl/pl/dataset/2627, API https://api.dane.gov.pl/1.4/datasets/2627): licence CC BY 4.0
       (https://creativecommons.org/licenses/by/4.0/), default dane.gov.pl CC 4.0 condition, which allows commercial
       reuse and modification with attribution; the custom condition only names the origin (register cards of the
@@ -3374,13 +3414,13 @@ sources:
   research:
     priority: review-next
     evidence: catalogue-only
-    connection: not-tested
+    connection: tested
     blockers:
-    - Open NID-native download/metadata page
-    - Define safe address fields
+    - 'Licence: the NID page read states no terms (dane.gov.pl, which states CC BY 4.0, is not reachable from Actions)'
     references:
     - https://dane.gov.pl/pl/dataset/2627
     - https://api.dane.gov.pl/1.4/datasets/2627
+    - https://nid.pl/zasoby/rejestr-zabytkow-zasoby/
 - id: PLS-027
   name: Kultura i dziedzictwo narodowe – annual tables
   short_name: GUS culture tables
@@ -3999,7 +4039,11 @@ sources:
       files sit under https://static.nbp.pl/dane/ with stable names (as bop_m.xlsx of PLG-002); the folder https://static.nbp.pl/dane/monetarno-finansowa/
       is confirmed by the methodology PDFs (DIC-M3.pdf), the workbook names are unverified: the links are not in the static
       HTML (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026) found 0 file links on the
-      three pages). Size not measured.'
+      three pages). On 16 Nov 2026 every nbp.pl page, /wp-json/wp/v2/pages and the sitemaps answered the runner with a 5,996-byte
+      bot-protection page (Dev probe run 43831903004, job 133178972022, branch test/src-r13-probe), so the 12 Nov result
+      was most probably that page too; static.nbp.pl answered (robots.txt 404, no rules), and the folder holds the methodology
+      PDFs DKI-M3.pdf, DKI-Miary.pdf, DKI-nbp.pdf and DKI-nal-zob.pdf (web search, 16 Nov 2026). File names are not guessed.
+      Size not measured.'
     incremental: 'Entity = workbook, version = Last-Modified of the file; re-download after the monthly release and replace
       the entity (snapshot, changed_since_last). Small source: refresh full. Fits the fixed-URL bulk_file pattern next to
       nbp_bop (suggested source_system nbp_monetary, shared with PLG-005).'
@@ -4015,8 +4059,14 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Workbook URLs under static.nbp.pl/dane/monetarno-finansowa/ are not resolved (not in the static HTML); resolve and HEAD
-      them in the Landing trial.
+    - 'Owner question: nbp.pl now answers GitHub runners with a bot-protection page ("Pardon Our Interruption", 5,996
+      bytes, on every page, the WordPress content API and the sitemaps; Dev probe run 43831903004, 16 Nov 2026), which
+      we never work around, while the workbooks themselves sit on static.nbp.pl, which answers runners (nbp_bop and nbp_interest_rates
+      load from it). Will you open https://nbp.pl/statystyka-i-sprawozdawczosc/statystyka-monetarna-i-finansowa/ in your
+      browser and paste into issue #2997 the address behind each "Pobierz" (download) link of the pages "Podaż pieniądza
+      M3 i czynniki jego kreacji", "Pieniądz rezerwowy i czynniki jego kreacji", "Bilans NBP (ujęcie monetarne)", "Należności
+      i zobowiązania MIF / banków", "Skonsolidowany bilans MIF" and "Zagregowany bilans pozostałych MIF", or should the
+      NBP e-mail of PLG-001 also ask NBP for these file addresses?'
     - Confirm NBP reuse terms (owner, with PLG-001); until then internal only.
     references:
     - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
@@ -4061,7 +4111,10 @@ sources:
       classification; the sister pages "Aggregated balance sheet of other MFIs" and "Consolidated balance sheet of MFIs" offer
       one workbook each. Files are expected under https://static.nbp.pl/dane/monetarno-finansowa/ with stable names; the names
       are unverified because the links are not in the static HTML (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
-      12 Nov 2026): 0 file links found). Size not measured.'
+      12 Nov 2026): 0 file links found). On 16 Nov 2026 every nbp.pl page, /wp-json/wp/v2/pages and the sitemaps answered
+      the runner with a 5,996-byte bot-protection page (Dev probe run 43831903004, job 133178972022, branch test/src-r13-probe);
+      static.nbp.pl answered (robots.txt 404, no rules) and holds DKI-nal-zob.pdf, the methodology of these tables (web
+      search, 16 Nov 2026). File names are not guessed. Size not measured.'
     incremental: Entity = workbook, version = Last-Modified; re-download monthly and replace (snapshot, changed_since_last);
       refresh full. One declaration with PLG-004 (suggested source_system nbp_monetary).
     identifiers: period + reporting sector + item + counterparty sector + currency + maturity + residency
@@ -4077,8 +4130,14 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - Workbook URLs under static.nbp.pl/dane/monetarno-finansowa/ are not resolved (not in the static HTML); resolve and HEAD
-      them in the Landing trial.
+    - 'Owner question: nbp.pl now answers GitHub runners with a bot-protection page ("Pardon Our Interruption", 5,996
+      bytes, on every page, the WordPress content API and the sitemaps; Dev probe run 43831903004, 16 Nov 2026), which
+      we never work around, while the workbooks themselves sit on static.nbp.pl, which answers runners (nbp_bop and nbp_interest_rates
+      load from it). Will you open https://nbp.pl/statystyka-i-sprawozdawczosc/statystyka-monetarna-i-finansowa/ in your
+      browser and paste into issue #2997 the address behind each "Pobierz" (download) link of the pages "Podaż pieniądza
+      M3 i czynniki jego kreacji", "Pieniądz rezerwowy i czynniki jego kreacji", "Bilans NBP (ujęcie monetarne)", "Należności
+      i zobowiązania MIF / banków", "Skonsolidowany bilans MIF" and "Zagregowany bilans pozostałych MIF", or should the
+      NBP e-mail of PLG-001 also ask NBP for these file addresses?'
     - Confirm NBP reuse terms (owner, with PLG-001); until then internal only.
     - Inventory series breaks (estimates before March 2002, sector reclassifications).
     references:
@@ -4392,7 +4451,8 @@ sources:
   name: Open KRS API (API Rejestrów Sądowych)
   short_name: KRS open API
   provider: Ministry of Justice
-  status: approved
+  status: built
+  source_system: ms_krs
   family: E
   kpi: false
   geography: Poland
@@ -4407,32 +4467,37 @@ sources:
     interfaces: [REST API, JSON]
     auth: public; no key documented
     cost: free
-    limits: Unknown.
+    limits: None published (no robots.txt on api-krs.ms.gov.pl, no rate-limit headers; Dev probe 43320344152). The pipeline
+      sends one request at a time, 1 s apart, at most 120 minutes a run.
   licence:
     status: unresolved
     notes: 'Terms: no licence on https://prs.ms.gov.pl/krs/openApi (the page documents the Open API; no terms text matched
       in the page body (page read 11 Nov 2026 from a GitHub runner)). KRS data are public by statute but no attribution or
       redistribution text is given: licence stays unresolved (internal only) until the Ministry of Justice terms or the dane.gov.pl
       dataset licence (https://dane.gov.pl/en/dataset/27606%2Capi-krajowego-rejestru-sadowego-api-krs) are confirmed.'
-  updates: Reflects registered records; no official change-feed guarantee verified.
+  updates: 'Entries are made on working days; https://api-krs.ms.gov.pl/api/Krs/Biuletyn/<YYYY-MM-DD> lists the KRS numbers
+    with an entry on a day (4,277 numbers for 10 Nov 2026; days back to June 2022 answer).'
   ingestion:
-    history: 'PROPOSAL: fetch current/full extracts only for KRS identifiers obtained from an authorised source; no enumeration
-      route is documented here.'
-    incremental: 'PROPOSAL: re-fetch known KRS numbers and compare canonical payloads after limits/terms review; this is polling,
-      not CDC.'
+    history: 'Built: current extracts (OdpisAktualny, register P, then S on 204) for the KRS numbers GLEIF lists (registration
+      authority RA000484; 31,892 numbers), ascending, about ten daily runs for the first load; reduced before Landing
+      to an entity-level allowlist (docs/sources/ms_krs.md). Left out: every other KRS entity (no authorised list of
+      numbers yet), full extracts (OdpisPelny) and all sections about persons.'
+    incremental: The daily bulletin names the held numbers to ask again; a part of the selection is rewritten only
+      when a record in it changed.
     identifiers: KRS primary; NIP and REGON when present
   modelling:
     notes: Model entity, section and roles; minimize natural-person fields.
     overlap: Complements RDF and CEIDG; legal-form scopes differ.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Route: the Open API answers per KRS number (current and full extract); no bulk list is documented, so the KRS number
-      list must come from REGON/CEIDG or the register search: confirm in the stage-2 dev trial'
-    - Confirm rate limits and exact endpoint in the Dev trial (limits not published on the page)
-    - 'Licence unresolved: confirm terms; personal data of natural persons in extracts needs an allowlist'
+    - 'Licence unresolved (internal only): the Open API page is a script-rendered application without terms text
+      in its HTML, and api.dane.gov.pl (dataset 27606) did not answer the runner (connect timeout, Dev probe
+      43320344152); the Ministry of Justice terms or the dane.gov.pl dataset licence still have to be read.'
+    - 'Selection: only entities with an LEI. A list of all KRS numbers needs an authorised source (REGON/BIR, or
+      walking the bulletin days back to June 2022 and beyond): a later task.'
     references:
     - https://prs.ms.gov.pl/krs/openApi
     - https://dane.gov.pl/en/dataset/27606%2Capi-krajowego-rejestru-sadowego-api-krs
@@ -5036,7 +5101,8 @@ sources:
   name: TED Search API and Open Data — Poland-filtered notices
   short_name: TED notices (Poland)
   provider: Publications Office of the European Union
-  status: approved
+  source_system: ted_notices
+  status: built
   family: D
   kpi: true
   geography: multicountry-Europe
@@ -5052,7 +5118,8 @@ sources:
     auth: 'Public: "The Search API does not require a key." (https://docs.ted.europa.eu/api/latest/index.html); keys are only
       needed to publish notices.'
     cost: free
-    limits: Unknown.
+    limits: 'Measured in Dev trial 43344674034: at most 250 notices a page, page x limit at most 15,000, fields x limit at
+      most 10,000; rate limits not published (one request at a time, 1.5 s pause).'
   licence:
     status: unresolved
     notes: 'Terms: https://docs.ted.europa.eu/api/latest/search.html names commercial organisations among the users of the
@@ -5077,8 +5144,8 @@ sources:
     connection: not-tested
     blockers:
     - Read https://ted.europa.eu/en/legal-notice (browser or another route) and record the licence and attribution text
-    - 'Query limits not read: check https://docs.ted.europa.eu/api/latest/search.html (paging/iteration) in the dev trial'
-    - Review person fields in notices
+    - 'Review person fields in notices: buyer names are not requested until then (a subsidised buyer, legal types org-sub*,
+      can be a natural person running a business, art. 6 Pzp); no review done yet'
     references:
     - https://docs.ted.europa.eu/api/latest/index.html
     - https://docs.ted.europa.eu/api/latest/search.html
@@ -5412,46 +5479,79 @@ sources:
   name: dane.gov.pl open-data catalogue and API
   short_name: dane.gov.pl
   provider: Chancellery of the Prime Minister
-  status: registered
+  status: approved
   family: J
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [open data, data catalog]
   entities: [dataset, resource, institution]
-  granularity: Catalogue metadata for datasets/resources, publisher, format, licence and updates.
-  coverage: Current catalogue; resource history depends on publisher.
+  granularity: One catalogue record per dataset (title, publisher, keywords, categories, issued and modified dates, accrual
+    periodicity, high-value flag) with its distributions (format, media type, download URL, byte size, modified).
+  coverage: 'Current catalogue only (no history of records): data.europa.eu holds 9,993 datasets harvested from dane.gov.pl
+    (catalogue `dane-gov-pl`, Dev probe run 43831903004, 16 Nov 2026); the newest `modified` among the records shown was 2026-06-15.'
   access:
-    endpoint: https://api.dane.gov.pl/doc/
+    endpoint: https://data.europa.eu/api/hub/search/search?filter=dataset&facets={"catalog":["dane-gov-pl"]}
     kind: api
-    interfaces: [REST API, JSON, HTML]
-    auth: public; Swagger available
+    interfaces: [REST API, JSON, SPARQL]
+    auth: none
     cost: free
-    limits: Unknown.
+    limits: 'None published (data.europa.eu FAQ lists the search, SPARQL and registry APIs without limits; the search API
+      is read-only). Plan: one request at a time, a second apart, pages of 100 records (maximum page size to confirm): about 100 requests for the whole
+      catalogue.'
   licence:
-    status: dataset-specific
-    notes: Each upstream resource retains its own licence and rights.
-  updates: Catalogue changes are not upstream-data CDC.
+    status: open
+    notes: 'Terms: copyright notice of data.europa.eu, https://data.europa.eu/en/copyright-notice (desk fetch 16 Nov 2026):
+      "To the extent possible under law, the European Union has waived all copyright and related or neighbouring rights
+      to metadata of the open data portal" (CC0 1.0). Commercial reuse and modification: allowed (CC0); no attribution
+      required. Attribution used anyway: "Metadata: data.europa.eu (catalogue dane.gov.pl)". The same page says resources
+      keep "the licence under which the owner has chosen to release them" and that for resources without licence information
+      "users must consult the licence conditions in the original portal"; the distributions read carried no licence value, so no resource content is taken from this entry. The terms of dane.gov.pl itself were not read
+      (the host does not answer runners).'
+  updates: 'data.europa.eu harvests national catalogues on its own schedule (not published on the pages read); the catalogue
+    record `dane-gov-pl` showed modified 2023-02-10 and the newest dataset seen was modified 2026-06-15, so the harvest
+    lag is unknown: measure it in the Landing trial (newest `modified` against today). Weekly refresh is enough.'
   ingestion:
-    history: 'PROPOSAL: backfill catalogue metadata through the public Swagger-documented API; do not ingest mirrored
-      resource content as a new source.'
-    incremental: 'PROPOSAL: poll catalogue modified fields for discovery, then follow the upstream publisher’s refresh
-      rules; catalogue change is not source-data CDC.'
-    identifiers: dataset ID + resource ID + institution ID + source URL
+    history: 'API, tested (Dev probe run 43831903004, job 133178972022, branch test/src-r13-probe, script dev/src_r13_probe.py,
+      16 Nov 2026): https://data.europa.eu/api/hub/search/catalogues/dane-gov-pl and /api/hub/search/search with the facet
+      catalog=dane-gov-pl answered 200 JSON from a GitHub runner (count 9,993); dataset keys include id, identifier, title,
+      publisher, modified, issued, accrual_periodicity, categories, keywords, is_hvd, landing_page and distributions (access_url,
+      download_url, format, media_type, byte_size, modified). dane.gov.pl itself (api.dane.gov.pl, dane.gov.pl, www.dane.gov.pl,
+      all 185.41.93.178) does not accept a TCP connection from runners: 20 s timeout in this run, after 75 s timeouts on
+      12 Nov (Dev runs 43282997907 and 43288930412); the official EU republisher is the route. Full load: about 100 pages
+      of 100 records; size not measured (measure in the Landing trial).'
+    incremental: 'Entity = the dane-gov-pl catalogue, version = download time (the API gives no catalogue version). Weekly
+      snapshot of every record, replaced whole (refresh full, small source). Distributions point to api.dane.gov.pl and
+      are not downloaded: each publisher''s data comes from its own register entry.'
+    identifiers: data.europa.eu dataset id (derived from the dane.gov.pl URL, as https-dane-gov-pl-pl-dataset-1650-...),
+      dane.gov.pl dataset number inside it, publisher name, distribution id.
   modelling:
-    notes: Gateway/dimension only; mirrored resources are not independent observations.
-    overlap: Overlaps nearly every publisher; upstream lineage controls onboarding.
+    notes: 'Entity table of datasets keyed by the dane.gov.pl dataset number (title, publisher, categories, periodicity,
+      high-value flag, modified), plus a distribution table. Smallest Gold selection: number of datasets and of distributions
+      per publisher and per category, monthly by `modified`, Poland only, as draft KPIs in the open-data catalogue domain;
+      and a lookup that tells builders which register entries publish on dane.gov.pl. Mirrored resources are not observations.'
+    overlap: Overlaps nearly every Polish publisher in the register (UTK, ULC, NFZ, URE, Wrocław...); upstream lineage controls
+      onboarding. No KPI of kpi.csv is published here.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
-    blockers: [Confirm API limits/portal terms, validate every resource upstream.]
-    references: ['https://api.dane.gov.pl/doc/', 'https://dane.gov.pl/pl']
+    evidence: tested
+    connection: tested
+    blockers:
+    - 'Not a route to the resources: every distribution read points to api.dane.gov.pl, which does not answer runners, so
+      PL-ENV-025 (UTK passenger and freight CSVs, datasets 1650-1652), PLG-032 and PL-ENV-028 gain no route from this entry.'
+    - Harvest lag of data.europa.eu against dane.gov.pl is unknown; measure in the Landing trial.
+    references:
+    - https://data.europa.eu/api/hub/search/catalogues/dane-gov-pl
+    - https://data.europa.eu/en/copyright-notice
+    - https://data.europa.eu/en/faq
+    - https://api.dane.gov.pl/doc/
+    - https://dane.gov.pl/pl
 - id: PLG-031
   name: Justice system statistical database (ISWS)
   short_name: ISWS justice statistics
   provider: Ministry of Justice
-  status: approved
+  source_system: ms_isws
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -5503,7 +5603,9 @@ sources:
     blockers:
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): hub, both listings and three
       workbook downloads answered 200 to a GitHub runner; workbook layout and byte format (.xls) not inspected.'
-    - Pick the caseload workbooks from the 88 titles at the build (only the first seven titles were read).
+    - 'Build (#2968): Dev probe 43797252172 (16 Nov 2026) read all 88 workbooks; four are landed (caseload, duration,
+      adoptions, notarial acts; .xlsx except notarial acts .xls). Adult convictions are left out: the 1946-2019 table
+      is a Word document and the 2002-2020 workbook is no longer extended.'
     references:
     - https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/
     - https://isws.ms.gov.pl/pl/baza-statystyczna/publikacje/
@@ -5573,7 +5675,8 @@ sources:
   name: Police Statistics portal
   short_name: Police statistics
   provider: Polish Police Headquarters
-  status: approved
+  source_system: policja_statistics
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -5614,7 +5717,10 @@ sources:
       New KPIs: recorded offences per 100,000 residents and detection rate (%), annual, Poland and voivodeships (population
       from GUS). Caveat stated on the portal: for 2013-2016 offences of the central units (BSW KGP, CBŚP) are assigned to
       voivodeship units, earlier years to garrisons. Police units are not one-to-one with voivodeships (a separate Warsaw
-      metropolitan command is expected; to confirm in the workbook). Effort S.'
+      metropolitan command is expected; to confirm in the workbook). Effort S. Built 16 Nov 2026 (#2969, Dev trial 43806377026):
+      the workbooks print Polska, the 16 voivodeships (Mazowieckie as one row) and the two police areas that split Mazowieckie
+      (KSP Warszawa, KWP Radom); the voivodeships add up to Poland. Gold: Poland and voivodeships; KPIs recorded_offences
+      and offence_detection_rate (draft); the rate per 100,000 residents and the other eight categories are not built yet.'
     overlap: GUS BDL publishes Police crime statistics by voivodeship and powiat, more current than the portal workbooks;
       keep both series (O31).
   research:
@@ -5787,7 +5893,8 @@ sources:
   name: Państwowy Rejestr Nazw Geograficznych (PRNG)
   short_name: GUGiK PRNG
   provider: GUGiK
-  status: approved
+  source_system: gugik_prng
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -5795,37 +5902,46 @@ sources:
   domains: [geographical names, geospatial]
   entities: [named place, geographic object]
   granularity: Individual Polish and world geographical-name records with PRNG identifier.
-  coverage: Current national register plus world-name section; historical snapshots not confirmed.
+  coverage: 'Current national register (localities 124,236 and physiographic objects 131,525 names, export of 12 Nov 2026)
+    plus a world-name section (15,158 names, export of 8 Sep 2026); no historical snapshots are published.'
   access:
     endpoint: https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/
     kind: bulk_file
     interfaces: [GML, SHP, XLSX, WFS, WMS]
     auth: Public services and download.
     cost: Free download.
-    limits: Unknown; no numeric quota was confirmed.
+    limits: None published.
   licence:
-    status: unresolved
-    notes: 'Terms: the PRNG page https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/ describes
-      free download of the national data but, unlike BDOT10k and NMT pages, carries no "możliwa do dowolnego wykorzystania"
-      sentence (page read 11 Nov 2026 from a GitHub runner); licence stays unresolved (internal only) until GUGiK states reuse
-      terms for PRNG.'
-  updates: Register is updated; cadence unknown.
+    status: open-conditional
+    notes: 'Terms: the PRNG page https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/ (read 12 Nov
+      2026 from a GitHub runner, Dev probe 43327592136), section "Pobieranie danych z rejestru nazw geograficznych RP": "Dane
+      są dostępne bezpłatnie i do dowolnego wykorzystania." (the world part: "Pliki można pobrać bezpłatnie do powszechnego
+      wykorzystania"). The GUGiK page https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
+      lists PRNG among the materials "udostępniane nieodpłatnie bez konieczności składania wniosku - zgodnie z art. 40a ust.
+      2 ustawy Prawo geodezyjne i kartograficzne". The packages carry no licence or notice file (members: data workbook,
+      column legend, "Export danych PRNG z dnia <date>"). No licence name and no attribution wording; commercial reuse and
+      modification are allowed by "do dowolnego wykorzystania". Attribution: "Źródło: GUGiK, PRNG" with the export date.
+      The note of 11 Nov 2026 (no such sentence) is superseded by this reading.'
+  updates: 'Updated continuously; official names are verified every year as of 1 January (page). The national packages are
+    rebuilt often (Last-Modified 12 Nov 2026 on the probe day).'
   ingestion:
-    history: 'Nationwide download in the geoportal "Dane do pobrania" layer "Państwowy Rejestr Nazw Geograficznych" (localities
-      and physiographic objects separately, GML, SHP, XLSX) or the WFS https://mapy.geoportal.gov.pl/wss/service/PZGiK/PRNG/WFS/GeographicalNames
-      (GML). Size: tens of MB (estimate, not measured).'
-    incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
-    identifiers: PRNG identifier; retain native name, language/status fields and geometry.
+    history: 'Bulk, stable URLs, listed by the WMS GetFeatureInfo of https://mapy.geoportal.gov.pl/wss/service/PZGIK/PRNG/WMS/DaneDoPobrania
+      (Dev probe 43328622271, 12 Nov 2026): https://opendata.geoportal.gov.pl/prng/PRNG_MIEJSCOWOSCI_XLSX.zip (22,976,072
+      bytes) and PRNG_OBIEKTY_FIZJOGRAFICZNE_XLSX.zip (20,134,653 bytes), each also as _GML.zip and _SHP.zip; the world part
+      PRNG_SWIAT_{XLSX,GML,SHP}.zip (about 2.5 MB). Last-Modified and ETag are sent. Only the current state is published.'
+    incremental: Entity = national XLSX package, version = Last-Modified; snapshot, changed_since_last (SHA-256), monthly.
+    identifiers: PRNG identifier (and the INSPIRE id), TERYT gmina codes, SIMC identifier of localities; names, status and
+      language fields and the coordinates as published (one main point, or start and end points of linear objects).
   modelling:
-    notes: Model names separately from places because aliases and status can change.
+    notes: 'Built as gugik_prng: silver.prng_objects (entity table by PRNG id), silver.prng_object_gminas (object × gmina), Gold
+      counts of named objects by kind or category per Poland, voivodeship, powiat and gmina (gold.build_gugik_prng), KPI
+      localities (draft). The world part is left out.'
     overlap: Complements PRG and municipal address sources; names are not addresses.
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: tested
-    blockers:
-    - 'Licence unresolved: no reuse sentence on the PRNG page'
-    - Inspect the package notice of the downloaded file
+    blockers: []
     references:
     - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-nazw-geograficznych-prng/
     - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
@@ -6802,7 +6918,8 @@ sources:
   name: Gas transmission transparency data
   short_name: GAZ-SYSTEM transparency
   provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
-  status: approved
+  source_system: entsog
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -7158,7 +7275,8 @@ sources:
   name: Airport traffic statistics
   short_name: ULC airport traffic
   provider: Urząd Lotnictwa Cywilnego (ULC)
-  status: approved
+  source_system: ulc_airports
+  status: built
   family: H
   kpi: true
   geography: Poland
@@ -7339,7 +7457,8 @@ sources:
   name: Gdańsk Open Data and GTFS/GTFS-Realtime feeds
   short_name: Gdańsk open data and GTFS
   provider: Gmina Miasta Gdańska / TRISTAR
-  status: approved
+  source_system: gtfs_gdansk
+  status: built
   family: H
   kpi: false
   geography: Gdańsk, Poland
@@ -7400,7 +7519,8 @@ sources:
   name: Poznań GTFS and GTFS-Realtime open data
   short_name: Poznań GTFS
   provider: Zarząd Transportu Miejskiego w Poznaniu / Miasto Poznań
-  status: approved
+  source_system: gtfs_poznan
+  status: built
   family: H
   kpi: false
   geography: Poznań service area, Poland
@@ -7452,7 +7572,8 @@ sources:
   name: Kraków KMK GTFS and GTFS-Realtime feeds
   short_name: Kraków GTFS
   provider: Zarząd Transportu Publicznego w Krakowie / Miasto Kraków
-  status: approved
+  source_system: gtfs_krakow
+  status: built
   family: H
   kpi: false
   geography: Kraków metropolitan service area, Poland
@@ -7496,7 +7617,8 @@ sources:
   name: Wrocław Open Data public-transport schedules and vehicle positions
   short_name: Wrocław transport open data
   provider: Gmina Wrocław / Centrum Usług Informatycznych
-  status: approved
+  source_system: gtfs_wroclaw
+  status: built
   family: H
   kpi: false
   geography: Wrocław, Poland
@@ -7553,7 +7675,8 @@ sources:
   name: Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ) public search and API
   short_name: GUNB RWDZ building register
   provider: Główny Urząd Nadzoru Budowlanego (GUNB)
-  status: approved
+  source_system: gunb_rwdz
+  status: built
   family: H
   kpi: false
   geography: Poland
@@ -7580,7 +7703,11 @@ sources:
       The GUGiK announcement https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
       (22 Apr 2022) states no licence; the GUNB site was in maintenance, so its terms are unread. Internal build only. Attribution
       if used: "Źródło: Główny Urząd Nadzoru Budowlanego, Rejestr Wniosków, Decyzji i Zgłoszeń (usługa GUGiK)". Personal data:
-      the attribute list of the features was not read; fields naming natural persons are left out at Bronze.'
+      the attribute list of the features was not read; fields naming natural persons are left out at Bronze. Dev probe
+      43345366257 (13 Nov 2026) read https://wyszukiwarka.gunb.gov.pl/pobranie.html and the home page: no licence, reuse or
+      terms text on either. The bulk files name investors, designers (name, licence number), addresses and plots: Bronze
+      keeps only register numbers, authority, dates, decision number, voivodeship, TERYT code, kind of investment, object
+      category and cubature (docs/sources/gunb_rwdz.md).'
   updates: Registry updates follow authority filings; the refresh rhythm of the WFS and of the bulk files is not stated.
   ingestion:
     history: 'Official alternative route, tested: the GUGiK WFS on GUNB data, https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
@@ -8542,16 +8669,17 @@ sources:
     - https://www.xbrl.org/news/well-over-3000-esef-filings-at-filings-xbrl-org-where-are-they-coming-from-and-how-can-we-improve-access/
     - https://www.esma.europa.eu/issuer-disclosure/electronic-reporting
 - id: CD-014
-  name: Companies House Public Data, Document and Streaming APIs
+  name: Companies House Free Company Data Product (basic company data)
   short_name: Companies House
   provider: UK Companies House
-  status: approved
+  source_system: companies_house
+  status: built
   family: I
   kpi: false
   geography: United Kingdom
   provider_type: national-public
   domains: [business-register, corporate-filings]
-  entities: [enterprise, officer, filing, person]
+  entities: [enterprise]
   granularity: 'Free Company Data Product: one row per live company on the register (name, number, registered office, status,
     type, country of origin, incorporation date, SIC codes). PSC and accounts products exist but are out of the selection.'
   coverage: Snapshot of live companies, compiled to the end of the previous month; the listing holds only the current snapshot,
@@ -8603,8 +8731,10 @@ sources:
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): en_output.html answered 200 (7,442
       bytes, Last-Modified 7 Nov 2026) and lists the one-file ZIP (471Mb) and 7 parts; HEAD of BasicCompanyDataAsOneFile-2026-11-01.zip
       answered 200 with 494,554,856 bytes; en_pscdata.html and the gov.uk guidance answered 200.'
-    - 'Not verified: the column names and empty-value markers (the field list PDF was not read), the row count, whether older
-      snapshots stay downloadable, the accounts data pages.'
+    - 'Dev probe run 43320416371 (12 Nov 2026) read the 2026-11-01 file: 5,711,779 rows, 55 columns, company numbers
+      unique; empty fields are empty (SIC "None Supplied", country of origin blank in 271 rows); CountryOfOrigin "POLAND"
+      in 50 rows (no other spelling); incorporation dates DD/MM/YYYY up to 2026-10-31. Not verified: whether older snapshots
+      stay downloadable, the accounts data pages.'
     - The PSC snapshot (about 2.5 GB, daily, personal data) is deliberately out of scope.
     references:
     - https://download.companieshouse.gov.uk/en_output.html
@@ -9292,7 +9422,8 @@ sources:
   name: Crossref REST API
   short_name: Crossref
   provider: Crossref
-  status: approved
+  source_system: crossref
+  status: built
   family: J
   kpi: false
   geography: worldwide
@@ -9307,7 +9438,9 @@ sources:
     interfaces: [API, JSON]
     auth: Public; polite pool identification is recommended and no signup is required for basic access.
     cost: free
-    limits: Rate etiquette and service pools apply; no numeric allowance relied on.
+    limits: 'Public pool measured on 12 Nov 2026 (Dev probe 43326689827): x-rate-limit-limit 1 per 1s for /works list
+      queries (pool public-array), 5 per 1s for /funders; the route sends one request at a time, 2 s apart, and retries
+      429 and 5xx with a growing wait. No contact address is sent (polite pool not used).'
   licence:
     status: open-conditional
     notes: 'Terms: https://www.crossref.org/documentation/retrieve-metadata/rest-api/ (read 11 Nov 2026 from a GitHub runner,
@@ -9328,11 +9461,22 @@ sources:
     overlap: Upstream of OpenAlex and many bibliographic services; retain deposited source.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - Confirm the public data file (annual snapshot) URL and size in the dev trial
-    - Exclude abstracts and full-text links
+    - 'Built scope (#553): aggregate counts only, no work records (so no abstracts, author names or ORCIDs): works
+      whose deposited author affiliation names Poland or Polska (query.affiliation, rows=0) by publication year, and
+      per year from 2000 by type, publisher and funder; plus the Funder Registry entries located in Poland. Left out:
+      work-level records, licences, ROR affiliation ids, Polish members (the members route has no country filter).'
+    - 'Dev probe 43326689827 (12 Nov 2026): /works list queries answer x-rate-limit-limit 1 per 1s (pool
+      public-array), /funders and /members 5 per 1s (public-single); facets stop at 1,000 values; 302,513 works
+      matched Poland or Polska; 183 funders located in Poland. The annual public data file was not used (full
+      metadata of every work, abstracts included).'
+    - 'Coverage limit: only works whose publisher deposits affiliations are counted, so the count is a lower bound.'
+    - 'Dev trial 43336945209 (13 Nov 2026): 29 answers, 854,848 bytes, a second run landed and loaded nothing new;
+      Silver 17,802 counts (publication years 1804..2027) and 183 funders, Gold 17,756 rows (total 1907..2026, 2026
+      provisional), 0 duplicates by series and date; PL 2024 = 26,973 works. The funder facet stops at 1,000 values
+      in 2019..2026.'
     references:
     - https://www.crossref.org/documentation/retrieve-metadata/rest-api/
 - id: CD-030
@@ -9386,7 +9530,8 @@ sources:
   name: Our World in Data Chart Data API
   short_name: Our World in Data
   provider: Global Change Data Lab
-  status: approved
+  source_system: owid
+  status: built
   family: J
   kpi: true
   geography: worldwide
@@ -9408,21 +9553,22 @@ sources:
     limits: None documented. CSV and ZIP can answer 403 "Data is non-redistributable" for some charts (chart API documentation).
       ourworldindata.org robots.txt (47 characters) does not forbid /grapher/.
   licence:
-    status: dataset-specific
+    status: unresolved
     notes: 'Terms: https://ourworldindata.org/faqs (desk reading and runner, 12 Nov 2026): "Most of the data on Our World
       in Data comes from third-party providers (such as the WHO, UN, and World Bank) and is subject to the license terms of
       those providers."; "Data produced by us falls under our permissive CC BY license; you have permission to use, reproduce,
       and distribute it, provided that you cite us."; "we ask you to always respect their license terms and cite them appropriately".
-      Site footer: "Our charts, articles, and data are licensed under CC BY, unless stated otherwise." Commercial reuse and
-      modification: allowed for data produced by OWID (CC BY); for third-party data they follow the upstream provider, chart
-      by chart. Attribution sentence: the chart''s citationShort from <slug>.metadata.json, for example "Global Carbon Budget
-      (2026); Population based on various sources (2024) – with major processing by Our World in Data". The chart metadata.json
-      has no licence field (checked on seven charts); the origin licence is in the indicator metadata (origins[].license,
-      desk reading of archived copies). Rule for the build: a chart is publishable only when every origin licence allows reuse
-      and modification; otherwise it stays internal. The three charts selected below are third-party data (Global Carbon Budget,
-      V-Dem, Maddison Project) whose origin licences are not read yet, so the build gives them an unresolved licence key until
-      origins[].license is recorded per chart (examples read: Corruption Perceptions Index, origin CC BY-ND 4.0; World Happiness
-      Report, own data-sharing policy).'
+      Site footer: "Our charts, articles, and data are licensed under CC BY, unless stated otherwise." The three charts selected
+      below are third-party data, so their terms are the producers'' (Global Carbon Budget, V-Dem, Maddison Project). OWID''s
+      indicator metadata names an origin licence for each (origins[].license, read on a runner in Dev run 43343148738, 13 Nov
+      2026: Global Carbon Project CC BY 4.0, Various sources (population) CC BY 4.0, V-Dem CC BY 4.0, Bolt and van Zanden
+      (Maddison Project Database 2023) CC BY 4.0), but that is OWID''s statement, not the producers'' own terms pages, which
+      were not read (review of #3001, 16 Nov 2026). Status unresolved: the source builds and stays internal (source.csv
+      licence_key unresolved, so no row reaches a published file). To resolve: quote the V-Dem, Global Carbon Budget and
+      Maddison Project terms pages with their URLs. Attribution sentence: the chart''s citationShort from <slug>.metadata.json,
+      for example "Global Carbon Budget (2026); Population based on various sources (2024) – with major processing by Our
+      World in Data". Rule for any further chart: read its origins and its producer''s terms first (examples of origins that
+      are not open: Corruption Perceptions Index, CC BY-ND 4.0; World Happiness Report, own data-sharing policy).'
   updates: 'Per chart: lastUpdated and nextUpdate in the metadata (for example consumption-based CO2 lastUpdated 2026-11-10,
     nextUpdate 2027-11-10). Whole series are revised in place.'
   ingestion:
@@ -9455,10 +9601,8 @@ sources:
     blockers:
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): the FAQ page, seven chart CSV
       files and seven metadata.json files answered 200; every CSV has rows for POL.'
-    - 'Before publication: read origins[].license of each selected chart from the indicator metadata on a runner (the session
-      read archived copies only) and record it per chart; until then the three charts are internal.'
-    - 'Not verified: the live host of the indicator metadata, the origin licences of the Global Carbon Budget, V-Dem and Maddison
-      charts, the catalog API (marked as under active development).'
+    - 'Licence unresolved: the producers'' own terms pages (V-Dem, Global Carbon Budget, Maddison Project) were not read;
+      OWID''s origin licences (CC BY 4.0, Dev run 43343148738) are a secondary statement (review of #3001).'
     references:
     - https://ourworldindata.org/faqs
     - https://owid-docs.readthedocs.io/projects/etl/api/chart-api/
