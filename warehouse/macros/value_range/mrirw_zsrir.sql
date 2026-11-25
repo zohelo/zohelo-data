@@ -1,6 +1,6 @@
-{# MRiRW ZSRIR (#2484), monthly purchase prices as published, Poland: raw milk zł/100 kg 91.28 (2004-04) to 274.01
-   (2022-11); pigs zł/kg live weight 4.25-9.16 (2022-2026); consumption wheat zł/t up to 1,590 (Dev probe
-   43856647230). #}
+{# MRiRW ZSRIR (#2484), monthly purchase prices as published, Poland: raw milk zł/100 kg 91.28 (2004-04) to 277.93
+   (2004-2026); pigs zł/kg live weight 4.25 to 9.16 (2022-2026); consumption wheat zł/t 458.37 to 1,717.14 (2006-2026)
+   (Dev trial 45705794335). #}
 {% macro poc_value_range__mrirw_zsrir() %}
     {{ return({
         'bounds': [

@@ -6,7 +6,8 @@ models:
       from the monthly sheet of the newest XLSX issue of the cereals, milk and pork bulletins. Grain: one row per
       market x product_code x period_start (first day of the month). Values, unit and currency as published (unit
       from the sheet title); cells without a price ('---', 'nld', ...) keep value null and their text in
-      value_flag. History and trial run: see ingestion/sources/mrirw_zsrir.yaml.
+      value_flag (201 cereals cells: '---' 200, '--' 1). History: milk 2004-04, cereals 2006-11, pigs 2022-01 (the
+      pork sheet shows the last five years) to 2026-10; 3,208 rows in Dev trial 45705794335.
     tests:
       - unique:
           column_name: "concat_ws('|', market, product_code, period_start)"

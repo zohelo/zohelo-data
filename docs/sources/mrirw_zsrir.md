@@ -1,6 +1,6 @@
 # MRiRW ZSRIR market bulletins (`mrirw_zsrir`)
 
-**Built (16 Nov 2026, register PLS-032, #2484).** Route: the ministry's ZSRIR portal `zsrir.minrol.gov.pl`, which
+**Built (25 Nov 2026, register PLS-032, #2484; Dev trial 45705794335).** Route: the ministry's ZSRIR portal `zsrir.minrol.gov.pl`, which
 publishes every weekly market bulletin as XLSX and PDF since August 2024 through its own public endpoints:
 `/api/ZsrirData/GetReportFileList?id=<report>` (file id, period, publication time, file name) and
 `/api/ZsrirData/DownloadReportFile?id=<file>`; no sign-in. The legacy gov.pl market pages only point to dane.gov.pl,
@@ -18,4 +18,6 @@ value. Gold block `gold.build_mrirw_zsrir` (`warehouse/macros/sources/mrirw_zsri
 `milk_purchase_price`, `pig_purchase_price`, `wheat_purchase_price`. Weekly check (Saturday). Licence: the portal and
 the workbooks state no terms of use: `unresolved`, internal only. Left out: the weekly tables, macroregion tables, the
 other bulletins (poultry, beef, eggs, oilseeds, fruit, vegetables, feed, sugar, mutton, tobacco, hops), the
-cross-market summary and the PDF copies.
+cross-market summary and the PDF copies. History is what the newest issue shows: milk from 2004-04, cereals from
+2006-11, pigs only the last five years (the pork sheet's window moves each January, so its oldest year leaves Silver
+and Gold then).
