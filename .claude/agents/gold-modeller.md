@@ -33,9 +33,11 @@ skills:
 - Do **not** touch `warehouse/models/gold/poc_fact_*.sql` or `warehouse/tests/fact_grain.sql` unless your Task says
   so. A source's Gold lines go in the source's own files (`docs/source-registration.md`, D34): never add a
   line to `warehouse/macros/poc_blocks.sql`, `poc_map_geography.sql` or, for a model of one source,
-  `warehouse/warehouse.yaml` and `_gold.yml`. Still shared (`kpi.csv`, `kpi_measure.csv`, `kpi_v2_map.csv`,
-  `unit.csv`, `domain.csv`; `warehouse.yaml` for a metrics model of several sources): your own rows and lines only, rebase on
-  `origin/main` right before the PR, keep both sides in conflicts.
+  `warehouse/warehouse.yaml` and `_gold.yml`. Rows of `kpi`, `kpi_measure`, `kpi_v2_map`, `unit`, `unit_map` and
+  `unit_decimals` go in `warehouse/seed_rows/<list>/<source_system>.csv` (the header line of `_shared.csv`, then
+  your rows; D36): never a new row in `_shared.csv` or in another source's file; a row that exists is edited
+  where it is. Still shared (`seeds/domain.csv`; `warehouse.yaml` for a metrics model of several sources): your
+  own rows and lines only, merge `origin/main` right before the PR, keep both sides in conflicts.
 - Size policy: a model rebuilt in full has a measured ceiling under `full_rebuild:` (in the source's
   `ingestion/sources/<source>.yaml`; `warehouse.yaml` for a model shared by several sources) and stays below
   1 M rows; anything larger is incremental from the start with unique key `series_key, date_key` (#822, D28).
@@ -70,8 +72,9 @@ define the measure); which source dimensions are breakdowns; frequency; how each
    `warehouse/macros/sources/<source>.sql` (template in `docs/source-registration.md`).
 2. Register or reference source: a dimension or entity table keyed by the official identifier (TERYT, LEI, NIP,
    REGON, KRS), with validity where the source has it; no observations invented from a register.
-3. Seeds: `unit.csv`, `kpi.csv` (new KPIs `draft`, PL and EN name), `kpi_measure.csv` (one row per KPI × source
-   measure, priority), `kpi_v2_map.csv` (one row per v2 key × source). A `poc_metrics_<kpi>.sql` model and a
+3. Code lists, each as `warehouse/seed_rows/<list>/<source_system>.csv`: `unit` (with `unit_decimals` and
+   `unit_map`), `kpi` (new KPIs `draft`, PL and EN name), `kpi_measure` (one row per KPI × source measure,
+   priority), `kpi_v2_map` (one row per v2 key × source). A `poc_metrics_<kpi>.sql` model and a
    semantic model before any KPI becomes `published`.
 4. The source YAML `gold:` and `full_rebuild:` ceiling, `warehouse/models/gold/_<source>.yml` description and
    tests (`warehouse.yaml` and `_gold.yml` only for models shared by several sources), `docs/gold-poc.md` activation table row. Leave the register `status` as it is: the orchestrator sets
@@ -91,9 +94,11 @@ These are the defects reviewers found repeatedly. A PR that skips a line goes to
 3. **Suppressed cells are not zeros.** Read the source's suppression, confidentiality and "no value" markers (flag
    attribute, `:`, `c`, `x`, `-`, empty) and drop the row or set `observation_status_key`; never cast them to `0.0`.
    A lower bound of 0 does not catch this. Name the source's markers and their count in the trial.
-4. **Value bounds.** Every new KPI × source in a `poc_metrics_*` model has a bound in
-   `warehouse/tests/metrics_value_range.sql`, and the model is in that test's union (a bound for a model outside
-   the union never runs). Run the test's SQL in the trial on the final head.
+4. **Value bounds.** Every new KPI × source in a `poc_metrics_*` model has a bound in the source's own
+   `warehouse/macros/value_range/<source_system>.sql` (`bounds`), and the model is in its `models` list, so it is in
+   the union of `warehouse/tests/metrics_value_range.sql` (a bound for a model outside the union never runs; the
+   rows written in the test file take no new lines, docs/source-registration.md). Run the test's SQL in the trial
+   on the final head.
 5. **One row per source × area × period.** A `kpi_measure.csv` pattern ending in `%` must not match several
    overlapping variants (price bases, vintages, adjustments). Show the count of metrics rows per source × area ×
    period: maximum 1.

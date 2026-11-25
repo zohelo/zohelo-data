@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Gold observations of a big source, one block at a time (docs/gold-coverage.md, owner direction O36).
 
-Every loaded Silver block of the source (Eurostat: a dataset) is put into Gold by rule, without an
-activation list: the block's Silver files go through the source's build stage
+Every loaded Silver block of the source (Eurostat: a dataset; GUS BDL: a subgroup; a source whose Silver
+is dbt tables: a table) is put into Gold by rule, without an activation list: the block's Silver files go
+through the source's build stage
 (warehouse/entity/gold_<source>_*.sql, the common observation shape) and three projections shared
 by all sources (gold_observations.sql, gold_series.sql, gold_measures.sql). Gold holds exactly one
 file per block in each table, as Silver does (design #875):
@@ -60,6 +61,7 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import time
@@ -86,6 +88,10 @@ MIN_REMOVABLE = 10
 # AVIA_TF_ACC: 92 MB in 13 min; Dev runs 43268232691, 43202733905). 6 MB a minute is below both.
 SERIAL_BYTES_PER_MINUTE = 6_000_000
 MAP_DIGEST = "zohelo.geography_map_digest"  # on gold.<source>_geography: the map its rows were last checked against
+# A DBW file id is <indicator>_<cross-section>_<presentation>_<periodicity>[_<year>]_pl; 570 yearly files
+# are named <indicator>_<cross-section>_<presentation>_<year>_282_pl instead (282 is the period "rok").
+DBW_YEAR_INSIDE = re.compile(r"^([0-9]+_[0-9]+_[0-9]+)_[0-9]{4}(_[0-9]{1,3})_pl$")
+DBW_FILE_END = re.compile(r"(_[0-9]{4})?_pl$")
 # Load order (O43). Areas of dim_geography below the country level carry a prefix; the Polish ones are
 # TERC: (voivodeship and below), BDL: (podregion) and NUTS:PL (makroregion, region).
 GROUPS = ("Polish regions", "countries and aggregates", "other")
@@ -181,8 +187,23 @@ TABLES["geography"] = {
     ],
 }
 
+
+def dbw_block(entity: str) -> str:
+    """The block of a GUS DBW file: its id without the language and the year, wherever the year stands
+    (the same two replacements as warehouse/entity/gold_gus_dbw_build.sql `block_id`)."""
+    return DBW_FILE_END.sub("", DBW_YEAR_INSIDE.sub(r"\1\2_pl", entity))
+
+
 # Per source: the Silver entity table and how its entities group into blocks, the build stage, and the
-# small tables the build stage reads (relation -> (namespace, table, columns, DuckDB filter)).
+# small tables the build stage reads (relation -> (namespace, table, columns, filter); the filter keeps
+# the rows of one source: a value of `source_system`, or (column, value); the column is then dropped).
+# Optional: `map_model` (a model run once per run over the lookups; its rows replace `geo_map`, so a
+# source can map its codes by rule and the build stage and the changed-map check read the same map),
+# `local_input` (the block's Silver files are downloaded once and every step reads the local
+# copy: one GET per file instead of range requests from each step), `not_loaded` (a model that counts
+# the Silver rows the build stage leaves out, by reason, for the run summary), `load_order` (lookup,
+# block column, rank column, ranks: the load-order group of a block comes from this lookup instead of the
+# geography codes of its Silver files, so nothing is read for it; `groups` names the three groups).
 SOURCES: dict[str, dict[str, Any]] = {
     "eurostat": {
         "silver": ("silver", "eurostat_observations"),
@@ -203,6 +224,134 @@ SOURCES: dict[str, dict[str, Any]] = {
         "geography_dimension": ("dims", "dataset_id", "dimension_id", "geo"),
         "polish_code": "PL",  # an unmatched code that starts with it and is longer is a Polish region
     },
+    "gus_bdl": {
+        "silver": ("silver", "bdl_observations"),
+        "block_of": str,  # a subgroup id (P####)
+        "build": "gold_gus_bdl_build",
+        # steps before the build, in this order
+        "prepare": {
+            "signs": "gold_gus_bdl_signs",
+            "labels": "gold_gus_bdl_labels",
+            "units": "gold_gus_bdl_units",
+            "cells": "gold_gus_bdl_cells",
+        },
+        "lookups": {
+            "geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), "gus_bdl"),
+            "bdl_units": ("silver", "bdl_units", ("unit_id", "name", "level"), None),
+            "names": ("gold", "coverage", ("source", "block_id", "block_name"), ("source", "gus_bdl")),
+            "levels": ("silver", "bdl_variables", ("subgroup_id", "level"), None),
+        },
+        "keyed_by": ("geo_map",),
+        "map_model": "gold_gus_bdl_map",  # unit ids by the TERYT code they carry
+        "local_input": True,
+        "not_loaded": "gold_gus_bdl_not_loaded",
+        # O43: Poland and voivodeships first, then powiats, then gminas. A subgroup is built whole, so the
+        # order is by the lowest territorial level its variables have (BDL levels 0–7: to 4 Poland,
+        # macroregions, voivodeships, regions and subregions; 5 powiat; 6 gmina; 7 statistical locality).
+        "load_order": ("levels", "subgroup_id", "level", ((4, 0), (5, 1), (7, 2))),
+        "groups": ("to voivodeships and subregions", "to powiats", "to gminas and below, or level unknown"),
+    },
+    # GUS DBW: a block is indicator × cross-section × presentation × periodicity; its Silver files are one
+    # per year (or one file), and each has its own dictionary file in Bronze (the labels of its ids).
+    "gus_dbw": {
+        "silver": ("silver", "dbw_observations"),
+        "block_of": dbw_block,
+        "build": "gold_gus_dbw_build",
+        "prepare": {
+            "labels": "gold_gus_dbw_labels",
+            "periods": "gold_gus_dbw_periods",
+            "areas": "gold_gus_dbw_areas",
+            "shape": "gold_gus_dbw_shape",
+            "twins": "gold_gus_dbw_twins",
+        },
+        "lookups": {
+            "geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), "gus_dbw"),
+        },
+        "keyed_by": ("geo_map",),
+        # the files of the block's entities in another table, read with the block (relation -> table)
+        "with": {"dictionary": ("bronze", "dbw_dictionary_items")},
+        # an area's source code is `<NAME> #<position id>`; the map is keyed by the name
+        "map_code": lambda code: code.rsplit(" #", 1)[0],
+    },
+}
+
+# Sources whose Silver is dbt tables, not per-entity files (docs/gold-coverage.md, decision 2): `tables`
+# replaces `silver`, `block_of` and `build`. Each Silver table is one block (block id -> (table, build
+# stage)): its files are the table's current data files, read from the table's file list, so the block
+# is rebuilt when dbt rebuilt the table. A source's first table has the build stage
+# gold_<source>_build.sql (run.py and ops/repo_check.py know the source by it); a further table of
+# another shape has gold_<source>_build_<x>.sql. No `geography_column`: with a handful of blocks the
+# load order needs no read.
+SOURCES.update(
+    {
+        "world_bank_wdi": {
+            "tables": {"wdi_observations": (("silver", "wdi_observations"), "gold_world_bank_wdi_build")},
+            "lookups": {
+                "geo_map": (
+                    "gold",
+                    "map_geography",
+                    ("source_system", "source_code", "geography_key"),
+                    "world_bank_wdi",
+                ),
+                "indicators": (
+                    "silver",
+                    "wdi_indicators",
+                    ("indicator_code", "indicator_name", "unit_of_measure"),
+                    None,
+                ),
+            },
+            "keyed_by": ("geo_map",),
+        },
+        "oecd": {
+            "tables": {"oecd_cli": (("silver", "oecd_cli"), "gold_oecd_build")},
+            "lookups": {
+                "geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), "oecd"),
+            },
+            "keyed_by": ("geo_map",),
+        },
+        "nbp": {  # no areas: exchange rates and the gold price belong to no territory (_Z)
+            "tables": {
+                "nbp_fx_rates": (("silver", "nbp_fx_rates"), "gold_nbp_build"),
+                "nbp_gold_fixings": (("silver", "nbp_gold_fixings"), "gold_nbp_build_gold_fixings"),
+            },
+            "lookups": {},
+            "keyed_by": (),
+        },
+    }
+)
+
+
+def _area_map(source: str) -> dict[str, tuple]:
+    """The lookup of a source's rows of gold.map_geography (source_code -> geography_key)."""
+    return {"geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), source)}
+
+
+# BIS, ILOSTAT, UNDP HDR, UNdata and UNECE (#2943): one Silver dbt table each, every series by rule; the
+# curated build_<source> models stay the KPI layer. UNdata maps its UN M49 codes by rule (gold_undata_map.sql:
+# the curated map holds the EU27 members and the World only).
+SOURCES.update(
+    {
+        source: {
+            "tables": {table: (("silver", table), f"gold_{source}_build")},
+            "lookups": _area_map(source),
+            "keyed_by": ("geo_map",),
+        }
+        for source, table in (
+            ("bis", "bis_observations"),
+            ("ilostat", "ilostat_observations"),
+            ("undp_hdr", "undp_hdr_indices"),
+            ("unece", "unece_observations"),
+        )
+    }
+)
+SOURCES["undata"] = {
+    "tables": {"undata_syb_values": (("silver", "undata_syb_values"), "gold_undata_build")},
+    "lookups": {
+        **_area_map("undata"),
+        "areas": ("gold", "dim_geography", ("geography_key", "iso3", "level_name"), None),
+    },
+    "keyed_by": ("geo_map",),
+    "map_model": "gold_undata_map",  # M49 country codes through ISO 3166-1 (numeric -> alpha-3 -> country)
 }
 
 
@@ -222,18 +371,67 @@ def export_lookups(cat, source: str, directory: Path) -> tuple[dict[str, str], d
         data = bf.retry(lambda n=namespace, t=table, c=columns: cat.load_table((n, t)).scan(selected_fields=c), name)
         data = data.to_arrow()
         if only_source:
-            data = data.filter(pc.equal(data.column("source_system"), only_source)).drop_columns(["source_system"])
+            column, value = only_source if isinstance(only_source, tuple) else ("source_system", only_source)
+            data = data.filter(pc.equal(data.column(column), value)).drop_columns([column])
         if name in spec["keyed_by"]:
             codes, keys = data.column("source_code").to_pylist(), data.column("geography_key").to_pylist()
             geo_map = dict(zip(codes, keys, strict=True))
         paths[name] = str(directory / f"{name}.parquet")
         pq.write_table(data, paths[name])
+    if spec.get("map_model"):
+        import duckdb
+
+        con = duckdb.connect()
+        try:
+            for name, path in paths.items():
+                con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{path.replace(chr(39), '')}')")
+            data = con.sql((MODELS / f"{spec['map_model']}.sql").read_text(encoding="utf-8")).to_arrow_table()
+        finally:
+            con.close()
+        codes, keys = data.column("source_code").to_pylist(), data.column("geography_key").to_pylist()
+        geo_map = dict(zip(codes, keys, strict=True))
+        if len(geo_map) != len(codes):  # two rows for one code would repeat every row of that unit
+            raise RuntimeError(
+                f"{source}: {spec['map_model']} gives {len(codes) - len(geo_map)} codes more than one area"
+            )
+        for name in spec["keyed_by"]:
+            paths[name] = str(directory / f"{name}.by_rule.parquet")
+            pq.write_table(data, paths[name])
     return paths, geo_map
 
 
-def expected_area(geo_map: dict[str, str], code: str | None) -> str:
-    """The geography_key the build stage gives a source code: no code `_Z`, unmatched `_X`."""
-    return "_Z" if code is None else geo_map.get(code, "_X")
+def expected_area(geo_map: dict[str, str], code: str | None) -> str | None:
+    """The geography_key the build stage gives a source code: no code `_Z`, unmatched `_X`.
+    A code written ``<code>#<area>[#<name>]`` is a unit that maps to ``<area>`` but does not hold it in its
+    block (the source's rule, gold_gus_bdl_units.sql): it is stored as `_X` while the map still says
+    ``<area>`` for ``<code>``; None (no stored key equals it) once the map says something else."""
+    if code is None:
+        return "_Z"
+    if "#" in code:
+        base, area = code.split("#", 2)[:2]
+        return "_X" if geo_map.get(base, "_X") == area else None
+    return geo_map.get(code, "_X")
+
+
+def load_ranks(source: str, lookups: dict[str, str]) -> dict[str, int]:
+    """Block -> its place in the load order (decision O43), from the lookup the source names: the rank
+    of the highest value the block has in the rank column (ranks: ascending (upper bound, rank) pairs).
+    Empty for a source without such a lookup; a block the lookup does not know is built with the last group."""
+    import pyarrow.parquet as pq
+
+    order = SOURCES[source].get("load_order")
+    if not order:
+        return {}
+    lookup, block_column, rank_column, ranks = order
+    data = pq.read_table(lookups[lookup], columns=[block_column, rank_column])
+    highest: dict[str, int] = {}
+    for block, value in zip(data.column(block_column).to_pylist(), data.column(rank_column).to_pylist(), strict=True):
+        if block is not None and value is not None:
+            highest[block] = max(highest.get(block, value), value)
+    return {
+        SOURCES[source]["block_of"](str(block)): next((rank for bound, rank in ranks if value <= bound), ranks[-1][1])
+        for block, value in highest.items()
+    }
 
 
 def recipe_of_file(path: str) -> str:
@@ -272,18 +470,90 @@ def geography_digest(pairs: list[tuple[str | None, str]]) -> str:
     return sha256(json.dumps(sorted(pairs, key=lambda p: (p[0] or "", p[1]))).encode()).hexdigest()[:8]
 
 
+def build_stages(source: str) -> dict[str | None, str]:
+    """Block -> its build stage; one stage under None for a source whose blocks share it."""
+    spec = SOURCES[source]
+    if "tables" in spec:
+        return {block: stage for block, (_, stage) in spec["tables"].items()}
+    return {None: spec["build"]}
+
+
+def build_stage(source: str, block: str) -> str:
+    stages = build_stages(source)
+    return stages[block] if block in stages else stages[None]
+
+
+SWAP_WAIT_SECONDS = 540
+
+
+def load_swapped(cat, table_id: tuple[str, str]):
+    """A Silver table that dbt builds. A model build of another run replaces such a table (drop and
+    rename), so a table not found is read again every 30 s for up to 9 minutes, as gold.publish does
+    (#2834); still missing, the run stops (nothing is built or removed)."""
+    from pyiceberg.exceptions import NoSuchTableError
+
+    deadline = time.monotonic() + SWAP_WAIT_SECONDS
+    while True:
+        try:
+            return bf.retry(lambda: cat.load_table(table_id), "silver_table")
+        except NoSuchTableError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(30)
+
+
+def silver_blocks(cat, source: str) -> dict[str, dict[str, Any]]:
+    """Block -> its Silver files, their size and rows, and the digest of their names, from file lists only.
+    An entity source: the partitions of its Silver table. A source of dbt tables: each declared table is
+    one block holding all the table's data files (dbt writes new files when it rebuilds a table, so their
+    names tell a rebuild). A declared table that is missing or holds no file stops the run: it is a fault
+    of the build, never a block that left the source, so nothing is removed from Gold for it."""
+    spec = SOURCES[source]
+    if "tables" not in spec:
+        silver = bf.retry(lambda: cat.load_table(spec["silver"]), "silver_table")
+        with_states = {}
+        for relation, table_id in spec.get("with", {}).items():  # file lists only, as for Silver
+            other = bf.retry(lambda t=table_id: cat.load_table(t), relation)
+            with_states[relation] = et.state(other, other.spec().fields[0].name)
+        return blocks_of(source, et.state(silver, silver.spec().fields[0].name), with_states)
+    out: dict[str, dict[str, Any]] = {}
+    for block, (table_id, _) in spec["tables"].items():
+        table = load_swapped(cat, table_id)
+        held = list(et.state(table, "").values())  # every file, whatever the table's partitioning
+        item = {
+            "paths": sorted(path for h in held for path in h["paths"]),
+            "bytes": sum(h["bytes"] for h in held),
+            "rows": sum(h["rows"] for h in held),
+        }
+        if not item["paths"]:
+            raise RuntimeError(f"{source}: {'.'.join(table_id)} holds no data file; nothing is built or removed")
+        names = "\n".join(et.recipe_of(p) for p in item["paths"])
+        item["silver_recipe"] = sha256(names.encode()).hexdigest()[:16]
+        out[block] = item
+    return out
+
+
 def model_digest(source: str) -> str:
     """Digest of the Gold SQL of the source: with the Silver files and the block's geography mapping it
     decides a block's Gold files."""
     digest = sha256()
     spec = SOURCES[source]
-    for model in (*spec.get("prepare", {}).values(), spec["build"], *(t["model"] for t in TABLES.values())):
+    stages = sorted(set(build_stages(source).values()))
+    rules = (spec.get("map_model"), *spec.get("prepare", {}).values(), *stages)
+    for model in (*(m for m in rules if m), *(t["model"] for t in TABLES.values())):
         digest.update((MODELS / f"{model}.sql").read_bytes())
     return digest.hexdigest()[:12]
 
 
-def blocks_of(source: str, silver_state: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """Block -> its Silver files, their size, and the digest of their names."""
+def blocks_of(
+    source: str,
+    silver_state: dict[str, dict[str, Any]],
+    with_states: dict[str, dict[str, dict[str, Any]]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Block -> its Silver files, their size, and the digest of their names. ``with_states`` (relation ->
+    the state of another table with the same entities, SOURCES ``with``) adds each entity's files there:
+    they are read with the block and their names are part of the digest; an entity without one is listed
+    under ``missing`` and the block is rejected until the file exists."""
     block_of = SOURCES[source]["block_of"]
     out: dict[str, dict[str, Any]] = {}
     for entity, held in silver_state.items():
@@ -293,16 +563,25 @@ def blocks_of(source: str, silver_state: dict[str, dict[str, Any]]) -> dict[str,
         item["paths"] += held["paths"]
         item["bytes"] += held["bytes"]
         item["rows"] += held["rows"]
+        for relation, state in (with_states or {}).items():
+            found = state.get(entity, {}).get("paths", [])
+            item.setdefault("with", {}).setdefault(relation, []).extend(found)
+            if not found:
+                item.setdefault("missing", []).append(f"{relation}:{entity}")
     for item in out.values():
         item["paths"].sort()
         names = "\n".join(et.recipe_of(p) for p in item["paths"])
+        for relation, paths in sorted(item.get("with", {}).items()):
+            paths.sort()
+            names += f"\n{relation}\n" + "\n".join(et.recipe_of(p) for p in paths)
         item["silver_recipe"] = sha256(names.encode()).hexdigest()[:16]
     return out
 
 
-def remapped_blocks(table, geo_map: dict[str, str]) -> tuple[set[str], str]:
+def remapped_blocks(table, geo_map: dict[str, str], map_code=None) -> tuple[set[str], str]:
     """Blocks holding a geography code whose mapping differs from the map now, and the map's digest.
-    The table's rows are read only when the map changed since they were last checked (table property)."""
+    The table's rows are read only when the map changed since they were last checked (table property).
+    ``map_code`` (SOURCES ``map_code``) gives the map's key of a source code that carries more than it."""
     digest = sha256(json.dumps(sorted(geo_map.items())).encode()).hexdigest()[:16]
     if table.properties.get(MAP_DIGEST) == digest or table.current_snapshot() is None:
         return set(), digest
@@ -312,7 +591,11 @@ def remapped_blocks(table, geo_map: dict[str, str]) -> tuple[set[str], str]:
         held.column("geography_source_code").to_pylist(),
         held.column("geography_key").to_pylist(),
     )
-    return {block for block, code, key in rows if expected_area(geo_map, code) != key}, digest
+    in_map = map_code or (lambda code: code)
+    changed = {
+        block for block, code, key in rows if expected_area(geo_map, code if code is None else in_map(code)) != key
+    }
+    return changed, digest
 
 
 def area_group(source: str, geo_map: dict[str, str], codes: set[str]) -> int:
@@ -463,8 +746,7 @@ def plan(
     """What each block needs, from the tables' file lists: build (new Silver files, new rule, a changed
     mapping of one of its geography codes), or removal (the block left Silver).
     ``create=False`` (checks): reads only, never creates a table."""
-    silver = bf.retry(lambda: cat.load_table(SOURCES[source]["silver"]), "silver_table")
-    listed = blocks_of(source, et.state(silver, silver.spec().fields[0].name))
+    listed = silver_blocks(cat, source)
     if not listed:
         raise RuntimeError(f"{source}: the Silver table lists no blocks; nothing is built or removed")
     blocks = {b: v for b, v in listed.items() if matches(only, b)}
@@ -477,7 +759,7 @@ def plan(
             load = lambda t=table_id: cat.load_table(t)  # noqa: E731
         tables[name] = bf.retry(load, name)
         states[name] = et.state(tables[name], ENTITY)
-    remapped, map_digest = remapped_blocks(tables["geography"], geo_map)
+    remapped, map_digest = remapped_blocks(tables["geography"], geo_map, SOURCES[source].get("map_code"))
     refused = bf.retry(lambda: bf.rejected_hashes(cat, rejected_id), "rejected")
     todo, rejected, complete = [], [], []
     for block, item in sorted(blocks.items()):
@@ -512,6 +794,17 @@ def plan(
     }
 
 
+def fetch(client, uris: list[str], directory: Path) -> list[str]:
+    """The block's Silver files as local copies, each read from storage once."""
+    paths = []
+    for number, uri in enumerate(uris):
+        bucket, key = uri.removeprefix("s3://").split("/", 1)
+        path = directory / f"silver-{number:04d}.parquet"
+        bf.retry(lambda b=bucket, k=key, p=path: client.download_file(b, k, str(p)), "silver_file")
+        paths.append(str(path))
+    return paths
+
+
 def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str, tmp_root: str, prefix: str) -> dict:
     """One block: build stage, the projections with their checks, upload. Runs in a worker process."""
     import duckdb
@@ -520,24 +813,47 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
 
     block = item["block"]
     out: dict[str, Any] = {"block": block, "recipe": item["recipe"], "silver_rows": item["rows"], "uris": {}}
+    spec = SOURCES[source]
     work_dir = Path(tempfile.mkdtemp(prefix=f"gold-{source}-", dir=tmp_root))
     started = time.monotonic()
     try:
+        client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
+        inputs = fetch(client, item["paths"], work_dir) if spec.get("local_input") else item["paths"]
         build = work_dir / "build.parquet"
         try:
+            if item.get("missing"):
+                raise entity.EntityModelError(
+                    f"{len(item['missing'])} files of the block are missing, e.g. {item['missing'][:3]}"
+                )
             built = entity.apply(
-                SOURCES[source]["build"],
-                item["paths"],
+                build_stage(source, block),
+                inputs,
                 build,
                 not_null=("measure_key", "geography_key", "date_key", "frequency", "breakdown_json", "is_total"),
                 same_rows=False,
-                lookups=lookups,
+                lookups={**lookups, **item.get("with", {})},
                 memory_limit=memory,
                 temp_directory=str(work_dir),
                 source_view="silver",
                 row_group_size=ROW_GROUP,
-                prepare=SOURCES[source].get("prepare"),
+                prepare=spec.get("prepare"),
             )
+            if spec.get("not_loaded"):
+                entity.apply(
+                    spec["not_loaded"],
+                    inputs,
+                    work_dir / "not_loaded.parquet",
+                    same_rows=False,
+                    lookups={**lookups, **item.get("with", {})},
+                    memory_limit=memory,
+                    temp_directory=str(work_dir),
+                    source_view="silver",
+                    prepare=spec.get("prepare"),
+                )
+                counted = str(work_dir / "not_loaded.parquet").replace("'", "''")
+                out["not_loaded"] = dict(
+                    duckdb.sql(f"select reason, row_count from read_parquet('{counted}')").fetchall()
+                )
             if built["rows"] == 0:
                 raise entity.EntityModelError("no row with a value and a period the calendar can place")
             reports = {}
@@ -561,7 +877,6 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
         geography = str(work_dir / "geography.parquet").replace("'", "''")
         pairs = duckdb.sql(f"select geography_source_code, geography_key from read_parquet('{geography}')").fetchall()
         recipe = f"{item['recipe']}.{geography_digest(pairs)}"
-        client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
         for name in TABLES:
             path = work_dir / f"{name}.parquet"
             content = sha256(path.read_bytes()).hexdigest()[:16]
@@ -626,13 +941,19 @@ def run(argv=None) -> dict[str, Any]:
         for table_id in ids.values():
             et.configure(table_id)
         # O43: Polish regions, then countries and aggregates, then the rest; smaller blocks first in a group
-        groups = load_order(
-            source, p["todo"], geo_map, args.minutes * 60 * PROBE_SHARE, without_geography(source, lookups)
-        )
+        if SOURCES[source].get("load_order"):  # the order is in the source's structure lookup: nothing is read
+            ranks = load_ranks(source, lookups)
+            groups = {c["block"]: min(ranks.get(c["block"], len(GROUPS) - 1), len(GROUPS) - 1) for c in p["todo"]}
+        else:
+            groups = load_order(
+                source, p["todo"], geo_map, args.minutes * 60 * PROBE_SHARE, without_geography(source, lookups)
+            )
+        group_names = SOURCES[source].get("groups", GROUPS)
         todo = sorted(p["todo"], key=lambda c: (groups[c["block"]], c["rows"]))
         totals = {"built": 0, "rows": 0, "series": 0, "measures": 0, "bytes": 0, "silver_rows": 0}
         built: list[dict[str, Any]] = []
         built_by_group = [0, 0, 0]
+        not_loaded: dict[str, int] = {}
         rejected_now: list[dict[str, str]] = []
         failed: list[dict[str, str]] = []
         waiting: list[str] = []
@@ -677,6 +998,8 @@ def run(argv=None) -> dict[str, Any]:
                 built_by_group[groups[result["block"]]] += 1
                 for key in ("rows", "series", "measures", "bytes", "silver_rows"):
                     totals[key] += result[key]
+                for reason, rows in result.get("not_loaded", {}).items():
+                    not_loaded[reason] = not_loaded.get(reason, 0) + rows
                 slowest.append((result["seconds"], result["block"], result["rows"]))
             else:
                 rejected_now.append({"block": result["block"], "error": result["error"][:160]})
@@ -754,9 +1077,9 @@ def run(argv=None) -> dict[str, Any]:
         "blocks_in_silver": p["blocks"],
         "todo": len(todo),
         "todo_by_group": dict(
-            zip(GROUPS, [sum(1 for c in todo if groups[c["block"]] == g) for g in range(3)], strict=True)
+            zip(group_names, [sum(1 for c in todo if groups[c["block"]] == g) for g in range(3)], strict=True)
         ),
-        "built_by_group": dict(zip(GROUPS, built_by_group, strict=True)),
+        "built_by_group": dict(zip(group_names, built_by_group, strict=True)),
         "remapped_geography": p["remapped"],
         "remaining": left,
         **totals,
@@ -772,6 +1095,8 @@ def run(argv=None) -> dict[str, Any]:
         "minutes": round(minutes, 1),
         "rows_per_minute": round(totals["rows"] / minutes) if minutes else 0,
     }
+    if SOURCES[source].get("not_loaded"):  # Silver rows of the built blocks = rows + these
+        summary["not_loaded"] = not_loaded
     print(json.dumps(summary, sort_keys=True), flush=True)
     clean_run = left == 0 and not rejected_now and not removal_refused
     annotate("notice" if clean_run else "warning", f"{source} gold observations", summary)

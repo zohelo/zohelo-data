@@ -1,0 +1,3 @@
+source_system,unit_code,measure_key_pattern,unit_key
+entsog,kWh/d,,kwh_per_day
+entsog,kWh,,kwh
