@@ -66,8 +66,12 @@ def note(title: str, data) -> None:
     annotate("notice", title, json.loads(text) if len(text) <= 3900 else {"truncated": text[:3800]})
 
 
+def run(con, q):
+    return con.execute(q).fetchall()
+
+
 def one(con, q):
-    return con.execute(q).fetchone()[0]
+    return con.execute(q).fetchall()[0][0]
 
 
 def rows(con, q, limit=60):
@@ -214,18 +218,20 @@ def setup_dbt(work: Path, arrow) -> tuple[dict, list[str], list[str]]:
     (work / "profiles").mkdir()
     (work / "tmp").mkdir()
     con = duckdb.connect(str(work / "r2.duckdb"))
+    # duckdb 2.0: a statement's result must be fetched before register() (ResourceInUseException otherwise)
     for ext in prod.get("extensions", []):
-        con.execute(f"install {ext}; load {ext}")
+        run(con, f"install {ext}")
+        run(con, f"load {ext}")
     for s in prod["secrets"]:
         s = {k: rendered(v) for k, v in s.items()}
-        con.execute(Secret.create(secret_type=s.pop("type"), name=s.pop("name"), **s).to_sql())
+        run(con, Secret.create(secret_type=s.pop("type"), name=s.pop("name"), **s).to_sql())
     a = {k: rendered(v) for k, v in attach.items()}
     try:
-        con.execute(Attachment(**{**a, "read_only": True}).to_sql())
+        run(con, Attachment(**{**a, "read_only": True}).to_sql())
         attach["read_only"] = True
     except duckdb.Error as exc:
         print("read-only attach refused, attaching without:", str(exc)[:300], flush=True)
-        con.execute(Attachment(**a).to_sql())
+        run(con, Attachment(**a).to_sql())
     prod["attach"] = [attach]
     (work / "profiles" / "profiles.yml").write_text(yaml.safe_dump({"zohelo": {"target": "prod", "outputs": {"prod": prod}}}))
     code, _ = dbt(work, "parse")
@@ -238,18 +244,19 @@ def setup_dbt(work: Path, arrow) -> tuple[dict, list[str], list[str]]:
              and "metrics_value_range" not in k]
     parents = {p for k in [*selected, *tests] for p in nodes[k]["depends_on"]["nodes"]} - selected
     for schema in ("bronze", "silver", "gold"):
-        con.execute(f"create schema if not exists {schema}")
+        run(con, f"create schema if not exists {schema}")
     con.register("queues_arrow", arrow)
-    con.execute(f"create table bronze.{nfz_load.TABLE} as select * from queues_arrow")
+    run(con, f"create table bronze.{nfz_load.TABLE} as select * from queues_arrow")
+    con.unregister("queues_arrow")
     views, missing = [], set()
     for p in sorted(parents):
         if p.startswith(f"source.zohelo.{SOURCE}."):
             continue
         n = nodes.get(p) or sources[p]
         schema, name = n["schema"], n.get("alias") or n.get("identifier") or n["name"]
-        con.execute(f"create schema if not exists {schema}")
+        run(con, f"create schema if not exists {schema}")
         try:
-            con.execute(f'create view {schema}."{name}" as select * from lake.{schema}."{name}"')
+            run(con, f'create view {schema}."{name}" as select * from lake.{schema}."{name}"')
             views.append(f"{schema}.{name}")
         except duckdb.CatalogException:  # not in production yet (an optional parent, poc_optional_ref)
             views.append(f"missing:{schema}.{name}")
@@ -335,8 +342,8 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
     g["kpi_rows_per_area_period_max"] = one(con, f"select max(c) from (select k.kpi_key, b.geography_key, b.date_key, count(*) c "
                                                  f"from {km} k join {b} b on b.measure_key like k.measure_key_pattern "
                                                  f"where k.source_system = '{SOURCE}' group by all)")
-    bounds = re.findall(r"\('(waiting_list[a-z_]*)', 'nfz_waiting_times', '%', ([0-9e.]+), ([0-9e.]+)\)",
-                        (WAREHOUSE / "tests/metrics_value_range.sql").read_text())
+    bounds = re.findall(r"\['(waiting_list[a-z_]*)', '%', '([0-9e.]+)', '([0-9e.]+)'\]",
+                        (WAREHOUSE / "macros/value_range/nfz_waiting_times.sql").read_text())
     g["bounds"] = bounds
     g["outside_bounds"] = {
         k: one(con, f"select count(*) from {km} m join {b} b on b.measure_key like m.measure_key_pattern "
