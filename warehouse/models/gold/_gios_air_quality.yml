@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_gios_air_quality
+    description: >-
+      Build stage — GIOŚ air quality (register PL-ENV-010): daily mean concentration of PM10, PM2.5, NO2, O3 and SO2
+      (µg/m³, provisional) for Poland and the 16 voivodeships, from silver.gios_air_hourly. A sensor-day counts with at
+      least 18 hourly values; area value = mean of the sensor-day means of its stations. Frequency D only.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
