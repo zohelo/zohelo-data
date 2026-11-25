@@ -56,4 +56,4 @@ left join meta as m on o.chart = m.chart and o.indicator = m.short_name
 where
     o.value is not null
     and o.year >= 1900
-    and not (o.chart = 'consumption-co2-per-capita' and o.value = 0)
+    and not (o.chart = 'consumption_co2_per_capita' and o.value = 0)

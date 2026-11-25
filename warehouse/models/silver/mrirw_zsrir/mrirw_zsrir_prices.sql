@@ -41,6 +41,8 @@ sheet as (
     inner join layouts as l on c.market = l.market and regexp_matches(c.sheet_name, l.sheet_pattern)
 ),
 
+-- exactly one header cell per sheet: a second grid header would make the rows below it ambiguous, so the market
+-- then yields no rows and the completeness tests fail (no first-match pick)
 header_rows as (
     select
         market,
@@ -48,6 +50,7 @@ header_rows as (
     from sheet
     where column_number = 2 and text = header_text
     group by market
+    having count(*) = 1
 ),
 
 titles as (
