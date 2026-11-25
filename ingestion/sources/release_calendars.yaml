@@ -28,6 +28,8 @@ archive_policy:
 bronze: [bronze.release_calendar_items, bronze.release_calendars_rejected_files]
 silver: [silver.releases]
 gold: []
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): about 55 small pages; Silver rebuilt in full.
