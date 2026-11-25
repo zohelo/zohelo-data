@@ -3658,7 +3658,8 @@ sources:
   name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
   short_name: MRiRW ZSRIR market information
   provider: Ministerstwo Rolnictwa i Rozwoju Wsi
-  status: approved
+  source_system: mrirw_zsrir
+  status: built
   family: B
   kpi: true
   geography: Poland and macroregions/markets, commodity-dependent
@@ -3669,15 +3670,19 @@ sources:
     market bulletin.
   coverage: Legacy bulletin archive plus new portal from 2025; exact starts differ by commodity.
   access:
-    endpoint: https://www.gov.pl/web/rolnictwo/biuletyny-informacyjne
+    endpoint: https://zsrir.minrol.gov.pl/api/ZsrirData/GetReportFileList?id=<report>
     kind: bulk_file
     interfaces: [HTML, PDF, XLSX]
-    auth: Public bulletins; new portal access conditions require review.
+    auth: Public; the portal's report list and file download need no sign-in (other endpoints answer 401).
     cost: free
-    limits: Unknown.
+    limits: None stated; one request at a time.
   licence:
-    status: open-conditional
-    notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    status: unresolved
+    notes: 'Terms: the site read, zsrir.minrol.gov.pl, states no terms of use; each workbook only says "PUBLIKOWANIE
+      DANYCH POCHODZĄCYCH Z RAPORTU MOŻLIWE JEST WYŁĄCZNIE Z PODANIEM ŹRÓDŁA" (publishing data from the report is
+      allowed only with the source named; Dev trial 45705794335, milk workbook row 34), which names no commercial reuse
+      or modification terms, so the status is unresolved and the source stays internal (#2484). Earlier reading of the
+      gov.pl pages, which do not cover the portal: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
       https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
       (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
       attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
@@ -3695,10 +3700,10 @@ sources:
     overlap: KOWR republishes/analyses ZSRIR market data; do not treat both as independent observations.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Dev probes 43087126643 and 43087698750: the new ZSRIR portal (zsrir.minrol.gov.pl) fails TLS certificate verification from GitHub runners (unable to get local issuer certificate); TLS checks are never disabled, so it is unreachable until its certificate chain is fixed. The legacy gov.pl market bulletins (rynek-zboz, rynek-mleka, ...) point to dane.gov.pl.'
+    - 'Route found (Dev probes 43813028487 to 43856647230 on test/zsrir, 16 Nov 2026): zsrir.minrol.gov.pl sends its leaf certificate without the intermediate (Certum DV TLS G2 R39 CA); with the CA''s own published intermediate added to certifi''s roots the chain verifies to Certum Trusted Root CA, verification on. The portal''s public endpoints list and serve every bulletin (XLSX and PDF) since August 2024; the legacy gov.pl market pages point to dane.gov.pl, which does not answer runners. The portal states no terms of use.'
     - Open new portal technical/terms pages
     - Inventory structured export
     - Resolve series breaks in 2025 migration
