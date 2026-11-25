@@ -142,8 +142,30 @@ def krs() -> None:
               "legal_form": sorted({str(r["legal_form"]) for r in rows}), "first": [r["krs_number"] for r in rows[:10]]})
 
 
+def units() -> None:
+    """Why world_bank_wdi:NY.GDP.MKTP.CD is not converted from US$ to million US$ (D33) in the metrics."""
+    queries = {
+        "3a unit_unmapped": "select * from ({{ poc_measure_units() }}) as u where source_unit_key is null or"
+        " target_base_unit_key is null",
+        "3b gdp units": "select * from ({{ poc_measure_units('gdp_current_prices') }}) as u",
+        "3c wdi dim_measure": "select measure_key, unit_key, measure_name from {{ ref('poc_dim_measure') }}"
+        " where measure_key like 'world_bank_wdi:%' order by 1",
+        "3d wdi indicators": "select indicator_code, unit_of_measure, indicator_name from {{ ref('wdi_indicators') }}"
+        " where indicator_code in (select replace(measure_key, 'world_bank_wdi:', '') from {{ ref('poc_dim_measure') }}"
+        " where measure_key like 'world_bank_wdi:%') order by 1",
+        "3e wdi unit codes in build_wdi": "select unit_code, count(*) as n, count(distinct measure_key) as measures,"
+        " min(source_version) as v0, max(source_version) as v1 from {{ ref('poc_build_wdi') }} group by 1 order by 2 desc",
+    }
+    for label, sql in queries.items():
+        rows = _show(sql, label, limit=500)
+        if rows is None:
+            continue
+        _emit(label.replace(" ", "_"), rows)
+        annotate("notice", label, rows[:40])
+
+
 def main() -> int:
-    for step in (value_range, krs):
+    for step in (units,):
         try:
             step()
         except Exception as exc:
