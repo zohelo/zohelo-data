@@ -266,12 +266,64 @@ order by a.period_from
 """
 
 
+ENTSOG_SUMMARY = """
+with f as (
+    select * from {{ ref('entsog_physical_flow') }} where point_key = 'ITP-00543' and direction_key = 'exit'
+),
+odd as (select * from f where substr(period_from, 12, 2) not in ('03', '04', '05'))
+select count(*) as rows, count(value_kwh_d) as with_value, count(*) filter (where is_na) as is_na,
+    count(*) filter (where exists (select 1 from f as b where b.gas_day = odd.gas_day and b.period_from <> odd.period_from))
+        as day_also_other_record,
+    min(period_from) as first, max(period_from) as last, list(distinct strftime(gas_day, '%Y-%m') order by 1) as months,
+    list(distinct substr(period_from, 12)) as starts, list(distinct last_update_utc::varchar) as updates,
+    (select count(*) from f where substr(period_from, 12, 2) in ('03', '04', '05') and value_kwh_d is not null)
+        as normal_with_value,
+    (select max(period_from) from f where value_kwh_d is not null) as last_value_day
+from odd
+"""
+
+ENTSOG_ALL = """
+select count(*) as rows, count(value_kwh_d) as with_value
+from {{ ref('entsog_physical_flow') }}
+where substr(period_from, 12, 2) not in ('03', '04', '05') and value_kwh_d is not null
+"""
+
+
+def krs_layout() -> None:
+    import requests
+
+    from ingestion.to_landing.ms_krs import extract as x
+
+    def shape(node, depth=0):
+        if isinstance(node, dict):
+            return {k: shape(v, depth + 1) for k, v in node.items()} if depth < 2 else f"dict[{len(node)}]"
+        if isinstance(node, list):
+            return [shape(node[0], depth + 1), len(node)] if node else "list[0]"
+        return type(node).__name__
+
+    out = {}
+    session = requests.Session()
+    session.headers.update({"User-Agent": "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data)"})
+    for number in ("0000694417", "0001268305", "0000517824"):
+        r = session.get(x.EXTRACT_URL.format(krs=number, register="P"), timeout=(20, 60))
+        time.sleep(1.0)
+        doc = r.json() if r.status_code == 200 else {}
+        d1 = x._at(doc.get("odpis") or {}, "dane.dzial1") or {}
+        out[number] = {
+            "status": r.status_code,
+            "odpis_keys": sorted((doc.get("odpis") or {}).keys()),
+            "dane_keys": sorted((x._at(doc.get("odpis") or {}, "dane") or {}).keys()),
+            "dzial1": shape(d1),
+        }
+    annotate("notice", "3g ms_krs answer layout without a name (structure only)", out)
+
+
 def main() -> int:
     if os.environ.get("ONLY") or True:
         steps = [
-            ("3a ms_krs parts", lambda: show("3a ms_krs Bronze newest vs Silver per part", KRS_PARTS)),
-            ("3b ms_krs rows", lambda: show("3b ms_krs extracts without register or name", KRS_ROWS)),
-            ("3f entsog rows", lambda: show("3f entsog ITP-00543 exit 07:00 records", ENTSOG_ROWS, 100)),
+            ("3f entsog summary", lambda: show("3f entsog ITP-00543 exit, records not starting 03-05", ENTSOG_SUMMARY)),
+            ("3h entsog all", lambda: show("3h entsog records with a value not starting 03-05", ENTSOG_ALL)),
+            ("3g ms_krs layout", krs_layout),
         ]
         return max((_run(n, s) for n, s in steps), default=0)
     steps = [
