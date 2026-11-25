@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: poc_build_companies_house
+    description: >-
+      Build stage — UK Companies House Free Company Data Product: companies on the UK register at the end of
+      each month a snapshot was landed for (all, and those whose country of origin is Poland; by company status
+      and by company category, one at a time), and the companies incorporated in that month that are on the
+      register at its end (UK total; a lower bound of incorporations). Monthly, geography GB, unit companies.
+    columns:
+      - name: measure_key
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - companies_house:basic_company_data:companies:on_register
+                  - companies_house:basic_company_data:companies:incorporated_in_month
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: company_uk_poland_origin
+    description: >-
+      One row per company on the UK register whose country of origin is Poland (newest Companies House
+      snapshot): overseas companies with a UK establishment and overseas entities owning UK property. Keyed by
+      the Companies House number; no Polish identifier in the source.
+    columns:
+      - name: company_key
+        description: "'GB-COH:' || company_number."
+        tests: [not_null, unique]
+      - name: company_number
+        tests: [not_null, unique]
+      - name: company_name
+        tests: [not_null]
+      - name: country_of_origin
+        tests:
+          - accepted_values:
+              arguments:
+                values: [POLAND]
+      - name: company_status
+        description: >-
+          Closed list as the 1 November 2026 snapshot holds it for the whole register (14 values); a new value
+          warns.
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - Active
+                  - Active - Proposal to Strike off
+                  - Liquidation
+                  - In Administration
+                  - Live but Receiver Manager on at least one charge
+                  - Voluntary Arrangement
+                  - In Administration/Administrative Receiver
+                  - RECEIVERSHIP
+                  - ADMINISTRATION ORDER
+                  - ADMINISTRATIVE RECEIVER
+                  - In Administration/Receiver Manager
+                  - RECEIVER MANAGER / ADMINISTRATIVE RECEIVER
+                  - VOLUNTARY ARRANGEMENT / RECEIVER MANAGER
+                  - VOLUNTARY ARRANGEMENT / ADMINISTRATIVE RECEIVER
+              config: {severity: warn}
+      - name: company_category
+        description: The two categories the Poland-origin companies have in the 1 November 2026 snapshot; another warns.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [Other company type, Overseas Entity]
+              config: {severity: warn}
+      - name: snapshot_date
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

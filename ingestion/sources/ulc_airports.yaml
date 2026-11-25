@@ -1,0 +1,39 @@
+source_system: ulc_airports
+description: "ULC — statystyki wg portów lotniczych: passengers and passenger flight operations per Polish airport, quarterly PDFs"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-026. Bulk feature: the Civil Aviation Authority's page
+# https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych links one PDF per quarter (65 links, Q1 2010
+# to Q1 2026 on 16 Nov 2026; no XLSX, CSV or API). The PDF paths differ per release, so the page is the entry
+# (ingestion/to_landing/ulc_airports/). Entity = the reporting quarter from the link text (<year>_q<n>), version =
+# Last-Modified, written only when the SHA-256 changed; missing quarters, quarters whose link changed and the newest
+# two are downloaded, one request every 4 seconds. The site carries Imperva Incapsula bot protection: a refusal or a
+# challenge page stops the run and is recorded, never worked around (Dev probe 43797214327: listing and 64 of 65 PDFs
+# answered 200; trial runs 43807334129 and 43808333414 at 05:00-05:10 UTC on 16 Nov got a 212-byte challenge page and
+# stopped; trial 43831892099 at 08:31 UTC landed all 65 PDFs, 15,404,552 bytes).
+# Restart unit: one quarter's PDF. Bronze reads the PDF text layer (pypdf); see ingestion/to_bronze/ulc_airports/.
+extraction:
+  initial: bulk
+  production: snapshot                  # each PDF is its quarter as published; a corrected file replaces it
+  incremental_policy: changed_since_last  # new quarters and changed links; SHA-256 of the newest two
+  schedule: # UTC; a quarter is published three to six months after its end (Q1 2026 in June, page updated Oct 2026); monthly check
+    - {cron: "40 5 9 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/ulc_airports/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.ulc_airports_rows, bronze.ulc_airports_rejected_files]
+silver: [silver.ulc_airports_traffic, silver.ulc_airports_airports]
+gold: [gold.build_ulc_airports]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  ulc_airports_traffic: {rows: 3400}  # 2,228 rows, Q1 2008 - Q1 2026 (Dev trial 43831892099)
+  ulc_airports_airports: {rows: 25}  # 15 airports
+  poc_build_ulc_airports: {rows: 3400}  # 2,228 rows (Dev trial 43831892099)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a quarter
+# Refresh policy for all layers (D32): about 65 PDFs of a few hundred KB, one new a quarter, 3,852 Bronze rows
+# and under 2,500 Silver rows; small, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2967"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

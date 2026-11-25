@@ -1,0 +1,61 @@
+version: 2
+models:
+  - name: ted_notices
+    description: >-
+      TED notices of Polish buyers (register PLG-023, TED Search API v3 of the Publications Office of the EU; licence
+      unresolved, internal): every notice published from 2025-01-01 whose buyer country is Poland. Grain:
+      publication_number (one row per published notice; a change or correction is its own notice). Notice and form
+      type, procedure type, contract nature, CPV codes, buyer countries (ISO alpha-3), buyer NUTS codes and buyer
+      legal types as published (no buyer names: not requested); estimated value of the procedure with its currency
+      as published. tests/ted_notices_pages_complete.sql checks that no page of a publication day is missing and
+      that the day's notices equal the total the answer states. History and trial run: see
+      ingestion/sources/ted_notices.yaml.
+    columns:
+      - name: publication_number
+        tests: [not_null, unique]
+      - name: publication_year
+        tests: [not_null]
+      - name: notice_type
+        description: >-
+          eForms notice subtype as published; the closed list holds the 19 types found in Dev trial 43344674034
+          (2025-01-02 to 2026-11-12). Severity warn: the eForms list has rarer types not yet seen for Polish buyers
+          (two seen only once), and a new one must show up without stopping the daily build.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['cn-standard', 'can-standard', 'can-modif', 'pin-rtl', 'veat', 'can-social', 'can-desg',
+                         'cn-social', 'pin-tran', 'pin-only', 'pin-buyer', 'compl', 'cn-desg', 'qu-sy',
+                         'pin-cfc-standard', 'pmc', 'can-tran', 'brin-ecs', 'pin-cfc-social']
+              config: {severity: warn}
+      - name: form_type
+        description: >-
+          eForms form type as published; closed list from Dev trial 43344674034. Severity warn, like notice_type:
+          a form type of the eForms list not yet seen for Polish buyers must show up without stopping the daily
+          build.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['competition', 'result', 'cont-modif', 'planning', 'dir-awa-pre', 'completion',
+                         'consultation', 'bri']
+              config: {severity: warn}
+      - name: procedure_type
+        description: eForms procedure type as published (null for notice types without a procedure); closed list from
+          Dev trial 43344674034.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['open', 'neg-wo-call', 'restricted', 'oth-single', 'neg-w-call', 'comp-dial', 'oth-mult',
+                         'comp-tend', 'innovation', 'exp-int-rail']
+      - name: publication_date
+        tests: [not_null]
+      - name: buyer_countries
+        tests: [not_null]
+      - name: day_total_notices
+        tests: [not_null]
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the source answer (lineage to Landing/Archive).
+        tests: [not_null]
