@@ -51,7 +51,8 @@ RETRY_STATUSES = {408, 500, 502, 503, 504}  # 429 and 403 are refusals: the run 
 NO_EXTRACT = {204, 404}  # the register holds no current extract of the number (P answers 204, S answers 404)
 NO_EXTRACT_RUN = 50  # numbers in a row without an extract that stop a run (about 1 in 4 has none)
 
-# The allowlist: reduced field → path in the answer below ``odpis``. Nothing else is kept.
+# The allowlist: reduced field → path in the answer below ``odpis``. Nothing else is kept. A branch of a foreign
+# entrepreneur (oddział przedsiębiorcy zagranicznego) has its entity data under other section names (FOREIGN).
 HEADER = {
     "register": "naglowekA.rejestr",
     "extract_kind": "rodzaj",
@@ -73,6 +74,10 @@ HEADER = {
     "share_capital": "dane.dzial1.kapital.wysokoscKapitaluZakladowego.wartosc",
     "share_capital_currency": "dane.dzial1.kapital.wysokoscKapitaluZakladowego.waluta",
 }
+FOREIGN = (
+    ("dane.dzial1.danePodmiotu.", "dane.dzial1.danePodmiotuZagranicznego."),
+    ("dane.dzial1.siedzibaIAdres.", "dane.dzial1.siedzibaIAdresPodmiotuZagranicznego."),
+)
 # Derived from allowlisted paths: codes of the main activity, and how many entries a status section holds
 # (and how many of them carry an end), never the entries themselves (they name liquidators and trustees).
 DERIVED = (
@@ -113,7 +118,11 @@ def reduce(krs: str, document: Any, requested_on: str) -> dict[str, Any]:
         raise ValueError(f"answer is not the extract of {krs}")
     record: dict[str, Any] = {"krs_number": krs, "requested_on": requested_on, "http_status": 200}
     for field, path in HEADER.items():
-        record[field] = _scalar(_at(odpis, path))
+        value = _scalar(_at(odpis, path))
+        for domestic, foreign in FOREIGN:
+            if value is None and path.startswith(domestic):
+                value = _scalar(_at(odpis, foreign + path[len(domestic) :]))
+        record[field] = value
     main = _items(_at(odpis, "dane.dzial3.przedmiotDzialalnosci.przedmiotPrzewazajacejDzialalnosci"))
     record["main_pkd"] = [
         ".".join(str(item.get(key) or "") for key in ("kodDzial", "kodKlasa", "kodPodklasa")) for item in main
@@ -356,6 +365,9 @@ def extract(
         for day in days:
             listed = api.bulletin(day) & set(held)
             again |= {krs for krs in listed if date.fromisoformat(held[krs]["requested_on"]) <= day}
+        # extracts reduced before the allowlist knew their layout (no name): asked again until they have one (#3196)
+        unnamed = {krs for krs, r in held.items() if r.get("http_status") == 200 and r.get("name") is None}
+        again |= unnamed
         settled = True
         for krs in sorted(again):
             if time.monotonic() > deadline:
@@ -369,7 +381,8 @@ def extract(
             {
                 "bulletin_days": [days[0].isoformat(), days[-1].isoformat()] if days else [],
                 "bulletin_days_unread": unread,
-                "listed_again": len(again),
+                "listed_again": len(again - unnamed),
+                "unnamed_again": len(unnamed),
                 "asked_again": sum(outcomes.values()),
                 "bulletin_settled": settled,
             }
