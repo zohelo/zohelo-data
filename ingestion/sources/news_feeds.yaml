@@ -59,9 +59,11 @@ extraction:
   initial: bulk
   production: snapshot                  # each copy is the feed as served; copies accumulate in Bronze
   incremental_policy: changed_since_last  # SHA-256
-  schedule: # UTC; every 3 hours the full dataflow fetches each feed once, loads it and rebuilds the topics, so the
-    # ranking follows the day (11 Nov; the build rebuilds only the topic models that changed)
-    - {cron: "5 0,3,6,9,12,15,18,21 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; the feeds keep 20 hours to 6 days of items, so the Landing fetch stays twice a day (each copy
+    # is kept and loaded later; one request per feed); Bronze and Silver once a week, Saturday, after the
+    # evening fetch (O46, weekly until production use; was every 3 hours, full)
+    - {cron: "5 5,17 * * *", run: "landing: extract"}
+    - {cron: "35 17 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/news_feeds/
 archive_policy:
@@ -71,6 +73,8 @@ archive_policy:
 bronze: [bronze.news_items, bronze.news_feeds_rejected_files]
 silver: [silver.news_headlines]
 gold: []
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  news_headlines: {rows: 300000}
 
 # Refresh policy for all layers (owner decision #875): Bronze accumulates one small file per landed copy;
 # Silver keeps 400 days of headlines (about 150,000 rows) and is rebuilt in full.

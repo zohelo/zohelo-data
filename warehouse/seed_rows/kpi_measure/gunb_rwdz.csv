@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+building_permit_decisions,gunb_rwdz,gunb_rwdz:permits:decisions,"register records by month of decision; the measure has an investment_kind breakdown, the KPI reads its total (_T); from 2020-01",1,decisions

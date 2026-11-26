@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: ulc_airports
+  description: ULC (Urząd Lotnictwa Cywilnego) airport traffic statistics (register PL-ENV-026), quarterly PDFs
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ulc_airports/
+    loaded_by: ingestion/to_bronze/ulc_airports/
+    config: ingestion/sources/ulc_airports.yaml
+  tables:
+  - name: ulc_airports_rows
+    description: >-
+      One row per printed table row (airport × measure) of the newest copy of each quarter's PDF, read from the text
+      layer: table title, column header and labels, airport and measure labels and the five values as printed (three
+      years, two growth rates); partitioned by entity (<year>_q<n>).
+  - name: ulc_airports_rejected_files
+    description: ULC airport-statistics PDFs the Bronze decoder rejected, with the reason.

@@ -909,7 +909,7 @@ def split_notes(body: str) -> tuple[str, str]:
     return "\n".join(lines[:1]), NOTES_MARKER + "\n\n" + "\n".join(lines[1:]).strip("\n")
 
 
-def run_sync(roots: list[Path], apply: bool) -> int:
+def run_sync(roots: list[Path], apply: bool, create: bool = True) -> int:
     from ingestion.common.report import annotate
 
     plan = build(roots)
@@ -936,7 +936,9 @@ def run_sync(roots: list[Path], apply: bool) -> int:
             return 1
     board = Board(api, token, ORG)
     nodes = sorted(plan.nodes.items(), key=lambda item: LAYERS.index(item[1][0]))
-    counts = {repo: {"create": 0, "update": 0, "reparent": 0, "close": 0} for repo in PREFIXES.values()}
+    counts = {
+        repo: {"create": 0, "update": 0, "reparent": 0, "close": 0, "not created": 0} for repo in PREFIXES.values()
+    }
     owner_open = sum(
         1 for i in issues.values() if i["state"] == "open" and any(n["name"] == "owner:action" for n in i["labels"])
     )
@@ -960,6 +962,10 @@ def run_sync(roots: list[Path], apply: bool) -> int:
             want = render(node, kind, ref, repo, due)
             existing = issues.get(key)
             finished = node.get("state") == "done" and kind in ("Task", "Deliverable")
+            if existing is None and not create:
+                # O45 (16 Nov): the daily run only updates and closes; a planned node gets its issue when work starts.
+                counts[repo]["not created"] += 1
+                continue
             if existing is None:
                 counts[repo]["create"] += 1
                 created = api.write(
@@ -1034,9 +1040,9 @@ def run_sync(roots: list[Path], apply: bool) -> int:
     if board.mapped:
         annotate("notice", "backlog_sync project options mapped", sorted(board.mapped))
     labels = (
-        ("created", "updated", "reparented", "closed")
+        ("created", "updated", "reparented", "closed", "not created (--no-create)")
         if apply
-        else ("to create", "to update", "to reparent", "to close")
+        else ("to create", "to update", "to reparent", "to close", "not created (--no-create)")
     )
     for repo, found in counts.items():
         if repo in loaded:
@@ -1258,6 +1264,11 @@ def main() -> int:
         sync_mode.add_argument(
             "--root", action="append", type=Path, help="repository root (repeatable; default: this one and _repos/*)"
         )
+        sync_mode.add_argument(
+            "--no-create",
+            action="store_true",
+            help="do not open issues for nodes without one; only update, reparent and close (owner rule O45)",
+        )
     args = parser.parse_args()
     if args.mode == "pr-check":
         return pr_check()
@@ -1267,7 +1278,7 @@ def main() -> int:
             roots += [d for d in (ROOT / "_repos" / "zohelo-bi", ROOT / "_repos" / "zohelo") if d.is_dir()]
         if args.mode == "migrate":
             return run_migrate(roots, args.apply)
-        return run_sync(roots, args.mode == "apply")
+        return run_sync(roots, args.mode == "apply", create=not args.no_create)
     return validate(roots, args.strict) if args.mode == "validate" else show(roots, args.key)
 
 

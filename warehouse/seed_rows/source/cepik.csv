@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+cepik,PL-ENV-024,CEPiK statystyki pojazdów zarejestrowanych,CEPiK vehicle registration statistics,Ministerstwo Cyfryzacji,cube,file,national-public,cepik_terms,https://www.gov.pl/web/cepik/statystyki

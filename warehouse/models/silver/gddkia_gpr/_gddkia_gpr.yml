@@ -1,0 +1,38 @@
+version: 2
+models:
+  - name: gddkia_gpr_sdrr
+    description: >-
+      GDDKiA traffic census GPR (register PL-ENV-022), table 2: average annual daily traffic (SDRR, vehicles per
+      day) per measured section and vehicle class of national roads (dk) and voivodeship roads (dw), editions
+      2020/21 and 2025. Grain: edition_code x road_class x section_code x vehicle_class. Columns found by header
+      text (gddkia_gpr_sdrr.sql); value as published, '-' = not_measured without a value; the 2020/21 dk erratum
+      replaces its 21 sections (from_erratum). Trial run: see ingestion/sources/gddkia_gpr.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', edition_code, road_class, section_code, vehicle_class)"
+    columns:
+      - name: edition_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['2020', '2025']}}}]
+      - name: road_class
+        tests: [not_null, {accepted_values: {arguments: {values: [dk, dw]}}}]
+      - name: section_code
+        tests: [not_null]
+      - name: voivodeship_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']
+      - name: length_km
+        tests: [not_null]
+      - name: vehicle_class
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [motor_vehicles, motorcycles, cars, cars_minibuses, minibuses, light_goods_vehicles,
+                         trucks_without_trailer, trucks_with_trailer, buses, agricultural_tractors]
+      - name: value_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, not_measured]}}}]
+      - name: raw_sha256
+        tests: [not_null]
