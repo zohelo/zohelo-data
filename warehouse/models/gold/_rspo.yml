@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: poc_build_rspo
+    description: >-
+      Build stage — RSPO register counts (register PLS-021): entries of the register of schools and educational
+      institutions, total and by institution type, public status and governing-body class (one breakdown at a time),
+      Poland, voivodeships, powiats and gminas, state of 30 September 2020-2025 (annual, date_key = 1 January of the
+      reference year).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: rspo_institution
+    description: >-
+      One row per RSPO number listed in any yearly list 2020-2025: attributes of the newest list that holds it (type,
+      unit kind, public status, governing-body type and class, TERYT codes, pupils, classes, teachers), the years it
+      is listed and whether the newest list holds it. No name, address, contact, REGON or governing-body identity.
+    columns:
+      - name: rspo_number
+        description: The register's own number (RSPO), the key.
+        tests: [not_null, unique]
+      - name: geography_key
+        description: >-
+          'TERC:' || the gmina's TERYT code as published in that list. No relationships test: it would be selected by
+          builds of poc_dim_geography before this table exists (the Dev trial counts codes missing from it).
+        tests: [not_null]
+      - name: institution_type_id
+        tests: [not_null]
+      - name: public_status_id
+        tests: [not_null]
+      - name: governing_body_class
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
