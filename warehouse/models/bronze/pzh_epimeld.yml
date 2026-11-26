@@ -1,0 +1,20 @@
+version: 2
+sources:
+- name: pzh_epimeld
+  description: NIZP PZH-PIB EPIMELD annual bulletins "Choroby zakaźne i zatrucia w Polsce" (register PLS-019), PDF
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/pzh_epimeld/
+    loaded_by: ingestion/to_bronze/pzh_epimeld/
+    config: ingestion/sources/pzh_epimeld.yaml
+  tables:
+  - name: pzh_epimeld_rows
+    description: >-
+      One row per printed row of the bulletins' per-disease tables "Liczba zachorowań (w kwartałach i ogółem),
+      zapadalność oraz liczba i procent hospitalizowanych wg województw" (newest copy of each bulletin, PDF text
+      layer): disease title and ICD-10 codes, incidence header, POLSKA rows (previous year and the bulletin's year) and
+      voivodeship rows (bulletin's year), quarters I-IV, cases, incidence, hospitalised and per cent as printed;
+      partitioned by entity (ch_<year>).
+  - name: pzh_epimeld_rejected_files
+    description: EPIMELD bulletins the Bronze decoder rejected, with the reason.

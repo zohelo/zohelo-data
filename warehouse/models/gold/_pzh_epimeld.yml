@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_pzh_epimeld
+    description: >-
+      Build stage — NIZP PZH-PIB EPIMELD annual bulletins (register PLS-019): registered cases and incidence per
+      100,000 population per disease (ICD-10 codes of the table title, part of the measure), per year, for Poland and
+      the voivodeships. Values and units as published; values of a bulletin marked "wstępne" are provisional.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
