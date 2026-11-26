@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: mf_state_budget
+  description: Ministry of Finance monthly state budget execution reports (one entity per year)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_state_budget/
+    loaded_by: ingestion/to_bronze/mf_state_budget/
+    config: ingestion/sources/mf_state_budget.yaml
+  tables:
+  - name: mf_state_budget_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity budget_execution_<year>): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: mf_state_budget_rejected_files
+    description: mf_state_budget Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.

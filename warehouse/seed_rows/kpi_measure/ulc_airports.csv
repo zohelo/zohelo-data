@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+air_passengers,ulc_airports,ulc_airports:airport_traffic:passengers:passengers,"ULC, quarterly, all airports in the table (Poland)",1,
+air_passenger_operations,ulc_airports,ulc_airports:airport_traffic:operations:passenger_operations,"ULC, quarterly, all airports in the table (Poland)",1,

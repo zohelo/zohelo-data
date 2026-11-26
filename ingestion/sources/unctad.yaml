@@ -67,7 +67,21 @@ bronze: [bronze.unctad_rows, bronze.unctad_rejected_files]
 silver: [silver.unctad_fdi_flows_stock, silver.unctad_merchandise_trade, silver.unctad_services_trade,
          silver.unctad_digital_services_trade, silver.unctad_commodity_prices, silver.unctad_liner_shipping_connectivity,
          silver.unctad_merchant_fleet, silver.unctad_seaborne_trade, silver.unctad_port_calls]
-gold: [gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services]
+# Full coverage (O43, D35, docs/gold-coverage.md): every measure of the nine Silver tables by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; each Silver table is one block.
+gold: [gold.build_unctad, gold.metrics_exports_goods, gold.metrics_exports_services, gold.unctad_observations,
+       gold.unctad_series, gold.unctad_measures, gold.unctad_geography, gold.observations_rejected]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  unctad_fdi_flows_stock: {rows: 55000}  # 36,950 (Dev trial 43094105961)
+  unctad_merchandise_trade: {rows: 70000}  # 46,108
+  unctad_services_trade: {rows: 1200000, exception: "#2777"}  # 807,733, ~38,000 more a year; whole-table archive, full rebuild accepted
+  unctad_digital_services_trade: {rows: 185000}  # 122,752
+  unctad_commodity_prices: {rows: 30000}  # 19,961
+  unctad_liner_shipping_connectivity: {rows: 115000}  # 76,003
+  unctad_merchant_fleet: {rows: 96000}  # 63,896
+  unctad_seaborne_trade: {rows: 97000}  # 64,424
+  unctad_port_calls: {rows: 1800}  # 1,197
+  poc_build_unctad: {rows: 18000}  # 11,871 (Dev trial 43100532689): 29 areas × 10 measures
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): nine tables, 1.24 million rows in all. Each archive is the whole table with no
@@ -76,4 +90,7 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # full-rebuild threshold: its ceiling 1,200,000 carries the exception #2777; the other eight are below 125,000 rows.
 refresh: {mode: full, decided: "D32 + #2757, #2777"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the weekly platform run continues the per-block Gold load
+# (O46); the first load is started by hand (Pipeline run "gold: observations" with filter *).
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

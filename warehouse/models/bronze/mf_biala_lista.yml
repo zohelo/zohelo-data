@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: mf_biala_lista
+  description: Ministry of Finance VAT taxpayer white list (flat file)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mf_biala_lista/
+    loaded_by: ingestion/to_bronze/mf_biala_lista/
+    config: ingestion/sources/mf_biala_lista.yaml
+  tables:
+  - name: biala_lista_records
+    description: >-
+      One row per item of the newest flat file's lists (record_kind active / exempt / mask, value
+      as published, position in its list), with the header's generation date and transformation count.
+  - name: biala_lista_rejected_files
+    description: Landing files the white-list Bronze decoder rejected, with the reason (cleared by ops/retry_rejected).

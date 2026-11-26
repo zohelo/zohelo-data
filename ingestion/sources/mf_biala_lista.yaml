@@ -16,10 +16,9 @@ extraction:
   initial: bulk
   production: snapshot                    # each file is the complete list for its day
   incremental_policy: changed_since_last  # a new file every day
-  schedule:                               # UTC; 00:50/01:50 Warsaw, after the evening publish;
-    # a second slot catches a late publish or a failed first run (an unchanged file is skipped)
-    - {cron: "50 23 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
-    - {cron: "50 5 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; 04:50/05:50 Warsaw, hours after the evening publish; one run a week (O46, weekly until production use; was 23:50 and 05:50
+    # daily): the list of that day only, the days between are not kept
+    - {cron: "50 3 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/mf_biala_lista/
 archive_folder: 05_archive/mf_biala_lista/
@@ -31,6 +30,8 @@ archive_policy:
 bronze: [bronze.biala_lista_records, bronze.biala_lista_rejected_files]
 silver: [silver.biala_lista_taxpayer_hashes, silver.biala_lista_masks]
 gold: [gold.build_mf_biala_lista, gold.metrics_vat_whitelist_entries]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_mf_biala_lista: {rows: 10}  # 4 (Dev trial 43099545187)
 legacy_tables: [bronze.biala_lista_header, bronze.biala_lista_masks, bronze.biala_lista_taxpayers, silver.biala_lista_header, silver.biala_lista_taxpayers, gold.dim_vat_header, gold.dim_vat_masks, gold.dim_vat_taxpayer_account]
 
 # Refresh policy for all layers (design #875): entity = the flat file; each day's file replaces

@@ -1,0 +1,20 @@
+version: 2
+sources:
+- name: world_bank_ids
+  description: World Bank International Debt Statistics — DataBank bulk CSV archive
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_ids/
+    loaded_by: ingestion/to_bronze/world_bank_ids/
+    config: ingestion/sources/world_bank_ids.yaml
+  tables:
+  - name: ids_observations
+    description: >-
+      One row per economy × series × counterpart area × year with a value of the observation member of the newest IDS_CSV archive (empty cells are not stored); codes, names and values as source text; partitioned by entity (IDS_CSV archive). Some codes are padded with spaces as published.
+  - name: ids_metadata
+    description: >-
+      Every other IDS member (country, series, country-series, series-time, footnote) as field/value rows: member file, source row number, field, value text.
+  - name: ids_rejected_files
+    description: >-
+      IDS Landing archives the Bronze decoder rejected, with the reason.

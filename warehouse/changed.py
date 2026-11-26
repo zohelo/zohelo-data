@@ -65,6 +65,10 @@ FINGERPRINT = "zohelo.build_fingerprint"
 SHARED_CODE = ("macros", "dimensions", "dbt_project.yml", "../requirements.txt")
 # Per-source macro files (D34): left out of the shared digest, fingerprinted with the models that use them.
 SOURCE_MACROS = "macros/sources"
+# Per-source value-range declarations, read by the data test metrics_value_range only (no model calls them): left out of
+# the shared digest like SOURCE_MACROS, but not given to the models that reach the registration macros, so a new or
+# changed bound rebuilds nothing (a test has no build fingerprint; it runs whenever a model it reads is built).
+VALUE_RANGES = "macros/value_range"
 # The macros that find the per-source macros by name; dbt records no dependency for a macro called that way.
 REGISTRATION = "macros/source_registration.sql"
 # A model that reads a code list kept per source (config meta of warehouse/seed_rows.py) is fingerprinted with the
@@ -99,13 +103,13 @@ def manifest(target: str = "prod") -> dict[str, Any]:
 
 
 def shared_digest() -> str:
-    """One digest of the code every model shares; the files under SOURCE_MACROS are not in it."""
+    """One digest of the code every model shares; the files under SOURCE_MACROS and VALUE_RANGES are not in it."""
     digest = hashlib.sha256()
-    apart = (PROJECT / SOURCE_MACROS).resolve()
+    apart = {(PROJECT / SOURCE_MACROS).resolve(), (PROJECT / VALUE_RANGES).resolve()}
     for name in SHARED_CODE:
         root = (PROJECT / name).resolve()
         for path in sorted(root.rglob("*") if root.is_dir() else [root]):
-            if path.is_file() and apart not in path.parents:
+            if path.is_file() and not apart & set(path.parents):
                 digest.update(str(path.relative_to(root.parent)).encode() + b"\0" + path.read_bytes() + b"\0")
     return digest.hexdigest()
 
@@ -120,13 +124,14 @@ def source_macro_files(meta: dict[str, Any]) -> dict[str, list[str]]:
     and, because dbt does not record a call inside ``{% if execute %}`` or through ``context[...]``, also from the
     text: a per-source or registration macro whose name occurs as a word in the model's code or in a reached
     macro's code counts as called. A file there that defines a macro without SOURCE_MACRO_PREFIX belongs to
-    every model."""
+    every model. A file under VALUE_RANGES counts only for a model that calls one of its macros (none should)."""
     project = meta["metadata"]["project_name"]
     macros = {uid: m for uid, m in meta["macros"].items() if m["package_name"] == project}
     files = {uid: Path(m["original_file_path"]).as_posix() for uid, m in macros.items()}
-    per_source = {uid for uid, f in files.items() if f.startswith(SOURCE_MACROS + "/")}
+    value_ranges = {uid for uid, f in files.items() if f.startswith(VALUE_RANGES + "/")}
+    per_source = {uid for uid, f in files.items() if f.startswith(SOURCE_MACROS + "/")} | value_ranges
     registration = {uid for uid, f in files.items() if f == REGISTRATION}
-    every = sorted({files[uid] for uid in per_source})
+    every = sorted({files[uid] for uid in per_source - value_ranges})
     loose = {files[uid] for uid in per_source if not macros[uid]["name"].startswith(SOURCE_MACRO_PREFIX)}
     named = {macros[uid]["name"]: uid for uid in per_source | registration}
     word = re.compile(r"\b(" + "|".join(map(re.escape, sorted(named))) + r")\b") if named else None
