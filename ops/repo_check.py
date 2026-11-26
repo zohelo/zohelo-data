@@ -469,6 +469,9 @@ METRICS_MODEL = re.compile(
 )
 BLOCK_SOURCE_SYSTEMS = re.compile(r"['\"]source_systems['\"]\s*:\s*\[([^\]]*)\]")
 SOURCE_LITERAL = re.compile(r"'([a-z0-9_]+)'\s+as\s+source_system\b")
+# warehouse/changed.py: the sources left out of the metrics scope inputs and the data test that enforces it (#3204 A2).
+OUTSIDE_METRICS = re.compile(r"^OUTSIDE_METRICS\s*=\s*\(([^)]*)\)", re.M)
+OUTSIDE_METRICS_TEST = re.compile(r"^OUTSIDE_METRICS_TEST\s*=\s*\"([^\"]+)\"", re.M)
 
 
 def scoped_metrics(files: list[Path], entries: dict[str, str]) -> list[str]:
@@ -494,6 +497,7 @@ def scoped_metrics(files: list[Path], entries: dict[str, str]) -> list[str]:
                 f"{model}: writes source_system '{literal}' but is declared for {sorted(declared_sources)}; add it to "
                 "config meta source_systems (warehouse/changed.py block_sources)"
             )
+    problems += outside_metrics()
     for f in files:
         if f.parts[:3] != ("warehouse", "models", "gold") or not f.stem.startswith("poc_metrics_"):
             continue
@@ -506,6 +510,29 @@ def scoped_metrics(files: list[Path], entries: dict[str, str]) -> list[str]:
                 f"{f}: a metrics model is exactly {{{{ config(alias='metrics_{kpi}') }}}}, an optional comment and "
                 f"{{{{ poc_concept_metrics('{kpi}') }}}} (warehouse/changed.py scopes it by that concept)"
             )
+    return problems
+
+
+def outside_metrics() -> list[str]:
+    """A source that warehouse/changed.py leaves out of the metrics scope inputs (OUTSIDE_METRICS) is safe only while
+    the data test OUTSIDE_METRICS_TEST runs: it must exist, read poc_dim_measure and poc_concept_measures, and not be
+    disabled or lowered to a warning (#3204 PR A2)."""
+    text = (ROOT / "warehouse/changed.py").read_text()
+    listed = OUTSIDE_METRICS.search(text)
+    names = re.findall(r"['\"]([\w.]+)['\"]", listed.group(1)) if listed else []
+    if not names:
+        return []
+    found = OUTSIDE_METRICS_TEST.search(text)
+    test = ROOT / found.group(1) if found else None
+    if test is None or not test.is_file():
+        return [f"warehouse/changed.py: OUTSIDE_METRICS {names} needs its data test (OUTSIDE_METRICS_TEST) to exist"]
+    sql = test.read_text()
+    problems = []
+    for model in ("poc_dim_measure", "poc_concept_measures"):
+        if not re.search(r"ref\(\s*['\"]" + model + r"['\"]\s*\)", sql):
+            problems.append(f"{test.relative_to(ROOT)}: must read {model} (it guards OUTSIDE_METRICS {names})")
+    if re.search(r"enabled\s*=\s*false|severity\s*=\s*['\"]warn", sql, re.I):
+        problems.append(f"{test.relative_to(ROOT)}: must stay enabled at error severity (it guards OUTSIDE_METRICS)")
     return problems
 
 
@@ -567,16 +594,31 @@ OPTIONAL_REF = re.compile(r"poc_optional_ref\(\s*['\"](\w+)['\"]")
 OPTIONAL_PARENTS = re.compile(r"['\"]optional_parents['\"]\s*:\s*\[(.*?)\]", re.S)
 
 
+GEOGRAPHY_CTES = re.compile(r"\bpoc_geography_ctes\(")
+
+
 def optional_parents(files: list[Path]) -> list[str]:
     """A model reads a table through `poc_optional_ref('<model>', …)` exactly when it lists that model in its
     config meta `optional_parents`: warehouse/changed.py plans by the list (the model does not wait for those
-    parents), the macro reads by the call (an empty relation while the parent waits)."""
+    parents), the macro reads by the call (an empty relation while the parent waits). A model that places the
+    per-source geography CTEs (`poc_geography_ctes()`, docs/source-registration.md) reads the calls in every
+    `poc_geography__<source>()` macro too. A per-source macro file calls poc_optional_ref only inside its geography
+    macro, the one place a model's list covers."""
     problems = []
+    geography_reads = set()
+    for f in files:
+        if f.parent != SOURCE_MACROS or f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        text = (ROOT / f).read_text()
+        inside = [body for kind, _, body in REGISTRATION.findall(text) if kind == "geography"]
+        geography_reads |= {m for body in inside for m in OPTIONAL_REF.findall(body)}
+        if len(OPTIONAL_REF.findall(text)) != sum(len(OPTIONAL_REF.findall(body)) for body in inside):
+            problems.append(f"{f}: poc_optional_ref outside poc_geography__{f.stem}() (no model lists it)")
     for f in files:
         if f.parts[:2] != ("warehouse", "models") or f.suffix != ".sql" or not (ROOT / f).exists():
             continue
         text = (ROOT / f).read_text()
-        read = set(OPTIONAL_REF.findall(text))
+        read = set(OPTIONAL_REF.findall(text)) | (geography_reads if GEOGRAPHY_CTES.search(text) else set())
         declared = OPTIONAL_PARENTS.search(text)
         listed = set(re.findall(r"['\"](\w+)['\"]", declared.group(1))) if declared else set()
         problems += [f"{f.stem}: poc_optional_ref('{m}') but not in meta optional_parents" for m in read - listed]

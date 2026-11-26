@@ -1,0 +1,22 @@
+version: 2
+models:
+  - name: poc_build_kgpsp_interventions
+    description: >-
+      Build stage — KG PSP standard summary tables, annual 2016 on, Poland and the 16 voivodeships: block incidents
+      (table 1, incidents by type and size) and block casualties (table 10, deaths and injured in fires and local
+      hazards by group, counts only). From 2023 voivodeships and Poland are sums of the published gmina rows.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_fire_service_fires
+    description: KPI fire_service_fires (draft) from gold.build_kgpsp_interventions (macros/poc_metrics.sql).
+  - name: poc_metrics_fire_service_local_hazards
+    description: KPI fire_service_local_hazards (draft) from gold.build_kgpsp_interventions (macros/poc_metrics.sql).
+  - name: poc_metrics_fire_service_false_alarms
+    description: KPI fire_service_false_alarms (draft) from gold.build_kgpsp_interventions (macros/poc_metrics.sql).

@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: kgpsp_interventions
+  description: KG PSP fire-service intervention statistics (register EX-003), annual standard summary tables
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/kgpsp_interventions/
+    loaded_by: ingestion/to_bronze/kgpsp_interventions/
+    config: ingestion/sources/kgpsp_interventions.yaml
+  tables:
+  - name: kgpsp_interventions_cells
+    description: >-
+      One row per non-empty cell (value as stored, ZIP member, sheet, row, column, number format) of the table 1 and
+      table 10 workbooks of the newest copy of each landed year's standard-tables ZIP; partitioned by entity.
+  - name: kgpsp_interventions_rejected_files
+    description: Files of kgpsp_interventions the Bronze decoder rejected, with the reason.

@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+direct_payments_paid,economy,A,direct_payments_paid,arimr_payments,direct_payments,arimr_payments:direct_payments:PLN:amount_paid,A,PL;VOIV,,sum,neutral,ready,"cumulative amount paid per campaign as of the newest ARiMR report; open campaigns provisional"

@@ -1,0 +1,16 @@
+version: 2
+models:
+  - name: poc_build_knf_banking
+    description: >-
+      Build stage — KNF monthly banking-sector data (register PLG-017): seven measures of block banking_sector (total
+      assets, net profit year to date, gross non-financial receivables without and with impairment, non-financial
+      deposits, employees: monthly; total capital ratio: quarterly), Poland, the whole sector as total and the bank
+      groups (commercial banks, branches of credit institutions, cooperative banks) as breakdown bank_group; values
+      as published (zł, persons, a fraction for the ratio).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]

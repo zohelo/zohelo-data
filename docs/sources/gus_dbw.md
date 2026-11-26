@@ -14,9 +14,9 @@ pipeline's `01_landing/gus_dbw/native/` and `_control/` stay as they are (owner,
 
 **Gold per block (docs/gold-coverage.md, D35; #2983).** `warehouse/observations.py --source gus_dbw` builds
 `gold.gus_dbw_observations`, `_series`, `_measures` and `_geography` with `warehouse/entity/gold_gus_dbw_*.sql`.
-The Pipeline activity `gold.observations` runs it once `gold.observations` is in `activities` of
-`ingestion/sources/gus_dbw.yaml` (the tables are declared there; the authorization is not added yet). Every DBW
-block is Polish, so the load order is one group, smallest blocks first.
+The Pipeline activity `gold.observations` is authorized in `ingestion/sources/gus_dbw.yaml` (#3287): the
+first load is started by hand with a filter (`*` or block ids), and the platform's weekly run continues it and
+rebuilds only changed blocks. Every DBW block is Polish, so the load order is one group, smallest blocks first.
 
 - **Block:** indicator × cross-section × presentation × periodicity, the file id without language and
   year. Most yearly files end in the year (`581_57_93_4_2020_pl`); 570 are named

@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+irena_stat,GL-035,IRENASTAT: moc zainstalowana i produkcja energii elektrycznej według technologii,IRENASTAT: electrical installed capacity and electricity generation by technology,International Renewable Energy Agency (IRENA),cube,api,international-public,unresolved,https://pxweb.irena.org/pxweb/en/IRENASTAT

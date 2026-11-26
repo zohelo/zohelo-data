@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gpw_ebi,CD-007,GPW EBI: raporty emitentów,GPW EBI issuer reports,Giełda Papierów Wartościowych w Warszawie,registry,day,commercial,unresolved,https://www.gpw.pl/espi-ebi-reports

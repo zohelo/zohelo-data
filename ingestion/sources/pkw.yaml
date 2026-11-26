@@ -1,0 +1,80 @@
+source_system: pkw
+description: "PKW / KBW election results — area-level result files (voivodeship, powiat, gmina) of the national elections since 2023"
+
+# Extraction strategy (docs/landing.md). Register PLG-029. Bulk feature: each election has its own site
+# (https://<election>.pkw.gov.pl/<election>/) whose "dane w arkuszach" page links the result files as ZIP (CSV, UTF-8
+# with BOM, semicolons) or, for the 2024 voivodeship assemblies, as XLSX. The page is a script shell: the file names
+# are in the site's bundle (/<election>/j/<stamp>.min.js, module csv_links; samorzad2024: SamorzadCsvController) and
+# pe2024 and prezydent2025 add a stamp to the name, data/csv/<name>_csv.<ts>.zip, ts = the file's entry in
+# data/config.blob (protobuf index, directory csv): 1725470571 (pe2024) and 1758650309 (prezydent2025) on 16 Nov
+# 2026. The plain name of those two sites, and any wrong name, answers the HTML shell with status 200: format zip
+# rejects it (not a ZIP), so a changed stamp fails the load instead of landing HTML (Dev probes 43343143051,
+# 43807885985, 43812026752, 43813029784 on test/486-pkw-probe). The files are static after the official results
+# (Last-Modified Feb 2024, Nov 2024, Aug 2024 and Sep 2025): entity = one file, version = Last-Modified, written
+# only when the SHA-256 changed; restart unit one file; a new election is added here by hand when it is called.
+# Selection: the smallest Gold selection of the register (Sejm 2023, EP 2024, sejmiki 2024, President 2025 both
+# rounds), counts and per-cent files by voivodeship, powiat and gmina, plus the sejmiki town/country file (Poland).
+# Left out: polling-district files (obwody, protokoly_po_obwodach: about 31,000 rows per election, beyond the area
+# grain the register asks for), candidate-by-area files of Sejm and EP, district (okręg) files, the Senate, local
+# councils and mayors, the 2020 President and older elections (danewyborcze.kbw.gov.pl, not inventoried), and the
+# committee-member files (sklad_komisji_*: personal data, register).
+# Dev trial of the PR (26 Nov 2026, test/486-pkw-trial): 25 files, 2.0 MB; 738,166 Bronze cells, 0 rejected;
+# 633,215 Silver cells, no non-numeric value and no marker (an empty cell is absent, never 0).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:  # format zip for all (an XLSX is a ZIP package): an HTML answer is rejected; three attempts, 20 s apart
+      - {entity: sejm2023_wojewodztwa, url: "https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_wojewodztwach_sejm_csv.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejm2023_wojewodztwa_proc, url: "https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_wojewodztwach_proc_sejm_csv.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejm2023_powiaty, url: "https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_powiatach_sejm_csv.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejm2023_powiaty_proc, url: "https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_powiatach_proc_sejm_csv.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejm2023_gminy, url: "https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_gminach_sejm_csv.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejm2023_gminy_proc, url: "https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_gminach_proc_sejm_csv.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: pe2024_wojewodztwa, url: "https://pe2024.pkw.gov.pl/pe2024/data/csv/wyniki_gl_na_listy_po_wojewodztwach_csv.1725470571.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: pe2024_wojewodztwa_proc, url: "https://pe2024.pkw.gov.pl/pe2024/data/csv/wyniki_gl_na_listy_po_wojewodztwach_proc_csv.1725470571.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: pe2024_powiaty, url: "https://pe2024.pkw.gov.pl/pe2024/data/csv/wyniki_gl_na_listy_po_powiatach_csv.1725470571.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: pe2024_powiaty_proc, url: "https://pe2024.pkw.gov.pl/pe2024/data/csv/wyniki_gl_na_listy_po_powiatach_proc_csv.1725470571.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: pe2024_gminy, url: "https://pe2024.pkw.gov.pl/pe2024/data/csv/wyniki_gl_na_listy_po_gminach_csv.1725470571.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: pe2024_gminy_proc, url: "https://pe2024.pkw.gov.pl/pe2024/data/csv/wyniki_gl_na_listy_po_gminach_proc_csv.1725470571.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejmiki2024_kraj, url: "https://samorzad2024.pkw.gov.pl/samorzad2024/data/csv/2024-sejmiki-miasto-wies-kraj.xlsx", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejmiki2024_wojewodztwa, url: "https://samorzad2024.pkw.gov.pl/samorzad2024/data/csv/2024-sejmiki-po-wojewodztwach.xlsx", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejmiki2024_wojewodztwa_proc, url: "https://samorzad2024.pkw.gov.pl/samorzad2024/data/csv/2024-sejmiki-po-wojewodztwach-proc.xlsx", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejmiki2024_powiaty, url: "https://samorzad2024.pkw.gov.pl/samorzad2024/data/csv/2024-sejmiki-po-powiatach.xlsx", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejmiki2024_powiaty_proc, url: "https://samorzad2024.pkw.gov.pl/samorzad2024/data/csv/2024-sejmiki-po-powiatach-proc.xlsx", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejmiki2024_gminy, url: "https://samorzad2024.pkw.gov.pl/samorzad2024/data/csv/2024-sejmiki-po-gminach.xlsx", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: sejmiki2024_gminy_proc, url: "https://samorzad2024.pkw.gov.pl/samorzad2024/data/csv/2024-sejmiki-po-gminach-proc.xlsx", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: prezydent2025_r1_wojewodztwa, url: "https://prezydent2025.pkw.gov.pl/prezydent2025/data/csv/wyniki_gl_na_kandydatow_po_wojewodztwach_csv.1758650309.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: prezydent2025_r1_powiaty, url: "https://prezydent2025.pkw.gov.pl/prezydent2025/data/csv/wyniki_gl_na_kandydatow_po_powiatach_csv.1758650309.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: prezydent2025_r1_gminy, url: "https://prezydent2025.pkw.gov.pl/prezydent2025/data/csv/wyniki_gl_na_kandydatow_po_gminach_csv.1758650309.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: prezydent2025_r2_wojewodztwa, url: "https://prezydent2025.pkw.gov.pl/prezydent2025/data/csv/wyniki_gl_na_kandydatow_po_wojewodztwach_w_drugiej_turze_csv.1758650309.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: prezydent2025_r2_powiaty, url: "https://prezydent2025.pkw.gov.pl/prezydent2025/data/csv/wyniki_gl_na_kandydatow_po_powiatach_w_drugiej_turze_csv.1758650309.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+      - {entity: prezydent2025_r2_gminy, url: "https://prezydent2025.pkw.gov.pl/prezydent2025/data/csv/wyniki_gl_na_kandydatow_po_gminach_w_drugiej_turze_csv.1758650309.zip", format: zip, version: last_modified, retries: 3, wait: 20}
+  initial: bulk
+  production: snapshot                    # each file is the final result of one election
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256
+  # UTC. Elections are irregular (the next national one is the Sejm in autumn 2027) and each file is static after the
+  # official results; a new election needs its files declared here by hand anyway. So a monthly check on the 3rd at
+  # the lane's slot hour (19:20), slower than O46's weekly maximum: unchanged files are skipped, a correction lands.
+  schedule:
+    - {cron: "20 19 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/pkw/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.pkw_cells, bronze.pkw_rejected_files]
+silver: [silver.pkw_results]
+gold: [gold.build_pkw, gold.pkw_elections, gold.metrics_voter_turnout]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  pkw_results: {rows: 950000}  # 633,215 measured (Dev trial of the PR); a national election adds about 130,000
+  poc_build_pkw: {rows: 32500}  # 21,616 measured
+  pkw_elections: {rows: 10}  # 5 measured (elections and rounds)
+  poc_metrics_voter_turnout: {rows: 13000}  # 8,670 measured: 2,890 areas x 3 elections
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): 25 files of at most 0.5 MB, static after each election, no changed-since
+# feature beyond Last-Modified; Silver and Gold are rebuilt in full (small).
+refresh: {mode: full, decided: "D32 + #486"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

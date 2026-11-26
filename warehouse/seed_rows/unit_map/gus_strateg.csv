@@ -1,0 +1,5 @@
+source_system,unit_code,measure_key_pattern,unit_key
+gus_strateg,%,,pct
+gus_strateg,dni,,days
+gus_strateg,lata,,years
+gus_strateg,km,,km

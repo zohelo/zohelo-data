@@ -23,6 +23,38 @@ geo_codes as (
     group by code
 ),
 
+-- NUTS regions (#2775): a GEO code of 3 to 5 characters is a NUTS region only when its first two characters are a
+-- country with NUTS or statistical regions (EU members, EL and UK, EFTA, and the candidate and neighbouring countries
+-- Eurostat gives regions: AL, BA, ME, MK, RS, TR, UA, XK) and its third character is a NUTS 1 character of that
+-- country: a digit, Z (extra-regio), X (not regionalised), or the letters some countries use (DE A–G; EL S, the
+-- self-governed region ELS; FR A–M and Y; IT C–I; UK A–N, with Scotland UKA and Northern Ireland UKB of NUTS 1995;
+-- TR A–C). Every other GEO code is an aggregate: the euro areas (EA11 … EA21), the EU of a past composition (EU15,
+-- EU28), EFTA, world regions (AFR, ASI, MEL), institutions (ECB, EIB, ESTAT), and the codes that only begin like a
+-- country: the European Economic Area (EEA, EEA31), Baltic countries (BAL), Mediterranean Basin (MED), non-OECD
+-- countries (NOECD), transit country (TRS), the former territory of the FRG (DEW), southern polar regions (PLR).
+geo_shapes as (
+    select
+        code,
+        name_en,
+        length(code) between 3 and 5
+        and regexp_matches(code, '^[A-Z]{2}[A-Z0-9]{1,3}$')
+        and substr(code, 1, 2) in (
+            'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR', 'HR', 'HU', 'IE', 'IT', 'LT',
+            'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK', 'UK', 'CH', 'IS', 'LI', 'NO', 'AL', 'BA',
+            'ME', 'MK', 'RS', 'TR', 'UA', 'XK'
+        )
+        and (
+            regexp_matches(substr(code, 3, 1), '^[0-9XZ]$')
+            or (substr(code, 1, 2) = 'DE' and substr(code, 3, 1) between 'A' and 'G')
+            or (substr(code, 1, 2) = 'EL' and substr(code, 3, 1) = 'S')
+            or (substr(code, 1, 2) = 'FR' and (substr(code, 3, 1) between 'A' and 'M' or substr(code, 3, 1) = 'Y'))
+            or (substr(code, 1, 2) = 'IT' and substr(code, 3, 1) between 'C' and 'I')
+            or (substr(code, 1, 2) = 'UK' and substr(code, 3, 1) between 'A' and 'N')
+            or (substr(code, 1, 2) = 'TR' and substr(code, 3, 1) between 'A' and 'C')
+        ) as is_nuts
+    from geo_codes
+),
+
 wdi as (select * from {{ ref('wdi_countries') }}),
 
 bdl_units as (select * from {{ ref('bdl_units') }}),
@@ -194,7 +226,7 @@ podregiony as (
     where level = 4
 ),
 
--- NUTS regions of other countries, from the Eurostat GEO code list: level by code length.
+-- NUTS regions of other countries, from the Eurostat GEO code list (geo_shapes): level by code length.
 foreign_nuts as (
     select
         'NUTS:' || code as geography_key,
@@ -210,9 +242,8 @@ foreign_nuts as (
         cast(null as varchar) as bdl_unit_id,
         cast(null as varchar) as wb_code,
         false as is_aggregate
-    from geo_codes
-    where
-        length(code) between 3 and 5 and regexp_matches(code, '^[A-Z]{2}[A-Z0-9]{1,3}$') and substr(code, 1, 2) <> 'PL'
+    from geo_shapes
+    where is_nuts and substr(code, 1, 2) <> 'PL'
 ),
 
 aggregates as (
@@ -230,11 +261,8 @@ aggregates as (
         cast(null as varchar) as bdl_unit_id,
         cast(null as varchar) as wb_code,
         true as is_aggregate
-    from geo_codes
-    where
-        code in ('EU', 'EA')
-        or length(code) > 5
-        or (length(code) between 3 and 5 and not regexp_matches(code, '^[A-Z]{2}[A-Z0-9]{1,3}$'))
+    from geo_shapes
+    where code in ('EU', 'EA') or (length(code) > 2 and not is_nuts)
     union all
     select
         'WB:' || economy_code as geography_key,

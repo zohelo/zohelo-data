@@ -1,0 +1,38 @@
+source_system: gugik_orto
+description: "GUGiK ORTO — orthophoto sheet index (WFS Skorowidze): one row per sheet edition with year, date, pixel size, colour, CRS and footprint; no imagery"
+
+# Extraction strategy (docs/landing.md), register PL-ENV-004. The orthophotos themselves (GeoTIFF sheets, terabytes)
+# are never landed. Smallest valuable selection: the sheet index, WFS 2.0.0
+# https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WFS/Skorowidze (GML 3.2 only, paging; no robots.txt: HTTP 404;
+# AccessConstraints "Brak ograniczeń"), one feature type per data year gugik:SkorowidzOrtofomapy<YYYY>, 49 years from
+# 1957 to 2026 with 1,337,733 features on 26 Nov 2026 (resultType=hits, Dev probe 45810994708). Entity = one year
+# (orto_<YYYY>), version = download time, landed whole as pages of 5,000 features sorted by the download link
+# (unsorted pages are not stable: the same page twice returned other features, Dev probe 45813550746), restart unit
+# one year; a year equal to its newest copy writes nothing (ingestion/to_landing/gugik_orto/).
+extraction:
+  initial: api
+  production: snapshot                    # each landed year is the complete feature type of that year
+  incremental_policy: changed_since_last  # hits count per year; the current and previous year also every 28 days
+  schedule: # UTC; sheets are added as deliveries are accepted into PZGiK, no release calendar; weekly (O46), Friday
+    - {cron: "50 2 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gugik_orto/
+# GML pages kept zstd-compressed in the Archive. Newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+# One file per year in Bronze and in Silver, replaced whole (design #875).
+bronze: [bronze.gugik_orto_sheets, bronze.gugik_orto_rejected_files]
+silver: [silver.gugik_orto_sheets]
+gold: [gold.build_gugik_orto]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_gugik_orto: {rows: 2900}  # 1,920: 1,183 edition rows + 737 shares, 17 areas, 1957-2026 (Dev trial 45855059566)
+
+bronze_latest_only: true   # policy #822/#845: a new year version replaces the year's file
+# Refresh policy for all layers (D32): 1.34 M index features, over the 1 M rows of a full rebuild; years change
+# independently (new deliveries go to recent years), so a new year version replaces that year's file in Bronze and
+# Silver and nothing else is rewritten (unit = one year's feature type).
+refresh: {mode: incremental, unit: "year feature type (orto_<YYYY>)", decided: "D32 + #3100"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

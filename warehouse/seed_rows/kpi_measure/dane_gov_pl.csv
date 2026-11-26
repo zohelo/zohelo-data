@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+open_data_datasets_modified,dane_gov_pl,dane_gov_pl:catalogue:datasets:total:monthly,"data.europa.eu search API, catalogue dane-gov-pl: all datasets by month of modified, Poland",1,
+open_data_distributions_modified,dane_gov_pl,dane_gov_pl:catalogue:distributions:total:monthly,"data.europa.eu search API, catalogue dane-gov-pl: all distributions with a modification time by month of their modified, Poland",1,

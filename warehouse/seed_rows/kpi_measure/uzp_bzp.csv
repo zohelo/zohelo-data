@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+bzp_notices,uzp_bzp,uzp_bzp:notices:notices,"BZP read API, contract and result notices by publication month, Poland and voivodeship of the contracting authority",1,
+bzp_contract_value,uzp_bzp,uzp_bzp:notices:PLN:contract_value,"BZP read API, sum of the contract values of the result notices by publication month, PLN as published",1,

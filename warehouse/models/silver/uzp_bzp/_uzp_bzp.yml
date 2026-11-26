@@ -1,0 +1,64 @@
+version: 2
+models:
+  - name: uzp_bzp_notices
+    description: >-
+      e-Zamówienia BZP contract notices (ContractNotice) and result notices (TenderResultNotice) published from
+      2026-01-01 (register PLG-022, BZP read API v1 of the Public Procurement Office; licence unresolved, internal).
+      Grain: notice_number (the BZP notice number with its version, one row per published notice; a change is its own
+      notice of another type, not loaded). Codes as published (client type, order type, tender type, voivodeship of
+      the contracting authority PL02-PL32); CPV codes of the notice; contracting authorities as institutions (a
+      subsidised authority, client type 3, keeps no name, city or ids); contractors only counted, with their
+      provinces. Contract value (sum of the 8.2 lines of a result notice) and estimated value as published, with
+      their currency, null when absent, unparsed or ambiguous (the line counts stay). tests/uzp_bzp_notices_days_complete.sql
+      checks every (type, day) against the API's notice/stats count. History and trial run: see
+      ingestion/sources/uzp_bzp.yaml.
+    columns:
+      - name: notice_number
+        tests: [not_null, unique]
+      - name: object_id
+        tests: [not_null, unique]
+      - name: bzp_number
+        tests: [not_null]
+      - name: notice_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ContractNotice', 'TenderResultNotice']
+      - name: publication_date
+        tests: [not_null]
+      - name: order_type
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Delivery', 'Services', 'Works']
+      - name: organization_province
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['PL02', 'PL04', 'PL06', 'PL08', 'PL10', 'PL12', 'PL14', 'PL16', 'PL18', 'PL20', 'PL22', 'PL24', 'PL26', 'PL28', 'PL30', 'PL32']
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the reduced answer (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: uzp_bzp_days
+    description: >-
+      e-Zamówienia BZP landed days. Grain: entity (one notice type on one UTC publication day,
+      <contract|result>_<YYYYMMDD>), from the newest Landing copy of each, with the notices it holds (0 for a day
+      without notices, a marker row in Bronze) and the API's notice/stats count. gold.build_uzp_bzp takes a month
+      only when every day of it has both types here. tests/uzp_bzp_days_complete.sql checks notices = notice/stats
+      and one file per entity.
+    columns:
+      - name: entity
+        tests: [not_null, unique]
+      - name: notice_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ContractNotice', 'TenderResultNotice']
+      - name: publication_date
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

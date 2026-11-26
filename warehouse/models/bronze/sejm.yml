@@ -1,0 +1,39 @@
+version: 2
+
+sources:
+- name: sejm
+  description: >-
+    Sejm API (register PLG-024), JSON answers of api.sejm.gov.pl for terms 9 and 10, newest copy of each answer;
+    one row per item of the answer's list, values as text; term, entity and provenance columns on every row.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/sejm/
+    loaded_by: ingestion/to_bronze/sejm/
+    config: ingestion/sources/sejm.yaml
+  tables:
+  - name: sejm_terms
+    description: One row per term of /sejm/term (entity terms; term_num, term empty) with its dates and the number of prints the API lists.
+  - name: sejm_proceedings
+    description: >-
+      One row per entry of /sejm/term<t>/proceedings (entity term<t>_proceedings): sitting_number (0 for a planned
+      sitting without a number), title, is_current, dates ('|' separated); the agenda HTML is not loaded.
+  - name: sejm_voting_days
+    description: >-
+      One row per day with votes of /sejm/term<t>/votings (entity term<t>_voting_days): sitting_number, voting_date
+      and the number of votings the API lists for that day.
+  - name: sejm_votings
+    description: >-
+      One row per voting of /sejm/term<t>/votings/<sitting> (entity term<t>_votings_<sitting>): numbers, time, kind,
+      majority, title, topic, description and the totals as published; the number of options of a list vote, not the
+      options. Individual MPs' votes are not read.
+  - name: sejm_prints
+    description: >-
+      One row per print of /sejm/term<t>/prints (entity term<t>_prints): number, title, document, delivery and change
+      dates, process prints ('|' separated), the number of additional prints; attachment names are not loaded.
+  - name: sejm_mps
+    description: >-
+      One row per MP of /sejm/term10/MP (entity term10_mps), allowlisted before Landing: mp_id, is_active, club,
+      district_num, district_name, voivodeship. No names or other personal data.
+  - name: sejm_rejected_files
+    description: Sejm Landing files the Bronze decoder rejected (not a JSON list, or an unknown item key), with the reason.

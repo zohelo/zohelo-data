@@ -1,0 +1,47 @@
+source_system: otomoto
+description: "OTOMOTO Insights — Raport Rynkowy OTOMOTO, the monthly market report of OTOMOTO (OLX Group): active listings and traffic by segment"
+
+# Extraction strategy (docs/landing.md). Register CD-034, decision D41. No bulk file or API: each monthly edition is a
+# public Infogram dashboard (infogram.com; robots.txt "Disallow: /app/, /oembed" only) whose HTML carries the report
+# as JSON (window.infographicData: 12 tabs, 27 charts with their data tables). Entity = one edition (the month of the
+# report's title, e.g. 08_26_OTOMOTO_INSIGHTS); version = download time (no Last-Modified; the weak ETag changes on
+# every request), a copy lands only when the SHA-256 of the JSON changed (reduce: otomoto keeps that JSON, exact
+# bytes; the rest of the page differs per request, Dev probe 45813576806). The address of a new edition is linked only
+# from https://www.otomoto.pl/news/raport-rynkowy-otomoto, and www.otomoto.pl refuses the runner (HTTP 403 on
+# robots.txt, Dev probe 43291903826): that host is never read, so each edition is a seed row added by hand (a desk
+# reading of the report page); landing.inspect and landing.extract warn "edition expected but not in the seed list"
+# 45 days after a month without a row (ingestion/to_landing/otomoto/). Each edition repeats the months of the current
+# and the previous year, so a late row loses nothing. Polite: one request per edition, 5 s apart.
+# Selection (smallest of the register entry; docs/sources/otomoto.md): average daily active listings per segment
+# (used cars, new cars, motorcycles, heavy machinery) and the traffic index (monthly users and buyers, January 2025 =
+# 100). Left out: registrations (CEPiK data, PL-ENV-024), price medians and bands, fuel and body shares, listing
+# duration, the macroeconomic tab (GUS and NBP data), user profile and filters.
+# Dev probes 45813576806, 45814610880 (test/3264-otomoto-trial).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:  # edition: the month of the report's title
+      - {entity: edition_2026_08, edition: "2026-08", url: "https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v", format: raw, version: ingested, reduce: otomoto}
+  initial: bulk
+  production: snapshot                  # each edition as published; an edited edition lands as a new version
+  incremental_policy: changed_since_last  # SHA-256 of each edition's JSON
+  schedule: # UTC; one edition a month (the August 2026 edition was created on 9 Sep and edited until 17 Nov); monthly
+    - {cron: "35 7 27 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/otomoto/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.otomoto_cells, bronze.otomoto_rejected_files]
+silver: [silver.otomoto_series]
+gold: [gold.build_otomoto]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  otomoto_series: {rows: 500}  # 180 (Dev trial 45821781004: 4 listing series, 5 index series, 2025-01 to 2026-08); 9 more a month, 324 by December 2027; 1.5 x
+  poc_build_otomoto: {rows: 500}  # 180, every Silver row has a value (same trial); same growth
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one JSON of about 650 kB a month, a few hundred values; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3264"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
