@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: gus_exam_results
+  description: "GUS republication of the CKE/OKE exam results (register PLS-025, #449): mean eighth-grade exam result by voivodeship, subject and sex"
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_exam_results/
+    loaded_by: ingestion/to_bronze/gus_exam_results/
+    config: ingestion/sources/gus_exam_results.yaml
+  tables:
+  - name: gus_exam_results_means
+    description: >-
+      Rows of the newest copy of entity eighth_grade_means (the GUS CSV), every value as published text: one per
+      variable x area x subject x sex x year, with the value and the GUS sign (flaga) side by side; partitioned by
+      entity.
+  - name: gus_exam_results_rejected_files
+    description: Files of gus_exam_results the Bronze decoder rejected, with the reason.
