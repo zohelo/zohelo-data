@@ -37,8 +37,8 @@ bronze: [bronze.otomoto_cells, bronze.otomoto_rejected_files]
 silver: [silver.otomoto_series]
 gold: [gold.build_otomoto]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  otomoto_series: {rows: 400}  # MEASURED; 9 rows a month more
-  poc_build_otomoto: {rows: 400}  # MEASURED
+  otomoto_series: {rows: 500}  # 180 (Dev trial 45821781004: 4 listing series, 5 index series, 2025-01 to 2026-08); 9 more a month, 324 by December 2027; 1.5 x
+  poc_build_otomoto: {rows: 500}  # 180, every Silver row has a value (same trial); same growth
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one JSON of about 650 kB a month, a few hundred values; small, rebuilt in full.
