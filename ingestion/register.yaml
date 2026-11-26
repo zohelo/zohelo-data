@@ -8436,7 +8436,7 @@ sources:
   name: Marketstack Stock Data API
   short_name: Marketstack
   provider: APILayer / Idera
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: worldwide
@@ -8450,14 +8450,19 @@ sources:
     endpoint: https://marketstack.com/pricing
     kind: api
     interfaces: [API]
-    auth: Account and API key.
+    auth: Account and API key (free key for non-commercial use; paid plans for commercial use).
     cost: mixed
-    limits: Plan-specific monthly requests; do not encode current figures before subscription selection.
+    limits: 'Free plan 100 requests a month and 1 year of history; Basic 10,000 requests a month ($9.99 a month), Professional
+      100,000, Business 500,000 (https://marketstack.com/pricing, 26 Nov 2026).'
   licence:
     status: restricted
-    notes: 'Terms: https://marketstack.com/pricing (terms page not re-read in this review; the restriction is as recorded
-      at registration). Commercial use is listed for paid tiers; source-market display and redistribution rights still require
-      contract review. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://marketstack.com/pricing (read by the runner 26 Nov 2026; https://marketstack.com/terms now
+      redirects to the Idera/APILayer legal index https://www.ideracorp.com/legal/APILayer, whose Master SaaS
+      Subscription Agreement link could not be opened by the probe). The Free plan ("$0 per month", "100 Requests / mo",
+      "1 Year History") is marked "Non-Commercial Use"; the paid plans from "$9.99 per month" are marked "Commercial
+      Use". "Stock market data provided by the marketstack API is licensed and sourced from multiple high-authority
+      market data providers around the world." No right to redistribute or publicly display the data is stated;
+      attribution sentence: none given. Not reusable for public display: stays internal.'
   updates: End-of-day or intraday/real-time by plan; corrections policy not documented on opened pages.
   ingestion:
     history: 'PROPOSAL: backfill approved tickers by bounded date windows after entitlement review.'
@@ -8468,22 +8473,32 @@ sources:
     overlap: Overlaps exchanges, SEC filings and other aggregators; retain vendor/source lineage.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: paid commercial market-data API; the plan terms do not grant public redistribution of quotes; re-open only
-      with an agreed commercial licence'
-    - Select plan and licensed use
-    - Verify Polish instrument coverage
-    - Confirm redistribution/display rights
+    - 'Owner question (paid licence): Marketstack sells share prices for commercial use only on paid plans (Basic from
+      $9.99 a month; the free plan is "Non-Commercial Use", 100 requests a month, one year of history) and resells
+      exchange data, so showing Warsaw prices publicly would still need GPW''s own licence (CD-005). Buy a Marketstack
+      plan for zohelo, or park CD-001? Recommendation: park; the lawful route for Polish share prices is GPW''s Market
+      Data License Agreement (the CD-005 question).'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a paid licence, which is an owner question, so the
+      entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+      dev/src_parked1_probe.py, 26 Nov 2026): https://marketstack.com/pricing HTTP 200 (plans and use classes quoted
+      in licence.notes); https://marketstack.com/terms redirects to https://www.ideracorp.com/legal/APILayer (HTTP
+      200); https://api.marketstack.com robots.txt answered 401 (key required), so no API call was made. Dev probe run
+      45880748620 (job 140119185484, same branch and script, argument `two`, 26 Nov 2026): the Idera General Website
+      Terms of Use and Marketplace Terms of Use (HTTP 200) govern the website and marketplace, not data reuse.'
+    - 'Earlier parking reason: paid commercial market-data API; the plan terms do not grant public redistribution of
+      quotes'
     references:
     - https://marketstack.com/pricing
     - https://www.ideracorp.com/legal/APILayer
+    - https://www.ideracorp.com/Legal/APILayer/Marketplace-Terms-of-Use
 - id: CD-002
   name: Alpha Vantage Market Data APIs
   short_name: Alpha Vantage
   provider: Alpha Vantage
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: worldwide
@@ -8496,14 +8511,22 @@ sources:
     endpoint: https://www.alphavantage.co/documentation/
     kind: api
     interfaces: [API, CSV]
-    auth: API key; premium or sales agreement for some functions and commercial needs.
+    auth: 'API key; the free key is for personal, non-commercial use, commercial use needs a written agreement
+      (premium@alphavantage.co).'
     cost: mixed
-    limits: Endpoint and plan specific; omit numerical allowance until an approved plan is chosen.
+    limits: 'Free key 25 requests a day; premium keys 75 to 1,200 requests a minute at $49.99 to $249.99 a month
+      (https://www.alphavantage.co/premium/, 26 Nov 2026).'
   licence:
     status: restricted
-    notes: 'Terms: https://www.alphavantage.co/terms_of_service/ (terms page not re-read in this review; the restriction is
-      as recorded at registration). Standard terms do not establish blanket commercial redistribution rights; commercial licensing
-      must be confirmed. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://www.alphavantage.co/terms_of_service/ (a 4-page PDF, read by the runner 26 Nov 2026). Section 2:
+      the right to use the platform is granted "for personal, non-commercial use, unless you and Alpha Vantage have
+      agreed otherwise in writing"; use is commercial when "You are using the Alpha Vantage Platform as or on behalf of
+      a corporation, firm, partnership, trust or any other association and not as an individual" or "You plan to use or
+      provide information accessed through the Alpha Vantage Platform as part of any type of commercial activity that
+      allows individuals or entities other than User to access information directly or indirectly"; commercial use:
+      premium@alphavantage.co. Section 20: the economic-indicator and commodity APIs use the FRED API and bind the user
+      to the FRED API Terms of Use. No redistribution right and no attribution sentence are stated. Not reusable for
+      public display: stays internal.'
   updates: Market and macro series update at different cadences; revisions are endpoint-specific.
   ingestion:
     history: 'PROPOSAL: backfill only selected endpoint-series pairs with saved request parameters.'
@@ -8514,21 +8537,31 @@ sources:
     overlap: Overlaps Marketstack, FMP, Nasdaq Data Link and official statistics.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: vendor API with restricted-use terms and no blanket redistribution right; re-open only with a commercial licence'
-    - Obtain commercial-use confirmation
-    - Test Polish coverage
-    - Record endpoint entitlements
+    - 'Owner question (paid licence): Alpha Vantage''s free key is only for "personal, non-commercial use"; use on
+      behalf of a company or that lets others see the information is commercial and needs a written agreement
+      (premium@alphavantage.co; premium keys from $49.99 a month). Ask Alpha Vantage for a commercial licence for
+      zohelo, or park CD-002? Recommendation: park; its macro series are FRED copies under FRED''s own terms and its
+      share prices are US-centred resold exchange data.'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a commercial licence, which is an owner question, so
+      the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+      dev/src_parked1_probe.py, 26 Nov 2026): terms PDF HTTP 200 (156,583 bytes, quoted in licence.notes);
+      https://www.alphavantage.co/premium/ and https://www.alphavantage.co/realtime_data_policy/ HTTP 200; the
+      documented demo call https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
+      answered HTTP 200 JSON (21,300 bytes, last refreshed 2026-11-25), so the API answers GitHub runners. Polish
+      coverage was not tested (needs a key).'
+    - 'Earlier parking reason: vendor API with restricted-use terms and no blanket redistribution right'
     references:
     - https://www.alphavantage.co/documentation/
     - https://www.alphavantage.co/terms_of_service/
+    - https://www.alphavantage.co/premium/
 - id: CD-003
   name: Financial Modeling Prep API
   short_name: Financial Modeling Prep
   provider: Financial Modeling Prep
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: worldwide
@@ -8546,9 +8579,11 @@ sources:
     limits: Plan and endpoint specific; unknown until order form review.
   licence:
     status: restricted
-    notes: 'Terms: https://site.financialmodelingprep.com/terms-of-service (terms page not re-read in this review; the restriction
-      is as recorded at registration). Default terms restrict personal plans and redistribution; public apps, client dashboards
-      and derived products require appropriate licensing. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://site.financialmodelingprep.com/terms-of-service (not readable on 26 Nov 2026: robots.txt of
+      site.financialmodelingprep.com answered HTTP 403 to the GitHub runner, not worked around). By the registration
+      reading, the default terms restrict personal plans and redistribution, and public apps, client dashboards and
+      derived products need a separate licence. No reuse right or attribution sentence is known. Not reusable for public
+      display: stays internal.'
   updates: Endpoint-specific market updates; fundamentals follow filings and may be restated.
   ingestion:
     history: 'PROPOSAL: licensed endpoint inventory first, then bounded historical loads.'
@@ -8562,10 +8597,17 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Parked: vendor API: default plans restrict redistribution and public display; re-open only with a commercial licence'
-    - Choose commercial licence
-    - Confirm redistribution and retention
-    - Verify Poland coverage
+    - 'Owner question (paid licence): Financial Modeling Prep sells its API by plan, and by the registration reading
+      its personal plans exclude redistribution while public apps need a separate licence; its pages now refuse GitHub
+      runners (robots.txt HTTP 403), so the terms cannot be re-read automatically. Buy an FMP commercial licence for
+      zohelo, or park CD-003? Recommendation: park; Polish issuers'' reports come from KNF ESPI and GPW EBI (CD-006,
+      CD-007, built) and entity data from GLEIF (CD-015) and KRS (PLG-012).'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a paid licence, which is an owner question, so the
+      entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+      dev/src_parked1_probe.py, 26 Nov 2026): https://site.financialmodelingprep.com/robots.txt answered HTTP 403, so
+      the terms page, the pricing page and the licensing article were not requested (refusal recorded, not worked
+      around).'
+    - 'Earlier parking reason: vendor API whose default plans restrict redistribution and public display'
     references:
     - https://site.financialmodelingprep.com/developer/docs
     - https://site.financialmodelingprep.com/terms-of-service
@@ -8645,7 +8687,7 @@ sources:
   name: GPW Market Data
   short_name: GPW market data
   provider: Warsaw Stock Exchange (GPW)
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: Poland
@@ -8658,14 +8700,26 @@ sources:
     endpoint: https://www.gpw.pl/market-data
     kind: bulk_file
     interfaces: [feed, bulk-files, HTML]
-    auth: Licence agreement and product annex for feeds/use; some delayed website views are public.
+    auth: 'Market Data License Agreement with GPW for any distribution or non-display use, including delayed data taken from
+      www.gpw.pl; the website shows delayed data and a daily price archive (XLS per day and instrument class) for
+      viewing.'
     cost: mixed
-    limits: Contract/product specific.
+    limits: Contract and product specific; no published request limit for the website archive.
   licence:
     status: restricted
-    notes: 'Terms: https://www.gpw.pl/market-data (terms page not re-read in this review; the restriction is as recorded at
-      registration). Licences cover distribution and non-display use; even delayed commercial redistribution can be fee-bearing.
-      Not reusable for public display: stays internal.'
+    notes: 'Terms: https://www.gpw.pl/pub/GPW/files/PDF/dane_rynkowe/WSE_Market_Data_Policy.pdf (WSE Market Data Policy, 9
+      pages, read by the runner 26 Nov 2026): "Market Data is provided for a fee in the case of Real -Time Data";
+      "Market Data is provided free of charge in the case of Delayed Data"; "Delayed Data is also made available via the
+      WSE (GPW) website at www.gpw.pl"; "The WSE (GPW) charges fees for the distribution of Delayed Data only where the
+      recipient redistributes such data in a manner that makes access to the Delayed Data conditional upon the user
+      paying any fee"; "Further distribution of Delayed Data, including data sourced from the WSE (GPW) website,
+      requires the conclusion of a License Agreement." https://www.gpw.pl/market-data: "Each company that intends to
+      offer its clients access to real time market data or wishes to use WSE market data internally for non-display
+      purposes is required to sign the Market Data License Agreement." Fee schedule from 1 Jan 2027
+      (https://www.gpw.pl/pub/GPW/files/PDF/cennik/2027_01_01_WSE_Market_Data_License_Agreement_Fee_Schedule.pdf): End
+      of Trading Information, distribution "G – Closing Data and Indicators 14 500" PLN a year.
+      https://www.gpw.pl/disclaimer: accuracy disclaimer only ("2017 © Warsaw Stock Exchange"). No open licence;
+      attribution sentence: none given. Not reusable without the agreement: stays out.'
   updates: Real-time or delayed streams; historical publications vary.
   ingestion:
     history: 'PROPOSAL: license exact products and backfill daily reference/trade files.'
@@ -8676,16 +8730,36 @@ sources:
     overlap: Canonical Polish market source; aggregators may normalize or omit instruments.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: exchange market data is licensed (distribution and non-display use are fee-bearing); re-open only with a GPW
-      data licence'
-    - Obtain use/redistribution licence
-    - Select products and history
-    - Budget feed operations
+    - 'Owner question (agreement): GPW''s Market Data Policy says delayed data is free of charge unless the
+      redistributor charges its users, but "Further distribution of Delayed Data, including data sourced from the WSE
+      (GPW) website, requires the conclusion of a License Agreement", and internal non-display use also needs that
+      agreement; the 2027 fee schedule lists distribution of "G – Closing Data and Indicators" at 14,500 PLN a year.
+      Do you want to write to GPW (market data department) asking to sign the Market Data License Agreement for free
+      display of delayed end-of-day data on zohelo (WIG and WIG20 closing values, monthly market statistics), and
+      whether the closing-data fee applies to a free service, or park CD-005? Recommendation: ask once, in one letter
+      that also covers GPW Benchmark (CD-011) and TGE (CD-010), which use the same agreement and fee schedule; without
+      an agreement nothing is loaded.'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a GPW data licence, which is an owner question, so
+      the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+      dev/src_parked1_probe.py, 26 Nov 2026): https://www.gpw.pl/market-data HTTP 200 (licence model, fee schedules
+      2017 to 2027 linked; the 2027 schedule PDF, 24 pages, read); https://www.gpw.pl/archiwum-notowan HTTP 200 (form:
+      instrument class, day, "Pobierz (XLS)"); robots.txt of www.gpw.pl disallows only /pub/NEWCONNECT/DI/EUROSNACK.
+      Dev probe run 45880748620 (job 140119185484, same branch and script, argument `two`, 26 Nov 2026): the Market
+      Data Policy PDF (quoted in licence.notes), https://www.gpw.pl/gpw-statistics (daily to annual statistics; 26 Nov
+      2026: 402 companies, capitalisation PLN 2,832,559.84 million), https://www.gpw.pl/disclaimer. Smallest Gold
+      selection once licensed: WIG and WIG20 daily closing values and monthly market capitalisation and number of
+      companies (Poland), from the daily price-archive XLS and the monthly statistics.'
+    - 'Earlier parking reason: exchange market data is licensed (distribution and non-display use are fee-bearing)'
     references:
     - https://www.gpw.pl/market-data
+    - https://www.gpw.pl/pub/GPW/files/PDF/dane_rynkowe/WSE_Market_Data_Policy.pdf
+    - https://www.gpw.pl/pub/GPW/files/PDF/cennik/2027_01_01_WSE_Market_Data_License_Agreement_Fee_Schedule.pdf
+    - https://www.gpw.pl/pub/GPW/files/DOC/dane_rynkowe/WSE_Market_Data_License_Agreement.docx
+    - https://www.gpw.pl/archiwum-notowan
+    - https://www.gpw.pl/gpw-statistics
 - id: CD-006
   name: Electronic Information Transmission System (ESPI)
   short_name: KNF ESPI
@@ -8853,9 +8927,11 @@ sources:
     limits: No public API or bulk allowance documented.
   licence:
     status: restricted
-    notes: 'Terms: https://biznes.pap.pl/espi (terms page not re-read in this review; the restriction is as recorded at registration).
-      Treat as discovery/display unless PAP grants automated extraction and republication. Not reusable for public display:
-      stays internal.'
+    notes: 'Terms: https://biznes.pap.pl/regulamin (read by the runner 26 Nov 2026): a guest may use the content only for
+      personal use ("Gość uprawniony jest jedynie do skorzystania z Treści na osobisty użytek") and acquires no rights
+      "do kopiowania w całości lub części, wprowadzania zmian, przesyłania i publicznego odtwarzania, dalszego
+      udostępniania w sieci Internet, jak i prezentowania lub wykorzystywania Treści, Aplikacji w celach komercyjnych".
+      No reuse right; attribution sentence: none given. Not reusable.'
   updates: Near publication-time display; downstream latency unknown.
   ingestion:
     history: 'PROPOSAL: use only for metadata reconciliation after permission review.'
@@ -8866,17 +8942,23 @@ sources:
     overlap: Downstream copy of ESPI/EBI, so never count it as a second filing.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: news-agency redistribution of company announcements: display only, no automated extraction or republication
-      right; ESPI/EBI primary source is CD-006/CD-007'
-    - Confirm PAP automation rights
-    - Measure completeness against GPW/KNF
-    - Clarify InfoStrefa legacy relationship
+    - 'Contained in: CD-006 `knf_espi` (ESPI reports from KNF''s OAM list; Silver `silver.knf_espi_reports`, Gold
+      `gold.filing_knf_espi`) and CD-007 `gpw_ebi` (EBI reports from GPW''s report list; Gold `gold.filing_gpw_ebi`),
+      both `built` on main (docs/sources/knf_espi.md, docs/sources/gpw_ebi.md). PAP Biznes''s ESPI/EBI pages are a
+      downstream copy of the same reports, and its terms allow personal use only.'
+    - 'Re-review 26 Nov 2026 (Task #2913): still parked, now as contained. Dev probe run 45879796136 (job
+      140115959895, branch test/src-parked-probe, script dev/src_parked1_probe.py, 26 Nov 2026):
+      https://biznes.pap.pl/espi HTTP 200 (report list, "Copyright © PAP SA 2026"); https://biznes.pap.pl/regulamin
+      HTTP 200 (quoted in licence.notes); robots.txt of biznes.pap.pl disallows /api and /node/ among others. No API,
+      bulk file or reuse licence is offered.'
+    - 'Earlier parking reason: news-agency redistribution of company announcements, display only, no automated
+      extraction or republication right'
     references:
     - https://biznes.pap.pl/espi
-    - https://biznes.pap.pl/
+    - https://biznes.pap.pl/regulamin
 - id: CD-009
   name: Stooq historical quotations
   short_name: Stooq quotations
@@ -8945,7 +9027,7 @@ sources:
   name: TGE Market Data
   short_name: TGE market data
   provider: Towarowa Giełda Energii (TGE)
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: Poland
@@ -8955,18 +9037,25 @@ sources:
   granularity: Trades and bid/offer depth for electricity, gas, property-right and financial-instrument products.
   coverage: Real-time, delayed and end-of-trading data; website also exposes selected historical tables.
   access:
-    endpoint: https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotycz_ca.1.pdf
+    endpoint: 'https://tge.pl/energia-elektryczna-rdn'
     kind: bulk_file
     interfaces: [feed, HTML, bulk-files]
-    auth: Licence/annex for market data; delayed website data may be publicly viewed.
+    auth: 'Public website for personal, information use; any other use needs a separate paid agreement with TGE (market data
+      distributed under GPW''s Market Data License Agreement).'
     cost: mixed
     limits: Agreement and product specific.
   licence:
     status: restricted
-    notes: 'Terms: https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotyczaca_danych_rynkowych.pdf (terms page
-      not re-read in this review; the restriction is as recorded at registration). Real-time and many commercial/non-display
-      or redistributed uses are licensed; delayed paid services can also attract fees. Not reusable for public display: stays
-      internal.'
+    notes: 'Terms: https://tge.pl/regulamin-uzytkowania-strony-internetowej (read by the runner 26 Nov 2026). § 1 ust. 3:
+      content, "w szczególności Publiczne Dane rynkowe TGE", is supplied "wyłącznie do użytku osobistego i w celach
+      informacyjnych"; § 5 ust. 3: "Jakiekolwiek inne wykorzystanie treści zamieszczonych na Stronie Internetowej, w
+      szczególności Publicznych Danych rynkowych TGE, poza celami i użytkiem wskazanych Regulaminie ... w tym między
+      innymi dystrybucja, reprodukcja, modyfikacja, wyświetlanie lub przesyłanie jest niedopuszczalne i stanowi
+      naruszenie praw TGE, chyba że uzgodniono inaczej w odrębnej i odpłatnej umowie z TGE"; § 5 ust. 4: TGE market data
+      and lists are databases protected under the Polish database act. GPW fee schedule from 1 Jan 2027: distribution of
+      "TGE - SPOT: DAM&IDM; DAMg&IDMg; PRM" 46,900 PLN a year; RES property rights forwards, FIM and RTRS "free of
+      charge (until further notice)". The old data policy PDF (registration reference) now answers TGE''s 404 page.
+      Attribution sentence: none given. Not reusable without an agreement: stays out.'
   updates: Real-time or delayed by product; selected archives are periodic.
   ingestion:
     history: 'PROPOSAL: license named information products, then load contract-day facts.'
@@ -8977,21 +9066,33 @@ sources:
     overlap: May be distributed through GPW and vendors; keep TGE as origin.
   research:
     priority: specialist
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: exchange market data policy: real-time and redistributed uses are licensed; re-open only with a TGE data licence'
-    - Execute market-data licence
-    - Select information products
-    - Confirm history delivery
+    - 'Owner question (paid agreement): TGE''s website terms allow its public market data only "do użytku osobistego i
+      w celach informacyjnych"; distribution, reproduction or display needs "odrębnej i odpłatnej umowie z TGE"
+      (GPW''s 2027 fee schedule: 46,900 PLN a year for spot day-ahead and intraday data; property-rights forwards free
+      of charge until further notice, still under the agreement). Sign a market-data agreement with TGE for zohelo, or
+      park CD-010? Recommendation: park, or include it in the one letter to the GPW group proposed under CD-005;
+      Poland''s official electricity price indicators come from URE (PL-ENV-020) and PSE''s balancing price RCE
+      (PL-ENV-019), both approved.'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a TGE data licence, which is an owner question, so
+      the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+      dev/src_parked1_probe.py, 26 Nov 2026): https://tge.pl/energia-elektryczna-rdn HTTP 200 (day-ahead results with
+      archive tables); https://tge.pl/regulamin-uzytkowania-strony-internetowej HTTP 200 (quoted in licence.notes);
+      https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotyczaca_danych_rynkowych.pdf and
+      https://tge.pl/dane-rynkowe answer TGE''s 404 page; robots.txt of tge.pl disallows only
+      /pub/NEWCONNECT/DI/EUROSNACK.'
+    - 'Earlier parking reason: exchange market data policy, real-time and redistributed uses are licensed'
     references:
-    - https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotycz_ca.1.pdf
-    - https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotyczaca_danych_rynkowych.pdf
+    - https://tge.pl/energia-elektryczna-rdn
+    - https://tge.pl/regulamin-uzytkowania-strony-internetowej
+    - https://www.gpw.pl/pub/GPW/files/PDF/cennik/2027_01_01_WSE_Market_Data_License_Agreement_Fee_Schedule.pdf
 - id: CD-011
   name: GPW Benchmark index and reference-rate data
   short_name: GPW Benchmark
   provider: GPW Benchmark
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: Poland
@@ -9004,14 +9105,21 @@ sources:
     endpoint: https://gpwbenchmark.pl/dane_historyczne
     kind: bulk_file
     interfaces: [HTML, bulk-files, PDF]
-    auth: Public website access for selected files; benchmark use/licensing depends on activity.
+    auth: 'Data agreements with GPW Benchmark ("Umowa na korzystanie z danych niebędących danymi wskaźników referencyjnych",
+      "Umowa o stosowanie") and the GPW Market Data License Agreement for distribution; annual historical files are
+      public PDFs.'
     cost: mixed
     limits: No public API limit documented.
   licence:
     status: restricted
-    notes: 'Terms: https://gpwbenchmark.pl/dane_historyczne (terms page not re-read in this review; the restriction is as
-      recorded at registration). Publication does not settle licensing for using a benchmark in products, contracts or commercial
-      redistribution. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://gpwbenchmark.pl/korzystanie_stawek_referencyjnych and
+      https://gpwbenchmark.pl/stosowanie_stawek_referencyjnych (read by the runner 26 Nov 2026): use of benchmark and
+      non-benchmark data is offered through agreements ("Umowa na korzystanie z danych niebędących danymi wskaźników
+      referencyjnych", "Umowa o stosowanie" with annexes); GPW fee schedule from 1 Jan 2027: distribution licence for "I
+      – GPWB Information (WIBID and WIBOR, WIRON ON, WIRON CR, POLSTR ON, POLSTR CI, POLSTR CR)" 82,430 PLN a year (real
+      time), delayed distribution also fee-bearing. https://gpwbenchmark.pl/dane_historyczne publishes annual PDF files
+      (POLSTR 2021 to 2025, WIRON 2019 to 2025) with no reuse statement. No open licence; attribution sentence: none
+      given. Not reusable without an agreement: stays out.'
   updates: Benchmark-specific fixing/publication calendar; revisions are separately reported.
   ingestion:
     history: 'PROPOSAL: load published annual files with methodology/version metadata.'
@@ -9022,16 +9130,28 @@ sources:
     overlap: Index values may also appear in GPW market feeds and vendors.
   research:
     priority: specialist
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: index/benchmark data: publication does not settle licensing for product use; re-open only with a GPW Benchmark
-      licence'
-    - Review benchmark-use licence
-    - Inventory downloadable series
-    - Track methodology changes
+    - 'Owner question (agreement): GPW Benchmark offers WIBOR, WIRON and POLSTR data only under its data agreements,
+      and the GPW fee schedule prices their distribution (82,430 PLN a year in real time; delayed distribution also
+      charged); the public historical files are annual PDFs without reuse terms. Ask GPW Benchmark for an agreement to
+      show daily or monthly WIBOR, WIRON and POLSTR on zohelo, or park CD-011? Recommendation: include it in the one
+      letter to the GPW group proposed under CD-005; otherwise park.'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a benchmark licence, which is an owner question, so
+      the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+      dev/src_parked1_probe.py, 26 Nov 2026): https://gpwbenchmark.pl/dane_historyczne HTTP 200 (12 annual PDFs
+      linked); https://www.gpwbenchmark.pl/en-dokumentacja HTTP 200 (benchmark statements and regulations, PDFs read);
+      https://gpwbenchmark.pl/licencje answered 404. Dev probe run 45880748620 (job 140119185484, same branch and
+      script, argument `two`, 26 Nov 2026): https://gpwbenchmark.pl/dane_opoznione,
+      https://gpwbenchmark.pl/stosowanie_stawek_referencyjnych and
+      https://gpwbenchmark.pl/korzystanie_stawek_referencyjnych HTTP 200 (agreements listed). robots.txt of
+      gpwbenchmark.pl disallows only /pub/NEWCONNECT/DI/EUROSNACK.'
+    - 'Earlier parking reason: index and benchmark data, publication does not settle licensing for product use'
     references:
     - https://gpwbenchmark.pl/dane_historyczne
+    - https://gpwbenchmark.pl/korzystanie_stawek_referencyjnych
+    - https://gpwbenchmark.pl/stosowanie_stawek_referencyjnych
     - https://www.gpwbenchmark.pl/en-dokumentacja
 - id: CD-012
   name: EDGAR APIs, bulk data and filing archives
@@ -9306,7 +9426,7 @@ sources:
   name: OpenCorporates REST and Reconciliation APIs
   short_name: OpenCorporates
   provider: OpenCorporates
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: worldwide
@@ -9319,14 +9439,23 @@ sources:
     endpoint: https://api.opencorporates.com/documentation/API-Reference
     kind: api
     interfaces: [API, OpenRefine, JSON, XML]
-    auth: API key; plan/account limits and commercial enterprise terms.
+    auth: 'API key on every call: free share-alike keys only for Permitted Users (journalists, NGOs, academics); paid
+      non-share-alike keys otherwise.'
     cost: mixed
-    limits: Account/plan specific; documented pagination also caps deep page traversal.
+    limits: 'Essentials plan £2,250 a year: up to 500 API calls a month and 200 a day; larger plans and bulk delivery by quote
+      (https://opencorporates.com/pricing/, 26 Nov 2026).'
   licence:
     status: restricted
-    notes: 'Terms: https://api.opencorporates.com/documentation/API-Reference (terms page not re-read in this review; the
-      restriction is as recorded at registration). Open-data projects may use ODbL conditions; commercial/internal/external
-      uses need the applicable licence. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://opencorporates.com/terms-of-use-2/ (read by the runner 26 Nov 2026;
+      https://opencorporates.com/terms-of-use/ redirects there): free access to the website is "for personal use only
+      and not for the benefit of a corporation or company"; "For the avoidance of doubt, financial institutions,
+      corporations, government departments and regulatory authorities are not Permitted Users"; "The OpenCorporates API
+      may be used only with an API key. API keys are available in two ways: free of charge to Permitted Users
+      (share-alike keys) and for a fee under our non-share-alike API terms"; "The OpenCorporates database is licensed
+      under the Open Database License". Enterprise API terms
+      (https://opencorporates.com/legal-information/enterprise-api-terms-of-service/): internal-use or
+      external-distribution licence by order form; attribution: "Powered by OpenCorporates" with the logo. Not reusable
+      without a key and its licence: stays internal.'
   updates: Registry-source dependent; update timestamps are available for some records.
   ingestion:
     history: 'PROPOSAL: backfill only licensed jurisdictions/entities with provenance.'
@@ -9337,17 +9466,28 @@ sources:
     overlap: Aggregates national registries and overlaps GLEIF; retain original publisher/terms.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: commercial API and database licence (ODbL share-alike for open-data projects, paid otherwise); re-open only
-      with a licence'
-    - Obtain appropriate licence
-    - Confirm Poland source coverage
-    - Define deletion/update obligations
+    - 'Owner question (key or paid licence): OpenCorporates gives free share-alike API keys only to Permitted Users
+      (journalists, NGOs, academics; "corporations" are excluded) who show they contribute back under an open licence,
+      and sells other keys from £2,250 a year (Essentials, 500 calls a month). Apply for a public-benefit share-alike
+      key for zohelo (ODbL share-alike would then apply to what we publish from it), buy a plan, or park CD-016?
+      Recommendation: park; Polish companies come from KRS (PLG-012, built), legal entities worldwide from GLEIF
+      (CD-015) and UK companies from Companies House (CD-014).'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a commercial licence, which is an owner question, so
+      the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+      dev/src_parked1_probe.py, 26 Nov 2026): https://opencorporates.com/terms-of-use-2/, the enterprise API terms,
+      https://opencorporates.com/pricing/ and https://opencorporates.com/legal-entity-data-principles HTTP 200 (quoted
+      in licence.notes and access.limits); https://opencorporates.com/info/licence answered 404; robots.txt of
+      api.opencorporates.com answered 401, so neither the API documentation nor an API call was requested.'
+    - 'Earlier parking reason: commercial API and database licence (ODbL share-alike for open-data projects, paid
+      otherwise)'
     references:
-    - https://api.opencorporates.com/documentation/API-Reference
+    - https://opencorporates.com/terms-of-use-2/
     - https://opencorporates.com/legal-information/enterprise-api-terms-of-service/
+    - https://opencorporates.com/pricing/
+    - https://api.opencorporates.com/documentation/API-Reference
 - id: CD-017
   name: YouTube Data API v3
   short_name: YouTube Data API
@@ -10130,7 +10270,7 @@ sources:
   name: Allegro REST API
   short_name: Allegro API
   provider: Allegro
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: multicountry-Europe
@@ -10143,14 +10283,20 @@ sources:
     endpoint: https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR
     kind: api
     interfaces: [API]
-    auth: Registered active Allegro account/app and OAuth; public-resource client credentials differ from user authorization.
+    auth: 'Fully registered Allegro account and a REST API key granted after Allegro verifies the application (rules section
+      3); OAuth, client_credentials for public resources such as the category list.'
     cost: free
     limits: Endpoint/application specific; unknown here.
   licence:
     status: restricted
-    notes: 'Terms: https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja- (terms page not re-read in this
-      review; the restriction is as recorded at registration). Designed for sales integrations. Public offer search is restricted
-      to verified applications and does not imply bulk marketplace reuse. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://developer.allegro.pl/rules (Regulamin REST API, read by the runner 26 Nov 2026): the REST API user
+      is an Allegro user with a complete registration; "REST API jest autoryzowanym przez Spółkę sposobem komunikacji
+      zewnętrznych aplikacji z zasobami Allegro"; a REST API key "zostaje przyporządkowany do Konta danego Użytkownika
+      po pozytywnej weryfikacji wniosku przez Spółkę", and Allegro may limit keys and scopes, notably for reading offer
+      data. https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR: the client_credentials
+      flow is "przeznaczona do zasobów, które pozwalają na dostęp do publicznych danych, np. pobieranie listy
+      kategorii". No right to republish marketplace data is stated; attribution sentence: none given. Not reusable for
+      public display: stays internal.'
   updates: Operational resources change continuously; events and polling differ by resource.
   ingestion:
     history: 'PROPOSAL: onboard only consenting seller accounts and approved public resources.'
@@ -10161,19 +10307,26 @@ sources:
     overlap: May overlap merchant systems and price vendors; public search is incomplete by design.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: sales-integration API: public offer search is restricted to verified applications and does not imply data reuse
-      rights'
-    - Application registration and verification
-    - Confirm commercial analytics/reuse
-    - Restrict scope to authorized sellers
+    - 'Owner question (account): Allegro''s REST API is open only to a fully registered Allegro account whose
+      application Allegro verifies, it is built for sales integrations, and it publishes no market statistics (public
+      resources are lists such as categories; offer search is for verified applications). Register an Allegro account
+      and REST API application for zohelo, or park CD-032? Recommendation: park; there is no measure for Gold beyond
+      the category tree.'
+    - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was restricted terms; the open point is an account,
+      which is an owner question, so the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch
+      test/src-parked-probe, script dev/src_parked1_probe.py, 26 Nov 2026):
+      https://developer.allegro.pl/documentation, https://developer.allegro.pl/rules and the authorization tutorial
+      HTTP 200 (quoted in licence.notes); robots.txt of api.allegro.pl is "user-agent: * / disallow: /", so no API
+      call was made (recorded, not worked around).'
+    - 'Earlier parking reason: sales-integration API; public offer search is restricted to verified applications and
+      does not imply data reuse rights'
     references:
+    - https://developer.allegro.pl/rules
     - https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR
     - https://developer.allegro.pl/documentation
-    - https://github.com/allegro/allegro-api/issues/4213
-    - https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-
 - id: CD-033
   name: Dane Otodom dashboards and reports
   short_name: Otodom reports
@@ -10613,47 +10766,91 @@ sources:
   name: Open Patent Services (OPS)
   short_name: EPO Open Patent Services
   provider: European Patent Organisation (EPO)
-  status: parked
+  status: approved
   family: J
   kpi: false
   geography: multicountry
   provider_type: international-public
   domains: [innovation, intellectual-property]
   entities: [patent-publication, patent-family, applicant]
-  granularity: Patent bibliographic, family and other supported record services; coverage varies by collection.
-  coverage: Historical/current collections; country/full-text completeness must be scoped.
+  granularity: 'Statistics workbooks: count of European patent applications or granted patents by country of residence of the
+    applicant, field of technology and year. Linked open EP data: one record per EP application and publication.'
+  coverage: 'Statistics: 2016-2025 in the EPO Technology Dashboard 2025 edition, EPO member states and main origins, one
+    workbook per main country incl. Poland. Linked open EP data: all EP publications, updated weekly.'
   access:
-    endpoint: https://www.epo.org/en/searching-for-patents/data/web-services/ops
-    kind: api
-    interfaces: [REST-API, XML]
-    auth: Registration and OAuth credentials.
-    cost: 'Mixed: official free threshold and paid larger-volume subscription.'
-    limits: 'Official OPS page: free up to 4 GB/week; fair-use limits also apply.'
+    endpoint: 'https://www.epo.org/en/about-us/statistics/data-download'
+    kind: 'bulk_file'
+    interfaces: [XLSX, N-Triples, SPARQL]
+    auth: 'None for the statistics workbooks and for Linked open EP data; OPS itself needs registration and OAuth
+      credentials and is not used.'
+    cost: free
+    limits: 'Statistics: about 40 XLSX files of 20 to 40 KB on link.epo.org, one request per file. Linked open EP data: bulk
+      N-Triples download (full set updated weekly, GZIP with SHA-512 checksums); its API and SPARQL endpoint are for
+      occasional use only. OPS (not used): free threshold per week, fair use charter.'
   licence:
-    status: restricted
-    notes: 'Terms: https://www.epo.org/en/searching-for-patents/data/web-services/ops (terms page not re-read in this review;
-      the restriction is as recorded at registration). Terms allow inclusion in own products; prohibit making or distributing
-      data as such. Product use needs explicit rights review. Not reusable for public display: stays internal.'
-  updates: Record/publication updates; version-specific discovery to confirm.
+    status: unresolved
+    notes: 'Terms: https://www.epo.org/en/about-us/statistics/data-download (the page that links the statistics workbooks,
+      read by the runner 26 Nov 2026) states no reuse terms, and https://www.epo.org/en/terms-of-use and
+      https://www.epo.org/en/legal-notice gave the probe no reuse text; commercial reuse and modification of the
+      statistics: not stated, so `unresolved` (internal only). Open alternative for record-level data:
+      https://www.epo.org/en/searching-for-patents/data/linked-open-data: "The EPO grants usage of Linked open EP data
+      under "Creative Commons Attribution 4.0 International Public" License" and "Linked open EP data is a
+      free-of-charge service and is governed by a fair use policy" (bulk download for production use). Not used: OPS
+      terms (https://www.epo.org/en/service-support/ordering/terms-and-conditions/ops-terms-and-conditions) 3.1 users
+      "may distribute the data as part of these products", 3.2 "Users are not permitted to make the data as such
+      available to the public or to copy and/or distribute the data as such"; raw-data (bulk) terms require the
+      attribution "This product contains data sourced from EPO databases, © European Patent Organisation".'
+  updates: 'Statistics: one edition a year (the 2025 Technology Dashboard holds 2016-2025); version = edition in the file name
+    plus the file SHA-256 (HEAD gave no Last-Modified). Linked open EP data: weekly.'
   ingestion:
-    history: 'Proposal: partition licensed collection within shared weekly quota; evaluate official bulk product for large
-      backfiles.'
-    incremental: 'Proposal: bounded publication-window retrieval plus legal-status/family reconciliation.'
-    identifiers: Publication/application numbers, country/kind codes, families and classifications.
+    history: 'Load the workbooks of the current edition: applications and granted patents per country of residence of the
+      applicant (2016-2025), per field of technology, per field and country for each year, and the Poland country
+      workbook; keep each edition.'
+    incremental: 'Yearly snapshot: the next edition is found by its file names on the data-download page; each edition restates
+      history, the newest wins.'
+    identifiers: 'Country of residence of the applicant (country names, map to ISO2), field of technology (as named in the
+      workbooks), year, indicator (applications, grants), edition.'
   modelling:
-    notes: Publication, family and legal event grains are distinct; link applicant identities cautiously.
-    overlap: UPRP and WIPO records may represent related patent-family members.
+    notes: 'Grain: indicator x applicant country of residence x field of technology x year; annual only; unit count of
+      applications or patents (D33, as published). Smallest Gold selection: European patent applications and granted
+      patents of Polish residents per year 2016-2025, total and by field of technology, then all countries. Suppression
+      markers: none seen in the page list; the builder checks empty cells (never 0). Duplicates: editions overlap in
+      years; keep the newest edition. Record-level EP data from Linked open EP data (CC BY 4.0) is a later, larger
+      step.'
+    overlap: 'WIPO IP statistics (GL-032) count patent filings by office and origin, including EPO filings of Polish residents,
+      under WIPO''s counting rules; UPRP statistics (EX-001, built) count national filings at the Polish office. No
+      published KPI uses EPO counts today.'
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: OPS terms allow use in own products but prohibit distributing the data as such and need a fair-use agreement;
-      for patent statistics use PATSTAT/WIPO (GL-032) instead'
-    - Product vs raw redistribution boundary
-    - Sustainable history volume
+    - 'Non-blocking (licence, for publication): the EPO statistics page states no reuse terms, so EX-004 is built for
+      internal use only. Do you want to ask the EPO (contact form on epo.org) whether its patent statistics workbooks
+      may be republished with attribution? Without an answer they stay internal; record-level EP data can be published
+      under CC BY 4.0 from Linked open EP data.'
+    - 'Re-review 26 Nov 2026 (Task #2913): approved on a new route. The parking reason (OPS forbids distributing the
+      data as such and needs registration) stands for OPS, which is not used. Dev probe run 45879796136 (job
+      140115959895, branch test/src-parked-probe, script dev/src_parked1_probe.py, 26 Nov 2026): OPS page and OPS
+      terms HTTP 200 (quoted in licence.notes); robots.txt of ops.epo.org answered 403, so no OPS call was made. Dev
+      probe run 45880748620 (job 140119185484, same branch and script, argument `two`, 26 Nov 2026):
+      https://www.epo.org/en/searching-for-patents/data/linked-open-data (CC BY 4.0),
+      https://www.epo.org/en/searching-for-patents/data/bulk-data-sets/ebd (EP bibliographic data, weekly, under the
+      raw-data terms) and the raw-data and PATSTAT terms HTTP 200. Dev probe run 45881196237 (job 140120671833, same
+      branch and script, argument `three`, 26 Nov 2026): https://www.epo.org/en/about-us/statistics/data-download HTTP
+      200 lists about 40 XLSX workbooks of the EPO Technology Dashboard 2025 (European patent applications and granted
+      patents 2016-2025 per country of residence of the applicant, per field of technology, and per field and country
+      for each year; one workbook per country incl. "Poland 2025", 34 KB); HEAD of three of them HTTP 200; the Linked
+      open EP data user guide PDF (bulk download section) HTTP 200.'
+    - 'Earlier parking reason: OPS terms allow use in own products but prohibit distributing the data as such and need
+      a fair-use agreement'
     references:
-    - https://www.epo.org/en/searching-for-patents/data/web-services/ops
+    - https://www.epo.org/en/about-us/statistics/data-download
+    - https://link.epo.org/web/about-us/statistics/european-patent-applications-2016-2025-per-country-of-residence-of-the-applicant-epo-technology-dashboard-2025.xlsx
+    - https://link.epo.org/web/about-us/statistics/european-patent-applications-per-field-of-technology-and-per-country-of-residence-of-the-applicant-for-each-individual-year-2016-2026-epo-technology-dashboard-2025.xlsx
+    - https://link.epo.org/web/about-us/statistics/poland-epo-technology-dashboard-2025.xlsx
+    - https://www.epo.org/en/searching-for-patents/data/linked-open-data
+    - https://link.epo.org/web/linked_open_ep_data_user_guide_en.pdf
     - https://www.epo.org/en/service-support/ordering/terms-and-conditions/ops-terms-and-conditions
 - id: EX-005
   name: OpenData organizations, people and locations (bulk ZIP)
