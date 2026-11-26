@@ -26,7 +26,9 @@ domestic + foreign applicants; the validations total = the sum of the country ro
 be read, for the report's own year only, the summary page's labelled figure "walidacje patentów europejskich
 <n>"). Each expected cell is a Bronze row with its value as printed (or none) and its guard: `ok`, or the reason. A
 table not found is a row with its reason; a file with none of the tables is rejected into
-`bronze.uprp_statistics_rejected_files`. Ranking tables (which name persons and companies) are not read.
+`bronze.uprp_statistics_rejected_files`. A page beyond pypdf's safety limits (the picture covers of the 2019
+report) is read as empty, so a table on it would be "table title not found". Ranking tables (which name persons and
+companies) are not read.
 
 What the guards found in the reports 2019 to 2025 (Dev probes 45811725126 and 45813573663): rows with empty cells
 for zeros ("krajowe 2 1" in 2019, many country rows of the 2019 and 2020 validations tables, "Tajlandia" in 2025),

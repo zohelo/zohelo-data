@@ -339,15 +339,24 @@ def parse(pages: list[str]) -> list[dict[str, Any]]:
 
 
 def text_pages(body: bytes) -> list[str]:
-    """The text layer of every page (pypdf plain extraction, with the fonts' character maps)."""
+    """The text layer of every page (pypdf plain extraction, with the fonts' character maps). A page whose content
+    stream exceeds pypdf's safety limits (the picture covers of the 2019 report, pages 1 and 89: "Reached maximum
+    number of tokens per stream") is read as empty: a table printed on it is then "table title not found", never
+    guessed; the limits are not raised."""
     from pypdf import PdfReader
-    from pypdf.errors import PyPdfError
+    from pypdf.errors import LimitReachedError, PyPdfError
 
     if not body.startswith(b"%PDF"):
         raise Layout("not a PDF file")
     try:
         reader = PdfReader(io.BytesIO(body))
-        return [page.extract_text() or "" for page in reader.pages]
+        pages = []
+        for page in reader.pages:
+            try:
+                pages.append(page.extract_text() or "")
+            except LimitReachedError:
+                pages.append("")
+        return pages
     except PyPdfError as exc:
         raise Layout(f"unreadable PDF: {exc}") from exc
 
