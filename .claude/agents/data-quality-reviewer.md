@@ -74,8 +74,10 @@ skills:
 12. **Suppressed cells**: find how the source marks confidential, missing and provisional values and follow those
     markers through Bronze, Silver and the build stage. A cast that turns a marker into `0.0` or keeps the row
     without `observation_status_key` is a blocker. Ask the trial for the count of exact zeros per measure.
-13. **Value bounds**: every new KPI × source in a `poc_metrics_*` model has a bound in
-    `tests/metrics_value_range.sql` **and** the model is in that test's union; the test ran on this head.
+13. **Value bounds**: every new KPI × source in a `poc_metrics_*` model has a bound in the source's
+    `macros/value_range/<source_system>.sql` **and** the model is in its `models` list (so in the union of
+    `tests/metrics_value_range.sql`); the test ran on this head. A new row or model written into the test file
+    itself is a blocker (docs/source-registration.md).
 14. **Overlapping patterns**: each new `kpi_measure.csv` pattern ending in `%` is checked against the measure keys
     the build stage emits; more than one match per source × area × period is a blocker.
 15. **Publish ordering and reach**: for a KPI with `status: published`, a new source changes the order of v1's

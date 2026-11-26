@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: krs_entity
+    description: >-
+      One row per KRS number with a current extract in the Open KRS API (Ministry of Justice; terms not
+      established, internal only): register, legal form, registered name, NIP, REGON, LEI (exact KRS match in GLEIF only), seat (voivodeship key of
+      dim_geography, powiat, gmina, town; no street address), registration date, date of the last entry, share
+      capital, main PKD code, liquidation and bankruptcy flags. Selection: the KRS numbers GLEIF lists (entities
+      with an LEI), not the whole register. No natural persons.
+    columns:
+      - name: krs_number
+        description: The ten-digit KRS number (the register's own id).
+        tests: [not_null, unique]
+      - name: lei
+        description: >-
+          The LEI of the one GLEIF record registered under exactly this KRS number (registration authority
+          RA000484); null when no record or several records name the number (lei_count). No relationships test
+          to a shared model.
+      - name: lei_count
+        description: GLEIF records that name this KRS number (0 = none any more, more than 1 = lei is left null).
+        tests: [not_null]
+      - name: register
+        tests: [not_null, {accepted_values: {arguments: {values: ['RejP', 'RejS']}}}]
+      - name: name
+        tests: [not_null]
+  - name: poc_build_ms_krs
+    description: >-
+      Gold build stage of the Open KRS API: entities loaded with a current extract, by legal form and seat
+      voivodeship. Measure ms_krs:lei_selection:entities (daily, one date: the day of the newest request) and
+      ms_krs:lei_selection:registered (monthly, by the month of registration in KRS; a month without
+      registrations has no row). Counts of what is loaded from the selection (entities with an LEI), not of
+      Polish companies or of all registrations.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: frequency
+        tests: [{accepted_values: {arguments: {values: ['D', 'M']}}}]
