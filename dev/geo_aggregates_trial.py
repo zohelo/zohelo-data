@@ -128,7 +128,18 @@ def main() -> int:
             "'countr|union|euro area|bank|fund|association|community|organi|group|total|world') order by 1",
         )
         dim["left_count"] = len(left)
-        annotate("notice", "2775 dimension", {**prod, **dim, "left": ",".join(left)})
+        dim["nuts_letter_third"] = rows(
+            con,
+            "select substr(nuts_code, 1, 2), string_agg(distinct substr(nuts_code, 3, 1), '' order by "
+            "substr(nuts_code, 3, 1)) from dim_new where level_name like 'nuts%' and "
+            "regexp_matches(substr(nuts_code, 3, 1), '[A-Z]') group by 1 order by 1",
+        )
+        moved = dim.pop("moved_with_country_prefix")
+        annotate("notice", "2775 dimension", {**prod, **dim})
+        annotate("notice", "2775 dimension: NUTS keys that leave (all)", {
+            "left": ",".join(left),
+            "moved_with_country_prefix": ",".join(r[0] for r in moved),
+        })
         changed = rows(
             con,
             "select n.source_system, n.source_code, o.geography_key, n.geography_key from map_new n "
