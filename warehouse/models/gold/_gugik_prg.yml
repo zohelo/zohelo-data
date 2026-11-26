@@ -2,5 +2,41 @@ version: 2
 models:
   - name: poc_build_prg
     description: >-
-      Build stage — area of every Polish administrative unit with a PRG boundary as PRG publishes it (JPT_POWIER,
-      hectares; D33: stored as published, KPI area converts to km²), daily at the PRG edition held.
+      Build stage of GUGiK PRG. Block jednostki_administracyjne: area of every Polish administrative unit with a PRG
+      boundary as PRG publishes it (JPT_POWIER, hectares; D33: stored as published, KPI area converts to km²), daily
+      at the PRG edition held. Block punkty_adresowe (#3106): number of address points of the newest national address
+      package per gmina, powiat, voivodeship and Poland, daily at the package's Last-Modified date.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_prg_address_counts
+    description: >-
+      Address points of the newest PRG national address package (silver.prg_address_points) per area: gmina (the
+      point's 7-digit TERC code), powiat (4 digits), voivodeship (2 digits) and Poland (PL). Grain unit_level ×
+      area_code (tests/gugik_prg_address_counts_complete.sql checks it with the areas). Read by the build stage
+      poc_build_prg (block punkty_adresowe) through poc_optional_ref.
+    columns:
+      - name: unit_level
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['kraj', 'wojewodztwo', 'powiat', 'gmina']
+      - name: area_code
+        tests: [not_null]
+      - name: address_points
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+      - name: packages
+        description: "Distinct packages counted (latest-only policy: always 1)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1]
