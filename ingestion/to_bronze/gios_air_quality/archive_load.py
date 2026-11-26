@@ -11,8 +11,8 @@ file per entity, replaced whole (entity_tables), so a rerun writes nothing and a
 
 The Silver stations are a dbt model (models/silver/gios_air_quality/gios_air_archive_stations.sql). A year whose
 file is not of a declared layout, or whose Silver breaks a check (a null key, a repeated station × indicator ×
-averaging time × stamp × member, a value cell that is not a number), is rejected into bronze.gios_air_quality_rejected_files
-with the reason and the tables keep the previous version. Years are committed one by one, newest first; a run that
+averaging time × stamp × member, a value cell that is not a number), is rejected into
+bronze.gios_air_quality_rejected_files with the reason and the tables keep the previous version. Years are committed one by one, newest first; a run that
 reaches its time budget stops and the next run continues.
 """
 
