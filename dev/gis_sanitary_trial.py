@@ -42,6 +42,7 @@ TABLES = [f"{SOURCE}_cells", f"{SOURCE}_rejected_files"]
 SILVER = [f"{SOURCE}_food_samples"]
 SEED_ROWS = ["source", "licence", "kpi", "kpi_measure", "kpi_v2_map", "unit", "unit_map", "unit_decimals"]
 SELECT = [*SILVER, *SEED_ROWS, "poc_map_geography", f"poc_build_{SOURCE}"]
+SKIP: list[str] = []  # tests of other sources whose own tables are not in production yet
 NUMBER = r"^[0-9][0-9   ]*$|^[0-9]{1,3},[0-9]{2}%$|^100%$"
 
 
@@ -116,8 +117,12 @@ def setup_dbt(work: Path, arrow_tables: dict) -> tuple[dict, list[str]]:
         n = nodes.get(p) or sources[p]
         schema, name = n["schema"], n.get("alias") or n.get("identifier") or n["name"]
         con.execute(f"create schema if not exists {schema}")
-        con.execute(f'create view {schema}."{name}" as select * from lake.{schema}."{name}"')
-        views.append(f"{schema}.{name}")
+        try:
+            con.execute(f'create view {schema}."{name}" as select * from lake.{schema}."{name}"')
+            views.append(f"{schema}.{name}")
+        except duckdb.Error:  # a parent not built in production yet (another source's new table)
+            views.append(f"missing in production: {schema}.{name}")
+            SKIP.extend(nodes[t]["name"] for t in tests if p in nodes[t]["depends_on"]["nodes"])
     con.close()
     aliases = {m: (nodes[f"model.zohelo.{m}"]["schema"], nodes[f"model.zohelo.{m}"]["alias"]) for m in SELECT}
     return aliases, views + [f"read_only_attach={attach.get('read_only', False)}"]
@@ -136,8 +141,9 @@ def main(argv) -> int:
         status = {"inspect": bulk_file.main(SOURCE, "inspect", landing_root=LAND)}
         per_pass = []
         for attempt in (1, 2):
-            todo = [s["entity"] for s in landing.changed_specs(LAND)]
-            status[f"extract_{attempt}"] = landing.extract(LAND)
+            specs = landing.changed_specs(LAND)  # landing.extract = these specs into the bulk_file load
+            todo = [s["entity"] for s in specs]
+            status[f"extract_{attempt}"] = bulk_file.main(SOURCE, "load", LAND, specs=specs, pause_seconds=landing.PAUSE_SECONDS)
             receipts = []
             for spec in bulk_file.declaration(SOURCE):
                 receipts += bulk_file.landed(client, bucket, bulk_file.prefix(SOURCE, spec["entity"], LAND))
@@ -150,7 +156,8 @@ def main(argv) -> int:
                            "second_extract_new_copies": per_pass[1]["receipts"] - per_pass[0]["receipts"],
                            "page_attachments_unknown": unknown,
                            "versions": sorted((r["entity"], r["version_token"], r["size_bytes"]) for r in receipts)}
-        if any(status.values()) or per_pass[1]["receipts"] != per_pass[0]["receipts"] or entities != 14 or unknown:
+        if (any(status.values()) or per_pass[1]["receipts"] != per_pass[0]["receipts"] or per_pass[1]["to_download"]
+                or entities != 14 or unknown):
             failures.append(f"landing {landing_summary}")
 
         # Bronze: load twice
@@ -199,7 +206,7 @@ def main(argv) -> int:
         aliases, views = setup_dbt(work, arrow_tables)
         runs, fingerprints = [], []
         for attempt in (1, 2):
-            code, results = dbt(work, "build", "--select", *SELECT)
+            code, results = dbt(work, "build", "--select", *SELECT, *(["--exclude", *SKIP] if SKIP else []))
             by_status: dict[str, int] = {}
             for st, _, _ in results.values():
                 by_status[st] = by_status.get(st, 0) + 1
@@ -257,7 +264,7 @@ def main(argv) -> int:
         local.close()
         note("dbt build x2 (Silver, code lists, poc_map_geography, build stage)", {
             "runs": runs, "second_build_same_tables": fingerprints[0] == fingerprints[1], "fingerprints": fingerprints,
-            "views_onto_production": views})
+            "views_onto_production": views, "excluded_tests_of_missing_parents": SKIP})
         note("silver", silver)
         note("gold", gold)
         note("spot values PL", [list(r) for r in spot])
