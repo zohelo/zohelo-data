@@ -70,7 +70,20 @@ def sample(type_name, prop, pattern, propname):
     return {"http": st, "s": sec, "vals": vals}
 
 
+def second():
+    OUT["id_0201"] = hits("ms:dzialki", "ID_DZIALKI", "0201%")
+    OUT["id_1465"] = hits("ms:dzialki", "ID_DZIALKI", "1465%")
+    OUT["id_02"] = hits("ms:dzialki", "ID_DZIALKI", "02%")
+    OUT["s_id_1465"] = sample("ms:dzialki", "ID_DZIALKI", "1465%", "ID_DZIALKI")
+    OUT["s_nj_by_id_1465"] = sample("ms:dzialki", "ID_DZIALKI", "1465%", "NUMER_JEDNOSTKI")
+    OUT["id_1465_again"] = hits("ms:dzialki", "ID_DZIALKI", "1465%")
+    annotate("notice", "gugik_egib probe 2", OUT)
+    return 0
+
+
 def main(args):
+    if args and args[0] == "second":
+        return second()
     st, body, sec, ct = get("https://mapy.geoportal.gov.pl/robots.txt")
     OUT["robots"] = {"http": st, "head": body[:200].decode("utf-8", "replace")}
     OUT["pl"] = {t: hits(t) for t in ("ms:dzialki", "ms:budynki")}
