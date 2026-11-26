@@ -202,7 +202,7 @@ def landed(client, bucket: str, root: str) -> list[dict[str, Any]]:
 
 def land(client, bucket: str, root: str, held: list[dict[str, Any]], deadline: float) -> dict[str, Any]:
     session = requests.Session()
-    session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json"})
+    session.headers.update({"User-Agent": USER_AGENT})
     started = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     members, counts = read(session, deadline)
     version = f"{counts['period']}_{started}"

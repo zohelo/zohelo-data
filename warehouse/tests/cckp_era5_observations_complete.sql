@@ -13,7 +13,7 @@ series as (
         count(*) as periods,
         min(period_year) as first_year,
         max(period_year) as last_year,
-        max(cast(right(any_value(dataset_period), 4) as integer)) as dataset_last
+        cast(right(max(dataset_period), 4) as integer) as dataset_last
     from obs
     group by all
 )
