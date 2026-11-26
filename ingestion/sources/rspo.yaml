@@ -1,0 +1,42 @@
+source_system: rspo
+description: "RSPO — register of schools and educational institutions: the Ministry of National Education's yearly lists (state of 30 September, SIO data) on dane.gov.pl"
+
+# Extraction strategy (docs/landing.md). Register PLS-021. The register's REST API (api.rspo.gov.pl) needs credentials
+# that CIE grants on request (owner action, not used) and the public search rspo.gov.pl offers no bulk file (Dev
+# probes 43808336871, 43838490749, 45746487144). Bulk feature used: the ministry's yearly lists on dane.gov.pl,
+# dataset 839 "Wykaz szkół i placówek oświatowych" (update frequency "Rocznie", CC BY 4.0), one XLSX per reference
+# date 30 September ("... wg stanu bazy SIO na 30.09.<year>", 2020-2025, about 17.5 MB and 55,600 rows each, one
+# sheet, the same 58 columns; Dev probes 45746804861, 45747111363, 45748207131). api.dane.gov.pl answered runners on
+# 26 Nov 2026 (it timed out in earlier probes). ingestion/to_landing/rspo/ reads the dataset's resource list from
+# the portal's public API once per run and lands each list whose file URL is not landed yet (a corrected upload is a
+# new dated URL) through the shared bulk_file pattern, 3 s apart. Entity = one reference year (school_list_<year>);
+# version = Last-Modified. Restart unit: one list. Not landed: the 2017 and 2018 lists (other layouts) and the
+# 2013-2015 lists (one XLS per voivodeship).
+extraction:
+  initial: bulk
+  production: snapshot                  # each list is the register's state on its 30 September
+  incremental_policy: changed_since_last  # a file URL not landed yet (new year or corrected upload)
+  schedule: # UTC; one list a year (30 September state, published November to March: 2025 on 16 Feb 2026, 2024 on
+    # 17 Mar 2025); weekly check on Wednesdays 08:55 (O46: at most one run a week past Landing), one API request
+    # and no download when nothing is new
+    - {cron: "55 8 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/rspo/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.rspo_institutions, bronze.rspo_rejected_files]
+silver: [silver.rspo_institutions]
+gold: [gold.build_rspo, gold.rspo_institution]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  rspo_institutions: {rows: 500000}  # 333,695: six lists 2020-2025 (Dev probe 45748207131)
+  poc_build_rspo: {rows: 450000}  # estimate before the trial
+  rspo_institution: {rows: 100000}  # estimate before the trial
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a list
+# Refresh policy for all layers (D32): six yearly workbooks (about 105 MB, 334,000 rows), one new list a year and no
+# changed-since filter; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3031"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
