@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+- name: eli_pl
+  description: >-
+    ELI Poland (register PLG-026), JSON answers of api.sejm.gov.pl/eli: the journals list and one answer per journal
+    year of Dziennik Ustaw (DU) and Monitor Polski (MP), newest copy of each; values as text, provenance columns.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/eli_pl/
+    loaded_by: ingestion/to_bronze/eli_pl/
+    config: ingestion/sources/eli_pl.yaml
+  tables:
+  - name: eli_pl_publishers
+    description: One row per journal of /eli/acts (entity publishers) with its number of acts and of years listed.
+  - name: eli_pl_acts
+    description: >-
+      One row per act of /eli/acts/<DU|MP>/<year> (entity acts_<DU|MP>_<year>): ELI id, address, journal, year,
+      volume, position, display address, title, type, status, promulgation, announcement and change dates, text flags.
+  - name: eli_pl_rejected_files
+    description: ELI Landing files the Bronze decoder rejected (incomplete year answer, unknown key, foreign item), with the reason.

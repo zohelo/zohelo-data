@@ -1,7 +1,9 @@
 """GIOŚ air quality Landing → Bronze → Silver activities.
 
 bronze.load       load.py → bronze.gios_air_stations, bronze.gios_air_sensors, bronze.gios_air_measurements (one
-                  Parquet file per Landing file), entities.py → silver.gios_air_hourly (a file per measurement day)
+                  Parquet file per Landing file), entities.py → silver.gios_air_hourly (a file per measurement day),
+                  then archive_load.py → bronze/silver.gios_air_archive_values (a file per year of the archive of
+                  verified values) and bronze.gios_air_archive_stations (#3119)
 bronze.verify     ingestion/common/lineage.py --source gios_air_quality
 landing.archive   ingestion/common/archive.py --source gios_air_quality (move to Archive)
 archive.prune     ingestion/common/retention.py --source gios_air_quality (archive_policy.retention)

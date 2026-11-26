@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+knf_espi,CD-006,KNF ESPI: raporty emitentów (OAM),KNF ESPI issuer reports (OAM list),Komisja Nadzoru Finansowego,registry,day,national-public,unresolved,https://moam.knf.gov.pl/moam.nsf

@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+- name: knf_espi
+  description: KNF OAM list of ESPI issuer reports (https://moam.knf.gov.pl/moam.nsf), one reduced JSON document per day of receipt
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/knf_espi/
+    loaded_by: ingestion/to_bronze/knf_espi/
+    config: ingestion/sources/knf_espi.yaml
+  tables:
+  - name: knf_espi_reports
+    description: >-
+      One row per report of the newest landed copy of each day of receipt (entity day_<YYYYMMDD>), values as listed,
+      as text: report_id (OAM document id), issuer_name, received_date, report_type (the form code that starts the
+      listed title, '' when the title has none; the title itself is never stored), link; listed = the number of
+      reports the list states for the day (null for a day of one page); provenance raw_sha256, source_version,
+      ingested_at, source_row_number. Partitioned by entity.
+  - name: knf_espi_rejected_files
+    description: KNF ESPI Landing files the Bronze decoder rejected, with the reason.

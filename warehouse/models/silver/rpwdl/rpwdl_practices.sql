@@ -4,7 +4,9 @@
    source_row_number): an individual practice is one practitioner, so no identifier is loaded (no register id, book
    number, name, business-register number or address; aggregate counts only). Only the voivodeship of the
    correspondence address is kept (Bronze keeps the first two TERYT digits). Chamber and legal form codes as
-   published. is_active = in an active ledger file, not removed and not ended on the snapshot date. #}
+   published. is_active = in an active ledger file, not removed and not ended on the snapshot date.
+   Years (#3139): the newest files of each snapshot year (snapshot_year = the year of the entity), so a past year
+   keeps its last state; snapshot_date = the download day of the file. #}
 with newest as ({{ poc_rpwdl_newest('rpwdl_practices') }}
 ),
 
@@ -12,8 +14,8 @@ typed as (
     select
         entity,
         source_row_number,
-        regexp_replace(entity, '_(active|inactive)$', '') as practice_register,
-        case when ends_with(entity, '_active') then 'active' else 'inactive' end as ledger_state,
+        regexp_replace(entity, '_(active|inactive)_[0-9]{4}$', '') as practice_register,
+        {{ poc_rpwdl_ledger_state() }} as ledger_state,
         {{ poc_rpwdl_text('practice_kind') }} as practice_kind,
         {{ poc_rpwdl_text('chamber_code') }} as chamber_code,
         {{ poc_rpwdl_text('chamber_name') }} as chamber_name,
@@ -24,6 +26,7 @@ typed as (
         {{ poc_rpwdl_date('end_date', 'rpwdl_practices.end_date') }} as end_date,
         {{ poc_rpwdl_date('removal_date', 'rpwdl_practices.removal_date') }} as removal_date,
         {{ poc_rpwdl_date('entry_change_date', 'rpwdl_practices.entry_change_date') }} as entry_change_date,
+        {{ poc_rpwdl_year() }} as snapshot_year,
         {{ poc_rpwdl_snapshot() }} as snapshot_date,
         raw_sha256,
         source_version,
