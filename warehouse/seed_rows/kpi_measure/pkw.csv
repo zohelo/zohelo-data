@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+voter_turnout,pkw,pkw:sejm:pct:turnout,"Sejm elections, turnout as published by PKW",1,
+voter_turnout,pkw,pkw:pe:pct:turnout,"European Parliament elections, turnout as published by PKW",2,
+voter_turnout,pkw,pkw:sejmik:pct:turnout,"voivodeship assembly elections, turnout as published by PKW",3,

@@ -5447,7 +5447,8 @@ sources:
   name: Election and referendum results data service
   short_name: PKW election results
   provider: National Electoral Commission (PKW) / National Electoral Office (KBW)
-  status: approved
+  source_system: pkw
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -5476,15 +5477,15 @@ sources:
   ingestion:
     history: 'Bulk feature, one site per election: https://wybory.gov.pl/<election>/ redirects to https://<election>.pkw.gov.pl/<election>/
       (sejmsenat2023, pe2024, samorzad2024, prezydent2025, prezydent20200628 are linked from wybory.gov.pl). Files are /<election>/data/csv/<name>_csv.zip
-      (and <name>_xlsx.zip). Tested: https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_wojewodztwach_sejm_csv.zip
-      (application/zip, 2,790 bytes) and .../wyniki_gl_na_listy_po_gminach_sejm_csv.zip (155,899 bytes). The "dane w arkuszach"
-      page is a JavaScript shell: the file names of each election come from its script bundle (/<election>/j/<stamp>.min.js
-      builds data/csv/<name>_csv.zip); a wrong name returns the HTML shell with status 200, so check Content-Type. Names for
-      pe2024, samorzad2024 and prezydent2025 are still to be listed (the names guessed by the probe were wrong). Older elections:
-      https://danewyborcze.kbw.gov.pl/ (a static archive; its front page only redirects, content not inventoried).'
+      (and <name>_xlsx.zip). The "dane w arkuszach" page is a JavaScript shell: the file names of each election come from
+      its script bundle (/<election>/j/<stamp>.min.js, module csv_links); pe2024 and prezydent2025 add a stamp from data/config.blob
+      (<name>_csv.<ts>.zip); samorzad2024 publishes the sejmik results as XLSX (data/csv/2024-sejmiki-po-<level>[-proc].xlsx).
+      A wrong name returns the HTML shell with status 200 (rejected as not a ZIP). Built (#486, Dev probes 43807885985, 43812026752,
+      43813029784): 25 area-level files of Sejm 2023, EP 2024, sejmiki 2024 and President 2025, docs/sources/pkw.md. Older
+      elections: https://danewyborcze.kbw.gov.pl/ (a static archive; its front page only redirects, content not inventoried).'
     incremental: 'Static after each election: land once per election (snapshot), version = Last-Modified; add the next election
       by hand when it is called.'
-    identifiers: Election id (site name), territorial code (TERYT expected, to confirm in the files), list or candidate number.
+    identifiers: Election id (site name), territorial code (TERYT, 6 digits without the gmina type digit), list or candidate number.
   modelling:
     notes: 'Smallest Gold selection: voivodeship and gmina results files of Sejm 2023, EP 2024, voivodeship assemblies 2024
       and president 2025. New KPIs: voter turnout (%) and vote share by list or candidate, Poland and voivodeships; new dimension:
@@ -5500,7 +5501,8 @@ sources:
       materials with the attribution "Źródło: Państwowa Komisja Wyborcza"?'
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): Sejm 2023 files fetched by HEAD
       (application/zip); file names of the 2024 and 2025 elections not yet listed; danewyborcze.kbw.gov.pl content not inventoried.'
-    - Confirm the territorial code column (TERYT) in the files at the Landing trial.
+    - 'TERYT confirmed (Dev probe 43807885985): gmina files carry a 6-digit code without the type digit (the CSV drops the
+      leading zero), powiat files WWPP00, voivodeship files a name (Sejm, EP, President) or WW0000 (sejmiki per-cent file).'
     references:
     - https://wybory.gov.pl/
     - https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/pl/dane_w_arkuszach
