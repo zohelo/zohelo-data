@@ -4672,7 +4672,7 @@ sources:
   name: CEIDG and Biznes.gov.pl Data Warehouse/API
   short_name: CEIDG
   provider: Ministry of Economic Development and Technology
-  status: approved
+  status: reviewing
   family: E
   kpi: false
   geography: Poland
@@ -4713,7 +4713,12 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Owner action: create the data-warehouse account and obtain the API token (secret), then add it as a repository secret'
+    - 'Owner question (26 Nov 2026, sources lane, #2873): will you create the account on the CEIDG and Biznes.gov.pl data
+      warehouse (https://dane.biznes.gov.pl/), obtain an API v2 token and add it as the repository secret SOURCE_CEIDG_API_TOKEN?
+      Every route to the data needs that account: the API v2 takes a token and the site says "Aby skorzystać z Hurtowni danych
+      CEIDG i Biznes.gov.pl musisz posiadać konto"; no workflow passes a CEIDG secret today (.github/workflows/dev.yml and
+      pipeline.yml on main 7b40c8de), so nothing can be extracted or proven. When the secret exists, set the entry back to
+      approved; the build keeps business attributes and counts only (no names or addresses of natural persons).'
     - 'Licence unresolved: no reuse terms for the data; personal-data allowlist for natural persons'
     - Document change semantics (current-state service, no CDC)
     references:
