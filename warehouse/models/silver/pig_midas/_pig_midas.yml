@@ -1,0 +1,90 @@
+version: 2
+models:
+  - name: pig_midas_deposits
+    description: >-
+      PIG-PIB MIDAS (register PL-ENV-015; PIG-PIB rules for re-use of public sector information, open-conditional):
+      mineral deposit contours of the newest WFS download, documented deposits (layer deposits) and deposits removed
+      from the balance (layer deposits_removed, archival selection). Grain: layer x objectid; deposit_number is the
+      MIDAS deposit number, repeated on the contours of one deposit (fields, minerals). Mineral, document, location
+      method, GIS area, centroid and point on the surface (EPSG:4326 degrees), snapshot_date = download date.
+      Completeness: tests/pig_midas_deposits_complete.sql. Trial run in the PR.
+    tests:
+      - unique:
+          column_name: "layer || '|' || objectid"
+    columns:
+      - name: layer
+        tests: [not_null, {accepted_values: {arguments: {values: ['deposits', 'deposits_removed']}}}]
+      - name: objectid
+        tests: [not_null]
+      - name: deposit_number
+        tests: [not_null]
+      - name: mineral_code
+        description: MIDAS code (Kod) as published; not one to one with the mineral (KN holds 11 minerals, Dev trial).
+        tests: [not_null]
+      - name: mineral
+        tests: [not_null]
+      - name: point_lon
+        description: Longitude of a point on the contour's surface (always inside it); used to place the contour in a voivodeship in Gold.
+        tests: [not_null]
+      - name: point_lat
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the WFS response (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: pig_midas_mining_areas
+    description: >-
+      PIG-PIB MIDAS (register PL-ENV-015): mining area contours (obszary górnicze) of the newest WFS download, current
+      (layer mining_areas, status aktualny) and abolished (layer mining_areas_archival, status zniesiony, archival
+      selection). Grain: layer x contour_id (ID_konturu). Register number, legal dates, decisions, legal area in m2
+      (Powierzchnia OG) and GIS area, deposit and mineral, centroid and point on the surface.
+      Completeness: tests/pig_midas_mining_areas_complete.sql. Trial run in the PR.
+    tests:
+      - unique:
+          column_name: "layer || '|' || contour_id"
+    columns:
+      - name: layer
+        tests: [not_null, {accepted_values: {arguments: {values: ['mining_areas', 'mining_areas_archival']}}}]
+      - name: contour_id
+        tests: [not_null]
+      - name: status
+        description: As published; NULL on a record the producer has not completed (1 current contour on 26 Nov 2026).
+        tests: [{accepted_values: {arguments: {values: ['aktualny', 'zniesiony']}}}]
+      - name: register_number
+        description: Numer w rejestrze (register of mining areas) as published; NULL on an uncompleted record.
+      - name: point_lon
+        tests: [not_null]
+      - name: point_lat
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: pig_midas_mining_terrains
+    description: >-
+      PIG-PIB MIDAS (register PL-ENV-015): mining terrain contours (tereny górnicze) of the newest WFS download, current
+      (layer mining_terrains, status aktualny) and abolished (layer mining_terrains_archival, status zniesiony, archival
+      selection). Grain: layer x contour_id (ID_konturu). Same columns as pig_midas_mining_areas.
+      Completeness: tests/pig_midas_mining_terrains_complete.sql. Trial run in the PR.
+    tests:
+      - unique:
+          column_name: "layer || '|' || contour_id"
+    columns:
+      - name: layer
+        tests: [not_null, {accepted_values: {arguments: {values: ['mining_terrains', 'mining_terrains_archival']}}}]
+      - name: contour_id
+        tests: [not_null]
+      - name: status
+        description: As published; NULL on a record the producer has not completed (1 current contour on 26 Nov 2026).
+        tests: [{accepted_values: {arguments: {values: ['aktualny', 'zniesiony']}}}]
+      - name: register_number
+        description: Numer w rejestrze (register of mining areas) as published; NULL on an uncompleted record.
+      - name: point_lon
+        tests: [not_null]
+      - name: point_lat
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

@@ -255,7 +255,14 @@ rule-based build stages apply the rules the curated stages already apply:
   signs `x`, `X`, `n`; API attribute ids 4, 14, 50, 91), a number other than 0 under such a sign is;
   two different published values for one key reject the subgroup in Silver already. A value for a
   year after the year of the subgroup's version, and every row of a subgroup named a projection
-  (`prognoza`), has status `forecast`.
+  (`prognoza`), has status `forecast`. An exact 0 without such a sign is a zero BDL publishes and is
+  loaded as published, as Eurostat's (#2973): the API gives it attribute 0 (`/attributes`: name "0",
+  no symbol), apart from the no-value signs and from 15 `-` (no information after a change of units
+  or variables; no Silver row carries it), and the website export writes an empty cell empty and this
+  zero as `0`, both within one variable and unit (`/attributes` as read in Dev run 43275462132; counts in
+  Dev runs 45829968475 and 45833898232, #1178).
+  In the subgroups of gminas and statistical localities most rows are such zeros (P2179 97%, P2035
+  89%, P2017 84% of the values); a reader that wants no zeros filters on `value`.
 - GUS DBW: an empty value is not loaded; a 0 with a no-value sign (`id_brak_wartosci` other than 253
   "Nie dotyczy") or under confidentiality (`id_tajnosci` other than 43 "Dane jawne") is not loaded; a
   non-zero number under confidentiality or with sign 38 (figure withheld) is loaded as `confidential`,

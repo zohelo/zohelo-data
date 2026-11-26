@@ -1,0 +1,32 @@
+version: 2
+models:
+  - name: knf_entities_esma_entries
+    description: >-
+      KNF supervised entities, route 1 (register PLG-016, #2994): one row per entry of the ESMA registers core
+      esma_registers_upreg whose home member state is Poland, from the newest landed answer. Grain: entry_id (ESMA
+      id). Entity type, office type (head office or branch), status, authorisation or notification date, withdrawal
+      date, LEI where filled (71 of 623 entries; branches may carry the firm's LEI), competent authority, host member
+      states of branches; no addresses. History: authorisations from 1991 (623 entries, 478 Active and 145 Inactive,
+      on 26 Nov 2026; Dev trial in ingestion/sources/knf_entities.yaml). ESMA legal notice of the registers site:
+      reproduction authorised with the source acknowledged (open-conditional).
+    columns:
+      - name: entry_id
+        tests: [not_null, unique]
+      - name: esma_db_id
+        tests: [not_null, unique]
+      - name: entity_name
+        tests: [not_null]
+      - name: entity_type_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['AIF', 'MIF', 'UCI', 'MIR', 'CSP', 'MIT', 'MIE', 'MIA', 'MIO', 'ESF', 'MIS']}}}]
+      - name: office_type
+        tests: [not_null, {accepted_values: {arguments: {values: ['Head office', 'Branch']}}}]
+      - name: status
+        tests: [not_null, {accepted_values: {arguments: {values: ['Active', 'Inactive']}}}]
+      - name: home_member_state
+        tests: [not_null, {accepted_values: {arguments: {values: ['POLAND']}}}]
+      - name: authorised_on
+        tests: [not_null]
+      - name: last_updated_on
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
