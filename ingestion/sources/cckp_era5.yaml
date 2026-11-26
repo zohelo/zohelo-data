@@ -26,8 +26,8 @@ bronze: [bronze.cckp_era5_records, bronze.cckp_era5_rejected_files]
 silver: [silver.cckp_era5_observations]
 gold: [gold.build_cckp_era5]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  cckp_era5_observations: {rows: 780000}  # 517,712: 2 variables x (246 countries + 16 voivodeships) x 912 months + 76 years, 1950-2025 (same trial)
-  poc_build_cckp_era5: {rows: 780000}  # 517,712 = Silver, 61,256 of them of 31 codes without a Gold area (_X) (same trial)
+  cckp_era5_observations: {rows: 780000}  # 517,712: 2 variables x (246 countries + 16 voivodeships) x (912 months + 76 years), 1950-2025 (Dev trial 45831607817, 26 Nov 2026)
+  poc_build_cckp_era5: {rows: 780000}  # 517,712 = Silver, 59,280 of them of 30 codes without a Gold area (_X) (same trial)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): one file of a few MB and about half a million values, read whole (the API has no

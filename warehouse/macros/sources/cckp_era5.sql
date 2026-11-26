@@ -24,7 +24,7 @@
 
 {# Countries by ISO3 (dim_geography iso3, the World Bank economy code, as unhcr), except Kosovo, which CCKP codes KSV
    (geonames.json 'Kosovo') and the World Bank XKX (as owid); voivodeships by the stated map above. Static, so the map
-   does not read CCKP Silver. A CCKP code without a Gold country (30 territories and Taiwan in Dev trial 45826698285,
+   does not read CCKP Silver. A CCKP code without a Gold country (29 territories and Taiwan in Dev trial 45831607817,
    e.g. GUF, REU, JEY, TWN) maps to _X with its code kept and is counted by build_check. #}
 {% macro poc_geography__cckp_era5() %}
 cckp_era5 as (

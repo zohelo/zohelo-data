@@ -32,11 +32,11 @@ Bronze `bronze.cckp_era5_records` (one row per variable x aggregation x geocode 
 `silver.cckp_era5_observations` (variable x aggregation x geocode x period; tas in degC, pr in mm; annual pr is the
 year's total, the sum of the months; annual tas is CCKP's yearly mean, within 0.15 °C of the plain average of the
 months; annual periods are published as `YYYY-07`; a value that is not a number keeps `value` null, never 0; CCKP
-prints no markers and leaves no gaps). Size (Dev trial 45826698285, 26 Nov 2026): one Landing file of 2.3 MB,
+prints no markers and leaves no gaps). Size (Dev trial 45831607817, 26 Nov 2026): one Landing file of 2.28 MB,
 517,712 values, 1950-01 to 2025-12, 246 countries and territories and 16 voivodeships. Gold block `era5`: four measures
 with one frequency each, `cckp_era5:era5:degC:tas.monthly` (M), `…:tas.annual` (A), `cckp_era5:era5:mm:pr.monthly` (M),
 `…:pr.annual` (A). Countries are matched by ISO3 through `dim_geography`. Kosovo is CCKP `KSV` = World Bank `XKX`. 30
-territories and Taiwan have no Gold area and stay `_X` with their code (61,256 rows). Voivodeships go to
+codes (29 territories and Taiwan) have no Gold area and stay `_X` with their code (59,280 rows). Voivodeships go to
 `TERC:<code>` by the stated list. Values and units as published (D33). These are reanalysis estimates, not station
 observations: IMGW (`imgw_archive`) stays the national observation source, and the two are kept side by side, never
 merged.
