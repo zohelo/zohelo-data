@@ -3828,7 +3828,7 @@ sources:
     evidence: documented
     connection: tested
     blockers:
-    - 'Curated selection only (Dev probes 43343134150, 43345651745): the index page links 13 scheme pages whose attachments are all PDF (no XLSX/CSV; api.dane.gov.pl timed out from the runner). Built: the monthly "Płatności bezpośrednie" report (newest and newest year-end), applications, decisions and amounts paid by campaign and voivodeship, cumulative as of the report date (newest report wins; open campaigns provisional). Not modelled: PS WPR 2023-2027 intervention reports, national aid, RDP 2014-2020 / 2007-2013 measures, KPO, fisheries and market-mechanism pages.'
+    - 'Curated selection only (Dev probes 43343134150, 43345651745): the index page links 13 scheme pages whose attachments are all PDF (no XLSX/CSV; api.dane.gov.pl timed out from the runner). Built: the monthly "Płatności bezpośrednie" report (newest and every year-end report), applications, decisions and amounts paid by campaign and voivodeship, cumulative as of the report date (newest report wins; open campaigns provisional). Not modelled: PS WPR 2023-2027 intervention reports, national aid, RDP 2014-2020 / 2007-2013 measures, KPO, fisheries and market-mechanism pages.'
     - No beneficiary-level data: only voivodeship aggregates reach Bronze; the report footers (names of the ARiMR staff responsible) stay in the Landing file.
     references:
     - https://www.gov.pl/web/arimr
