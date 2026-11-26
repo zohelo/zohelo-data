@@ -5,6 +5,8 @@
 -- measures in different units (million EUR and million national currency) get a row each, and the
 -- patterns of one KPI × source never overlap. A measure without a bound fails, so a new source or
 -- measure gets one.
+-- The KPIs in positive_concepts are counts and levels that cannot be 0 or negative (#2807): for them the lower
+-- bound is exclusive, so a 0 stored in place of a missing value fails.
 {#- Where the bounds and the metrics models are declared (docs/source-registration.md, "Value ranges"): a source's
     bounds and the metrics models of its KPIs are in warehouse/macros/value_range/<source_system>.sql,
     poc_value_range__<source_system>() returning {'bounds': [[concept_key, measure_key_pattern, value_min, value_max],
@@ -44,6 +46,13 @@
     'poc_metrics_hdi',
     'poc_metrics_internet_users',
     'poc_metrics_health_expenditure_gdp',
+] -%}
+{%- set positive_concepts = [
+    'population',
+    'population_projection',
+    'gdp_current_prices',
+    'gdp_per_capita',
+    'fx_rate',
 ] -%}
 {%- set registered = namespace(bounds=[], models=[], keys=[]) -%}
 {%- for source in (poc_registered('poc_value_range__') if context is defined else []) -%}
@@ -287,4 +296,8 @@ left join bounds as b
         m.concept_key = b.concept_key
         and m.source_system = b.source_system
         and m.measure_key like b.measure_key_pattern
-where m.value < b.value_min or m.value > b.value_max or b.value_min is null
+where
+    m.value < b.value_min
+    or m.value > b.value_max
+    or b.value_min is null
+    or (m.value <= 0 and m.concept_key in ({{ "'" ~ positive_concepts | join("', '") ~ "'" }}))
