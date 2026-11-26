@@ -197,7 +197,23 @@ LIC = r"(?i)licencj|licenc|license|prawa autorskie|wszelkie prawa|all rights|cop
 DATA = r"(?i)pobierz|do pobrania|download|eksport|export|api|dane\.gov\.pl|otwarte dane|xlsx|csv"
 
 
-def probe_page(url, text=2500, follow_files=3):
+SERVICE = r"(?i)wfs|wms|ogc|getcapabilities|atom|arcgis/rest|/api/|uslugi|services?\b"
+
+
+def follow(ll, limit=4):
+    out = {}
+    for a, u in [(a, u) for a, u in ll if re.search(SERVICE, a + " " + u)][:limit]:
+        r = get(u, 200000, 60)
+        if "err" in r:
+            out[u[-90:]] = r["err"][:60]
+            continue
+        b = r.pop("body").decode("utf-8", "replace")
+        print(f"=== FOLLOW {a} | {u}\nMETA {json.dumps({k: v for k, v in r.items() if v}, ensure_ascii=False)}\nBODY {plain(b)[:3000]}\n=== END", flush=True)
+        out[u[-90:]] = {"st": r.get("st"), "ct": r.get("ct"), "types": re.findall(r"<(?:wfs:)?Name>([^<]+)</", b)[:10], "head": plain(b)[:160]}
+    return out
+
+
+def probe_page(url, text=2500, follow_files=3, svc=False):
     got = page(url, text=text)
     if not got:
         return {"err": ERR[-1].split(": ", 1)[-1][:90] if ERR else "failed"}
@@ -223,7 +239,8 @@ def probe_page(url, text=2500, follow_files=3):
     for a, u in tab[:follow_files]:
         h = get(u, method="HEAD")
         heads.append({"u": u[-80:], "st": h.get("st") or h.get("err"), "ct": h.get("ct"), "len": h.get("len"), "lm": h.get("lm")})
-    return {"chars": len(p), "scripts": len(re.findall("(?i)<script", t)), "ext": ext, "tab_files": [u[-90:] for _, u in tab[:6]],
+    fol = follow(ll) if svc else None
+    return {"follow": fol, "chars": len(p), "scripts": len(re.findall("(?i)<script", t)), "ext": ext, "tab_files": [u[-90:] for _, u in tab[:6]],
             "dl_links": [f"{a[:30]}|{u[-70:]}" for a, u in dl[:5]], "lic": [s[:240] for s in lic[:2]], "head": heads}
 
 
@@ -308,7 +325,7 @@ def main():
         out: dict[str, object] = {}
         try:
             for u in spec.get("pages", []):
-                out[tag(u)[:60]] = probe_page(u)
+                out[tag(u)[:60]] = probe_page(u, svc=eid.startswith("PL-ENV"))
             if spec.get("app"):
                 out["app"] = app_scan(spec["app"])
             for u in spec.get("raw", []):
