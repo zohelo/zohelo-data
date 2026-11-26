@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: mrirw_zsrir
+  description: MRiRW ZSRIR market bulletins (register PLS-032), newest XLSX issue of the cereals, milk and pork bulletins
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/mrirw_zsrir/
+    loaded_by: ingestion/to_bronze/mrirw_zsrir/
+    config: ingestion/sources/mrirw_zsrir.yaml
+  tables:
+  - name: mrirw_zsrir_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      market bulletin (entities cereals, milk, pork); partitioned by entity.
+  - name: mrirw_zsrir_rejected_files
+    description: Bulletins of mrirw_zsrir the Bronze decoder rejected, with the reason.

@@ -32,12 +32,20 @@ archive_policy:
   prune: report
 bronze: [bronze.undp_hdr_values, bronze.undp_hdr_rejected_files]
 silver: [silver.undp_hdr_indices]
-gold: [gold.build_undp_hdr]
+# Full coverage (O43, D35, docs/gold-coverage.md, #2943): every series of silver.undp_hdr_indices by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table undp_hdr_indices.
+gold: [gold.build_undp_hdr, gold.undp_hdr_observations, gold.undp_hdr_series, gold.undp_hdr_measures, gold.undp_hdr_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   poc_build_undp_hdr: {rows: 23000}  # 15,471: 28 areas, 7 measures, 1990-2023 (Dev trial 43290214779); 1.5 x
+  undp_hdr_indices: {rows: 300000}  # 200,004 (Dev trial 43093051337)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of ~200,000 values a year, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2765"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35; #2943): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

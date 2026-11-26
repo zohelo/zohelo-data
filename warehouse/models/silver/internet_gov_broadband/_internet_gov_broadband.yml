@@ -1,0 +1,44 @@
+version: 2
+models:
+  - name: internet_gov_broadband_coverage
+    description: >-
+      internet.gov.pl broadband, "Polska w zasięgu stacjonarnego dostępu do internetu" (register PL-ENV-034):
+      fixed broadband coverage of address points from the national report of each quarter. Grain: reference_date x
+      table_code x area_code x class_code. territory: the 16 voivodeships (TERC code from the printed name) and
+      Poland, class '_T' (coverages, address points in coverage, all address points); bandwidth: Poland by
+      bandwidth class in Mb/s and '_T' (coverages and address points in coverage, each with its printed share);
+      service_type: Poland by kind of coverage and '_T' (address points, printed share of all address points).
+      Values as printed (counts; shares in per cent, with address_points_share_basis naming what they are shares
+      of). History (reference dates 30 June 2024 to 30 September 2026) and trial run: see
+      ingestion/sources/internet_gov_broadband.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', reference_date, table_code, area_code, class_code)"
+    columns:
+      - name: reference_date
+        tests: [not_null]
+      - name: period_label
+        tests: [not_null]
+      - name: table_code
+        tests: [not_null, {accepted_values: {arguments: {values: [territory, bandwidth, service_type]}}}]
+      - name: area_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32', PL]
+      - name: class_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [
+                  _T, rzeczywisty, hurtowy, teoretyczny, brak_zasiegu, '2', '10', '20', '30', '40', '50', '60', '70',
+                  '80', '90', '100', '200', '300', '400', '500', '600', '700', '800', '900', '1000', '2000', '3000',
+                  '4000', '5000', '6000', '7000', '8000', '9000', '10000']
+      - name: address_points_share_basis
+        tests: [{accepted_values: {arguments: {values: [address points in coverage, all address points]}}}]
+      - name: address_points
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

@@ -20,7 +20,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from pyiceberg.exceptions import CommitFailedException
+from pyiceberg.exceptions import CommitFailedException, ValidationException
 from pyiceberg.expressions import In
 from pyiceberg.io.pyarrow import parquet_file_to_data_file
 import requests
@@ -113,7 +113,12 @@ def replace(
                             for data_file in files:
                                 add.append_data_file(data_file)
             except Exception as exc:  # a lost response or a lost race is re-checked against the table
-                retryable = bf.transient(exc) or isinstance(exc, CommitFailedException)
+                # ValidationException: after a commit conflict PyIceberg retries by itself and first checks that no
+                # files matching the delete were added since the attempt began. Files of these entities committed in
+                # between (this attempt's own commit answered as a conflict, or another writer's) fail that check
+                # (eurostat gold.observations, run 45731403788, #3216). The retried commit is not sent, so the next
+                # attempt reloads the table, skips entities already as intended, and the state check below decides.
+                retryable = bf.transient(exc) or isinstance(exc, (CommitFailedException, ValidationException))
                 if not retryable or attempt == len(bf.RETRY_DELAYS):
                     raise
                 time.sleep(bf.RETRY_DELAYS[attempt])

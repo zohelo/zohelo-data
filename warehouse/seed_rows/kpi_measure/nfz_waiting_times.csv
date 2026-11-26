@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+waiting_list_persons,nfz_waiting_times,nfz_waiting_times:waiting_lists:persons:persons_awaiting:case1,"stable case, sum over the lists that published the month-end count; voivodeships and Poland",1,
+waiting_lists,nfz_waiting_times,nfz_waiting_times:waiting_lists:waiting_lists:waiting_lists:case1,"stable case, queue entries in the monthly snapshot; voivodeships and Poland",1,

@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: opendata_org
+  description: OpenData.org (BrightQuery) organizations, people and locations — Senzing-ready snapshot
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/opendata_org/
+    loaded_by: ingestion/to_bronze/opendata_org/
+    config: ingestion/sources/opendata_org.yaml
+  tables:
+  - name: opendata_records
+    description: >-
+      One row per Senzing record of the newest snapshot, one file per member of the ZIP
+      (entity = folder.file); DATA_SOURCE, RECORD_ID, bq_dataset and FEATURES (JSON text) as published.
+  - name: opendata_rejected_files
+    description: Snapshot members the OpenData Bronze decoder or Silver models rejected (cleared by ops/retry_rejected).

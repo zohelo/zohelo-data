@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GUS DBW (Dziedzinowe Bazy Wiedzy) Landing: the website's bulk ZIP files.
 
-Route (docs/sources.md, GUS DBW): the DBW website publishes every indicator as bulk CSV ZIP
+Route (docs/sources/gus_dbw.md): the DBW website publishes every indicator as bulk CSV ZIP
 files, one per indicator × cross-section × presentation × periodicity (large ones also per
 year), listed with their last update date by the website's own application endpoints:
 

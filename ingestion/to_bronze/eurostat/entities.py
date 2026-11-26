@@ -40,7 +40,7 @@ import botocore.exceptions
 
 from ingestion.common import bronze_files as bf
 from ingestion.common import entity_tables as et
-from ingestion.common.r2 import catalog, req, s3
+from ingestion.common.r2 import catalog, read_receipt, req, s3
 from ingestion.common.report import annotate
 from ingestion.to_bronze.eurostat.decode import BRONZE_COLUMNS, EurostatBulkDecodeError, decode_landing_distribution
 
@@ -80,7 +80,12 @@ def landing_candidates(client, landing_bucket: str) -> list[dict[str, Any]]:
         keys += [item["Key"] for item in page.get("Contents", []) if item["Key"].endswith(".receipt.json")]
 
     def read(key: str) -> dict[str, Any]:
-        body = bf.retry(lambda: client.get_object(Bucket=landing_bucket, Key=key)["Body"].read(), "read_receipt")
+        body = read_receipt(
+            client,
+            landing_bucket,
+            key,
+            lambda: bf.retry(lambda: client.get_object(Bucket=landing_bucket, Key=key)["Body"].read(), "read_receipt"),
+        )
         receipt = json.loads(body)
         sha, size, obj = receipt.get("sha256"), receipt.get("size_bytes"), receipt.get("object") or {}
         if (
