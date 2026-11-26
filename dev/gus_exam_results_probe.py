@@ -64,12 +64,15 @@ def profile(name, body):
         out["wartosc_zero"] = sum(d["wartosc"] in ("0", "0,0", "0.0", "0,00") for d in data)
         flag = [c for c in header if c.lower().startswith("flag")]
         if flag:
-            out["flag_by_value_kind"] = dict(Counter(
+            out["flag_by_value_kind"] = {"|".join(k): v for k, v in Counter(
                 (d[flag[0]], "empty" if d["wartosc"] == "" else ("num" if re.fullmatch(r"-?[0-9]+([.,][0-9]+)?", d["wartosc"]) else d["wartosc"]))
-                for d in data).most_common(20))
+                for d in data).most_common(20)}
     keys = [c for c in header if c.lower() not in ("wartosc", "flaga")]
     out["dup_keys"] = sum(1 for _, c in Counter(tuple(d[k] for k in keys) for d in data).items() if c > 1)
-    out["dup_sample"] = [k for k, c in Counter(tuple(d[k] for k in keys) for d in data).items() if c > 1][:5]
+    out["dup_sample"] = ["|".join(k) for k, c in Counter(tuple(d[k] for k in keys) for d in data).items() if c > 1][:5]
+    print(f"=== {name} flagged rows", flush=True)
+    for d in [d for d in data if d.get("flaga")][:60]:
+        print("   ", {k: d[k] for k in ("wojewodztwo", "przedmiot", "plec", "rok", "wartosc", "flaga") if k in d}, flush=True)
     print(f"=== {name} sample rows", flush=True)
     for d in data[:40]:
         print("   ", d, flush=True)
