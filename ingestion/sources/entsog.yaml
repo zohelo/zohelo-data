@@ -16,8 +16,9 @@ extraction:
   initial: api
   production: snapshot                    # each file is the complete answer for one operator, indicator and gas month
   incremental_policy: changed_since_last  # an answer is written only when its bytes differ from the newest copy
-  schedule: # UTC; GAZ-SYSTEM publishes gas day D provisionally on D+1 (about 07:05 UTC) and confirms it after the month ends; daily at 07:40, about 3 requests
-    - {cron: "40 7 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; GAZ-SYSTEM publishes gas day D provisionally on D+1 (about 07:05 UTC) and confirms it after the month ends;
+    # one run a week (O46, weekly until production use; was daily); a gas month is one entity, so the open months are fetched again
+    - {cron: "40 7 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/entsog/
 archive_policy:
