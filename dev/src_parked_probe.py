@@ -419,7 +419,48 @@ def two():
     emit("parked2 robots errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
 
 
+def rawget(u, n=400000, show=4000):
+    r = get(u, n, 90)
+    if "err" in r:
+        fail(u, r)
+        return {"err": r["err"][:80]}
+    b = r.pop("body")
+    body = b.decode("utf-8", "replace")
+    print(f"=== RAW {u}\nMETA {json.dumps({k: v for k, v in r.items() if v}, ensure_ascii=False)} read={len(b)}\nBODY {body[:show]}\n=== END", flush=True)
+    return {"st": r.get("st"), "ct": r.get("ct"), "len": len(b), "hits": re.findall(r'number(?:Matched|OfFeatures)="([^"]+)"', body)[:2],
+            "types": re.findall(r"<(?:wfs:)?Name>([^<]+)</", body)[:25], "head": re.sub(r"\s+", " ", body[:240])}
+
+
+def three():
+    res: dict[str, object] = {}
+    d = jget("https://api.dane.gov.pl/1.4/datasets/677/resources?per_page=30")
+    links = [x.get("attributes", {}).get("link") for x in (d or {}).get("data", [])]
+    print(f"=== CBDG links {links}\n=== END", flush=True)
+    res["cbdg_links"] = links
+    wfs = [x for x in links if x and "WFSServer" in x]
+    if wfs:
+        res["cbdg_wfs"] = rawget(wfs[0], show=6000)
+    lasy = "https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows"
+    res["lasy_caps"] = rawget(lasy + "?service=WFS&version=2.0.0&request=GetCapabilities", 3000000, 8000)
+    names = [t for t in res["lasy_caps"].get("types", []) if re.search(r"(?i)nadle", t)] if isinstance(res["lasy_caps"], dict) else []
+    if names:
+        res["lasy_hits"] = rawget(lasy + f"?service=WFS&version=2.0.0&request=GetFeature&typeNames={names[0]}&resultType=hits")
+        res["lasy_one"] = rawget(lasy + f"?service=WFS&version=2.0.0&request=GetFeature&typeNames={names[0]}&count=1&outputFormat=application/json", show=3000)
+    for u in ("https://wody.gios.gov.pl/pjwp/api/publications", "https://wody.gios.gov.pl/pjwp/api/publications/367"):
+        res["gios " + u[-30:]] = rawget(u, 2000000, 5000)
+    r = get("https://barometrzawodow.pl/js/custom.js?1792590816", 3000000, 60)
+    if "err" not in r:
+        b = r["body"].decode("utf-8", "replace")
+        urls = sorted(set(re.findall(r"""['"`](/[A-Za-z0-9_\-/]*(?:ajax|api|json|table|tabel|prognoz|forecast|export|pdf|xls)[A-Za-z0-9_\-/\.?=&]*)['"`]""", b)))
+        print(f"=== BAROMETR custom.js urls {urls[:80]}\n=== END", flush=True)
+        res["barometr_js"] = urls[:30]
+    emit("parked3 cbdg", {k: res.get(k) for k in ("cbdg_links", "cbdg_wfs")})
+    emit("parked3 lasy", {k: res.get(k) for k in ("lasy_caps", "lasy_hits", "lasy_one")})
+    emit("parked3 gios and barometr", {k: v for k, v in res.items() if k.startswith(("gios", "barometr"))})
+    emit("parked3 errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
+
+
 if __name__ == "__main__":
     import sys
 
-    two() if sys.argv[1:] == ["two"] else main()
+    {"two": two, "three": three}.get((sys.argv[1:] or ["main"])[0], main)()
