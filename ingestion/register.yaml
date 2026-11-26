@@ -7072,7 +7072,8 @@ sources:
   name: Generalny Pomiar Ruchu (GPR)
   short_name: GDDKiA traffic census (GPR)
   provider: Generalna Dyrekcja Dróg Krajowych i Autostrad (GDDKiA)
-  status: approved
+  source_system: gddkia_gpr
+  status: built
   family: H
   kpi: true
   geography: Poland
@@ -7201,7 +7202,8 @@ sources:
   name: CEPiK public API
   short_name: CEPiK
   provider: Ministerstwo Cyfryzacji / Centralna Ewidencja Pojazdów i Kierowców
-  status: approved
+  source_system: cepik
+  status: built
   family: H
   kpi: true
   geography: Poland
@@ -7251,6 +7253,12 @@ sources:
       XLSX answered 200 to a GitHub runner; api.cepik.gov.pl timed out (robots.txt, one attempt), so every API detail stays
       unverified.'
     - Confirm the definition of "pojazdy zarejestrowane" (first registrations or all) at the build.
+    - 'Built (#2966): vehicles registered per month by voivodeship and by vehicle type, XLSX 2016-2026 (Dev probe 43340837086,
+      branch test/2966-cepik-trial: 22 workbooks, one sheet each, three-month blocks). Not landed: driving licences issued,
+      inspection stations and technical inspections. The workbook of 22 Oct 2026 prints the September 2026 voivodeship values
+      in another order than the names (Mazowieckie 3,598, Łódzkie 35,467): those rows are kept out of Gold. Trial of 26 Nov 2026
+      (Dev run in the PR): the workbook is corrected (0 order_suspect rows) and repeats September in an unheaded column 13, kept
+      as outside_table, not in Gold.'
     references:
     - https://www.gov.pl/web/cepik/statystyki
     - https://www.gov.pl/web/cepik/pojazdy-zarejestrowane-w-2026-roku
