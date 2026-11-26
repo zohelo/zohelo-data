@@ -186,16 +186,20 @@ def trial(cat):
                                        "silver_s group by data_year)"),
         "not_in_a_voivodeship": q(con, f"select sum(value) filter (where geography_key = 'PL') - sum(value) filter "
                                        f"(where geography_key like 'TERC:%') from gold_t where {total}"),
+        "not_placed_by_year": q(con, f"select date_key, sum(value) filter (where geography_key = 'PL') - coalesce(sum("
+                                     f"value) filter (where geography_key like 'TERC:%'), 0) from gold_t where {total} "
+                                     "group by 1 order by 2 desc limit 6"),
         "share_sums_off": one(con, "select count(*) from (select geography_key, date_key, sum(value) s from gold_t "
                                    "where measure_key like '%share%' group by all having abs(s - 100) > 0.1)"),
         "columns": [r[0] for r in con.execute("describe gold_t").fetchall()]})
     note("orto gold spot values (Poland, voivodeships)", {
         "pl_recent": q(con, f"select date_key, value from gold_t where {total} and geography_key = 'PL' "
                             "order by 1 desc limit 5"),
-        "pl_2024_shares": q(con, "select breakdown_json, value from gold_t where geography_key = 'PL' and date_key = "
-                                 "'2024-01-01' and measure_key like '%share%' order by 1"),
+        "pl_newest_shares": q(con, "select date_key, breakdown_json, value from gold_t where geography_key = 'PL' and "
+                                   "date_key = (select max(date_key) - interval 1 year from gold_t) and measure_key "
+                                   "like '%share%' order by 2"),
         "voivodeships_2024": q(con, f"select g.name_pl, b.value from gold_t as b join geo as g using (geography_key) "
-                                    f"where {total} and b.date_key = '2024-01-01' order by 2 desc limit 17")})
+                                    f"where {total} and b.date_key = (select max(date_key) - interval 1 year from gold_t) order by 2 desc limit 17")})
 
     from warehouse import seed_rows
 
