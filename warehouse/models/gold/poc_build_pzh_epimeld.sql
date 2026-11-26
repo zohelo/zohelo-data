@@ -1,8 +1,9 @@
 {{ config(alias='build_pzh_epimeld', tags=['gold_block']) }}
 {# Gold build stage: NIZP PZH-PIB EPIMELD annual bulletins (register PLS-019), annual observations of
    silver.pzh_epimeld_cases. Block 'annual': per disease (disease_key: the bulletin's disease line, part of the
-   measure) two measures, registered cases ('cases') and incidence ('per_100k' per 100,000 population or
-   'per_100k_live_births' for the congenital diseases: the denominator stays with the measure); frequency A only.
+   measure) two measures, registered cases ('cases') and incidence ('per_100k' per 100,000 population,
+   'per_100k_live_births', 'per_100k_children_under_2' or 'per_100k_children_0_14': the denominator stays with the
+   measure); frequency A only.
    Geography: Poland ('PL') and the voivodeships (TERYT code, poc_geography__pzh_epimeld). No breakdown (is_total).
    Values and units as published (D33). Status: 'provisional' for a bulletin whose text says "wstępne", 'flagged'
    for a printed row whose quarters do not add up to its year (a misprint kept as published), else 'ok'. #}
@@ -29,18 +30,11 @@ select
     'annual' as block_id,
     'NIZP PZH-PIB infectious diseases: cases and incidence by disease (annual bulletins)' as block_name,
     'pzh_epimeld:annual:' || s.unit_code || ':' || s.disease_key as measure_key,
-    case s.unit_code
-        when 'cases' then 'Registered cases: '
-        when 'per_100k' then 'Incidence per 100,000 population: '
-        else 'Incidence per 100,000 live births: '
-    end || s.disease_label || ' (NIZP PZH-PIB, annual)' as measure_name,
+    case s.unit_code when 'cases' then 'Registered cases: ' else 'Incidence ' || u.unit_name || ': ' end
+    || s.disease_label || ' (NIZP PZH-PIB, annual)' as measure_name,
     coalesce(s.disease_codes, s.disease_key) as measure_codes,
     s.unit_code,
-    case s.unit_code
-        when 'cases' then 'cases'
-        when 'per_100k' then 'per 100,000 population'
-        else 'per 100,000 live births'
-    end as unit_name,
+    u.unit_name,
     s.area_code as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,
     'A' as frequency,
@@ -60,4 +54,12 @@ select
     s.raw_sha256
 from measures as s
 left join geo as g on s.area_code = g.source_code
+left join (
+    values
+    ('cases', 'cases'),
+    ('per_100k', 'per 100,000 population'),
+    ('per_100k_live_births', 'per 100,000 live births'),
+    ('per_100k_children_under_2', 'per 100,000 children under 2'),
+    ('per_100k_children_0_14', 'per 100,000 children aged 0-14')
+) as u (unit_code, unit_name) on s.unit_code = u.unit_code
 where s.value is not null
