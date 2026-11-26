@@ -17,8 +17,8 @@ extraction:
   initial: api
   production: snapshot                  # each file is the calendar as published
   incremental_policy: changed_since_last  # SHA-256
-  schedule: # UTC; calendars change rarely; daily before the evening topics build
-    - {cron: "0 5 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; calendars change rarely; one run a week (O46, weekly until production use; was daily)
+    - {cron: "0 5 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/release_calendars/
 archive_policy:
@@ -28,6 +28,8 @@ archive_policy:
 bronze: [bronze.release_calendar_items, bronze.release_calendars_rejected_files]
 silver: [silver.releases]
 gold: []
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  releases: {rows: 5000}  # about 50 announced releases a week, 60-day window
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): about 55 small pages; Silver rebuilt in full.

@@ -57,7 +57,7 @@ def apply(
     same_rows: bool = True,
     unique_key: tuple[str, ...] = (),
     reject_if: str = "",
-    lookups: dict[str, str] | None = None,
+    lookups: dict[str, str | list[str]] | None = None,
     memory_limit: str = "10GB",
     temp_directory: str | None = None,
     source_view: str = "bronze",
@@ -68,7 +68,8 @@ def apply(
     s3:// URIs), read as the relation ``source_view``. The writer holds one row group per thread in
     memory: wide rows need a smaller ``row_group_size``. ``prepare`` (table name -> model) runs
     other models first, in order, and keeps each result as a table the model can read: a small lookup
-    made from the input is then known to be small when the model's joins are planned."""
+    made from the input is then known to be small when the model's joins are planned. A lookup is one
+    Parquet file or a list of them (the files of the entity in another table)."""
     sql = (MODELS / f"{model}.sql").read_text(encoding="utf-8")
     output = Path(output)
     if output.exists():
@@ -76,12 +77,14 @@ def apply(
     con = _connect(memory_limit, temp_directory)
     try:
         inputs = [bronze] if isinstance(bronze, str) else list(bronze)
-        if any(str(v).startswith("s3://") for v in [*inputs, *(lookups or {}).values()]):
+        tables = {name: [v] if isinstance(v, str) else list(v) for name, v in (lookups or {}).items()}
+        if any(str(v).startswith("s3://") for v in [*inputs, *(p for paths in tables.values() for p in paths)]):
             _remote(con)
         files = ", ".join("'" + str(path).replace(chr(39), "") + "'" for path in inputs)
         con.execute(f"CREATE VIEW {source_view} AS SELECT * FROM read_parquet([{files}])")
-        for name, path in (lookups or {}).items():
-            con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{str(path).replace(chr(39), '')}')")
+        for name, paths in tables.items():
+            listed = ", ".join("'" + str(path).replace(chr(39), "") + "'" for path in paths)
+            con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet([{listed}])")
         for name, step in (prepare or {}).items():
             step_sql = (MODELS / f"{step}.sql").read_text(encoding="utf-8")
             con.execute(f"CREATE TEMP TABLE {name} AS {step_sql}")

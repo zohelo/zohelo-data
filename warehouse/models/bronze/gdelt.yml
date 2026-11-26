@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: gdelt
+  description: GDELT DOC 2.0 API — daily news volume and tone per topic query (topics, O32)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gdelt/
+    loaded_by: ingestion/to_bronze/gdelt/
+    config: ingestion/sources/gdelt.yaml
+  tables:
+  - name: gdelt_timeline
+    description: >-
+      One row per timeline point of every landed copy (accumulating; copies overlap): topic, mode (volraw |
+      tone), series, date, value and norm as source text; partitioned by entity (<topic>__<mode>).
+  - name: gdelt_rejected_files
+    description: GDELT Landing files the Bronze decoder rejected, with the reason.

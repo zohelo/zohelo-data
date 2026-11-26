@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: nid_monuments
+  description: NID register of immovable monuments, register book A (register PLS-026), voivodeship PDF lists
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nid_monuments/
+    loaded_by: ingestion/to_bronze/nid_monuments/
+    config: ingestion/sources/nid_monuments.yaml
+  tables:
+  - name: nid_monuments_items
+    description: >-
+      One row per dash item of the newest copy of each PDF list (text layer read with pypdf, wrapped lines joined),
+      with the page header, the list date and the heading above it, all as printed; partitioned by entity (list).
+  - name: nid_monuments_rejected_files
+    description: Lists of nid_monuments the Bronze decoder rejected, with the reason.

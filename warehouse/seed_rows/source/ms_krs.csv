@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+ms_krs,PLG-012,KRS – otwarte API (odpisy aktualne),Open KRS API (current extracts),Ministerstwo Sprawiedliwości,registry,file,national-public,unresolved,https://prs.ms.gov.pl/krs/openApi

@@ -1,0 +1,11 @@
+version: 2
+models:
+  - name: poc_build_mf_biala_lista
+    description: >-
+      Build stage — MF VAT white list flat file entries (taxpayer × account hashes) by taxpayer status and
+      virtual-account masks, Poland, newest file only. Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]

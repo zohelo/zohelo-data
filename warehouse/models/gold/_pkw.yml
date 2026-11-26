@@ -1,0 +1,34 @@
+version: 2
+models:
+  - name: poc_build_pkw
+    description: >-
+      Build stage - PKW election results (register PLG-029): blocks sejm, pe, sejmik, prezydent; frequency D at the
+      election day. Poland and voivodeships: turnout, eligible voters, ballots issued, valid votes, votes per list or
+      candidate and list shares as published; powiats and gminas: turnout as published (Sejm, EP, sejmiki) and
+      eligible voters and ballots issued (President). Abroad and ships rows are left out; votes per list or
+      candidate by powiat and gmina stay in silver.pkw_results.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: block_id
+        tests: [not_null, {accepted_values: {arguments: {values: ['sejm', 'pe', 'sejmik', 'prezydent']}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['D']}}}]
+      - name: date_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['2023-10-15', '2024-04-07', '2024-06-09', '2025-05-18', '2025-06-01']}}}]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: pkw_elections
+    description: >-
+      Entity table: one row per election and round of the PKW results (register PLG-029), keyed by PKW's site name
+      (sejm2023, pe2024, sejmiki2024, prezydent2025_r1, prezydent2025_r2): type, round, election day, names, files
+      and lists or candidates loaded. Names the election behind a date_key of the pkw blocks.
+    columns:
+      - name: election_key
+        tests: [not_null, unique]
+      - name: election_date
+        tests: [not_null, unique]
+  - name: poc_metrics_voter_turnout
+    description: Draft KPI voter_turnout - turnout as published by PKW per election (Sejm, EP, sejmiki), every area.

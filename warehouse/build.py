@@ -3,12 +3,12 @@
 The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"). An empty
 filter (the scheduled run) builds only the models whose inputs or code changed since their
 last build (warehouse/changed.py, owner policy #822), incremental models incrementally unless
-their code changed; "fqn:*" builds everything (incremental models incrementally). Eurostat and
+their code changed; "fqn:*" builds everything (the per-block incremental Gold models in full, #3204 PR B). Eurostat and
 GUS BDL observations are not dbt models: their loaders write Silver per entity (design #875,
 warehouse/entity/). A build whose failed models all failed on transient catalog errors (the rate limit, HTTP
 429, or an Iceberg commit that does not yet see a table the build just created, #2574) is
-resumed with `dbt retry` after declared waits, with fewer threads; failing data tests do not
-prevent that (#2789).
+resumed with `dbt retry` after declared waits, with fewer threads, and after them again while each retry
+re-runs fewer nodes, up to a retry count and a deadline (#2618); failing data tests do not prevent that (#2789).
 Target prod writes to the silver/gold namespaces; results (models, tests, failures) are
 published per build as an annotation (GitHub keeps the first 10 per step) and in the step
 summary (all builds).
@@ -31,6 +31,12 @@ PROJECT = Path(__file__).resolve().parent
 _RETRY = yaml.safe_load((PROJECT / "warehouse.yaml").read_text())
 RATE_LIMIT_WAITS = [float(s) for s in _RETRY["rate_limit_retry_waits"]]
 RATE_LIMIT_THREADS = int(_RETRY["rate_limit_retry_threads"])
+# After the declared waits, retries go on with the last wait while each one re-runs fewer nodes than the one
+# before (the catalog still answers 429, but the build advances), up to this many retries in all and only while
+# the next wait ends before the deadline, counted from the process start (job limit 180 min).
+RATE_LIMIT_MAX_RETRIES = int(_RETRY["rate_limit_retry_max"])
+RATE_LIMIT_DEADLINE_S = 60.0 * float(_RETRY["rate_limit_retry_deadline_minutes"])
+_PROCESS_START = time.time()  # the deadline counts from here: planning and the build both run in the job's limit
 COMMIT_RETRY_THREADS = int(_RETRY["commit_retry_threads"])
 # Owner policy #822: only small tables are rebuilt in full; each full-rebuild model has a row ceiling.
 FULL_REBUILD = declared.full_rebuild()  # warehouse.yaml and each source's own YAML
@@ -80,6 +86,9 @@ def changed_only(target: str, variables: dict | None) -> int:
     variables = dict(variables or {})
     if plan["full_refresh"]:
         variables["full_refresh_models"] = plan["full_refresh"]
+    # Always set in the changed-only build, also when empty: without it a per-block model rebuilds in full
+    # (macros/poc_incremental.sql poc_block_full_refresh).
+    variables["changed_blocks"] = plan["changed_blocks"]
     if plan["empty_blocks"]:  # the only Gold blocks poc_observations() may find without a table
         variables["waiting_blocks"] = plan["empty_blocks"]
     if plan["waiting"]:  # the only optional inputs poc_optional_ref() may find without a table
@@ -128,6 +137,10 @@ def _why(plan: dict) -> dict:
         "why": kinds,
         "waiting": plan.get("waiting", []),
         "empty_blocks": plan.get("empty_blocks", []),  # waiting Gold blocks the facts read as zero rows
+        # models the unscoped rule would also rebuild: metrics models whose blocks did not change (#3204)
+        "scoped_skipped": len(plan.get("scoped_skipped", [])),
+        # Gold blocks the per-block incremental models replace (#3204 PR B); the step summary has the names
+        "changed_blocks": len(plan.get("changed_blocks", [])),
     }
 
 
@@ -228,6 +241,25 @@ def _retry_threads(results: list[dict]) -> int:
     return COMMIT_RETRY_THREADS if commit else RATE_LIMIT_THREADS
 
 
+def _next_wait(retries: list[dict], elapsed_s: float) -> float | None:
+    """The wait before the next `dbt retry`, or None to stop. The declared waits first; then the last wait again
+    while the previous retry re-ran fewer nodes than the one before it (#2618: a build of 270 models still had 15
+    rate-limited models after the three declared retries, each retry smaller than the last), up to
+    RATE_LIMIT_MAX_RETRIES retries and only when the wait ends before RATE_LIMIT_DEADLINE_S from the process start."""
+    done = len(retries)
+    if done >= RATE_LIMIT_MAX_RETRIES:
+        return None
+    if done < len(RATE_LIMIT_WAITS):
+        wait = RATE_LIMIT_WAITS[done]
+    elif done >= 2 and retries[-1]["nodes"] < retries[-2]["nodes"]:
+        wait = RATE_LIMIT_WAITS[-1]
+    else:
+        return None
+    if elapsed_s + wait >= RATE_LIMIT_DEADLINE_S:
+        return None
+    return wait
+
+
 def build_once(
     selectors: list[str],
     target: str,
@@ -251,8 +283,9 @@ def build_once(
     # arguments and writes results for those nodes only; they replace the earlier ones.
     latest = {r["unique_id"]: r for r in results}
     retries = []
-    for wait in RATE_LIMIT_WAITS:
-        if returncode == 0 or not _transient_only(list(latest.values())):
+    while returncode != 0 and _transient_only(list(latest.values())):
+        wait = _next_wait(retries, time.time() - _PROCESS_START)
+        if wait is None:
             break
         threads = _retry_threads(list(latest.values()))
         time.sleep(wait)
@@ -299,7 +332,7 @@ def build_once(
             ran = sorted(held[r["unique_id"]] for r in results if r["unique_id"] in held)
             summary["changed_only"]["waiting_tests"] = {"left_out": len(held), "ran": ran}
         summary["changed_only"]["properties"] = changed.record(
-            changed_plan["cat"], changed_plan["meta"], results, started_ms
+            changed_plan["cat"], changed_plan["meta"], results, started_ms, changed_plan["full_refresh"]
         )
     if target == "prod" and any(r["unique_id"].startswith("model.") and r["status"] == "success" for r in results):
         try:

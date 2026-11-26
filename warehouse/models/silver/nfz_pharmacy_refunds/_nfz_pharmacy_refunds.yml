@@ -33,6 +33,16 @@ models:
       - name: period_start
         description: First day of the month (year, month as published).
         tests: [not_null]
+      - name: value_status
+        description: >-
+          ok; all_zero (all five values 0: a gap the API fills with 0, not loaded to Gold);
+          national_without_province (Poland row of an ATC selection and month with an all_zero voivodeship: the
+          published national total lacks that province, not loaded to Gold).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ok', 'all_zero', 'national_without_province']
       - name: source_version
         description: end-date of /available-periods when downloaded (YYYYMMDDT000000Z).
         tests: [not_null]

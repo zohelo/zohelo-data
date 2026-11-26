@@ -1,0 +1,114 @@
+version: 2
+# RPWDL register (PLS-020), newest register files of each snapshot year (#3139: entities <register>_<state>_<year>,
+# a past year keeps its last state); history and trial run: ingestion/sources/rpwdl.yaml and
+# docs/sources/rpwdl.md. Privacy allowlist (aggregate counts only) in ingestion/to_bronze/rpwdl/load.py.
+# voivodeship_code: a voivodeship of silver.teryt_terc by construction (macro poc_rpwdl_voivodeship), null when the
+# TERYT code is missing or not one; no relationships test (a test with a shared parent would be selected by builds
+# of teryt_terc before these tables exist); tests/rpwdl_*_complete.sql check that all 16 have active rows.
+models:
+  - name: rpwdl_providers
+    description: >-
+      Healthcare providers (podmioty wykonujące działalność leczniczą), one row per provider ledger of the newest
+      active and inactive files, without any identifier (a provider can be one natural person). Grain: entity x
+      source_row_number (the file row; the entity carries the snapshot year).
+    tests:
+      - unique:
+          column_name: "entity || '|' || source_row_number"
+      - accepted_values:
+          column_name: "regexp_replace(entity, '_[0-9]{4}$', '')"
+          arguments: {values: [healthcare_provider_active, healthcare_provider_inactive]}
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: snapshot_year
+        tests: [not_null]
+      - name: source_row_number
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: authority_type
+        tests: [{accepted_values: {arguments: {values: ['W']}}}]
+      - name: is_active
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_establishments
+    description: >-
+      Establishments (zakłady lecznicze) of the healthcare providers, newest active and inactive files of
+      each snapshot year. Grain: snapshot_year x establishment_id.
+    tests:
+      - unique:
+          column_name: "snapshot_year || '|' || establishment_id"
+    columns:
+      - name: establishment_id
+        tests: [not_null]
+      - name: snapshot_year
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_units
+    description: >-
+      Organisational units (jednostki organizacyjne) of the establishments, newest active and inactive files.
+      Grain: snapshot_year x unit_id (newest files of each snapshot year).
+    tests:
+      - unique:
+          column_name: "snapshot_year || '|' || unit_id"
+    columns:
+      - name: unit_id
+        tests: [not_null]
+      - name: snapshot_year
+        tests: [not_null]
+      - name: establishment_id
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_cells
+    description: >-
+      Organisational cells (komórki organizacyjne) of the units with bed and place counts, newest active and
+      inactive files of each snapshot year. Grain: snapshot_year x cell_id.
+    tests:
+      - unique:
+          column_name: "snapshot_year || '|' || cell_id"
+    columns:
+      - name: cell_id
+        tests: [not_null]
+      - name: snapshot_year
+        tests: [not_null]
+      - name: unit_id
+        tests: [not_null]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: rpwdl_practices
+    description: >-
+      Professional practices of the 8 practice registers (individual and group practices of physicians, nurses
+      and midwives, physiotherapists, laboratory diagnosticians), newest active and inactive files, without any
+      identifier (an individual practice is one practitioner). Grain: entity x source_row_number (the file row; the
+      entity carries the snapshot year).
+    tests:
+      - unique:
+          column_name: "entity || '|' || source_row_number"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: snapshot_year
+        tests: [not_null]
+      - name: source_row_number
+        tests: [not_null]
+      - name: practice_register
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [physician_practice, group_physician_practice, nursing_practice, group_nursing_practice,
+                         physiotherapy_practice, group_physiotherapy_practice, diagnostic_practice,
+                         group_diagnostic_practice]
+      - name: ledger_state
+        tests: [not_null, {accepted_values: {arguments: {values: [active, inactive]}}}]
+      - name: raw_sha256
+        tests: [not_null]

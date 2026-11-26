@@ -1,0 +1,15 @@
+version: 2
+models:
+  - name: poc_build_rpwdl
+    description: >-
+      Build stage — RPWDL register counts (register PLS-020): active healthcare providers, establishments,
+      organisational units, beds in organisational cells and professional practices (also by practice register),
+      Poland and the 16 voivodeships, one state per snapshot year (annual, date_key = 1 January of the snapshot
+      year; the current year moves with each weekly load, a past year keeps its last load, #3139).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
