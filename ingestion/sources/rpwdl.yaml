@@ -62,7 +62,8 @@ silver: [silver.rpwdl_providers, silver.rpwdl_establishments, silver.rpwdl_units
 gold: [gold.build_rpwdl, gold.metrics_healthcare_providers, gold.metrics_medical_practices]  # counts only
 full_rebuild:   # model: {rows: ceiling} (owner policy #822); one year measured in Dev trials 43796970764 and 43813074556
   # (16 Nov 2026, same rows); since #3139 every past year keeps its year-end state and the rows grow by one year each
-  # January: the ceilings are 1.5 x two snapshot years, room for about three (2026-2028); raise them before 2029.
+  # January: the ceilings are 1.5 x two snapshot years (2026 and 2027); three years pass them, so raise them before
+  # the first run of January 2028.
   rpwdl_providers: {rows: 141000}  # 47,060 a year (29,846 active + 17,214 inactive ledger rows)
   rpwdl_establishments: {rows: 169000}  # 56,201 a year
   rpwdl_units: {rows: 239000}  # 79,616 a year

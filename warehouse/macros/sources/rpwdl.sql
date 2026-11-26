@@ -55,11 +55,25 @@
 
 {# Newest Landing copy of every entity (a Bronze table may hold two copies of one year: before the latest-only prune,
    or when an older copy's bytes are also another year's newest). Entities without a year are the copies landed
-   before #3139 (one rolling state, superseded by the year entities) and are left out. #}
+   before #3139 (one rolling state). They are left out once the table holds any year entity; until then (production
+   Bronze between the merge of #3139 and the first rpwdl run on that code) they stand in for the year of their
+   download (UTC), so a platform build in that window keeps the counts instead of emptying Silver. #}
 {% macro poc_rpwdl_newest(table) -%}
     select *
-    from {{ source('rpwdl', table) }}
-    where regexp_matches(entity, '_(active|inactive)_[0-9]{4}$')
+    from (
+        select
+            * replace (
+                case
+                    when regexp_matches(entity, '_(active|inactive)_[0-9]{4}$') then entity
+                    else entity || '_' || left(source_version, 4)
+                end as entity
+            ),
+            regexp_matches(entity, '_(active|inactive)_[0-9]{4}$') as has_year
+        from {{ source('rpwdl', table) }}
+    ) as tagged
+    where has_year or not exists (
+        select 1 from {{ source('rpwdl', table) }} as y where regexp_matches(y.entity, '_(active|inactive)_[0-9]{4}$')
+    )
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
 {%- endmacro %}
 
