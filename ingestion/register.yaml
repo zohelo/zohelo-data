@@ -3201,8 +3201,9 @@ sources:
 - id: PLS-019
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
   short_name: NIZP-PZH epidemiology bulletins
+  source_system: pzh_epimeld
   provider: Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)
-  status: approved
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, publication-dependent
