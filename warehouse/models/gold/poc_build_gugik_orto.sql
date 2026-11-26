@@ -2,15 +2,18 @@
 {# Gold build stage: GUGiK orthophoto sheet index (register PL-ENV-004), coverage counts by data year from
    silver.gugik_orto_sheets (one row per index feature = sheet edition). Grain: measure_key x geography_key x
    breakdown x date_key, annual (date_key = 1 January of the feature type's data year). Rule: every feature counts for
-   Poland ('PL': the national index); it also counts for the voivodeship whose PRG boundary (silver.prg_units, EPSG:4258,
-   transformed to EPSG:2180) contains its footprint centroid (EPSG:2180, computed in Silver). A feature whose centroid
-   lies in no voivodeship (sea, border strips) or that has no centroid counts for Poland only; one placed in two fails
-   the build (no silent pick). Measures: sheet editions (index features) in total (pixel_class '_T', is_total) and by
-   pixel-size class; the share of each class in the area's editions of the year (%). Pixel classes on the published
-   pixel size in metres: le_0.05, 0.05-0.10 (above 0.05 up to 0.10), 0.10-0.25, gt_0.25, '_U' without a pixel size.
-   Covered area is not given: editions of one year overlap (several deliveries, colours and pixel sizes of one sheet),
-   so a sum of footprints overstates it. source_version is the newest year version used; raw_sha256 is the SHA-256 of
-   the sorted list of the Landing pages used. #}
+   Poland ('PL': the national index); it also counts for the voivodeship that contains its footprint centroid
+   (EPSG:2180, computed in Silver): the PRG gmina boundary (silver.prg_units, EPSG:4258, transformed to EPSG:2180) that
+   contains the centroid gives the voivodeship, the first two digits of its TERYT code. Gminas, not the voivodeship
+   polygons, because a test against a whole voivodeship boundary for each of 1.3 M points ran out of memory (Dev trial
+   45824096302); the gminas of a voivodeship cover it exactly in PRG. A feature whose centroid lies in no gmina (sea,
+   border strips) or that has no centroid counts for Poland only; a centroid in two voivodeships fails the build (no
+   silent pick). Measures: sheet editions (index features) in total (pixel_class '_T', is_total) and by pixel-size
+   class; the share of each class in the area's editions of the year (%). Pixel classes on the published pixel size in
+   metres: le_0.05, 0.05-0.10 (above 0.05 up to 0.10), 0.10-0.25, gt_0.25, '_U' without a pixel size. Covered area is
+   not given: editions of one year overlap (several deliveries, colours and pixel sizes of one sheet), so a sum of
+   footprints overstates it. source_version is the newest year version used; raw_sha256 is the SHA-256 of the sorted
+   list of the Landing pages used. #}
 with sheets as (
     select
         feature_id,
@@ -29,22 +32,44 @@ with sheets as (
     from {{ source('gugik_orto_entities', 'gugik_orto_sheets') }}
 ),
 
-voivodeships as (
+gminas as (
     select
-        teryt_code,
-        st_transform(st_geomfromwkb(geometry_wkb), 'EPSG:4258', 'EPSG:2180', always_xy := true) as geom
-    from {{ ref('prg_units') }}
-    where unit_level = 'wojewodztwo'
+        substr(teryt_code, 1, 2) as voivodeship_code,
+        geom,
+        st_xmin(geom) as x_min,
+        st_xmax(geom) as x_max,
+        st_ymin(geom) as y_min,
+        st_ymax(geom) as y_max
+    from (
+        select
+            teryt_code,
+            st_transform(st_geomfromwkb(geometry_wkb), 'EPSG:4258', 'EPSG:2180', always_xy := true) as geom
+        from {{ ref('prg_units') }}
+        where unit_level = 'gmina'
+    ) as g
 ),
 
-placed as (
+points as (
+    select distinct
+        centroid_x_2180 as x,
+        centroid_y_2180 as y
+    from sheets
+    where centroid_x_2180 is not null
+),
+
+point_voivodeships as (
     select
-        s.feature_id,
-        v.teryt_code,
-        count(*) over (partition by s.feature_id) as voivodeships_found
-    from sheets as s
-    inner join voivodeships as v on st_contains(v.geom, st_point(s.centroid_x_2180, s.centroid_y_2180))
-    where s.centroid_x_2180 is not null
+        p.x,
+        p.y,
+        min(g.voivodeship_code) as voivodeship_code,
+        count(distinct g.voivodeship_code) as voivodeships_found
+    from points as p
+    inner join gminas as g
+        on
+            p.x between g.x_min and g.x_max
+            and p.y between g.y_min and g.y_max
+            and st_contains(g.geom, st_point(p.x, p.y))
+    group by p.x, p.y
 ),
 
 areas as (
@@ -54,12 +79,14 @@ areas as (
     from sheets
     union all
     select
-        feature_id,
+        s.feature_id,
         case
-            when voivodeships_found > 1 then error('build_gugik_orto: feature ' || feature_id || ' in two voivodeships')
-            else teryt_code
+            when v.voivodeships_found > 1
+                then error('build_gugik_orto: feature ' || s.feature_id || ' in two voivodeships')
+            else v.voivodeship_code
         end as geography_source_code
-    from placed
+    from sheets as s
+    inner join point_voivodeships as v on s.centroid_x_2180 = v.x and s.centroid_y_2180 = v.y
 ),
 
 tagged as (
