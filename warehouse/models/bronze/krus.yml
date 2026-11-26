@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: krus
+  description: KRUS basic benefit statistics workbook (pensions and benefits paid, quarterly since 2020)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/krus/
+    loaded_by: ingestion/to_bronze/krus/
+    config: ingestion/sources/krus.yaml
+  tables:
+  - name: krus_cells
+    description: >-
+      One row per non-empty cell of the newest Landing copy of each workbook (entity swiadczenia_kwartalne): sheet, row, column,
+      source text (value_text), cell type and number format (ingestion/common/xlsx_cells.py); partitioned by entity.
+  - name: krus_rejected_files
+    description: krus Landing files the Bronze decoder rejected (not an XLSX workbook), with the reason.

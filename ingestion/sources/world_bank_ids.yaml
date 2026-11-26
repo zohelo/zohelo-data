@@ -26,10 +26,22 @@ archive_policy:
   prune: report
 bronze: [bronze.ids_observations, bronze.ids_metadata, bronze.ids_rejected_files]
 silver: [silver.ids_observations, silver.ids_series]
-gold: [gold.build_ids, gold.metrics_external_debt_stocks, gold.metrics_external_debt_gni, gold.metrics_external_debt_service, gold.metrics_external_debt_service_gni, gold.metrics_external_debt_service_exports]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.ids_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table ids_observations.
+gold: [gold.build_ids, gold.metrics_external_debt_stocks, gold.metrics_external_debt_gni, gold.metrics_external_debt_service,
+       gold.metrics_external_debt_service_gni, gold.metrics_external_debt_service_exports, gold.world_bank_ids_observations,
+       gold.world_bank_ids_series, gold.world_bank_ids_measures, gold.world_bank_ids_geography, gold.observations_rejected]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  ids_observations: {rows: 4000000, exception: "#2772"}  # 2,647,628 (Dev trial 43085820597); #822 exception, review 2027-01-15
+  ids_series: {rows: 2000}  # 577
+  poc_build_ids: {rows: 50000}  # 31,260 (Dev trial 43202506484)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32, small source: full in every layer): one archive of ~12 MB; rebuilt in full when a new archive lands (about once a year).
 refresh: {mode: full, decided: "D32 + #2736"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+uzp_bzp,PLG-022,e-Zamówienia BZP ogłoszenia o zamówieniu i o wyniku postępowania,e-Zamówienia BZP contract and result notices,Urząd Zamówień Publicznych,registry,api,national-public,unresolved,https://ezamowienia.gov.pl/pl/integracja/

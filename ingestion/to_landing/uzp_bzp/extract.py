@@ -23,7 +23,8 @@ concessions, notices below the Act's thresholds), and notices before WINDOW_STAR
 Reduced before Landing (as news feeds, O33, and the ``reduce:`` of the bulk_file pattern): a notice's ``htmlBody``
 (the whole form, about 95% of the bytes) names contact persons, e-mail addresses and telephone numbers and the
 winning contractors with their addresses, which this platform must not store. Each notice keeps the API's own
-fields except: ``htmlBody`` is replaced by ``values`` (the template-labelled value lines of VALUE_FIELDS with their
+fields except: an e-mail address in a kept free-text field (FREE_TEXT) becomes ``[e-mail]``; ``htmlBody`` is
+replaced by ``values`` (the template-labelled value lines of VALUE_FIELDS with their
 part number: estimated value, value per part, outcome per part, offers received, price of the chosen offer,
 contract date, contract value); ``contractors`` keeps only each contractor's province and country (a contractor
 may be a natural person: no name, city or national id); a subsidised contracting authority (client type ``3``,
@@ -101,6 +102,11 @@ LINE_RE = re.compile(
     r"<h3[^>]*>\s*(\d+(?:\.\d+)*\.\))\s*([^<:]{1,200}?)\s*:\s*<span[^>]*>\s*([^<]{0,200}?)\s*</span>", re.S
 )
 PART_RE = re.compile(r">\s*Część\s+(\d+)\s*<|\(dla części\s+(\d+)\)")
+# Free-text fields kept: an e-mail address written into them (a contact person's, Dev trial 43842705235 found 31
+# notices with "@" in their text) is replaced before Landing.
+FREE_TEXT = ("orderObject", "organizationName", "organizationCity")
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+EMAIL_MARK = "[e-mail]"
 
 
 def prefix(root: str) -> str:
@@ -214,6 +220,9 @@ def reduce_notice(item: dict[str, Any]) -> dict[str, Any]:
     if str(item.get("clientType") or "").split(".", 1)[0] == "3":
         for k in AUTHORITY_PERSONAL:
             out[k] = None
+    for k in FREE_TEXT:
+        if isinstance(out[k], str):
+            out[k] = EMAIL_RE.sub(EMAIL_MARK, out[k])
     contractors = []
     for c in item.get("contractors") or []:
         if not isinstance(c, dict) or set(c) - CONTRACTOR_KNOWN:

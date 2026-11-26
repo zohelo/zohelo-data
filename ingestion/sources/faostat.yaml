@@ -35,11 +35,21 @@ archive_policy:
   prune: report
 bronze: [bronze.faostat_observations, bronze.faostat_rejected_files]
 silver: [silver.faostat_observations]
-gold: [gold.build_faostat]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.faostat_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table faostat_observations.
+gold: [gold.build_faostat, gold.faostat_observations, gold.faostat_series, gold.faostat_measures, gold.faostat_geography,
+       gold.observations_rejected]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  faostat_observations: {rows: 4400000, exception: "#2815"}  # 2,920,278 (GT 2,498,428 + RL 421,850; Dev trial 43159213097); D32: two whole-domain files, rebuilt in full when one changes (about yearly)
+  poc_build_faostat: {rows: 4000}  # 2,538: 29 areas × 2 blocks (Dev trial 43159213097)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two whole-domain snapshots that change once or twice a year; a new copy
 # replaces its entity and Silver (newest copy per entity) is rebuilt in full from Bronze in DuckDB.
 refresh: {mode: full, decided: "D32 + #2402"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

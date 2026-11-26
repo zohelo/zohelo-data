@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+imgw_archive,PL-ENV-009,IMGW-PIB dane pomiarowo-obserwacyjne (archiwum plikowe),IMGW-PIB observation archive (files),Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy,cube,file,national-public,unresolved,https://danepubliczne.imgw.pl/data/dane_pomiarowo_obserwacyjne/

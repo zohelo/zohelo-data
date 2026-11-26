@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+entsog,PL-ENV-021,"ENTSOG Transparency Platform: przepływy gazu, GAZ-SYSTEM","ENTSOG Transparency Platform: gas flows, GAZ-SYSTEM","ENTSOG (data reported by Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.)",cube,api,international-public,unresolved,https://transparency.entsog.eu/

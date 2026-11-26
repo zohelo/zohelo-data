@@ -20,8 +20,9 @@ extraction:
   initial: bulk
   production: snapshot                  # each workbook holds the complete series
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: # UTC; release: monthly, about six weeks after the month end; one small file, weekday check
-    - {cron: "45 13 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; release: monthly, about six weeks after the month end; one small file, one run a week (O46, weekly until production use;
+    # was every weekday)
+    - {cron: "45 13 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/mf_treasury_debt/
 archive_policy:
@@ -31,6 +32,8 @@ archive_policy:
 bronze: [bronze.mf_treasury_debt_cells, bronze.mf_treasury_debt_rejected_files]
 silver: [silver.treasury_debt]
 gold: [gold.build_public_finance]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  treasury_debt: {rows: 125000}  # 83,206 (Dev trial 43099813876), monthly since 2001
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): small workbooks (under 200,000 cells), rebuilt in full.

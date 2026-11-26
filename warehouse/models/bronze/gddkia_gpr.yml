@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: gddkia_gpr
+  description: GDDKiA traffic census GPR (register PL-ENV-022), SDRR table workbooks (.xlsx 2025, .xls 2020/21)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gddkia_gpr/
+    loaded_by: ingestion/to_bronze/gddkia_gpr/
+    config: ingestion/sources/gddkia_gpr.yaml
+  tables:
+  - name: gddkia_gpr_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of every workbook of the newest
+      copy of each landed file; partitioned by entity.
+  - name: gddkia_gpr_rejected_files
+    description: Files of gddkia_gpr the Bronze decoder rejected, with the reason.

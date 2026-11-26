@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """UNECE Landing: the tables of the UNECE Statistical Database (PXWeb) economic statistics, from its PXWeb API.
 
-Route (docs/sources.md, UNECE): the database publishes no bulk files (the PX files are not served) and its
+Route (docs/sources/unece.md): the database publishes no bulk files (the PX files are not served) and its
 PXWeb API v1 answers data only to POST queries, so this small extractor replaces the bulk_file pattern. The
 entity is one table: every table under the folders in FOLDERS (``20-ME``: macroeconomic overview, national
 accounts, labour force and wages, price indices, industrial production, external relations, globalization),

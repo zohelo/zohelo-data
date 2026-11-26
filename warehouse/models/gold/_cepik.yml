@@ -1,0 +1,18 @@
+version: 2
+models:
+  - name: poc_build_cepik
+    description: >-
+      Build stage — CEPiK (register PL-ENV-024): vehicles registered per month, Poland and the 16 voivodeships
+      (totals) and Poland by vehicle type (breakdown vehicle_type), one measure cepik:vehicle_registrations:vehicles,
+      frequency M, values as published (vehicles). Voivodeship rows of a month printed out of order are left out.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+  - name: poc_metrics_vehicle_registrations
+    description: >-
+      Metrics view of the draft KPI vehicle_registrations (vehicles registered in the month): CEPiK totals for Poland
+      and the voivodeships.
