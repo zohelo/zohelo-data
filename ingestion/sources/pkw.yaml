@@ -68,7 +68,7 @@ silver: [silver.pkw_results]
 gold: [gold.build_pkw, gold.pkw_elections, gold.metrics_voter_turnout]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   pkw_results: {rows: 950000}  # 633,215 measured (Dev trial of the PR); a national election adds about 130,000
-  poc_build_pkw: {rows: 32500}  # 21,622 measured
+  poc_build_pkw: {rows: 32500}  # 21,616 measured
   pkw_elections: {rows: 10}  # 5 measured (elections and rounds)
   poc_metrics_voter_turnout: {rows: 13000}  # 8,670 measured: 2,890 areas x 3 elections
 
