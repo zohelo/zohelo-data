@@ -7294,7 +7294,8 @@ sources:
   name: Road programme and infrastructure downloads (RPBDK/MOP)
   short_name: GDDKiA road downloads
   provider: GDDKiA
-  status: approved
+  source_system: gddkia_mop
+  status: built
   family: H
   kpi: false
   geography: Poland
@@ -7324,8 +7325,9 @@ sources:
     2026); obstruction feed live.
   ingestion:
     history: 'Bulk files on gov.pl, tested from a runner. https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop links one XLSX
-      "Tabela MOP istniejące" (September 2026 edition: 89,285 bytes, one sheet "Arkusz1"; columns Lp., Oddział, Województwo,
-      Zarządca, Miejscowość, name of the rest area, current category, target category). https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023
+      "Tabela MOP istniejące" (September 2026 edition: 89,285 bytes, one sheet "Arkusz1", 424 rows, 35 columns: Lp., Oddział,
+      Województwo, Zarządca, Miejscowość, name of the rest area, current and target category, x, y, road class, road number,
+      chainage, direction, parking places and 17 amenity columns; Dev trial 45829412455, docs/sources/gddkia_mop.md). https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023
       links the road-programme status as one PDF (1,121,256 bytes, 6 pages, with a text layer: 9,796 text operators, no page
       images) plus contractor and legend PDFs. Attachment ids change per edition, so the two pages are the stable entries.
       Not in this route: the road-obstruction XML feed on archiwum.gddkia.gov.pl, a live operational feed with no statistical
