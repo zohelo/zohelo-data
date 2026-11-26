@@ -103,7 +103,7 @@ LINE_RE = re.compile(
 )
 PART_RE = re.compile(r">\s*Część\s+(\d+)\s*<|\(dla części\s+(\d+)\)")
 # Free-text fields kept: an e-mail address written into them (a contact person's) is replaced before Landing. Dev
-# trials 43842705235 and 45748222888 found "@" in 33 notice subjects, none of them in the shape of an address.
+# trials 43842705235 and 45767597789 found "@" in 33 notice subjects, none of them in the shape of an address.
 FREE_TEXT = ("orderObject", "organizationName", "organizationCity")
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 EMAIL_MARK = "[e-mail]"
