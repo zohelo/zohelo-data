@@ -6,7 +6,8 @@ models:
       an institution in Poland (filter institutions.country_code:PL, each work once), by publication year, as
       published: selection all, open_access, or field (primary topic's OpenAlex field, field_id with field and
       domain names). Every publication year OpenAlex holds; the year of the copy is still filling. Grain: selection
-      x field_id x publication_year (field_id '_T' outside selection field). History: TRIAL.
+      x field_id x publication_year (field_id '_T' outside selection field). History 1812-2027 (Dev trial 45825975173: 175 years, 1,818,049 works; 1,290 works of meta.count have no
+      publication year and no group).
     tests:
       - unique:
           column_name: "selection || '|' || field_id || '|' || publication_year"

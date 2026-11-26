@@ -44,7 +44,12 @@ the year of `source_version` (the read's time). OpenAlex revises past years too 
 read replaces all years. Years after the read (works dated ahead) and before 1900 (the calendar's range) stay in
 Silver and are not loaded into Gold.
 
-Size: TRIAL.
+Size (Dev trial 45825975173, 26 Nov 2026): two Landing files of 48 KB and 226 KB (29 and 7 answers). 1,818,049
+works in 175 publication years 1812-2027 (`meta.count` 1,819,339: 1,290 works have no publication year and fall in
+no group), 1,001,460 open access, 26 fields (works without a primary topic, 244 to 393 a year since 2020, are in
+none); 2024: 87,917 works, 72,910 open access, Medicine 15,402 the largest field. 1,352 institutions (company 504,
+education 330, facility 205, ...), 1,174 with yearly counts (15,732 institution-years, 2010-2026). Gold 34,233 rows:
+works_pl 2,769 (1900-2026; 289 rows before 1900 and 14 of 2027 stay in Silver), institutions_pl 2 x 15,732.
 
 Geography: Poland only; institutions are not assigned to voivodeships (no code, only `geo.region` names).
 

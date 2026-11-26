@@ -26,12 +26,12 @@ bronze: [bronze.openalex_works_counts, bronze.openalex_institutions, bronze.open
 silver: [silver.openalex_works_pl_counts, silver.openalex_institutions_pl, silver.openalex_institution_works_by_year]
 gold: [gold.build_openalex, gold.institution_openalex, gold.metrics_scholarly_works_pl_institution]  # draft KPI
 full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial of #2996
-  openalex_works_pl_counts: {rows: 4500}  # TRIAL
-  openalex_institutions_pl: {rows: 2000}  # TRIAL
-  openalex_institution_works_by_year: {rows: 25000}  # TRIAL
-  poc_build_openalex: {rows: 52000}  # TRIAL
-  institution_openalex: {rows: 2000}  # TRIAL
-  poc_metrics_scholarly_works_pl_institution: {rows: 200}  # TRIAL
+  openalex_works_pl_counts: {rows: 4500}  # 3,072 (Dev trial 45825975173, 26 Nov 2026)
+  openalex_institutions_pl: {rows: 2000}  # 1,352 (same trial)
+  openalex_institution_works_by_year: {rows: 25000}  # 15,732: 1,174 institutions, 2010-2026 (same trial)
+  poc_build_openalex: {rows: 52000}  # 34,233: works_pl 2,769, institutions_pl 2 x 15,732 (same trial)
+  institution_openalex: {rows: 2000}  # 1,352 (same trial)
+  poc_metrics_scholarly_works_pl_institution: {rows: 200}  # 127 years 1900-2026 of its measure (same trial)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two files of under 1 MB a week (some 3,000 yearly counts and about 1,350
