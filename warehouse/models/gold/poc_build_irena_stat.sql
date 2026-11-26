@@ -9,7 +9,8 @@
    children, and every technology is its own series, never summed or split here (IRENA terms 2.1(viii)). The grid
    connection is the breakdown {"grid_connection": "All" | "On-grid" | "Off-grid"}; 'All' is the total (is_total).
    Values and units as published (D33). Areas through poc_map_geography (section irena_stat, static ISO3); an IRENA
-   code without a Gold country maps to _X with its code kept and is counted by build_check. Cells without a value are
+   code without a Gold country maps to _X with its code kept and is counted by build_check (16 codes, 9,466 of 189,929
+   rows in Dev trial 45868633684: AIA, BES, BLM, COK, FLK, GLP, GUF, MSR, MTQ, MYT, NIU, REU, SGS, SPM, TKL, TWN). Cells without a value are
    not loaded; a value with a PxWeb status is 'flagged'; a year after the build year cannot be an observation and is left out. #}
 with geo as (
     select

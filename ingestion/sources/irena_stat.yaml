@@ -27,11 +27,11 @@ archive_policy:
 bronze: [bronze.irena_stat_electricity, bronze.irena_stat_rejected_files]
 silver: [silver.irena_stat_electricity]
 gold: [gold.build_irena_stat, gold.metrics_renewable_capacity, gold.metrics_renewable_generation]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the PR's Dev trial
-  irena_stat_electricity: {rows: 600000}  # placeholder until the trial measures it
-  poc_build_irena_stat: {rows: 600000}
-  poc_metrics_renewable_capacity: {rows: 9000}
-  poc_metrics_renewable_generation: {rows: 9000}
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45868633684 (26 Nov 2026), 1.5 x
+  irena_stat_electricity: {rows: 285000}  # 189,929: the cells with a value of release 2026 H2 (718,615 '..' cells not stored)
+  poc_build_irena_stat: {rows: 285000}  # 189,929 = Silver, 9,466 of them of 16 codes without a Gold country (_X)
+  poc_metrics_renewable_capacity: {rows: 7600}  # 5,028: Total Renewable capacity, All, 208 countries, 2000-2025
+  poc_metrics_renewable_generation: {rows: 7300}  # 4,827: Total Renewable generation, All, 207 countries, 2000-2024
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): one table of under a million cells, a new release twice a year (a release

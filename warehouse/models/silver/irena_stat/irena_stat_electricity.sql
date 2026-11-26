@@ -7,7 +7,10 @@
    ('0' … '25'), so the keys are the published labels; the codes are kept beside them. measure and unit_code come
    from the data type label ('Electrical Installed Capacity (MW)', 'Electricity Generation (GWh)'); a label of another
    shape gives null and fails the not_null tests. value is the published number; a cell without a value keeps value
-   null with its status and never becomes 0 (cells marked '..' without a value are not in Bronze).
+   null with its status and never becomes 0 (cells marked '..' without a value are not in Bronze). Release 2026 H2
+   (Dev trial 45868633684): 908,544 cells, 718,615 of them '..' without a value, 187,374 numbers and 2,555 published
+   zeros, no other status; capacity 2000-2025 (23 technologies with values), generation 2000-2024 (25); 'All' equals
+   On-grid + Off-grid within 1 % for every one of the 85,542 cells that have both.
    Grain: country_code x technology x data_type x grid_connection x year. #}
 with records as (
     select *
