@@ -9,7 +9,8 @@
    WIPO itself defines office and origin counts. The breakdown is the published class: {"technology_field": "<0-35>"}
    for patents, {"locarno_class": "<0-32>"} for designs. Patents also get a total row per area and year,
    {"technology_field": "_T"} (is_total): the sum of the 35 fields and 0 'Unknown', each document being counted in one
-   field (the trial compares Poland's office total with the UPRP annual reports). Designs get no total: the design
+   field (2022: US 323,388, CN 798,431, PL 2,222; a WIPO technology count, not the office's own annual total: PL 2016
+   is 3,776 here and 3,548 in the UPRP annual report, so the KPIs are their own concepts). Designs get no total: the design
    files hold only the offices that report by class, so a sum is not an office total. Values and units as published
    (D33). Areas through poc_map_geography (section wipo_ip_stats, static ISO2); regional offices (EP, EA, AP, OA, GC,
    EM, BX), historical codes (CS, YU, DD, AN), other codes without a Gold country and '**' have no Gold country and map to _X with their code kept
