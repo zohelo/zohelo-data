@@ -23,6 +23,7 @@ from ingestion.common import bronze_files as bf
 from ingestion.common import bulk_bronze, report
 from ingestion.common import gus_publications as gp
 from ingestion.common.r2 import catalog, req, s3
+from ingestion.to_bronze import gus_health as health_bronze
 from ingestion.to_landing.gus_health import SERIES
 from ingestion.to_landing.patterns import bulk_file
 
@@ -98,7 +99,7 @@ def main(argv) -> int:
         snapshots = []
         for attempt in (1, 2):
             print(f"\n##### bronze load {attempt}", flush=True)
-            gp.bronze_load(SOURCE, entities, landing_root=LAND, namespace=SCRATCH)
+            health_bronze.bronze_load(entities, landing_root=LAND, namespace=SCRATCH)
             snap = cat.load_table((SCRATCH, f"{SOURCE}_cells")).current_snapshot()
             snapshots.append(snap.snapshot_id if snap else None)
         cells = cat.load_table((SCRATCH, f"{SOURCE}_cells")).scan().to_arrow()
@@ -156,7 +157,10 @@ def main(argv) -> int:
             "split_names_repaired": n("select string_agg(distinct entity, ',') from s where area_name = 'warmińsko-mazurskie' and row_number > 0 and entity in ('zdrowie_2012','zdrowie_2013','zdrowie_2014','zdrowie_2015')"),
             "sheets": n("select string_agg(distinct entity || ' ' || table_code || '=' || sheet_name, ', ' order by entity || ' ' || table_code || '=' || sheet_name) from s"),
             "sources_named": n("select string_agg(distinct regexp_extract(table_notes, '(Ź ?r ?ó ?d ?ł ?o:?[^.]*)', 1), ' || ') from s"),
-            "third_party_words": n("select string_agg(distinct w, ',') from (select unnest(regexp_extract_all(lower(table_notes), '(nfz|narodow[a-z]* fundusz[a-z]*|centrum e-zdrowia|csioz|izb[a-z]* lekarsk[a-z]*)')) w from s)"),
+            "third_party_context": n("""select string_agg(distinct entity || ' ' || table_code || ': ' || x, ' || ') from (select entity, table_code,
+                unnest(regexp_extract_all(table_notes, '[^.]{0,140}(NFZ|Narodow[a-ząęł]* Fundusz[a-z]*|Centrum e-Zdrowia|CSIOZ)[^.]{0,80}')) x from s)
+                where entity in ('zdrowie_2012', 'zdrowie_2020', 'zdrowie_2024')"""),
+            "owner_files_left_out": n("select count(*) from gus_health_cells where member like '%~$%'"),
         }
         ANNOTATE("notice", f"{SOURCE} trial markers", markers)
 
