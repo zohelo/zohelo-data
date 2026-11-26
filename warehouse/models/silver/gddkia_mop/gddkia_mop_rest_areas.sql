@@ -6,7 +6,9 @@
    Read by guards, not by position: the header is the row whose column 1 starts "Lp." (Bronze rejects a file without
    it); each column's role comes from its header text; data rows are the rows below whose Lp. is digits. A repeated
    role or a header on two sheets stops the build; a missing role fails the tests (not_null, completeness).
-   Values as published (whitespace collapsed, empty = null). Zarządca (manager): kept as text only for GDDKiA, the
+   Values as published (whitespace collapsed, empty = null; voivodeship_name lower case without the spaces the file
+   prints around a hyphen, "kujawsko - pomorskie"); road class, number, chainage, direction and the x/y coordinates
+   as published text. Parking places and the 17 amenity columns are not read yet. Zarządca (manager): kept as text only for GDDKiA, the
    word "Prywatny" and names with a company form (S.A., sp. z o.o., spółka, sp.k., SE), else null with manager_kind
    'other', so a sole trader's personal name never leaves Bronze. #}
 with cells as (
@@ -45,6 +47,12 @@ roles as (
             when regexp_matches(lower(c.text), '^(dane identyfik|nazwa)') then 'rest_area_name'
             when regexp_matches(lower(c.text), '^obecna') then 'current_category'
             when regexp_matches(lower(c.text), '^(kat.*docel|docelowa)') then 'target_category'
+            when regexp_matches(lower(c.text), '^klasa techniczna') then 'road_class'
+            when regexp_matches(lower(c.text), '^nr drogi') then 'road_number'
+            when regexp_matches(lower(c.text), '^pikieta') then 'chainage'
+            when regexp_matches(lower(c.text), '^kierunek') then 'direction'
+            when lower(c.text) = 'x' then 'x'
+            when lower(c.text) = 'y' then 'y'
         end as role
     from cells as c
     inner join head as h on c.entity = h.entity and c.sheet_name = h.sheet_name and c.row_number = h.header_row
@@ -93,6 +101,12 @@ listed as (
         max(text) filter (where role = 'rest_area_name') as rest_area_name,
         max(text) filter (where role = 'current_category') as current_category,
         max(text) filter (where role = 'target_category') as target_category,
+        max(text) filter (where role = 'road_class') as road_class,
+        max(text) filter (where role = 'road_number') as road_number,
+        max(text) filter (where role = 'chainage') as chainage,
+        max(text) filter (where role = 'direction') as direction,
+        max(text) filter (where role = 'x') as x,
+        max(text) filter (where role = 'y') as y,
         max(source_version) as source_version,
         max(raw_sha256) as raw_sha256
     from row_cells
@@ -124,13 +138,19 @@ select
     cast(lp_text as integer) as lp,
     branch,
     voivodeship,
-    lower(voivodeship) as voivodeship_name,
+    regexp_replace(lower(voivodeship), '\s*-\s*', '-', 'g') as voivodeship_name,
     case when manager_kind in ('gddkia', 'private', 'company') then manager end as manager_name,
     manager_kind,
     locality,
     rest_area_name,
     current_category,
     target_category,
+    road_class,
+    road_number,
+    chainage,
+    direction,
+    x,
+    y,
     row_number as source_row,
     source_version,
     raw_sha256
