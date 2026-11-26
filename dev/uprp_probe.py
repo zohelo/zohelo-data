@@ -23,18 +23,17 @@ def main(argv: list[str]) -> int:
     from pypdf import PdfReader
 
     full = {int(a) for a in argv if a.isdigit()} or set(range(2016, 2026))
-    peek = {2005, 2010, 2013}
+    peek: set[int] = set()
     links = _links(PAGE)
     pdfs = [(h, t) for h, t in links if ".pdf" in h.lower()]
     print(f"== {len(links)} links, {len(pdfs)} PDF links", flush=True)
     for h, t in pdfs:
         print(f"LINK | {t} | {h}", flush=True)
     for href, text in pdfs:
-        years = [int(y) for y in re.findall(r"(20[0-2]\d)", href + " " + text)]
-        english = bool(re.search(r"annual|report|_en|\ben\b|english", (href + " " + text).lower()))
-        if not years or english:
+        m = re.match(r"^(20\d\d)(?: \(wersja polska\))?$", text)
+        if not m:
             continue
-        year = years[0]
+        year = int(m.group(1))
         if year not in full and year not in peek:
             continue
         time.sleep(3)
