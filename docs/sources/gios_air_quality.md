@@ -67,8 +67,10 @@ Silver: `silver.gios_air_archive_values` (entity table, one file per year, `arch
 `warehouse/entity/gios_air_archive_values.sql`): grain station code × indicator × averaging time × stamp × member (two
 workbooks may publish one series: benzene at KpZielBoryTu in both the C6H6 and the ozone-precursor workbook of 2024 and
 2025; both rows are kept), `validation_status = verified`, never mixed with the provisional values. Indicator = the
-`Wskaźnik` cell, else the member name; averaging time `1g`/`24g` from the member's periods (the header also prints
-`SO2-24g`, `(PM2.5)-24g`); stamp rounded to the hour (the serials drift by up to a minute in a year); `measured_on` = the
+`Wskaźnik` cell, else the member name; averaging time = the header code (`1g`, `24g`, `1t`: 71 benzene cells of 2013),
+else the member name (the header also prints `SO2-24g`, `(PM2.5)-24g`, station codes), else the period grid, and it must
+agree with the grid (hours or whole days) or the year is rejected; a few columns of 2002 to 2009 carry garbled header
+cells (indicator `awWSSE` or `Arch`, 51 to 208 cells a year), kept as published; stamp rounded to the hour (the serials drift by up to a minute in a year); `measured_on` = the
 day the value describes (hour stamp minus one hour). Values as published: zeros and small negative hourly values exist
 (instrument noise near zero) and are kept; no text markers occur, and a cell that is not a number would reject its year.
 `silver.gios_air_archive_stations` (dbt): one row per station code (a station on two rows that differ only in old codes
