@@ -6783,7 +6783,8 @@ sources:
   name: MIDAS mineral deposits and mining areas database
   short_name: PIG-PIB MIDAS deposits
   provider: PIG-PIB
-  status: approved
+  source_system: pig_midas
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -6808,8 +6809,11 @@ sources:
       and whether all or part was used, and pass the terms on to recipients; using the information counts as accepting the
       offer. The rules set no separate limit on commercial use (a request only states whether the purpose is commercial);
       modification is allowed when disclosed. PIG-PIB accepts no liability for use, interpretation or processing. The WFS
-      capabilities point to the same rules ("Zasady wykorzystania danych z bazy MIDAS"); the MIDAS rules page https://www.pgi.gov.pl/midas/zrodla-danych.html
-      was not opened. Attribution: "Źródło: Państwowy Instytut Geologiczny - PIB, System Gospodarki i Ochrony Bogactw Mineralnych
+      capabilities point to the same rules ("Zasady wykorzystania danych z bazy MIDAS"), and so does the MIDAS rules page
+      https://www.pgi.gov.pl/midas/zrodla-danych.html (read 26 Nov 2026, Dev probe 45817073166): the MIDAS data "stanowią
+      informację sektora publicznego. Zasady ponownego wykorzystywania informacji sektora publicznego będących w posiadaniu
+      PIG-PIB określone są pod adresem: https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html";
+      the page adds "Korzystanie z zasobów aplikacji oznacza akceptację Zasad wykorzystywania informacji". Attribution: "Źródło: Państwowy Instytut Geologiczny - PIB, System Gospodarki i Ochrony Bogactw Mineralnych
       Polski MIDAS" with the date of the data and the download date.'
   updates: Maintained continuously; the download manager carries daily dated packages (cbdg_midas_zloza_2026_11_12.zip), so
     the layers change about daily. The yearly balance of mineral resources is the official reference state.
@@ -6834,9 +6838,7 @@ sources:
     priority: review-first
     evidence: tested
     connection: tested
-    blockers:
-    - GetFeature for a full layer (output formats, paging, CRS) was not run; test in the Landing trial, one request at a time.
-    - MIDAS rules page (zrodla-danych.html) and attribute dictionary not opened.
+    blockers: []
     references:
     - https://www.pgi.gov.pl/midas.html
     - https://midas-app.pgi.gov.pl/
