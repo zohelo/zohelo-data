@@ -7,7 +7,8 @@ description: "GUS STRATEG — indicators of the Strategy for Responsible Develop
 # the EU countries) and 2 (voivodeships); other strategies and levels 3-6, M, O are left out (docs/sources/
 # gus_strateg.md). Entity = the selection, sor: one ZIP of the exact answers (about 190), version = time the read
 # started (the API gives no update time); a read equal to the newest copy writes nothing. Polite: one request at a
-# time, 9.5 s apart (anonymous quota 100 per 15 minutes), about 32 minutes a read (ingestion/to_landing/gus_strateg/).
+# time, bursts of at most 90 then 16 minutes without a request (quota 100 per 15 minutes; an over-quota request gets
+# HTTP 404, trial 45754068310), about 38 minutes a read (ingestion/to_landing/gus_strateg/).
 # Dev probes 43800593902, 45746504682 (test/428-strateg-probe, test/2430-strateg-trial).
 extraction:
   initial: api

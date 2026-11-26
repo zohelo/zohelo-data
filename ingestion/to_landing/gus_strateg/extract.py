@@ -18,9 +18,14 @@ exact answer bodies with fixed member dates, so the same answers give the same b
 version = the time the read started, and a read whose bytes equal the newest landed copy writes nothing. A read
 that fails part-way lands nothing (the next run reads it again).
 
-Polite access (spec: anonymous users at most 5 requests a second and 100 per 15 minutes): one request at a time,
-PAUSE_SECONDS between requests (at most 95 per 15 minutes), an identifying User-Agent, timeouts, bounded retries
-with backoff on 429, 5xx, timeouts and refused connections (Retry-After honoured). About 32 minutes a read.
+Polite access (spec: anonymous users at most 5 requests a second and 100 per 15 minutes). The API answers a request
+over the quota with HTTP 404 "Nie znaleziono żądanego zasobu", not 429: trial 45754068310 paced 9.5 s apart got it
+on its 101st request although no 15 minutes held more than 95, and the same address answered HTTP 200 seven
+minutes later (Dev probe 45756534317). So requests go in bursts of at most BURST, PAUSE_SECONDS apart, each
+followed by REST_SECONDS without a request (a full quota window under any counting); a 404 waits one rest and is
+asked once more, a second 404 fails the read. One request at a time, an identifying User-Agent, timeouts, bounded
+retries with backoff on 429, 5xx, timeouts and refused connections (Retry-After honoured). About 38 minutes a read
+(about 190 requests, two rests).
 
 Layout (docs/landing.md): ``<root>/gus_strateg/snapshot/data/sor/<version>__<ingested>.zip`` + receipt.
 Modes: inspect (newest copy held, no requests), load (read and land when changed), verify (every receipt has its
@@ -51,7 +56,9 @@ ENTITY = "sor"
 STRATEGY = 78  # Strategia na rzecz Odpowiedzialnego Rozwoju (SOR), 2017-2030
 API = "https://strateg.stat.gov.pl/api/"
 LEVELS = ("0", "2")  # EU and countries; voivodeships
-PAUSE_SECONDS = 9.5  # 100 requests per 15 minutes for anonymous users: at most 95
+PAUSE_SECONDS = 1.5  # at most 5 requests a second
+BURST = 90  # requests, then REST_SECONDS without one (anonymous quota: 100 per 15 minutes)
+REST_SECONDS = 16 * 60
 TIMEOUT = (30, 120)
 RETRY_DELAYS = (30, 60, 120, 300)
 MARGIN_MINUTES = 5
@@ -64,14 +71,29 @@ def strategy_paths() -> list[tuple[str, str]]:
     ]
 
 
+SENT = {"burst": 0, "rests": 0}  # requests in the current burst; rests taken (one process = one quota user)
+
+
+def pace(deadline: float, rest: bool = False) -> None:
+    """Wait before a request: PAUSE_SECONDS, and a full rest after BURST requests (or when asked)."""
+    if rest or SENT["burst"] >= BURST:
+        if time.monotonic() + REST_SECONDS > deadline:
+            raise RuntimeError("time budget: no room for the quota rest")
+        time.sleep(REST_SECONDS)
+        SENT.update(burst=0, rests=SENT["rests"] + 1)
+    time.sleep(PAUSE_SECONDS)
+    SENT["burst"] += 1
+
+
 def fetch(session: requests.Session, path: str, deadline: float) -> tuple[bytes, Any]:
-    """GET one answer: (exact body, parsed JSON). 429, 5xx and network errors are retried with backoff; another
-    status fails at once."""
-    last = ""
+    """GET one answer: (exact body, parsed JSON). 429, 5xx and network errors are retried with backoff; a 404 (the
+    quota answer) once after a rest; another status fails at once."""
+    last, rested = "", False
     for attempt, delay in enumerate((0, *RETRY_DELAYS)):
         if time.monotonic() + delay > deadline:
             break
-        time.sleep(PAUSE_SECONDS + delay)
+        time.sleep(delay)
+        pace(deadline, rest=last.startswith("HTTP 404"))
         try:
             response = session.get(API + path, timeout=TIMEOUT)
         except requests.RequestException as exc:  # connect timeouts happen (Dev probe 45745965411)
@@ -82,6 +104,9 @@ def fetch(session: requests.Session, path: str, deadline: float) -> tuple[bytes,
                 return response.content, response.json()
             except ValueError as exc:
                 raise RuntimeError(f"STRATEG answered no JSON for {path}: {response.content[:200]!r}") from exc
+        if response.status_code == 404 and not rested:
+            last, rested = f"HTTP 404 {response.text[:160]}", True
+            continue
         last = f"HTTP {response.status_code} {response.text[:160]}"
         if response.status_code not in (429, 500, 502, 503, 504):
             raise RuntimeError(f"STRATEG {last} for {path}")
@@ -125,7 +150,7 @@ def read(session: requests.Session, deadline: float) -> tuple[list[tuple[str, by
             body, _ = fetch(session, f"indicators/{indicator}/dimensions/{dimension}?level_id={level}", deadline)
             members.append((f"data_{indicator}_{dimension}_level{level}.json", body))
             counts["answers_by_level"][level] += 1
-    counts["answers"] = len(members)
+    counts.update({"answers": len(members), "quota_rests": SENT["rests"]})
     return members, counts
 
 

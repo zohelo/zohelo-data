@@ -10,9 +10,12 @@ Route (`ingestion/to_landing/gus_strateg/`): for strategy 78, the Strategy for R
 indicator, with unit, objective and the strategy's base, intermediate and target values), each indicator's levels and
 years (`indicators/<id>`), and the observed values of its dimension at level 0, the EU aggregates and the EU
 countries, and level 2, the voivodeships (`indicators/<id>/dimensions/<dimension>?level_id=<L>`, `real_values`
-by year and 12-digit territory code). About 190 answers, one request at a time, 9.5 s apart (anonymous quota:
-5 a second, 100 per 15 minutes), about 32 minutes. Entity `sor` = the whole selection as one ZIP of the exact
-answers; version = time the read started (the API gives no update time); a read equal to the newest copy writes
+by year and 12-digit territory code). About 190 answers, one request at a time (anonymous quota: 5 a second,
+100 per 15 minutes). The API answers a request over the quota with HTTP 404 "Nie znaleziono żądanego zasobu", not
+429 (a trial paced 9.5 s apart got it on its 101st request; the same address answered HTTP 200 seven minutes
+later), so the extractor sends bursts of at most 90 requests, each followed by 16 minutes without one, and asks a
+404 once more after such a rest: about 38 minutes a read. Entity `sor` = the whole selection as one ZIP of the
+exact answers; version = time the read started (the API gives no update time); a read equal to the newest copy writes
 nothing; restart unit: the whole read (a read that fails part-way lands nothing; connect timeouts happen and are
 retried with backoff).
 
