@@ -123,6 +123,9 @@ def main(argv) -> int:
                     )
         complete = render(ROOT / "warehouse/tests/cepik_vehicle_registrations_complete.sql", {"cepik_vehicle_registrations": "s"})
         failures["complete"] = n(f"select count(*) from ({complete})")
+        in_silver = render(ROOT / "warehouse/tests/cepik_entities_in_silver.sql",
+                           {"cepik_cells": "cepik_cells", "cepik_vehicle_registrations": "s"})
+        failures["entities_in_silver"] = n(f"select count(*) from ({in_silver})")
         silver_stats = {
             "rows": n("select count(*) from s"),
             "per_table": n("select string_agg(table_code || '=' || c || ' ' || f || '..' || l, '; ') from (select table_code, count(*) c, min(period_date) f, max(period_date) l from s group by 1)"),

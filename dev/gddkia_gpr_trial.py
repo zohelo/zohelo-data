@@ -122,6 +122,8 @@ def main(argv) -> int:
             "accepted_vehicle_class": n(f"select count(*) from {s} where vehicle_class not in ({', '.join(repr(c) for c in classes)})"),
             "accepted_value_status": n(f"select count(*) from {s} where value_status not in ('ok', 'not_measured')"),
             "complete_test_rows": len(complete),
+            "entities_in_silver_rows": len(con.sql(render(ROOT / "warehouse/tests/gddkia_gpr_entities_in_silver.sql",
+                                                          {"gddkia_gpr_cells": "cells", "gddkia_gpr_sdrr": s})).fetchall()),
         }
         stats["silver"] = {
             "rows": n(f"select count(*) from {s}"),
