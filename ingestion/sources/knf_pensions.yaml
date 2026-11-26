@@ -1,0 +1,41 @@
+source_system: knf_pensions
+description: "KNF — pension-market statistics: quarterly net asset value of PPK target-date funds by managing institution, since 2020"
+
+# Extraction strategy (docs/landing.md). Register PLG-018, Task #2871. Bulk by release: every KNF statistics release
+# is its own article of https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne, so the file URL changes
+# with each release; ingestion/to_landing/knf_pensions/ reads the PPK category page (the main listing when it holds no
+# PPK article), takes the newest quarterly PPK release ("Wartość aktywów netto funduszy zdefiniowanej daty (PPK) wg
+# stanu na koniec III kwartału 2026", 30 October 2026) and its single XLSX
+# (www_Art_100435.49_UoPPK_2026_3Q_100435.xlsx, 131,783 bytes; Dev probe 45758367857, test/2871-knf-probe; robots.txt
+# allows every agent). The workbook is a rolling series since the first quarter of 2020 (Tabela 1 by fund in PLN,
+# Tabela 2 by managing institution in thousand PLN with the total, Tabela 4 the U indicator), so only the newest
+# release is landed: entity ppk_quarterly, version = download time (no Last-Modified), written only when the SHA-256
+# changed. Restart unit: the file.
+# Not declared yet (register PLG-018 names them): monthly OFE data (one .xls or .xlsx per month), the quarterly
+# insurance bulletin (parts A-D), the OFE quarterly bulletin, IKE and IKZE yearly; each is one file per period, an
+# accumulating entity for a follow-up.
+extraction:
+  initial: bulk
+  production: snapshot                  # each release is the whole series since 2020 Q1
+  incremental_policy: changed_since_last  # SHA-256 of the newest release's file
+  schedule: # UTC; release: quarterly, about a month after the quarter (Q3 2026 on 30 October 2026); weekly check (O46)
+    - {cron: "25 10 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/knf_pensions/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report   # each version is the whole series; a later file could drop managers that left the market
+bronze: [bronze.knf_pensions_cells, bronze.knf_pensions_rejected_files]
+silver: [silver.knf_pensions_ppk_net_assets]
+gold: [gold.build_knf_pensions]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  knf_pensions_ppk_net_assets: {rows: 900}  # MEASURED
+  poc_build_knf_pensions: {rows: 900}  # MEASURED
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): one workbook of about 130 kB, replaced quarterly as a whole; small, rebuilt in
+# full.
+refresh: {mode: full, decided: "D32 + #2871"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+bank_total_assets,knf_banking,knf_banking:banking_sector:pln:total_assets,"KNF monthly banking-sector data, total assets (Bilans), banking sector and bank groups",1,
+bank_nonfinancial_deposits,knf_banking,knf_banking:banking_sector:pln:nonfin_deposits,"KNF monthly banking-sector data, deposits of the non-financial sector without blocked deposits, banking sector and bank groups",1,
+bank_total_capital_ratio,knf_banking,knf_banking:banking_sector:share:total_capital_ratio,"KNF banking-sector data, total capital ratio (quarterly), banking sector, commercial and cooperative banks",1,
