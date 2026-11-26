@@ -6,6 +6,10 @@ apart per host, robots.txt honoured; a refused, walled or timed-out host is repo
 At most ten notices carry the summary.
 """
 
+import html
+import json
+import re
+import ssl
 import time
 import urllib.error
 import urllib.parse
