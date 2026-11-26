@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gios_air_quality,PL-ENV-010,GIOŚ Portal Jakości Powietrza (API),GIOŚ air quality portal (API),Główny Inspektorat Ochrony Środowiska (GIOŚ),cube,api,national-public,cc_by_4_0_gios_air_quality,https://powietrze.gios.gov.pl/pjp/content/api
