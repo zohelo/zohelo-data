@@ -1,0 +1,63 @@
+version: 2
+models:
+  - name: uprp_statistics_counts
+    description: >-
+      UPRP annual reports (register EX-001), statistics tables read from the PDF text layer and checked against the
+      tables' own sums in Bronze: applications and rights granted or registered for inventions, utility models,
+      trademarks and industrial designs by procedure and origin, and European patents validated in Poland (total),
+      a year, Poland. The newest report holding a checked cell wins. Grain: table_code x row_code x year. History
+      2015 to 2025 (validations 2017 to 2025), from the reports 2019 to 2025.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', table_code, row_code, year)"
+    columns:
+      - name: table_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - inventions_applications
+                  - inventions_grants
+                  - utility_models_applications
+                  - utility_models_grants
+                  - european_patents_validations
+                  - trademarks_applications
+                  - trademarks_grants
+                  - industrial_designs_applications
+                  - industrial_designs_grants
+      - name: row_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - total
+                  - national
+                  - national_domestic
+                  - national_foreign
+                  - international
+                  - international_domestic
+                  - international_foreign
+                  - domestic
+                  - foreign
+      - name: year
+        tests: [not_null]
+      - name: event_code
+        tests: [not_null, {accepted_values: {arguments: {values: [applications, grants, validations]}}}]
+      - name: right_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [inventions, utility_models, european_patents, trademarks, industrial_designs]
+      - name: procedure_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['_T', national, international]}}}]
+      - name: origin_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['_T', domestic, foreign]}}}]
+      - name: value
+        tests: [not_null]
+      - name: report_year
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

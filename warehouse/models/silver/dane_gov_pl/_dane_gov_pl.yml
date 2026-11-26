@@ -1,0 +1,71 @@
+version: 2
+models:
+  - name: dane_gov_pl_datasets
+    description: >-
+      dane.gov.pl open-data catalogue as harvested by data.europa.eu (register PLG-030, #3263; search API of
+      data.europa.eu, catalogue dane-gov-pl; metadata CC0): one row per dane.gov.pl dataset of the newest landed
+      catalogue. Grain: dataset_number (the dane.gov.pl dataset number). Several harvest records of one number are
+      versions of the dataset (a changed slug): the newest by modified, then by the harvest record's modified, is kept
+      and harvest_records counts them; a tie fails the build. Title, publisher (dane.gov.pl institution number, name,
+      type), periodicity, high-value flag, issued and modified, the harvest record's times, the number of themes and
+      of distributions. History: modified from 2017; the trial run id and counts are in
+      ingestion/sources/dane_gov_pl.yaml.
+    columns:
+      - name: dataset_number
+        tests: [not_null, unique]
+      - name: dataset_id
+        tests: [not_null, unique]
+      - name: modified_at
+        tests: [not_null]
+      - name: modified_on
+        tests: [not_null]
+      - name: periodicity_code
+        tests: [{accepted_values: {arguments: {values: ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUAL', 'ANNUAL_2', 'IRREG', 'NOT_PLANNED', 'UNKNOWN']}}}]
+      - name: publisher_type
+        tests: [{accepted_values: {arguments: {values: ['Agent']}}}]
+      - name: country_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['pl']}}}]
+      - name: harvest_records
+        tests: [not_null]
+      - name: distribution_count
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: dane_gov_pl_dataset_categories
+    description: >-
+      dane.gov.pl catalogue via data.europa.eu (register PLG-030, #3263): the EU data themes of each dataset of
+      silver.dane_gov_pl_datasets (the record kept there). Grain: dataset_number x category_code (the theme's id,
+      else the end of its data-theme URI, as published; listings = how often the record lists it). A dataset without
+      a theme has no row.
+    tests:
+      - unique:
+          column_name: "dataset_number || '|' || category_code"
+    columns:
+      - name: dataset_number
+        tests: [not_null]
+      - name: category_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['AGRI', 'ECON', 'EDUC', 'ENER', 'ENVI', 'GOVE', 'HEAL', 'INTR', 'JUST', 'REGI', 'SOCI', 'TECH', 'TRAN', 'UKLF']}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: dane_gov_pl_distribution_months
+    description: >-
+      dane.gov.pl catalogue via data.europa.eu (register PLG-030, #3263): the distributions (resources) of each dataset
+      of silver.dane_gov_pl_datasets counted by the month of their own last modification and their format, with the
+      sum of the published byte sizes. Grain: dataset_number x modified_month x format_code ('_U' = no format given).
+      The per-distribution rows (about 670,000, growing by about 45,000 a month) stay in bronze.dane_gov_pl_distributions;
+      distributions without a modification time are only in distribution_count of the dataset.
+    tests:
+      - unique:
+          column_name: "dataset_number || '|' || modified_month || '|' || format_code"
+    columns:
+      - name: dataset_number
+        tests: [not_null]
+      - name: modified_month
+        tests: [not_null]
+      - name: format_code
+        # an open EU vocabulary of about 200 file types: a new one warns instead of failing the weekly build
+        tests: [not_null, {accepted_values: {arguments: {values: ['7Z', 'CSV', 'DOC', 'DOCX', 'GEOJSON', 'GEOTIFF', 'GPKG', 'HTML', 'JPEG', 'JSON', 'ODS', 'ODT', 'PARQUET', 'PDF', 'PNG', 'RAR', 'RDF', 'RTF', 'SHP', 'TSV', 'TXT', 'WCS_SRVC', 'WFS_SRVC', 'WMS_SRVC', 'XLS', 'XLSX', 'XML', 'ZIP', '_U']}, config: {severity: warn}}}]
+      - name: distributions
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

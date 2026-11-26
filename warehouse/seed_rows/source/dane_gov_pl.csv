@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+dane_gov_pl,PLG-030,Katalog otwartych danych dane.gov.pl (metadane z data.europa.eu),dane.gov.pl open-data catalogue (metadata via data.europa.eu),Kancelaria Prezesa Rady Ministrów (katalog); Urząd Publikacji UE (data.europa.eu),registry,api,national-public,cc0_data_europa_eu,https://data.europa.eu/data/catalogues/dane-gov-pl
