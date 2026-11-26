@@ -361,6 +361,7 @@ def main():
     itu["d360_ind"] = jinfo("https://data360api.worldbank.org/data360/indicators?datasetId=ITU_DH")
     itu["d360_data_pol"] = jinfo("https://data360api.worldbank.org/data360/data?DATABASE_ID=ITU_DH&REF_AREA=POL&skip=0")
     itu["wb_catalog"] = jinfo("https://datacatalogapi.worldbank.org/ddhxext/DatasetView?dataset_unique_id=0067055", 6000)
+    itu["wb_terms"] = short(probe_page("https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets", 2500, 0))
     emit("parked5 GL-031 ITU", itu)
     # GL-032 WIPO
     w = res["GL-032"] = {}
@@ -397,10 +398,12 @@ def main():
     k = res["PLS-033"] = {}
     k["zboza"] = attachments("https://www.gov.pl/web/kowr/Rynek-zboz", 4)
     k["mieso"] = attachments("https://www.gov.pl/web/kowr/Rynek-miesa", 4)
+    k["tygodniowe"] = attachments("https://www.gov.pl/web/kowr/raporty-tygodniowe", 6)
     emit("parked5 PLS-033 KOWR", k)
     # TP-007 PAP: one read of the feed (no workaround), dane.gov.pl for the two gov.pl report families
     p = res["TP-007"] = {}
     p["rss"] = jinfo("https://www.pap.pl/rss.xml", 1500)
+    p["regulamin"] = short(probe_page("https://www.pap.pl/regulamin", 2500, 0))
     p["robots"] = ROBOTS_TXT.get("https://www.pap.pl", "")[:400]
     d = {"stan_sanitarny": dane("stan sanitarny"), "kowr": dane("KOWR"), "kowr_inst": dane("Krajowy Ośrodek Wsparcia Rolnictwa", "institutions")}
     emit("parked5 TP-007 PAP and dane.gov.pl", {"TP-007": p, "dane": d})
