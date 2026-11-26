@@ -6,7 +6,8 @@ workbook from 2016 (link texts "... tablice", "Tablice w formacie XLSX", "Aneks 
 only the edition title). Route: the health subject page links the newest edition, every edition page links the
 others (`ingestion/common/gus_publications.py`, editions from 2012). Entity = one edition (`zdrowie_<year>`), version
 = download time (no Last-Modified) when the SHA-256 changed; the newest edition is downloaded again on every run;
-restart unit: one edition. Bronze `bronze.gus_health_cells` (every cell of every workbook, with the ZIP member).
+restart unit: one edition. Bronze `bronze.gus_health_cells` (every cell of every workbook, with the ZIP member); the
+2014 ZIP also holds an Excel owner file (`~$...xlsx`, not a workbook), which the source's decoder leaves out.
 
 Silver `silver.gus_health_tables`: doctors and nurses on 31 December ("Pracownicy medyczni według województw"),
 general hospitals, beds, beds per 10,000 population and inpatients ("Szpitale ogólne według województw"), Poland and
