@@ -16,6 +16,7 @@ import time
 import duckdb
 import jinja2
 import requests
+import yaml
 
 from ingestion.common import bronze_files as bf
 from ingestion.common.r2 import catalog, req, s3
@@ -89,25 +90,25 @@ def main(argv) -> int:
     con = duckdb.connect()
     land = f"{SCRATCH}/01_landing"
     out: dict = {}
-    try:
-        import socket
+    lb = req("STORAGE_LANDING_BUCKET_NAME")
 
+    def landed_state() -> list[tuple[str, int]]:
+        state = []
+        for page in client.get_paginator("list_objects_v2").paginate(Bucket=lb, Prefix=f"{land}/"):
+            state += [(o["Key"], o["Size"]) for o in page.get("Contents", [])]
+        return sorted(state)
+
+    try:
+        # one short request first: an unreachable host ends the trial in a minute, not after every retry
+        started = time.monotonic()
         try:
-            addrs = sorted({a[4][0] for a in socket.getaddrinfo("www.gov.pl", 443, proto=socket.IPPROTO_TCP)})
-        except OSError as exc:
-            addrs = [f"dns error {exc}"]
-        reach = {}
-        for a in addrs:
-            try:
-                fam = socket.AF_INET6 if ":" in a else socket.AF_INET
-                with socket.socket(fam, socket.SOCK_STREAM) as sk:
-                    sk.settimeout(15)
-                    sk.connect((a, 443))
-                reach[a] = "ok"
-            except OSError as exc:
-                reach[a] = str(exc)[:60]
+            r = requests.get(tl.PAGE, headers={"User-Agent": bulk_file.USER_AGENT}, timeout=(20, 40))
+            reach = {"status": r.status_code, "bytes": len(r.content), "server": r.headers.get("Server")}
+        except requests.RequestException as exc:
+            reach = {"error": f"{type(exc).__name__}: {str(exc)[:160]}"}
+        reach["seconds"] = round(time.monotonic() - started, 1)
         print("www.gov.pl reachability", reach, flush=True)
-        if "ok" not in reach.values():
+        if reach.get("status") != 200:
             note("arimr www.gov.pl not reachable from the runner", reach, "warning")
             return 1
         pc = parser_check()
@@ -115,10 +116,12 @@ def main(argv) -> int:
 
         found, summary = tl.discover()
         out["page"] = summary
+        states = []
         for attempt in (1, 2):
             out[f"landing_extract_{attempt}_rc"] = tl.extract(30, landing_root=land)
+            states.append(landed_state())
+        out["landing_second_run_unchanged"] = states[0] == states[1]
         held = tl.held(land)
-        lb = req("STORAGE_LANDING_BUCKET_NAME")
         receipts = bulk_file.landed(client, lb, f"{land}/{SOURCE}/snapshot/data/")
         out["landing_files"] = len(receipts)
         out["landing_bytes"] = sum(r["size_bytes"] for r in receipts)
@@ -126,8 +129,14 @@ def main(argv) -> int:
         out["landing_verify_rc"] = bulk_file.main(
             SOURCE, "verify", landing_root=land, specs=[{"entity": e} for e in sorted(held)]
         )
+        snaps = []
         for attempt in (1, 2):
-            tb.bronze_load(sorted(held), landing_root=land, namespace=SCRATCH)
+            out[f"bronze_load_{attempt}_rc"] = tb.bronze_load(sorted(held), landing_root=land, namespace=SCRATCH)
+            t = cat.load_table((SCRATCH, f"{SOURCE}_cells"))
+            snap = t.current_snapshot()
+            snaps.append((snap.snapshot_id if snap else None, t.scan().to_arrow().num_rows))
+        out["bronze_second_run_unchanged"] = snaps[0] == snaps[1]
+        out["bronze_snapshot_rows"] = snaps
         cells_t = cat.load_table((SCRATCH, f"{SOURCE}_cells"))
         cells = cells_t.scan().to_arrow()
         out["bronze_snapshots"] = len(list(cells_t.metadata.snapshots))
@@ -190,12 +199,33 @@ def main(argv) -> int:
             ),
             "notes": n("select string_agg(distinct measure_code || ' ' || campaign_year || column_note, ',') from silver where column_note <> ''"),
         }
+        # the YAML's own tests (unique on the grain, not_null, accepted_values), read from _arimr_payments.yml
+        spec = yaml.safe_load((ROOT / "warehouse/models/silver/arimr_payments/_arimr_payments.yml").read_text())["models"][0]
+        failures = {}
+        for test in spec.get("tests", []):
+            if "unique" in test:
+                expr = test["unique"]["column_name"]
+                failures["unique grain"] = n(f"select count(*) from (select 1 from silver group by {expr} having count(*) > 1)")
+        for column in spec["columns"]:
+            for test in column.get("tests", []):
+                if test == "not_null":
+                    failures[f"not_null {column['name']}"] = n(f"select count(*) from silver where {column['name']} is null")
+                elif isinstance(test, dict) and "accepted_values" in test:
+                    values = test["accepted_values"]["arguments"]["values"]
+                    con.execute("create or replace temp table allowed as select unnest(?) as v", [values])
+                    failures[f"accepted_values {column['name']}"] = n(
+                        f"select count(*) from silver where {column['name']} not in (select v from allowed)"
+                    )
+        s["yaml_tests_run"] = len(failures)
+        s["yaml_test_failures"] = {k: v for k, v in failures.items() if v} or "none"
+        s["zero_values"] = n("select count(*) from silver where value = 0")
         complete = render(ROOT / "warehouse/tests/arimr_payments_complete.sql", {"arimr_payments_direct_payments": "silver"})
         s["complete_failures"] = n(f"select count(*) from ({complete})")
         s["complete_rows"] = n(
             f"select string_agg(measure_code || ' ' || coalesce(cast(campaign_year as varchar), '-') || '=' || found, '; ') from ({complete})"
         )
-        note("arimr silver", s)
+        bad = s["yaml_test_failures"] != "none" or s["complete_failures"] or not s["rebuild_same"]
+        note("arimr silver", s, "error" if bad else "notice")
 
         terc = cat.load_table(("silver", "teryt_terc")).scan().to_arrow()
         con.register("terc", terc)
@@ -236,6 +266,24 @@ def main(argv) -> int:
                 " where geography_key = 'TERC:1400000' and year(date_key) = 2025"
             ),
         }
+        # D37 bound (metrics in million PLN): Poland and voivodeship amounts / 1e6 within the declared bound
+        from warehouse.seed_rows import rows
+
+        bound = re.search(r"\['direct_payments_paid', '%', '([^']+)', '([^']+)'\]",
+                          (ROOT / "warehouse/macros/value_range/arimr_payments.sql").read_text())
+        g["metrics_bound"] = bound.groups() if bound else None
+        if bound:
+            g["metrics_out_of_bound"] = n(
+                f"select count(*) from gold where measure_codes = 'amount_paid' and geography_key <> '_X'"
+                f" and (value / 1e6 < {bound.group(1)} or value / 1e6 > {bound.group(2)})"
+            )
+        g["metrics_max_per_area_campaign"] = n(
+            "select max(c) from (select count(*) c from gold where measure_codes = 'amount_paid' group by geography_key, date_key)"
+        )
+        src = [r for r in rows("source") if r["source_key"] == SOURCE]
+        lic = [r for r in rows("licence") if src and r["licence_key"] == src[0]["licence_key"]]
+        g["catalogue_source_row"] = {k: src[0][k] for k in ("source_key", "licence_key", "url")} if src else None
+        g["catalogue_licence_row"] = {k: lic[0][k] for k in ("licence_key", "commercial_ok", "share_alike", "url")} if lic else None
         note("arimr gold", g)
     finally:
         removed = 0
@@ -252,7 +300,12 @@ def main(argv) -> int:
             cat.drop_namespace(SCRATCH)
         except Exception as exc:  # noqa: BLE001
             print("drop failed", exc)
-        note("arimr trial cleanup", {"objects_removed": removed, "tables_dropped": dropped})
+        left = sum(
+            len(pg.get("Contents", []))
+            for b in (req("STORAGE_LANDING_BUCKET_NAME"), req("STORAGE_LAKEHOUSE_BUCKET_NAME"))
+            for pg in client.get_paginator("list_objects_v2").paginate(Bucket=b, Prefix=f"{SCRATCH}/")
+        )
+        note("arimr trial cleanup", {"objects_removed": removed, "tables_dropped": dropped, "objects_left": left})
     return 0
 
 
