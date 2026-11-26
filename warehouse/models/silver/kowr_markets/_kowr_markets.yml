@@ -4,7 +4,7 @@ models:
     description: >-
       KOWR weekly grain report (register PLS-033), table "Eksportowe ceny zbóż na rynkach zagranicznych (na bazie
       FOB)": export prices FOB in EUR/t of milling wheat, feed barley and maize by export market, as of the quotation
-      date the table names (one date per report). Stated source KE, EBC, NBP (stated_source). "-" keeps value null;
+      date the table names (one date per report). Stated source KE, EBC, NBP (stated_source). "-" and a lone "0" keep value null (value_flag);
       a quotation date printed by two reports keeps the newer report. Grain: commodity_code x market_code x
       quote_date. History from the quotation of 29.03.2023 (report week 20-26.03.2023).
     tests:
@@ -23,6 +23,8 @@ models:
         tests: [not_null]
       - name: unit_code
         tests: [not_null, {accepted_values: {arguments: {values: [EUR_T]}}}]
+      - name: value_flag
+        tests: [{accepted_values: {arguments: {values: ['-', '0']}}}]
       - name: stated_source
         tests: [not_null]
       - name: raw_sha256
