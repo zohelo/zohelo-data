@@ -5537,7 +5537,8 @@ sources:
   name: dane.gov.pl open-data catalogue and API
   short_name: dane.gov.pl
   provider: Chancellery of the Prime Minister
-  status: approved
+  source_system: dane_gov_pl
+  status: built
   family: J
   kpi: false
   geography: Poland
