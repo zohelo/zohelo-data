@@ -46,9 +46,9 @@ full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the De
   wipo_ip_stats_patent_publications: {rows: 995000}  # 663,584 (office x origin x technology field x year, 2000-2022)
   wipo_ip_stats_patent_grants: {rows: 643000}  # 428,490
   wipo_ip_stats_designs: {rows: 609000}  # 405,393 = 202,802 applications + 202,591 registrations
-  poc_build_wipo_ip_stats: {rows: 564000}  # 375,863: by office and by origin per field or class, patent totals
-  poc_metrics_patent_grants_filing_office: {rows: 2100}  # 1,382 office-years, those of a country
-  poc_metrics_patent_grants_applicant_origin: {rows: 4900}  # 3,209 origin-years, those of a country
+  poc_build_wipo_ip_stats: {rows: 564000}  # 375,863: by office and by origin per field or class, patent totals; 15,168 _X
+  poc_metrics_patent_grants_filing_office: {rows: 1900}  # 1,250: office-years of 64 countries (EP, EA, ** ... are _X)
+  poc_metrics_patent_grants_applicant_origin: {rows: 4700}  # 3,132: origin-years of 195 countries
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): two ZIPs of 4 MB and 1.5 MB (about 1.5 M rows), replaced whole about once a
