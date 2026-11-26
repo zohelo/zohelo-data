@@ -20,12 +20,34 @@ with geo as (
     where source_system = 'pig_midas'
 ),
 
-voivodeships as (
+voivodeships as materialized (  -- parsed once; the bounding box narrows each point to one to three candidates
     select
         teryt_code,
-        st_geomfromwkb(geometry_wkb) as geom
-    from {{ ref('prg_units') }}
-    where unit_level = 'wojewodztwo'
+        geom,
+        st_xmin(geom) as xmin,
+        st_xmax(geom) as xmax,
+        st_ymin(geom) as ymin,
+        st_ymax(geom) as ymax
+    from (
+        select
+            teryt_code,
+            st_geomfromwkb(geometry_wkb) as geom
+        from {{ ref('prg_units') }}
+        where unit_level = 'wojewodztwo'
+    ) as parsed
+),
+
+candidates as (
+    select
+        c.contour_key,
+        c.point_lon,
+        c.point_lat,
+        v.teryt_code
+    from contours as c
+    inner join voivodeships as v
+        on
+            c.point_lon between v.xmin and v.xmax
+            and c.point_lat between v.ymin and v.ymax
 ),
 
 contours as (
@@ -62,11 +84,12 @@ contours as (
 
 placed as (
     select
-        c.contour_key,
-        v.teryt_code,
-        count(*) over (partition by c.contour_key) as voivodeships_found
-    from contours as c
-    inner join voivodeships as v on st_contains(v.geom, st_point(c.point_lon, c.point_lat))
+        k.contour_key,
+        k.teryt_code,
+        count(*) over (partition by k.contour_key) as voivodeships_found
+    from candidates as k
+    inner join voivodeships as v on k.teryt_code = v.teryt_code
+    where st_contains(v.geom, st_point(k.point_lon, k.point_lat))
 ),
 
 areas as (
