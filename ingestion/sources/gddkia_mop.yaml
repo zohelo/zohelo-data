@@ -1,0 +1,42 @@
+source_system: gddkia_mop
+description: "GDDKiA — existing rest areas (MOP) and parkings on national roads, monthly table \"Tabela MOP istniejące\""
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-023, Task #2995. Bulk feature: the page
+# https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop links one XLSX attachment "Tabela MOP - <month> <year> r."
+# (September 2026 edition: 89,285 bytes, one sheet "Arkusz1", 424 rows, 35 columns: Lp., Oddział, Województwo,
+# Zarządca, Miejscowość, rest-area name, current and target category, x, y, road class, road number, chainage,
+# direction, parking places, 17 amenity columns). Attachment uuids change per edition, so the page is the
+# entry (ingestion/to_landing/gddkia_mop/). Entity = one edition (mop_<yyyy>_<mm>, the month of the link text),
+# version = Last-Modified when read, else download time; a new attachment URL lands only when its bytes differ.
+# Restart unit: one file. Dev probes 43282997907 and 43288930412 (12 Nov 2026: page and workbook read from a runner).
+# Left out (register entry): the parking-place and amenity columns (Silver reads 14 of the 35), the road-programme
+# status PDF (no PDF text reader yet) and the road-obstruction feed on archiwum.gddkia.gov.pl (live operational feed,
+# not reachable from runners).
+extraction:
+  initial: bulk
+  production: snapshot                  # each edition is the table as published for its month
+  incremental_policy: changed_since_last  # new attachment URL with different bytes
+  schedule: # UTC; a monthly edition published in the following month (September 2026: Last-Modified 26 Oct); a weekly check (Thursday), at most one run a week (O46)
+    - {cron: "35 10 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gddkia_mop/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gddkia_mop_cells, bronze.gddkia_mop_rejected_files]
+silver: [silver.gddkia_mop_rest_areas]
+gold: [gold.build_gddkia_mop, gold.gddkia_mop_rest_area]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); Dev trial 45829412455 (26 Nov 2026), edition 2026-09
+  # Silver and the build stage keep every landed edition, so they grow by one edition a month: ceilings are 1.5 x twelve
+  # editions, reached about September 2027 (raise them, or make the models incremental by edition, before that).
+  gddkia_mop_rest_areas: {rows: 7700}  # 424 measured (one edition)
+  gddkia_mop_rest_area: {rows: 650}  # 424 measured (newest edition only)
+  poc_build_gddkia_mop: {rows: 1150}  # 63 measured: Poland 5 (4 categories and _T), voivodeships 58
+
+bronze_latest_only: true   # policy #822/#845: one copy per edition (a corrected edition replaces its month)
+# Refresh policy for all layers (D32): one workbook of about 90 kB a month, editions kept side by side; small, rebuilt
+# in full.
+refresh: {mode: full, decided: "D32 + #2995"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
