@@ -227,6 +227,8 @@ def main(args) -> int:
     egib_load.bulk_bronze.annotate = lambda *_a, **_k: None
     failed = 0
     cat = catalog()
+    cleanup(cat)  # what a cancelled earlier run may have left
+    NOTES["left"] -= 1
     try:
         try:
             trial(cat, minutes)
