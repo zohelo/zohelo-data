@@ -1,0 +1,2 @@
+licence_key,name,url,attribution_text,commercial_ok,share_alike
+nfz_itl_api_terms,"Regulamin API Terminy Leczenia (NFZ, statute page of API v1.4; source required, data not to be modified, commercial reuse not addressed)",https://apinfz.nfz.gov.pl/app-itl-api-pcus/swagger-ui/statute.html,"Źródło: Narodowy Fundusz Zdrowia, API Terminy Leczenia (https://api.nfz.gov.pl/) / Source: National Health Fund (NFZ), NFZ Waiting Times API (https://api.nfz.gov.pl/)",false,false
