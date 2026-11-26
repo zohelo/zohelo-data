@@ -27,9 +27,9 @@ bronze: [bronze.gddkia_gpr_cells, bronze.gddkia_gpr_rejected_files]
 silver: [silver.gddkia_gpr_sdrr]
 gold: [gold.build_gddkia_gpr, gold.metrics_average_daily_traffic_national_roads]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  gddkia_gpr_sdrr: {rows: 150000}  # about 95,000 expected (Dev trial on the final head: see the PR)
-  poc_build_gddkia_gpr: {rows: 300}  # 204 expected: 3 measures x 2 road classes x 17 areas x 2 editions
-  poc_metrics_average_daily_traffic_national_roads: {rows: 60}  # 34 expected: 17 areas x 2 editions
+  gddkia_gpr_sdrr: {rows: 150000}  # 94,793 measured (Dev trial of the PR, 26 Nov 2026)
+  poc_build_gddkia_gpr: {rows: 300}  # 204 measured: 3 measures x 2 road classes x 17 areas x 2 editions
+  poc_metrics_average_daily_traffic_national_roads: {rows: 50}  # 34 measured: 17 areas x 2 editions
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): five workbooks of about 2,500 to 3,300 sections each, a new edition every five
