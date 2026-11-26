@@ -25,8 +25,11 @@ observations) and `silver.gus_strateg_observations` (indicator dimension x level
 is not a number keeps `value` null, `value_status = 'not_numeric'`, never 0). Gold block `sor`
 (`warehouse/macros/sources/gus_strateg.sql`): one annual measure per indicator dimension, values and units as
 published (D33); Poland from level 0, voivodeships from level 2; EU-28 (`030000000000`) has no Gold area and is not
-built. No KPI rows yet: the SOR indicators that match existing concepts (R&D expenditure in % of GDP, the at-risk-of-
-poverty-or-social-exclusion rate, the employment rate) can join those KPIs as another source (O31). Values overlap
+built. Size (26 Nov 2026): 83 indicator dimensions, all with values for Poland, 21 also for the 16 voivodeships;
+20,869 values, 2003-2025; 72 indicators carry SOR targets. Units as published, mapped (D33) where the code is plain
+(`%`, `dni`, `lata`, `km`); `osoby na 100 ludności` stays unmapped because the English list calls it "persons per
+1000 population". No KPI rows yet: the SOR indicators that match existing concepts (R&D expenditure in % of GDP,
+the at-risk-of-poverty-or-social-exclusion rate, the employment rate) can join those KPIs as another source (O31). Values overlap
 GUS BDL and Eurostat by design; the source is kept, never deduplicated.
 
 Left out (next steps, same API): the other 100+ strategies and programmes (national, supra-regional, voivodeship,
