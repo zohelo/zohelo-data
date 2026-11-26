@@ -1,0 +1,23 @@
+version: 2
+sources:
+- name: openalex
+  description: OpenAlex REST API (register CD-028), works with an author affiliated in Poland (counts) and the Polish institutions
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/openalex/
+    loaded_by: ingestion/to_bronze/openalex/
+    config: ingestion/sources/openalex.yaml
+  tables:
+  - name: openalex_works_counts
+    description: >-
+      Rows of the newest copy of entity works_pl, values as published text: record_kind 'group' (one per group of a
+      group_by publication_year answer: request, field id of the request, year, count, the answer's groups_count and
+      count) and 'field' (one per OpenAlex field: field and domain id and name); partitioned by entity.
+  - name: openalex_institutions
+    description: >-
+      Rows of the newest copy of entity institutions_pl, one per institution with country_code PL: OpenAlex id, ROR,
+      name, type, geo (city, region, country, coordinates), works and citation counts, counts_by_year and lineage as
+      JSON text, updated date; partitioned by entity.
+  - name: openalex_rejected_files
+    description: Files of openalex the Bronze decoder rejected, with the reason.
