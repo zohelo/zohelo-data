@@ -2222,7 +2222,8 @@ sources:
   name: GUS thematic publications with downloadable statistical tables
   short_name: GUS publication tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_health
+  status: built
   family: B
   kpi: true
   geography: Poland and regional Poland
@@ -2257,12 +2258,18 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Choose publication-family whitelist
-    - 'Check each chosen publication for embedded third-party material (owners'' terms apply)'
+    - 'Whitelist (#2451): this entry is built as the health family, source gus_health ("Zdrowie i ochrona zdrowia w
+      <year> r.", editions 2012-2024; Dev probe 45746829360): medical personnel and general hospitals by voivodeship.
+      Culture, cultural participation and tourism are their own entries (PLS-027, PLS-028, PLS-035); the census,
+      labour and prices tables are built elsewhere. Other health tables are in Bronze, not modelled.'
+    - 'Third-party material: the modelled tables name as source "dane Ministerstwa Zdrowia, Ministerstwa Spraw
+      Wewnętrznych i Administracji oraz GUS" (public administration data published by GUS); no NFZ or other
+      third-party tables are modelled.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/
+    - https://stat.gov.pl/obszary-tematyczne/zdrowie/zdrowie/
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
     - https://stat.gov.pl/en/copyright/
 - id: PLS-005
