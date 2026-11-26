@@ -8,6 +8,7 @@ arguments (default: the newest and the oldest year) to the job log. Annotations:
 from __future__ import annotations
 
 import collections
+import re
 import sys
 import time
 
@@ -53,12 +54,14 @@ def main(argv: list[str]) -> int:
                 n[0], n[1], n[2] = max(n[0], r), max(n[1], c), n[2] + 1
             print(f"MEMBER {entity} | {member} | {len(data)} B | " + " ; ".join(f"{s}:{v[0]}x{v[1]}/{v[2]}" for s, v in sheets.items()), flush=True)
             names.append(member.rsplit("/", 1)[-1])
-            if entity in dump:
+            base = member.rsplit("/", 1)[-1]
+            if re.match(r"^(1|10)(\.|\s|_(?![12][_.]))", base):
                 for s in sheets:
+                    last = sheets[s][0]
                     print(f"=== {entity} :: {member} :: {s}", flush=True)
                     rows = collections.defaultdict(list)
                     for s2, r, c, v in cells:
-                        if s2 == s and r <= 70 and c <= 30:
+                        if s2 == s and (r <= 9 or r > last - 14):
                             rows[r].append(f"c{c}={v.replace(chr(10), ' ')[:45]}")
                     for r in sorted(rows):
                         print(f"  r{r}: " + " | ".join(rows[r]), flush=True)
