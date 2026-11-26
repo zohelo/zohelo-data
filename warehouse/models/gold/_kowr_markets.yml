@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_kowr_markets
+    description: >-
+      Build stage — KOWR weekly grain report (register PLS-033): FOB export prices in EUR/t of milling wheat, feed
+      barley and maize by export market (US Gulf, Rouen, Bordeaux, Black Sea ports), daily at the quotation date the
+      report names (one quotation a week), values and unit as published (stated source KE, EBC, NBP). Black Sea ports
+      stay '_X'. The weekly tables of the report stay in Silver.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: [US, FR, _X]}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: [D]}}}]
+      - name: value
+        tests: [not_null]
