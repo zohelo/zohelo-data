@@ -1,4 +1,4 @@
-"""Dev trial (scratch only): per-block Gold of KNF banking-sector data, NBP balance of payments and UN WPP (#3302).
+"""Dev trial (scratch only): per-block Gold of NBP balance of payments and UN WPP (#3302).
 
 Runs warehouse/observations.py for the three sources into the scratch namespace and prefix zz_dev_gold3302: the
 first-load guard, the load, a second run with nothing to do, then checks of the scratch tables against production
@@ -28,7 +28,7 @@ from ingestion.common.report import annotate
 from warehouse import observations as obs
 
 NS = "zz_dev_gold3302"
-SOURCES = ("knf_banking", "nbp_bop", "un_wpp")
+SOURCES = ("nbp_bop", "un_wpp")
 
 
 def connect():
@@ -271,13 +271,11 @@ def check_un_wpp(con) -> dict:
         "silver_values_estimates_projections_nan": one(
             con,
             "select count(*), count(*) filter (where not is_projection), count(*) filter (where is_projection), "
-            "count(*) filter (where isnan(value) or isinf(value)) from long as l inner join silver as x "
-            "on l.loc_id = x.loc_id and l.year = x.year",
+            "count(*) filter (where isnan(value) or isinf(value)) from long",
         ),
         "expected_gold_rows": one(
             con,
-            "select count(*) from long as l inner join silver as x on l.loc_id = x.loc_id and l.year = x.year "
-            "where not x.is_projection and not isnan(l.value) and not isinf(l.value)",
+            "select count(*) from long where not is_projection and not isnan(value) and not isinf(value)",
         )[0],
         "indicator_columns": one(con, "select count(distinct column_name) from long")[0],
         "iso2_repeated": con.execute(
