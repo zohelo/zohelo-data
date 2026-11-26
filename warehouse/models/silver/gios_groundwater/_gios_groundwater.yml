@@ -1,0 +1,57 @@
+version: 2
+models:
+  - name: gios_groundwater_results
+    description: >-
+      GIOŚ groundwater quality monitoring (register PL-ENV-012; licence cc_by_4_0_gios_groundwater, dane.gov.pl dataset
+      1405): physico-chemical results per monitoring point, indicator and sampling date, 2019 on (diagnostic network
+      2019 and 2022, operational network 2020, 2021, 2023, 2024). Values as published; below the limit of quantification
+      ('<0,002') the value is NULL with below_limit true and the limit in limit_value, never 0; 'n.o.' (not determined)
+      is not loaded. Dev trial 45816380441: 412,078 rows, 357 indicators, samples 2019-04-02 to 2024-09-25.
+      Grain: point_key x indicator_key x sample_date.
+    tests:
+      - unique:
+          column_name: "point_key || '|' || indicator_key || '|' || sample_date"
+    columns:
+      - name: point_key
+        tests: [not_null]
+      - name: indicator_key
+        tests: [not_null]
+      - name: sample_date
+        tests: [not_null]
+      - name: survey_year
+        tests: [not_null]
+      - name: indicator_group
+        tests: [not_null, {accepted_values: {arguments: {values: [inorganic, organic]}}}]
+      - name: monitoring_kind
+        tests: [not_null, {accepted_values: {arguments: {values: [diagnostic, operational]}}}]
+      - name: value_status
+        tests: [not_null, {accepted_values: {arguments: {values: [measured, below_limit]}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: gios_groundwater_points
+    description: >-
+      GIOŚ groundwater monitoring points as each year's result files describe them (register PL-ENV-012): point
+      numbers, EU identifiers and groundwater bodies (JCWPd) of the 161, 172 and 174 divisions, PUWG 1992
+      coordinates, voivodeship, powiat, gmina and locality names as published (no TERYT codes), hydrogeological
+      attributes; an attribute with several values in one year is NULL and named in conflicting_attributes.
+      Dev trial 45816380441: 4,187 point-years, no conflicting attribute. Grain: point_key x survey_year.
+    tests:
+      - unique:
+          column_name: "point_key || '|' || survey_year"
+    columns:
+      - name: point_key
+        tests: [not_null]
+      - name: survey_year
+        tests: [not_null]
+      - name: voivodeship
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [dolnośląskie, kujawsko-pomorskie, lubelskie, lubuskie, łódzkie, małopolskie, mazowieckie,
+                         opolskie, podkarpackie, podlaskie, pomorskie, śląskie, świętokrzyskie, warmińsko-mazurskie,
+                         wielkopolskie, zachodniopomorskie]
+      - name: voivodeship_values
+        tests: [not_null, {accepted_values: {arguments: {values: [1], quote: false}}}]
+      - name: raw_sha256
+        tests: [not_null]
