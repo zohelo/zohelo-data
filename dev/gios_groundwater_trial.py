@@ -88,8 +88,8 @@ def main(argv) -> int:
     except Exception as exc:  # noqa: BLE001
         reach = {"error": f"{type(exc).__name__}: {str(exc)[:160]}"}
     reach["seconds"] = round(time.monotonic() - started, 1)
-    annotate("notice" if reach.get("status") == 200 else "error", "gios_groundwater trial reach dane.gov.pl", reach)
     if reach.get("status") != 200:
+        annotate("error", "gios_groundwater trial reach dane.gov.pl", reach)
         return 1
     try:
         states, codes = [], []
@@ -106,6 +106,7 @@ def main(argv) -> int:
             "exit_codes": codes,
             "second_run_unchanged": states[0] == states[1],
             "verify_exit": verify_rc,
+            "reach": reach,
         }
         annotate("notice", "gios_groundwater trial landing", landing_stats)
 
@@ -128,7 +129,6 @@ def main(argv) -> int:
             "rejected": [(x.get("entity"), (x.get("error") or "")[:300]) for x in rejected],
             "second_run_unchanged": snapshots[0] == snapshots[1],
         }
-        annotate("notice" if not rejected else "error", "gios_groundwater trial bronze", bronze_stats)
         profile = {
             "samples_no_monbada": n("select count(*) from b where record_kind = 'sample' and point_monbada is null"),
             "samples_no_monbada_no_idm": n("select count(*) from b where record_kind = 'sample' and point_monbada is null and point_id_monitoring is null"),
@@ -148,7 +148,8 @@ def main(argv) -> int:
             "indicators": n("select count(distinct lower(regexp_replace(indicator, '\\s+', '', 'g'))) from b where record_kind = 'value'"),
             "nitrate_headers": n("select string_agg(distinct indicator, ' | ') from b where record_kind = 'value' and lower(indicator) like 'azotany%'"),
         }
-        annotate("notice", "gios_groundwater trial bronze profile", profile)
+        bronze_stats["profile"] = profile
+        annotate("notice" if not rejected else "error", "gios_groundwater trial bronze", bronze_stats)
 
         tables = {"gios_groundwater_records": "b"}
         res_sql = render(SILVER / "gios_groundwater_results.sql", tables)
@@ -169,6 +170,8 @@ def main(argv) -> int:
             "status": n(f"select string_agg(value_status || '=' || c, ' ') from (select value_status, count(*) c from {r_} group by 1)"),
             "not_determined_dropped": n("select count(*) from b where record_kind = 'value' and trim(value) = 'n.o.'"),
             "zero_values": n(f"select count(*) from {r_} where value = 0"),
+            "zero_by_indicator": n(f"""select string_agg(indicator || ' ' || value_text || '=' || c, '; ') from (select indicator, value_text, count(*) c
+                from {r_} where value = 0 group by 1, 2 order by c desc)"""),
             "dup_grain": n(f"select count(*) from (select 1 from {r_} group by point_key, indicator_key, sample_date having count(*) > 1)"),
             "dup_examples": n(f"""select string_agg(k, ' ') from (select point_key || '/' || indicator_key || '/' || sample_date k from {r_}
                 group by point_key, indicator_key, sample_date having count(*) > 1 limit 5)"""),
@@ -207,7 +210,6 @@ def main(argv) -> int:
                 and unit_code <> '%' group by 1, 2) x join {g} p using (measure_key, date_key) where p.geography_key = 'PL' and x.v <> p.value"""),
             "test_failures": {k: v for k, v in gold_failures.items() if v} or "none",
         }
-        annotate("notice" if not any(gold_failures.values()) else "error", "gios_groundwater trial gold", gold_stats)
         spot = {
             "pl": n(f"""select string_agg(period_label || ' ' || measure_codes || '=' || round(value, 2), '; ' order by period_label, measure_codes)
                 from {g} where geography_key = 'PL'"""),
@@ -215,7 +217,6 @@ def main(argv) -> int:
                 where geography_source_code = 'mazowieckie' and period_label = '2022'"""),
             "max_nitrate": n(f"select max(value) from {r_} where indicator_key = 'azotany[mgno3/l]'"),
         }
-        annotate("notice", "gios_groundwater trial spot values", spot)
         # KPI rows: the metrics rows the concept would take, per area x period (at most 1)
         km = list(csv.DictReader((ROOT / "warehouse/seed_rows/kpi_measure/gios_groundwater.csv").open()))
         pattern = km[0]["measure_key_pattern"]
@@ -226,8 +227,10 @@ def main(argv) -> int:
         }
         src = list(csv.DictReader((ROOT / "warehouse/seed_rows/source/gios_groundwater.csv").open()))
         lic = {r["licence_key"]: r for f in (ROOT / "warehouse/seed_rows/licence").glob("*.csv") for r in csv.DictReader(f.open())}
-        kpi_stats["licence_row"] = lic.get(src[0]["licence_key"], "MISSING")
-        annotate("notice", "gios_groundwater trial kpi and licence", kpi_stats)
+        row = lic.get(src[0]["licence_key"], {})
+        kpi_stats["licence_row"] = {k: row.get(k) for k in ("licence_key", "name", "commercial_ok")} if row else "MISSING"
+        gold_stats.update({"spot": spot, "kpi": kpi_stats})
+        annotate("notice" if not any(gold_failures.values()) else "error", "gios_groundwater trial gold", gold_stats)
         print("STATS", landing_stats, bronze_stats, profile, silver_stats, gold_stats, spot, kpi_stats, flush=True)
     finally:
         removed = 0
