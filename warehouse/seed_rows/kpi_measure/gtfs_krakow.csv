@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+scheduled_transit_trips,gtfs_krakow,gtfs_krakow:scheduled_trips:trips,"scheduled trips per service day, ZTP Kraków GTFS timetable",1,

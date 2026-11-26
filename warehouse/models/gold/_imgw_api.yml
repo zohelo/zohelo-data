@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_imgw_api
+    description: >-
+      Build stage — IMGW public data API: Poland daily mean air temperature from the provisional synoptic snapshots
+      (station day = mean of the 8 main synoptic terms, all eight required; Poland = mean of at least 30 stations),
+      status provisional, its own series next to the verified archive (O31). Rule in the model header.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: observation_status_key
+        tests: [{accepted_values: {arguments: {values: [provisional]}}}]
