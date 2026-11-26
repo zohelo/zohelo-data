@@ -7,7 +7,7 @@
    - kind: by Rodzaj dokumentu ({"document_kind": <as published>});
    - status: by the status of the downloaded list ({"status_key": realised | withdrawn | in_progress}); a draft's
      status changes after it is published, so these counts are the state on the download date;
-   - responsible_body: by Organ odpowiedzialny ({"responsible_body": <as published>}).
+   - responsible_body: by Organ odpowiedzialny ({"responsible_body": <as published>}; '_U' where the list names none).
    Only periods in which a draft was published have a row (no zero filling, never a 0). Planned adoption dates are
    plans and are not counted. The period holding the download date is provisional. raw_sha256 = the Landing file's
    SHA-256 (one file). #}
@@ -37,7 +37,7 @@ geo_map as (
     ('total', "'{}'", 'null'),
     ('kind', "json_object('document_kind', document_kind)::varchar", "json_object('document_kind', document_kind)::varchar"),
     ('status', "json_object('status_key', status_key)::varchar", "json_object('status_key', coalesce(status_text, 'w realizacji (brak statusu)'))::varchar"),
-    ('responsible_body', "json_object('responsible_body', responsible_body)::varchar", "json_object('responsible_body', responsible_body)::varchar"),
+    ('responsible_body', "json_object('responsible_body', coalesce(responsible_body, '_U'))::varchar", "json_object('responsible_body', coalesce(responsible_body, 'nie podano (not given)'))::varchar"),
 ] %}
 {% set freqs = [('M', 'monthly', 'month', '%Y-%m'), ('A', 'annual', 'year', '%Y')] %}
 counted as (
