@@ -6,7 +6,8 @@ models:
       1405): physico-chemical results per monitoring point, indicator and sampling date, 2019 on (diagnostic network
       2019 and 2022, operational network 2020, 2021, 2023, 2024). Values as published; below the limit of quantification
       ('<0,002') the value is NULL with below_limit true and the limit in limit_value, never 0; 'n.o.' (not determined)
-      is not loaded. Grain: point_key x indicator_key x sample_date.
+      is not loaded. Dev trial 45816380441: 412,078 rows, 357 indicators, samples 2019-04-02 to 2024-09-25.
+      Grain: point_key x indicator_key x sample_date.
     tests:
       - unique:
           column_name: "point_key || '|' || indicator_key || '|' || sample_date"
@@ -33,7 +34,7 @@ models:
       numbers, EU identifiers and groundwater bodies (JCWPd) of the 161, 172 and 174 divisions, PUWG 1992
       coordinates, voivodeship, powiat, gmina and locality names as published (no TERYT codes), hydrogeological
       attributes; an attribute with several values in one year is NULL and named in conflicting_attributes.
-      Grain: point_key x survey_year.
+      Dev trial 45816380441: 4,187 point-years, no conflicting attribute. Grain: point_key x survey_year.
     tests:
       - unique:
           column_name: "point_key || '|' || survey_year"
