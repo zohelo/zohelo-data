@@ -89,7 +89,10 @@ it cannot follow macros found by name; a full parse takes about five seconds.
 - **Lines of sources registered before D34** moved to the sources' own files one kind at a time, each move
   proved not to change the resolved lists, the compiled SQL or a build fingerprint. Moved (16 November): the
   sources' Gold tables and row ceilings in `warehouse.yaml` (`gold.build_public_finance` stays, shared by
-  the MF family). Still shared: the Gold macros, the geography map and `docs/sources.md`. Moving the Gold
+  the MF family). Moved (25 November): their sections of `docs/sources.md`, one file each in `docs/sources/`
+  (the NBP section gave `nbp_interest_rates` and `nbp_bop` their own files; the text is unchanged, headings one
+  level up); `docs/sources.md` keeps the register status table and the route matrix of the first five sources.
+  Still shared: the Gold macros and the geography map. Moving the Gold
   macros is mechanical (cut the block macros, the list line, the CTE and the branch into
   `macros/sources/<source>.sql`; a trial move of WHO changed only the position of its branches in the
   compiled SQL) but reorders the unions, so the compiled SQL of the facts changes once. Do it in one pull
