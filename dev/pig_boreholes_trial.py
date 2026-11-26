@@ -185,7 +185,7 @@ def trial(cat) -> None:
     series = ("measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || "
               "coalesce(geography_source_code, '') else '' end || '|' || breakdown_json")
     note("boreholes gold build_pig_boreholes", {
-        "rows_two_builds_seconds": gold_rows, "join_ops": ops, "prg_gminas": one(con, "select count(*) from prg_t"),
+        "rows_two_builds_seconds": gold_rows, "plan_joins": ops or plan[:200], "prg_gminas": one(con, "select count(*) from prg_t"),
         "map_rows": one(con, "select count(*) from map_t"),
         "dup_series_x_date": one(con, f"select count(*) from (select {series}, date_key from gold_t group by all "
                                       "having count(*) > 1)"),
@@ -217,11 +217,11 @@ def trial(cat) -> None:
                                       "lower(p.voivodeship_name)), count(*) filter (where p.voivodeship_name is null) from "
                                       "placed_t p join geo g on g.level_name = 'wojewodztwo' and g.terc_code = p.w[1] "
                                       "where len(p.w) = 1"),
-        "woj_sum_vs_poland": q(con, "select sum(value) filter (where length(geography_source_code) = 2), sum(value) "
-                                    "filter (where length(geography_source_code) = 4), max(value) filter (where "
+        "woj_sum_vs_poland": q(con, "select sum(value) filter (where length(geography_source_code) = 2 and "
+                                    "geography_key <> 'PL'), sum(value) filter (where length(geography_source_code) = 4), max(value) filter (where "
                                     "geography_key = 'PL') from gold_t where is_total"),
         "voivodeships_top": q(con, "select g.name_pl, b.value from gold_t as b join geo as g using (geography_key) "
-                                   "where b.is_total and length(b.geography_source_code) = 2 order by 2 desc limit 5"),
+                                   "where b.is_total and length(b.geography_source_code) = 2 and b.geography_key <> 'PL' order by 2 desc limit 5"),
         "powiats_top": q(con, "select g.name_pl, b.value from gold_t as b join geo as g using (geography_key) "
                               "where b.is_total and length(b.geography_source_code) = 4 order by 2 desc limit 3")})
 
