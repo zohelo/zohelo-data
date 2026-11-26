@@ -1,0 +1,25 @@
+version: 2
+models:
+  - name: poc_build_uprp_statistics
+    description: >-
+      Build stage — UPRP industrial-property statistics (register EX-001), Poland, annual 2015 on: applications and
+      rights granted or registered for inventions, utility models, trademarks and industrial designs (total, by
+      procedure and origin as printed) and European patents validated in Poland, one measure per table and row,
+      counts as published; the newest annual report holding a checked cell.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: [PL]}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_patent_applications
+    description: KPI patent_applications (draft) from gold.build_uprp_statistics (macros/poc_metrics.sql).
+  - name: poc_metrics_patents_granted
+    description: KPI patents_granted (draft) from gold.build_uprp_statistics (macros/poc_metrics.sql).
+  - name: poc_metrics_trademark_applications
+    description: KPI trademark_applications (draft) from gold.build_uprp_statistics (macros/poc_metrics.sql).
+  - name: poc_metrics_industrial_design_applications
+    description: KPI industrial_design_applications (draft) from gold.build_uprp_statistics (macros/poc_metrics.sql).

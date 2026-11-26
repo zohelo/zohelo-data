@@ -9910,7 +9910,8 @@ sources:
   name: Industrial-property statistical APIs
   short_name: UPRP industrial-property statistics
   provider: Patent Office of the Republic of Poland (UPRP)
-  status: approved
+  source_system: uprp_statistics
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -10007,8 +10008,9 @@ sources:
       tej domeny zabrania dostępu programom (Disallow: /). Proszę o informację: (1) czy mogę pobierać te dziesięć
       zestawień programem raz w miesiącu; (2) na jakich warunkach mogę je ponownie wykorzystywać i publikować w
       serwisie zohelo.com z adnotacją »Źródło: Urząd Patentowy RP«."'
-    - 'Build task, not a review blocker: the pipeline has no PDF reader, and the reports for 2003 to 2024 were not
-      opened, so their layouts are unknown.'
+    - 'Built (#3265): the Polish reports 2019 to 2025 are read with pypdf (statistics tables, each cell checked by its
+      table''s sums; docs/sources/uprp_statistics.md); the 2003 to 2018 reports have other layouts and are not read,
+      so years before 2015 (validations before 2017) are not loaded.'
     - 'Not verified: whether P3005 and P3006 are already in Bronze (the GUS BDL initial load is in progress); the
       variables of P3006; everything inside the ten API endpoints.'
     references:
