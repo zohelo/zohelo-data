@@ -155,6 +155,11 @@ def main(argv) -> int:
         show(con, "labels per year", f"select report_year, table_code, measure_code, string_agg(distinct measure_label, ' || ') from {s} group by all order by all", limit=400)
         show(con, "gmina TERYT codes on several rows", f"""select report_year, table_code, area_code, count(*) / count(distinct measure_code) as rows_, string_agg(distinct area_name, ' / ')
             from {s} where layout = 'gmina' group by all having count(*) > count(distinct measure_code) order by all""", limit=80)
+        show(con, "city rows (Warszawa, Kraków, Łódź, Poznań, Wrocław): code, name, incidents", f"""select report_year, area_code, area_name, value
+            from {s} where layout = 'gmina' and measure_code = 'OGÓŁEM' and (left(area_code, 4) in ('1465', '1261', '1061', '3064', '0264')
+            or area_name in ('Warszawa', 'Kraków', 'Łódź', 'Poznań', 'Wrocław')) order by all""", limit=200)
+        show(con, "gmina codes per year present in one year only", f"""select area_code, string_agg(distinct report_year::varchar, ','), string_agg(distinct area_name, ' / ')
+            from {s} where layout = 'gmina' group by 1 having count(distinct report_year) < 3 order by 1""", limit=200)
         show(con, "gmina rows per year", f"select report_year, table_code, count(distinct area_code), count(*) from {s} where layout = 'gmina' group by all order by all")
 
         # Gold: geography map from teryt_terc (read-only), build stage twice, grain and spot values
@@ -171,7 +176,7 @@ def main(argv) -> int:
         bounds = {"P": (500, 4e5), "MZ": (1000, 1.5e6), "AF": (50, 2e5)}
         stats["gold"] = {
             "rows_two_builds": gold_counts,
-            "blocks": n("select string_agg(k, '; ') from (select block_id || ' ' || count(*) || ' rows, ' || count(distinct measure_key) || ' measures' k from gold group by 1)"),
+            "blocks": n("select string_agg(k, '; ') from (select block_id || ' ' || count(*) || ' rows, ' || count(distinct measure_key) || ' measures' k from gold group by block_id)"),
             "areas": n("select count(distinct geography_key) from gold"),
             "years": n("select min(period_label) || '..' || max(period_label) from gold"),
             "dup_series_date": n("select count(*) from (select 1 from gold group by measure_key || '|' || geography_key || '|' || breakdown_json, date_key having count(*) > 1)"),
@@ -187,6 +192,8 @@ def main(argv) -> int:
         spot = n("""select string_agg(period_label || ' ' || k, '; ' order by period_label) from (select period_label, string_agg(replace(measure_codes, 'OGÓŁEM:ogolem:', 'all_') || '=' || cast(value as bigint), ' ' order by measure_codes) k
             from gold where geography_key = 'PL' and measure_codes in ('P', 'MZ', 'AF', 'OGÓŁEM', 'OGÓŁEM:ogolem:smiertelne', 'OGÓŁEM:ogolem:ranni') group by 1)""")
         note(f"{SOURCE} trial Poland", {"values": spot})
+        show(con, "gold 2021-2025 incidents (OGÓŁEM) per area", """pivot (select geography_key, period_label, value from gold where measure_codes = 'OGÓŁEM' and period_label >= '2021')
+            on period_label using max(value) order by geography_key""")
         show(con, "gold voivodeships, fires", "select geography_key, period_label, value from gold where measure_codes = 'P' order by 1, 2", limit=200)
         from warehouse.seed_rows import rows as seed_rows
 
