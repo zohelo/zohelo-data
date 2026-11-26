@@ -1,0 +1,38 @@
+source_system: zus_yearbook
+description: "ZUS — Rocznik Statystyczny Ubezpieczeń Społecznych (social insurance statistical yearbook), PDF editions, curated voivodeship tables"
+
+# Extraction strategy (docs/landing.md). Register PLS-010. Bulk feature: ZUS publishes the yearbook every three years
+# as one PDF per edition on https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
+# (no XLSX, CSV, API or dane.gov.pl copy found: Dev probe 43326914693). The page links each edition under
+# /documents/10182/167642/<name>.pdf/<uuid>; ingestion/to_landing/zus_yearbook/ follows the page (at most 4 list pages,
+# 5 s apart) and lands the Polish editions from 2009-2011 on. Entity = one edition (rocznik_<first>_<last>), version =
+# Last-Modified (download time when absent), written only when the SHA-256 changed; missing editions first, then the
+# newest edition again. Restart unit: one edition. Bronze keeps the PDF text layer line by line (pypdf, layout mode);
+# Silver finds its tables by title and reads the rows by voivodeship name (warehouse/models/silver/zus_yearbook/).
+# History: 31 December 2009-2023, five editions (2009-2011 to 2021-2023), 23,963,152 bytes, 63,327 Bronze lines
+# (Dev trial 45708846339).
+extraction:
+  initial: bulk
+  production: snapshot                  # each edition file as published; a correction replaces it
+  incremental_policy: changed_since_last  # new editions; SHA-256 of the newest edition
+  schedule: # UTC; one edition every three years (2021-2023 edition published in 2026); monthly check
+    - {cron: "40 6 9 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/zus_yearbook/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.zus_yearbook_lines, bronze.zus_yearbook_rejected_files]
+silver: [silver.zus_yearbook_tables]
+gold: [gold.build_zus_yearbook]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  zus_yearbook_tables: {rows: 800}  # 510 rows: 2 tables x 17 areas x 15 years 2009-2023 (Dev trial 45708846339)
+  poc_build_zus_yearbook: {rows: 800}  # 510 rows (Dev trial 45708846339)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): five PDF editions of 2-8 MB, one new every three years, a few hundred Silver
+# rows; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #434"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

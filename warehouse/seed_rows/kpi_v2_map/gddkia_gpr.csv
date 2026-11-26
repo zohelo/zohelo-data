@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+average_daily_traffic_national_roads,poland,A,average_daily_traffic_national_roads,gddkia_gpr,sdrr,gddkia_gpr:sdrr:veh_per_day:dk:motor_vehicles,A,PL;VOIV,,mean,neutral,ready,"census editions 2020/21 and 2025 (every five years); length-weighted mean of the measured sections"

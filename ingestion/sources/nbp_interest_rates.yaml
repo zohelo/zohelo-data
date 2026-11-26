@@ -22,8 +22,9 @@ extraction:
   initial: bulk
   production: snapshot                  # each file is complete
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: # UTC; release: MPC decisions take effect the day after the meeting (about monthly); two small files, weekday check
-    - {cron: "40 12 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; release: MPC decisions take effect the day after the meeting (about monthly; meetings usually end
+    # on a Wednesday); two small files, one run a week, Thursday (O46, weekly until production use; was every weekday)
+    - {cron: "40 12 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nbp_interest_rates/
 archive_policy:

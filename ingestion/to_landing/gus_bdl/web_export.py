@@ -29,7 +29,7 @@ import tempfile
 import time
 from typing import Any
 
-from ingestion.common.r2 import req, s3
+from ingestion.common.r2 import read_receipt, req, s3
 from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.gus_bdl.api import Bdl, token
 from ingestion.to_landing.gus_bdl.inspect import DATA, landing_versions
@@ -586,7 +586,7 @@ def landed_parts(client, bucket: str, subgroup_id: str, version_token: str) -> d
     for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=prefix):
         for o in page.get("Contents", []):
             if o["Key"].endswith(".receipt.json"):
-                part = json.loads(client.get_object(Bucket=bucket, Key=o["Key"])["Body"].read()).get("part") or {}
+                part = json.loads(read_receipt(client, bucket, o["Key"])).get("part") or {}
                 out.setdefault(int(part.get("total", 1)), set()).add(int(part.get("index", 1)))
     return out
 
