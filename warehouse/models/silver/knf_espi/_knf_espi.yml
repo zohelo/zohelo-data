@@ -3,7 +3,7 @@ models:
   - name: knf_espi_reports
     description: >-
       ESPI issuer reports in KNF's public OAM list (register CD-006), from bronze.knf_espi_reports (newest landed
-      copy of each day of receipt), 1 January of the previous year onwards. Grain: report_id (OAM document id), one
+      copy of each day of receipt), from the first run's floor (1 January 2025) on; held days are kept, so it accumulates. Grain: report_id (OAM document id), one
       row per report. Issuer name, day received, ESPI form code of the title (report_type), link to the report's
       page, the day's stated report count. No titles (persons), no report texts or attachments, no issuer
       identifiers (the list gives none). Completeness: tests/knf_espi_reports_complete.sql. Dev trial 43831909084:

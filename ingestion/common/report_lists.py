@@ -1,6 +1,6 @@
 """Issuer report lists (KNF OAM: ESPI reports, CD-006; GPW report list: EBI reports, CD-007), shared code.
 
-Both sources are public HTML lists of issuer reports, read politely (decision D38): list pages only, one request
+Both sources are public HTML lists of issuer reports, read politely (decision D39): list pages only, one request
 at a time, PAUSE_SECONDS apart, the platform's identified User-Agent, bounded retries, never a report document or
 an attachment. A refusal (4xx, robots.txt, bot protection) stops the day; it is never tried another way.
 
@@ -337,9 +337,10 @@ def landed_specs(source: str, landing_root: str = "01_landing") -> list[dict[str
 def days_to_read(today: date, held: list[date], reread: int, backfill: int) -> list[tuple[date, str]]:
     """The days of one run, in reading order, each with why it is read:
     ``window``    today and the ``reread`` days before it, oldest first: read on every run;
-    ``gap``       working days (Monday to Friday) between the oldest landed day and the window without a copy,
-                  oldest first: a day a past run failed on (a public holiday without reports is asked again,
-                  one request);
+    ``gap``       every day between the oldest landed day and the window without a copy, oldest first: a day
+                  a past run failed on, weekends included (a weekly run's window day that failed falls out of the
+                  next window); a day without reports is asked again on every run, one request each (about one
+                  day in eleven in the Dev trial, so about 60 requests, 6 minutes, a run for two years held);
     ``backfill``  every day from ``backfill`` days before today up to the oldest landed day (or the window),
                   newest first, so an interrupted backfill continues where it stopped."""
     window_start, floor = today - timedelta(days=reread), today - timedelta(days=backfill)
@@ -349,7 +350,7 @@ def days_to_read(today: date, held: list[date], reread: int, backfill: int) -> l
     plan = [(today - timedelta(days=n), "window") for n in range(reread, -1, -1)]
     day = oldest + timedelta(days=1)
     while day < window_start:
-        if day not in have and day.weekday() < 5:
+        if day not in have:
             plan.append((day, "gap"))
         day += timedelta(days=1)
     day = oldest - timedelta(days=1) if oldest in have else oldest

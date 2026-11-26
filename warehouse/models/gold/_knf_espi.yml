@@ -3,7 +3,8 @@ models:
   - name: poc_build_knf_espi
     description: >-
       Build stage — ESPI issuer reports received by KNF (OAM list) per month, Poland, total and by ESPI form code;
-      complete months only (after the month of the oldest day held, before the current month).
+      complete months only (after the month of the oldest day held, before the month of the newest day held: a later
+      report proves the month was read to its end).
     columns:
       - name: measure_key
         tests: [not_null]
@@ -13,7 +14,7 @@ models:
         tests: [not_null]
   - name: filing_knf_espi
     description: >-
-      One row per ESPI report in KNF's OAM list (register CD-006, 1 January of the previous year onwards): OAM
+      One row per ESPI report in KNF's OAM list (register CD-006, from 1 January 2025, accumulating): OAM
       document id, issuer name, day received, ESPI form code, link. The list gives no issuer identifier (KRS, NIP,
       REGON, LEI, ISIN), so no join to GLEIF; titles are not stored. Terms unresolved: internal only.
     columns:

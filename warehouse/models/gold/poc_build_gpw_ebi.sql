@@ -3,7 +3,10 @@
    publication (Warsaw time as listed), Poland. Fact kind: event counts. measure_key gpw_ebi:reports:reports,
    monthly only; breakdown category (as listed: Current, Quarterly, …) and the total (category _T, is_total). Only
    complete months: after the month of the oldest report held (the first run reads back to a floor, so that month
-   can be partial) and before the current month (still open). A month without a report held has no row, never a 0:
+   can be partial) and before the month of the newest report held (and the current month): Gold builds weekly and
+   the list is read on Fridays, so the calendar alone would count a month whose last days are unread; a report
+   published after the month proves a read after it ended, and each read takes everything from the newest held day
+   down, so the month was read to its end. Few EBI reports a month, so a month can wait for the next report. A month without a report held has no row, never a 0:
    an empty answer of the list cannot be told from a month without reports. A report is counted once, on its day of
    publication; a correction is its own report. Provenance: the newest version and the newest day document of the
    month. #}
@@ -20,7 +23,7 @@ with reports as (
 window_months as (
     select
         cast(date_trunc('month', min(published_date)) + interval 1 month as date) as first_month,
-        cast(date_trunc('month', current_date) as date) as open_month
+        cast(least(date_trunc('month', current_date), date_trunc('month', max(published_date))) as date) as open_month
     from reports
 ),
 

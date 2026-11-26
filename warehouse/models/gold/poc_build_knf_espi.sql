@@ -3,7 +3,11 @@
    Poland. Fact kind: event counts. measure_key knf_espi:reports:reports, monthly only; breakdown report_type
    (the ESPI form code as listed, '_U' none) and the total (report_type _T, is_total). Only complete months: after
    the month of the oldest day held (the history is read newest first, so that month can be partial) and before the
-   current month (still open); a month outside that range has no row, never a 0. A report is counted once, on its
+   month of the newest day held (and the current month). Gold builds weekly, days after the last read (Tuesday) are
+   not held yet, so the calendar alone would count a month whose last days are unread; a report received after the
+   month proves a read after the month ended, and every read takes the 8 days before it again (REREAD_DAYS), so the
+   month's last day was read. A window day that failed is read again by later runs (days_to_read) and the full
+   rebuild corrects the month. A month outside that range has no row, never a 0. A report is counted once, on its
    day of receipt; a correction is its own report. Provenance: the newest version and the newest day document of
    the month. #}
 with reports as (
@@ -19,7 +23,7 @@ with reports as (
 window_months as (
     select
         date_trunc('month', min(received_date)) + interval 1 month as first_month,
-        date_trunc('month', current_date) as open_month
+        least(date_trunc('month', current_date), date_trunc('month', max(received_date))) as open_month
     from reports
 ),
 
