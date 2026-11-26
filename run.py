@@ -419,10 +419,14 @@ def main(argv: list[str] | None = None) -> int:
         _annotate_throttling(args.source, args.activity)
 
 
+RECEIPTS_REPORTED = 1000  # receipt reads in one activity at or above which the counts are annotated
+
+
 def _annotate_throttling(source: str, activity: str) -> None:
     """Storage requests R2 throttled in this activity (#2985): a notice when every one went through
     after waiting, a warning when one was given up. Nothing when no request was throttled. Then the R2 Data
-    Catalog requests the activity sent, by kind (#3133)."""
+    Catalog requests the activity sent, by kind, and the Landing receipts read from R2 and from memory, for an
+    activity that read many (#3133)."""
     r2 = sys.modules.get("ingestion.common.r2")
     report = r2.THROTTLE.report() if r2 else {}
     if report:
@@ -438,6 +442,11 @@ def _annotate_throttling(source: str, activity: str) -> None:
         step_summary(
             f"## {source} {activity} · R2 Data Catalog calls\n\n```json\n{json.dumps(summary, indent=2)}\n```\n"
         )
+    reads = dict(r2.RECEIPT_READS) if r2 else {}
+    if sum(reads.values()) >= RECEIPTS_REPORTED:  # Landing receipts read once per process (#3133)
+        from ingestion.common.report import annotate
+
+        annotate("notice", f"{source} {activity} receipt reads", reads)
 
 
 def _annotate_crash(source: str, activity: str, error: BaseException) -> None:

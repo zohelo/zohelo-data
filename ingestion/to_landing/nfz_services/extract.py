@@ -54,7 +54,7 @@ import zipfile
 from botocore.exceptions import ClientError
 import requests
 
-from ingestion.common.r2 import archive_key, archived, req, s3
+from ingestion.common.r2 import archive_key, archived, read_receipt, req, s3
 from ingestion.common.report import annotate, step_summary
 from ingestion.to_landing.world_bank_icp.extract import USER_AGENT, put_new
 from warehouse import seed_rows
@@ -242,7 +242,9 @@ def landed(client, bucket: str, root: str) -> dict[str, list[dict[str, Any]]]:
     keys = r2_retry(listing)
 
     def read(key: str) -> dict[str, Any]:
-        body = r2_retry(lambda: client.get_object(Bucket=bucket, Key=key)["Body"].read())
+        body = read_receipt(
+            client, bucket, key, lambda: r2_retry(lambda: client.get_object(Bucket=bucket, Key=key)["Body"].read())
+        )
         return {**json.loads(body), "receipt_key": key}
 
     out: dict[str, list[dict[str, Any]]] = {}
