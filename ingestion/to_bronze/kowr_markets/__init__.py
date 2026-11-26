@@ -15,15 +15,16 @@ fob       "Eksportowe ceny zbóż na rynkach zagranicznych (na bazie FOB)": per 
           barley, maize) one row per export market, "<market> EUR/t <price> <3 changes in %> <price in zł/t>", the
           price as of the date in the header ("Cena z 21.10.2026"); stated source "KE, EBC, NBP". Guards: the header,
           the NBP rate line and the source line are present; every row is in a known group with a known market, once;
-          the values are numbers or "-" as printed; the zł/t price equals the EUR price × the NBP rate (±1 % + 1 zł).
+          the values are numbers or "-" as printed. A row whose zł/t price is not the EUR price × the NBP rate (±1 % +
+          1 zł) gets a cell "kontrola" (Silver loads no price from it); some rows print no zł/t price, or nothing.
 eu        "Ceny zakupu zbóż w krajach UE": the 27 member states and "Średnio w UE" (exactly this list, in this order),
           then three blocks of the rows "Cena w EUR/t",
           "tygodniowa", "miesięczna", "roczna" (changes in %) and "Cena w PLN/t", 28 values each (the PLN row may be
           empty, as in 2025), for the report week ("w okresie 12-18.10.2026"); stated source "Komisji Europejskiej".
           The commodity of a block (wheat, barley, maize: a merged label cell) is read from the text positions, as
           the text layer prints the labels in no fixed order. Guards: the list and row order, one label inside each
-          block, 28 values per row, the week equals the file's week, EUR × the ECB rate of the table equals the PLN
-          value (±1 % + 2 zł) wherever both are printed.
+          block, 28 values per row, the week equals the file's week, at most two cells per block where EUR × the ECB
+          rate of the table is not the PLN value (±1 % + 2 zł; each gets a "kontrola" cell, more reject the file).
 exchange  "Ceny wybranych zbóż na krajowych giełdach towarowych": sale offers in zł/t (minimum, maximum, average)
           and three changes of the average in %, one row per known commodity, for the report week ("Oferty za okres
           12-18.10.2026"); stated source "krajowych giełd towarowych". Guards: the headers, known commodities once,
@@ -86,11 +87,11 @@ NO_DATA = {'"-" brak danych', "- brak danych"}
 PRICE = re.compile(r"-|\d+(?:,\d+)?")
 CHANGE = re.compile(r"-|-?\d+(?:,\d+)?|####")
 GROUPED = r"-|[1-9]\d{0,2}(?: \d{3})*"
-FOB_ROW = re.compile(r"(.+?) EUR/t (.+)")
+FOB_ROW = re.compile(r"(.+?) EUR/t(?: (.+))?")
 # "Towar Jedn. miary Cenaz 21.10.2026  Zmiana ceny w % Cena w zł/t"
-FOB_HEADER = re.compile(r"Towar Jedn\. ?miary .*?(\d{1,2}\.\d{2}\.\d{4}).*zł/t")
+FOB_HEADER = re.compile(r"Towar Jedn\. ?miary .*?(\d{1,2}\.\d{2}\.\d{4}).*zł/t(?: tygodniowa miesięczna roczna)?")
 # "Średni kurs NBP z dnia 21.10.2026 r.: EUR = 4,3716 zł." (FOB), "1 EUR = 4,3695 PLN (wg EBC - 22.10.2026 r.)" (EU)
-RATE = re.compile(r"EUR ?= ?(\d,\d{2,4}) ?(?:zł|PLN)")
+RATE = re.compile(r"EUR ?= ?(\d[,.]\d{2,4}) ?(?:zł|PLN)")
 SOURCE_LINE = re.compile(r"Źródło: (.+)")
 LAST_DATE = re.compile(r"(\d{1,2})\.(\d{2})\.(\d{4})(?:\D*)$")
 EXCHANGE_ROW = re.compile(
@@ -143,9 +144,9 @@ def fob(lines: list[str]) -> tuple[str, str, list[tuple[str, str, str, str]]]:
     """(quote date text, stated source, cells (group, market, column, value))."""
     header = [m for m in map(FOB_HEADER.fullmatch, lines) if m]
     rate = [m for m in map(RATE.search, lines) if m]
-    if len(header) != 1 or len(rate) != 1 or "tygodniowa miesięczna roczna" not in lines:
+    if len(header) != 1 or len(rate) > 1 or not any("tygodniowa miesięczna roczna" in x for x in lines):
         raise Layout(f"fob: header lines {len(header)}, rate lines {len(rate)}")
-    nbp, source = number(rate[0].group(1)), stated(lines, "fob")
+    nbp, source = number(rate[0].group(1)) if rate else None, stated(lines, "fob")
     group, cells, seen = None, [], set()
     for line in lines:
         if line in FOB_MARKETS:
@@ -161,35 +162,44 @@ def fob(lines: list[str]) -> tuple[str, str, list[tuple[str, str, str, str]]]:
             ):
                 raise Layout(f"fob: unexpected line {line[:80]!r}")
             continue
-        market, tokens = row.group(1), row.group(2).split(" ")
+        market, tokens = row.group(1), (row.group(2) or "").split(" ")
         if group is None or market not in FOB_MARKETS[group] or (group, market) in seen:
             raise Layout(f"fob: market {market!r} unknown, repeated or outside a group ({group})")
         seen.add((group, market))
-        if tokens == ["0"]:  # "Francja (Bordeaux) EUR/t 0": a zero and nothing else, no price (2023)
-            cells.append((group, market, "cena", "0"))
+        if tokens in (["0"], ["-"], [""]):  # "... EUR/t 0" (Bordeaux 2023), "... EUR/t -", "... EUR/t" (2024)
+            cells += [(group, market, "cena", tokens[0])] if tokens[0] else []
             continue
         price, changes, pln = tokens[0], tokens[1:4], " ".join(tokens[4:])
         if (
             not PRICE.fullmatch(price)
             or len(changes) != 3
             or not all(CHANGE.fullmatch(c) for c in changes)
-            or not re.fullmatch(GROUPED, pln)
+            or not re.fullmatch(f"(?:{GROUPED})?", pln)  # no zł/t price at all on some Black Sea rows (Jan-Mar 2024)
         ):
             raise Layout(f"fob: values of {group} / {market} not as printed: {row.group(2)!r}")
-        if (price == "-") != (pln == "-"):
-            raise Layout(f"fob: {group} / {market}: EUR price {price!r} without zł/t price {pln!r} or the reverse")
-        if price != "-" and abs(number(price) * nbp - number(pln)) > number(pln) / 100 + 1:
-            raise Layout(f"fob: {group} / {market}: {price} EUR/t x {nbp} is not {pln} zł/t")
-        cells += [(group, market, c, v) for c, v in zip(FOB_COLUMNS, [price, *changes, pln], strict=True)]
+        if price == "-" and pln not in ("-", ""):
+            raise Layout(f"fob: {group} / {market}: a zł/t price {pln!r} without an EUR price")
+        values = [price, *changes, *([pln] if pln else [])]
+        cells += [(group, market, c, v) for c, v in zip(FOB_COLUMNS, values, strict=False)]
+        if (
+            nbp
+            and price != "-"
+            and pln not in ("-", "")
+            and abs(number(price) * nbp - number(pln)) > number(pln) / 100 + 1
+        ):
+            # the producer's zł/t column disagrees with its EUR price (Black Sea barley, 27 reports of 2024-2025):
+            # which one is wrong cannot be told, so the row is marked and Silver loads no price from it
+            cells.append((group, market, "kontrola", f"{price} EUR/t x {nbp} <> {pln} zł/t"))
     if {g for g, _ in seen} != set(FOB_MARKETS):
         raise Layout(f"fob: commodity groups found {sorted({g for g, _ in seen})}")
     return header[0].group(1), source, cells
 
 
 def eu_groups(frags: list[tuple[str, float, float]]) -> list[str]:
-    """The commodity of each block, top to bottom, from the positions of the text on the page: the merged label cell
-    ("Pszenica", "Jęczmień", "Kukurydza") lies between its block's "Cena w EUR/t" and "Cena w PLN/t" rows. The text
-    layer prints these labels in no fixed order (Dev trial 45902040402), so their order is never read from it."""
+    """The commodity of each block, top to bottom, from the positions of the text on the page: the block's heading
+    ("Pszenica", "Jęczmień", "Kukurydza") lies above its "Cena w EUR/t" row and below the "Cena w PLN/t" row of the
+    block before (the first: at most one block height above). The text layer prints these headings in no fixed order
+    (Dev trial 45902040402), so their order is never read from it."""
     eur = [y for t, _, y in frags if t.strip().startswith("Cena w EUR/t")]
     pln = [y for t, _, y in frags if t.strip().startswith("Cena w PLN/t")]
     labels = [(t.strip(), y) for t, _, y in frags if t.strip() in EU_GROUPS]
@@ -198,10 +208,11 @@ def eu_groups(frags: list[tuple[str, float, float]]) -> list[str]:
     if eur != sorted(eur, reverse=True) or any(p >= e for e, p in zip(eur, pln, strict=True)):
         raise Layout(f"eu: positions: rows not printed top to bottom (EUR {eur}, PLN {pln})")
     order = []
-    for top, bottom in zip(eur, pln, strict=True):
-        inside = [t for t, y in labels if bottom - 2 <= y <= top + 2]
+    for k, (top, bottom) in enumerate(zip(eur, pln, strict=True)):
+        ceiling = pln[k - 1] if k else top + (top - bottom)
+        inside = [t for t, y in labels if top < y < ceiling]
         if len(inside) != 1:
-            raise Layout(f"eu: positions: block {top:.0f}..{bottom:.0f} has labels {inside}")
+            raise Layout(f"eu: positions: block {top:.0f}..{bottom:.0f} has headings {inside}")
         order.append(inside[0])
     if sorted(order) != sorted(EU_GROUPS):
         raise Layout(f"eu: positions: blocks labelled {order}")
@@ -228,7 +239,7 @@ def eu(lines: list[str], end: date, frags=None) -> tuple[str, str, list[tuple[st
     rate = [m for m in map(RATE.search, tail) if m]
     period = [m for m in map(EU_PERIOD.fullmatch, tail) if m]
     groups = eu_groups(frags) if frags is not None else [x for x in tail if x in EU_GROUPS]
-    if len(rate) != 1 or len(period) != 1 or sorted(groups) != sorted(EU_GROUPS):
+    if len(rate) > 1 or len(period) != 1 or sorted(groups) != sorted(EU_GROUPS):
         raise Layout(f"eu: rate lines {len(rate)}, period lines {len(period)}, groups {groups}")
     for line in tail:
         if (
@@ -237,7 +248,11 @@ def eu(lines: list[str], end: date, frags=None) -> tuple[str, str, list[tuple[st
             and not (RATE.search(line) or EU_PERIOD.fullmatch(line) or SOURCE_LINE.fullmatch(line))
         ):
             raise Layout(f"eu: unexpected line {line[:80]!r}")
-    week, source, ecb = week_end(period[0].group(1), end, "eu"), stated(tail, "eu"), number(rate[0].group(1))
+    week, source, ecb = (
+        week_end(period[0].group(1), end, "eu"),
+        stated(tail, "eu"),
+        number(rate[0].group(1)) if rate else None,
+    )
     cells = []
     for i, (label, values) in enumerate(rows):
         group = groups[i // len(EU_ROWS)]
@@ -247,14 +262,16 @@ def eu(lines: list[str], end: date, frags=None) -> tuple[str, str, list[tuple[st
         if not all(valid.fullmatch(v) for v in values):
             raise Layout(f"eu: {group} / {label}: values not as printed: {values[:6]}")
         cells += [(group, c, label, v) for c, v in zip(COUNTRIES, values, strict=False)]
-        if label == "Cena w PLN/t" and values:
-            for country, eur, pln in zip(COUNTRIES, rows[i - 4][1], values, strict=True):
-                if (
-                    eur not in ("-", "0")
-                    and pln != "-"
-                    and abs(number(eur) * ecb - number(pln)) > number(pln) / 100 + 2
-                ):
-                    raise Layout(f"eu: {group} / {country}: {eur} EUR/t x {ecb} is not {pln} PLN/t")
+        if label == "Cena w PLN/t" and values and ecb:
+            off = [
+                (country, eur, pln)
+                for country, eur, pln in zip(COUNTRIES, rows[i - 4][1], values, strict=True)
+                if eur not in ("-", "0") and pln != "-" and abs(number(eur) * ecb - number(pln)) > number(pln) / 100 + 2
+            ]
+            if len(off) > 2:  # the columns are shifted, not one cell mistyped
+                raise Layout(f"eu: {group}: EUR x {ecb} is not the PLN price in {len(off)} columns: {off[:3]}")
+            # one or two cells where the producer's PLN price disagrees with its EUR price: marked, not loaded
+            cells += [(group, c, "kontrola", f"{e} EUR/t x {ecb} <> {p} PLN/t") for c, e, p in off]
     return week, source, cells
 
 
