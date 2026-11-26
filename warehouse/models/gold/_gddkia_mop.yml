@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: poc_build_gddkia_mop
+    description: >-
+      Build stage — rest areas (MOP) and parkings on national roads listed in each monthly edition of GDDKiA's
+      "Tabela MOP istniejące": gddkia_mop:rest_areas:facilities (count, breakdown current_category with _T), Poland
+      and the 16 voivodeships, monthly (date_key = first day of the edition month). Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: gddkia_mop_rest_area
+    description: >-
+      Entity table: one row per rest area (MOP) or parking of the newest edition of GDDKiA's MOP table, keyed by the
+      producer's row number Lp.; edition month as date_key, the printed voivodeship as geography_key, branch,
+      locality, name, current and target category and manager as published (silver.gddkia_mop_rest_areas). Licence
+      unresolved: internal.
+    columns:
+      - name: lp
+        tests: [not_null, unique]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]

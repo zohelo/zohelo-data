@@ -1,0 +1,42 @@
+source_system: gios_groundwater
+description: "GIOŚ groundwater quality monitoring (PMŚ, Monitoring Jakości Wód Podziemnych): yearly results of the physico-chemical indicators per monitoring point and sample, from dane.gov.pl dataset 1405"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-012. The producer's portal https://mjwp.gios.gov.pl/ (yearly
+# result pages with XLSX workbooks) answered every request, robots.txt and the known 2025 file URLs included, with
+# HTTP 403 and a maintenance page on 26 Nov 2026 (Dev probes 45809388367, 45809752001); not used, not worked around.
+# Bulk feature used: GIOŚ's own dataset 1405 on dane.gov.pl "Państwowy Monitoring Środowiska - monitoring jakości wód
+# podziemnych" (CC BY 4.0, update frequency "Rocznie"): one file per year x indicator group (inorganic, organic) x
+# monitoring kind (diagnostic, operational), 2019-2024, 12 files, 2019-2020 CSV and 2021 on XLSX, 95-853 kB each (Dev
+# probes 45810255139, 45810873298). ingestion/to_landing/gios_groundwater/ reads the dataset's resource list from
+# the portal's public API once per run and lands each result file whose URL is not landed yet through the shared
+# bulk_file pattern, 3 s apart. Entity = <year>_<inorganic|organic>_<diagnostic|operational>; version =
+# Last-Modified; a re-issued file is a new URL and replaces its entity. Restart unit: one file.
+extraction:
+  initial: bulk
+  production: snapshot                  # each file is the complete result table of its year and group
+  incremental_policy: changed_since_last  # a file URL not landed yet (new year or re-issued file)
+  schedule: # UTC; one release a year (2024 files uploaded 23 Dec 2024, 2022 on 15 Dec 2023, 2021 on 9-14 Dec 2022);
+    # weekly check on Fridays 06:20 (O46: at most one run a week past Landing), one API request and no download
+    # when nothing is new
+    - {cron: "20 6 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gios_groundwater/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gios_groundwater_records, bronze.gios_groundwater_rejected_files]
+silver: [silver.gios_groundwater_results, silver.gios_groundwater_points]
+gold: [gold.build_gios_groundwater, gold.metrics_groundwater_nitrate_above_50_share]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45816380441 (2019-2024, 12 files)
+  gios_groundwater_results: {rows: 620000}  # 412,078: 142,376 measured and 269,702 below the limit (19,686 n.o. not loaded)
+  gios_groundwater_points: {rows: 6300}  # 4,187 point-years: 1,289 to 1,404 a year diagnostic, 362 to 390 operational
+  poc_build_gios_groundwater: {rows: 430}  # 285: 3 measures x 15-17 areas x 6 years
+  poc_metrics_groundwater_nitrate_above_50_share: {rows: 145}  # 95 share rows of the build stage, at most 1 per area x year
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a file
+# Refresh policy for all layers (D32): 12 files of under 1 MB (about 6 MB) and about half a million values, one new
+# year a year and no changed-since filter; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
