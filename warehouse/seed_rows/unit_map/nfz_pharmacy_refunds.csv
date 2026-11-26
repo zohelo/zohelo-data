@@ -1,0 +1,3 @@
+source_system,unit_code,measure_key_pattern,unit_key
+nfz_pharmacy_refunds,PLN,,pln
+nfz_pharmacy_refunds,packages,,medicine_packages

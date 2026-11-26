@@ -9,7 +9,7 @@ models:
       applicable) and the unit as published (one indicator can be published in several units). Text values of the
       IT_COMP_* indicators stay in value_text with value null, never 0. Grain: indicator x ref_area x sex x age x
       urbanisation x comp_breakdown_1 x comp_breakdown_2 x comp_breakdown_3 x unit_measure x time_period. Dev trial
-      TRIAL_RUN.
+      45874151208: 144,549 rows, 39 indicators, 236 economies, 2000-2025.
     tests:
       - unique:
           column_name: "indicator || '|' || ref_area || '|' || sex || '|' || age || '|' || urbanisation || '|' || comp_breakdown_1 || '|' || comp_breakdown_2 || '|' || comp_breakdown_3 || '|' || unit_measure || '|' || time_period"
