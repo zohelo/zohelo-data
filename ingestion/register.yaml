@@ -6364,8 +6364,8 @@ sources:
   domains: [air quality, environment]
   entities: [monitoring station, sensor, observation]
   granularity: Station/sensor pollutant readings and indexes.
-  coverage: 'Current operational data; the API keeps the last three days of hourly values (Dev probes of #2960), so history
-    starts with the first daily pass.'
+  coverage: 'Current operational data; the API keeps the last three days of hourly values (Dev probes of #2960), so its
+    history starts with the first daily pass. Verified values 2000 to 2025 from the yearly archive files (#3119).'
   access:
     endpoint: https://powietrze.gios.gov.pl/pjp/content/api
     kind: api
@@ -6386,15 +6386,20 @@ sources:
       Modification, section 5: allowed with a notice ("użytkownik zobowiązany jest do zamieszczenia stosownej informacji o
       przetworzeniu (zmianie)"). Commercial reuse: allowed under CC BY 4.0 (the Regulamin does not restrict it). GIOŚ accepts
       no liability for processed information (section 6). Attribution (section 4): "Źródło danych: GIOŚ - EKOINFONET", with
-      the measurement time and a note when values are processed. GIOŚ warns current data are unverified and may change.'
+      the measurement time and a note when values are processed. GIOŚ warns current data are unverified and may change.
+      The Regulamin covers every material published on the site ("Korzystanie przez użytkowników z materiałów
+      opublikowanych w serwisie powietrze.gios.gov.pl jest bezpłatne"; "W serwisie udostępniane są również wyniki
+      pomiarów z manualnych stanowisk pomiarowych"), so also the yearly archive files on /pjp/archives (re-read 26 Nov
+      2026 by Dev probe 45750149567, #3119).'
   updates: Operational updates can be delayed by transmission outages and may be revised after verification.
   ingestion:
     history: 'New API v1: https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId} (measurements), /aqindex/getIndex/{stationId},
-      station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Archive series of validated data are published
-      separately: yearly ZIP files listed on https://powietrze.gios.gov.pl/pjp/archives (/pjp/archives/downloadFile/<id>; the
-      job log of Dev probe 43322192937 shows 2022 to 2025, not downloaded) and the API v1 archivalData services (getDataBySensor,
-      getDataForAllStationsByYearAndVoivodeship; limit 2 requests a minute; untested); not loaded by the first build (#2960),
-      follow-up #3119.'
+      station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Verified values (#3119): the yearly files
+      of https://powietrze.gios.gov.pl/pjp/archives (plain links /pjp/archives/downloadFile/<id>; no robots.txt; the
+      page''s reCAPTCHA guards only its own query export), "Wyniki pomiarów z <year> roku" 2000 to 2025 (ZIPs of 2.3 to
+      75 MB, one workbook per indicator and averaging time) and the station workbook; GIOŚ replaces a file under a new id
+      (Dev probes 45746079470, 45747293591, 45750149567, 45750793415, 45756304318). The API v1 archivalData services
+      (2 requests a minute) are not used.'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Station, sensor/parameter and observation timestamp.
   modelling:
@@ -6406,7 +6411,6 @@ sources:
     connection: tested
     blockers:
     - 'Current data are not validated and may change (GIOŚ): keep snapshots and mark them provisional'
-    - Validated archive (yearly files) not loaded yet (#3119)
     references:
     - https://powietrze.gios.gov.pl/pjp/content/api
     - https://powietrze.gios.gov.pl/pjp/content/terms_of_service

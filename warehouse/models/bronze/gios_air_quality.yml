@@ -17,8 +17,18 @@ sources:
     description: >-
       One row per sensor × hour of every daily pass (data/getData/{id}, last full hour to the third day back, local
       time, µg/m³), value as printed or null; entity pass_<YYYYMMDD> = the UTC day of the pass.
+  - name: gios_air_archive_values
+    description: >-
+      Yearly archive of verified measurements (#3119), one file per year entity archive_<year>: one row per non-empty
+      value cell of every workbook of the year's ZIP (member, sheet row and column), with the column's header
+      attributes (station code, indicator, averaging time, and from the newer layout unit and sensor code), the
+      period as the Excel serial number read_xlsx prints and the value as text.
+  - name: gios_air_archive_stations
+    description: >-
+      Station metadata workbook of the archive ("Metadane oraz kody stacji i stanowisk pomiarowych", entity
+      archive_stations): one row per sheet row, every field as text.
   - name: gios_air_quality_rejected_files
-    description: Files of gios_air_quality the Bronze decoder rejected, with the reason.
+    description: Files of gios_air_quality the Bronze decoder or the Silver checks rejected, with the reason.
 - name: gios_air_quality_silver
   description: >-
     GIOŚ air quality Silver written per measurement day by ingestion/to_bronze/gios_air_quality/entities.py from
@@ -30,3 +40,20 @@ sources:
     description: >-
       Hourly values, grain sensor_id × measured_at (local time as published), newest pass per key, value null when
       the API gives none, validation_status 'provisional'; entity = measurement day.
+  - name: gios_air_archive_values
+    description: >-
+      Verified values of the yearly archive (#3119), grain station_code × indicator × averaging_time × measured_at,
+      validation_status 'verified'; entity = archive_<year>; written per year by
+      ingestion/to_bronze/gios_air_quality/archive_load.py from warehouse/entity/gios_air_archive_values.sql, which
+      checks per year that the keys are not null and the grain is unique (a year that fails is rejected).
+    columns:
+      - name: averaging_time
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['1g', '24g']
+      - name: validation_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['verified']
