@@ -199,11 +199,12 @@ def dbw_block(entity: str) -> str:
 # the rows of one source: a value of `source_system`, or (column, value); the column is then dropped).
 # Optional: `map_model` (a model run once per run over the lookups; its rows replace `geo_map`, so a
 # source can map its codes by rule and the build stage and the changed-map check read the same map),
-# `local_input` (the block's Silver files are downloaded once and every step reads the local
-# copy: one GET per file instead of range requests from each step), `not_loaded` (a model that counts
-# the Silver rows the build stage leaves out, by reason, for the run summary), `load_order` (lookup,
-# block column, rank column, ranks: the load-order group of a block comes from this lookup instead of the
-# geography codes of its Silver files, so nothing is read for it; `groups` names the three groups).
+# `local_input` (the block's Silver files, and its files of the `with` tables, are downloaded once and
+# every step reads the local copy: one GET per file instead of range requests from each step),
+# `not_loaded` (a model that counts the Silver rows the build stage leaves out, by reason, for the run
+# summary), `load_order` (lookup, block column, rank column, ranks: the load-order group of a block comes
+# from this lookup instead of the geography codes of its Silver files, so nothing is read for it; `groups`
+# names the three groups).
 SOURCES: dict[str, dict[str, Any]] = {
     "eurostat": {
         "silver": ("silver", "eurostat_observations"),
@@ -272,6 +273,9 @@ SOURCES: dict[str, dict[str, Any]] = {
         "with": {"dictionary": ("bronze", "dbw_dictionary_items")},
         # an area's source code is `<NAME> #<position id>`; the map is keyed by the name
         "map_code": lambda code: code.rsplit(" #", 1)[0],
+        # several steps read the Silver and dictionary files: each is downloaded once, then read locally
+        "local_input": True,
+        "not_loaded": "gold_gus_dbw_not_loaded",
     },
 }
 
@@ -831,12 +835,13 @@ def plan(
     }
 
 
-def fetch(client, uris: list[str], directory: Path) -> list[str]:
-    """The block's Silver files as local copies, each read from storage once."""
+def fetch(client, uris: list[str], directory: Path, name: str = "silver") -> list[str]:
+    """The block's Silver files (or its files of a ``with`` table, ``name``) as local copies, each read
+    from storage once."""
     paths = []
     for number, uri in enumerate(uris):
         bucket, key = uri.removeprefix("s3://").split("/", 1)
-        path = directory / f"silver-{number:04d}.parquet"
+        path = directory / f"{name}-{number:04d}.parquet"
         bf.retry(lambda b=bucket, k=key, p=path: client.download_file(b, k, str(p)), "silver_file")
         paths.append(str(path))
     return paths
@@ -856,6 +861,9 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
     try:
         client, bucket = s3(), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
         inputs = fetch(client, item["paths"], work_dir) if spec.get("local_input") else item["paths"]
+        extra = item.get("with", {})
+        if spec.get("local_input"):
+            extra = {relation: fetch(client, paths, work_dir, relation) for relation, paths in extra.items()}
         build = work_dir / "build.parquet"
         try:
             if item.get("missing"):
@@ -868,7 +876,7 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
                 build,
                 not_null=("measure_key", "geography_key", "date_key", "frequency", "breakdown_json", "is_total"),
                 same_rows=False,
-                lookups={**lookups, **item.get("with", {})},
+                lookups={**lookups, **extra},
                 memory_limit=memory,
                 temp_directory=str(work_dir),
                 source_view="silver",
@@ -881,7 +889,7 @@ def work(source: str, item: dict[str, Any], lookups: dict[str, str], memory: str
                     inputs,
                     work_dir / "not_loaded.parquet",
                     same_rows=False,
-                    lookups={**lookups, **item.get("with", {})},
+                    lookups={**lookups, **extra},
                     memory_limit=memory,
                     temp_directory=str(work_dir),
                     source_view="silver",
