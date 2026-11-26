@@ -11,7 +11,8 @@ description: "RSPO — register of schools and educational institutions: the Min
 # the portal's public API once per run and lands each list whose file URL is not landed yet (a corrected upload is a
 # new dated URL) through the shared bulk_file pattern, 3 s apart. Entity = one reference year (school_list_<year>);
 # version = Last-Modified. Restart unit: one list. Not landed: the 2017 and 2018 lists (other layouts) and the
-# 2013-2015 lists (one XLS per voivodeship).
+# 2013-2015 lists (one XLS per voivodeship). Dev trial 45754116316: 6 lists (105.5 MB), 333,695 Bronze rows,
+# 0 rejected; second Landing and Bronze runs wrote nothing.
 extraction:
   initial: bulk
   production: snapshot                  # each list is the register's state on its 30 September
@@ -30,9 +31,9 @@ bronze: [bronze.rspo_institutions, bronze.rspo_rejected_files]
 silver: [silver.rspo_institutions]
 gold: [gold.build_rspo, gold.rspo_institution]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  rspo_institutions: {rows: 500000}  # 333,695: six lists 2020-2025 (Dev probe 45748207131)
-  poc_build_rspo: {rows: 450000}  # estimate before the trial
-  rspo_institution: {rows: 100000}  # estimate before the trial
+  rspo_institutions: {rows: 500000}  # 333,695: six lists 2020-2025 (Dev trial 45754116316)
+  poc_build_rspo: {rows: 325000}  # 216,021: 17,248 totals + 135,700 by type + 30,415 by public status + 32,658 by class
+  rspo_institution: {rows: 92000}  # 60,859 RSPO numbers (55,741 in the 2025 list)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a list
 # Refresh policy for all layers (D32): six yearly workbooks (about 105 MB, 334,000 rows), one new list a year and no

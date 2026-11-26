@@ -30,7 +30,10 @@ the years it is listed, whether the newest list holds it; the lists publish no s
 `institutions` of `poc_build_rspo` (register entries, total and by institution type, public status and governing-body
 class, one breakdown at a time; Poland, voivodeships, powiats and gminas; annual, date_key = 1 January of the
 reference year, period_label 30.09.<year>; areas mapped statically by TERYT code in `macros/sources/rspo.sql`).
-Pupils, classes and teachers stay in Silver for now (a complex and its member schools may both report them).
+Pupils, classes and teachers stay in Silver for now (1,272 of 35,898 complex entries of the six lists report pupils, as their member
+schools do). Dev trial 45754116316: 6 lists, 105.5 MB; 333,695 Bronze and Silver rows, 0 rejected, 60,859 RSPO numbers;
+216,021 build rows, 0 duplicates by series_key x date_key; 72 gmina codes (all type 2, rural; 206 code-years, 6 in
+the 2025 list) are not in today's TERYT and map to `_X` (1,712 rows).
 
 Schedule: weekly, Wednesday 08:55 UTC (O46; one API request and no download when nothing is new). Refresh full (D32).
 Terms: dane.gov.pl dataset 839 states CC BY 4.0 (`license_name`, default condition `license_condition_default_cc40`),
