@@ -14,7 +14,8 @@ The package's members are Deflate64, which Python's zipfile cannot read: only th
 (CRC checked), to the runner's disk (~7.4 GB), and read with DuckDB spatial in bounded memory. The package's other
 layers (localities, streets, squares) are not loaded. A package whose layer has another attribute set, another row
 count than its .shx, or whose Silver breaks a check (a null key, a repeated PRG address id) is rejected into
-bronze.prg_rejected_files with the reason, and the tables keep the previous version. Prints one JSON result line.
+bronze.prg_rejected_files with the reason; nothing is uploaded and Silver keeps the previous package (Bronze's copy of
+it is superseded and removed by the latest-only prune after the load, #845). Prints one JSON result line.
 """
 
 from __future__ import annotations

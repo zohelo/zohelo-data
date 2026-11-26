@@ -39,7 +39,7 @@ sources:
   - name: prg_address_points
     description: >-
       Entity table of the PRG address points (register PL-ENV-007): one row per address point, grain address_id
-      (ID_IIP), with the TERC code of the gmina, SIMC of the locality, ULIC of the street, names, house number, postal
+      (ID_IIP) with its version stamp, the TERC code of the gmina, SIMC of the locality, ULIC of the street, names, house number, postal
       code, date assigned and coordinates in EPSG:2180 as published. Grain, not-null keys (address_id, gmina_code,
       house_number, coordinates, raw_sha256), 7-digit gmina codes and coordinates inside Poland are checked by the
       loader on every package (entity.apply), which rejects the package otherwise; tests/
