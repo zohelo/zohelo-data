@@ -217,8 +217,51 @@ def head_sha256(client, bucket: str, keys: list[str]) -> dict[str, str]:
         return dict(pool.map(head, keys))
 
 
+# ----------------------------------------------------------------------------- Landing receipts
+# A Landing receipt is written once and changed in place only by the one-off reduction of a held copy
+# (bulk_file.reduce_held, which then calls remember_receipt), and every reader GETs all of a source's receipts
+# (#3133: GUS BDL about 40,000, read 8 to 11 times per run, most of the R2 Class B bill). Within one process each
+# receipt is read from R2 once; later readers get the same bytes. A writer that replaces a receipt under its key
+# must call remember_receipt with the new bytes, or the process keeps serving the old ones.
+RECEIPT_SUFFIX = ".receipt.json"
+_receipts: dict[tuple[str, str], bytes] = {}
+_receipts_lock = threading.Lock()
+RECEIPT_READS = {"from_storage": 0, "from_memory": 0}
+
+
+def read_receipt(client, bucket: str, key: str, fetch=None) -> bytes:
+    """The bytes of a Landing receipt, from R2 at most once per process. ``fetch`` reads it when it is not held
+    (default: get_with_backoff's own GET); any other key is read every time."""
+    if not key.endswith(RECEIPT_SUFFIX):
+        return fetch() if fetch else _get_with_backoff(client, bucket, key)
+    with _receipts_lock:
+        body = _receipts.get((bucket, key))
+        if body is not None:
+            RECEIPT_READS["from_memory"] += 1
+            return body
+    body = fetch() if fetch else _get_with_backoff(client, bucket, key)
+    with _receipts_lock:
+        _receipts[(bucket, key)] = body
+        RECEIPT_READS["from_storage"] += 1
+    return body
+
+
+def remember_receipt(bucket: str, key: str, body: bytes) -> None:
+    """Records the bytes just written under a receipt key, so this process never serves the replaced ones."""
+    if key.endswith(RECEIPT_SUFFIX):
+        with _receipts_lock:
+            _receipts[(bucket, key)] = body
+
+
 def get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
-    """GET an object, waiting out R2 throttling (ServiceUnavailable / SlowDown) with backoff."""
+    """GET an object, waiting out R2 throttling (ServiceUnavailable / SlowDown) with backoff. A Landing receipt
+    is read from R2 once per process (read_receipt)."""
+    if key.endswith(RECEIPT_SUFFIX):
+        return read_receipt(client, bucket, key, lambda: _get_with_backoff(client, bucket, key, attempts))
+    return _get_with_backoff(client, bucket, key, attempts)
+
+
+def _get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
     import time
 
     from botocore.exceptions import ClientError
@@ -350,6 +393,47 @@ CATALOG_RETRY = {"total": 5, "other": 0, "backoff_factor": 2, "status_forcelist"
 CATALOG_OPEN_DELAYS = (5, 20)
 
 
+# R2 Data Catalog operations are billed per request beyond 1 million a month (#3133). Every request this process
+# sends through catalog() is counted by kind; run.py annotates the counts per activity. A request urllib3 repeats
+# after a 429 or 5xx counts once; DuckDB's own catalog requests (dbt builds, ATTACH ... TYPE iceberg) are not seen.
+CATALOG_CALLS: dict[str, int] = {}
+_catalog_calls_lock = threading.Lock()
+_TABLE_PATH = re.compile(r"/namespaces/[^/]+/tables/[^/]+$")
+
+
+def _catalog_call(kind: str) -> None:
+    with _catalog_calls_lock:
+        CATALOG_CALLS[kind] = CATALOG_CALLS.get(kind, 0) + 1
+
+
+def catalog_call_kind(method: str, path: str) -> str:
+    """A catalog request's kind, from its method and URL path (Iceberg REST spec)."""
+    path = path.split("?", 1)[0].rstrip("/")
+    if _TABLE_PATH.search(path):
+        return {"GET": "load_table", "HEAD": "table_exists", "POST": "commit", "DELETE": "drop_table"}.get(
+            method, f"{method} table"
+        )
+    if path.endswith("/tables"):
+        return {"GET": "list_tables", "POST": "create_table"}.get(method, f"{method} tables")
+    if path.endswith("/namespaces"):
+        return {"GET": "list_namespaces", "POST": "create_namespace"}.get(method, f"{method} namespaces")
+    if path.endswith("/transactions/commit"):
+        return "commit_transaction"
+    if path.endswith("/tables/rename"):
+        return "rename_table"
+    if path.endswith("/config"):
+        return "config"
+    if path.endswith("/oauth/tokens"):
+        return "token"
+    return f"{method} other"
+
+
+def _count_catalog_response(response, *args, **kwargs):
+    from urllib.parse import urlsplit
+
+    _catalog_call(catalog_call_kind(response.request.method or "", urlsplit(response.request.url or "").path))
+
+
 def catalog():
     """The R2 Data Catalog (Apache Iceberg REST) holding bronze, silver and gold."""
     import time
@@ -370,15 +454,20 @@ def catalog():
                     "s3.secret-access-key": req("STORAGE_WRITE_SECRET_KEY"),
                     "s3.endpoint": req("STORAGE_ENDPOINT_URL"),
                     "s3.region": "auto",
+                    # PyArrow's file reads and writes wait out R2 throttling like the boto3 client (#2989).
+                    "s3.retry-strategy-impl": "ingestion.common.s3_retry.R2S3RetryStrategy",
                 },
             )
+            _catalog_call("config")  # the constructor's GET /v1/config, sent before the hook below exists
             break
         except (requests.ConnectionError, requests.Timeout):
+            _catalog_call("config")
             if attempt == len(CATALOG_OPEN_DELAYS):
                 raise
             time.sleep(CATALOG_OPEN_DELAYS[attempt])
     retry = Retry(allowed_methods=frozenset({"GET", "HEAD"}), raise_on_status=False, **CATALOG_RETRY)
     cat._session.mount("https://", HTTPAdapter(max_retries=retry))
+    cat._session.hooks.setdefault("response", []).append(_count_catalog_response)
     return cat
 
 

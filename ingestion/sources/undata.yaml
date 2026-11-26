@@ -137,7 +137,10 @@ archive_policy:
   prune: report
 bronze: [bronze.undata_syb_values, bronze.undata_rejected_files]
 silver: [silver.undata_syb_values]
-gold: [gold.build_undata]
+# Full coverage (O43, D35, docs/gold-coverage.md, #2943): every series of silver.undata_syb_values by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table undata_syb_values.
+gold: [gold.build_undata, gold.undata_observations, gold.undata_series, gold.undata_measures, gold.undata_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   poc_build_undata: {rows: 1600}  # 1,059: 28 areas, 6 series, the years the Yearbook prints (Dev trial 43290214779); 1.5 x
   undata_syb_values: {rows: 200000}  # 126,703 (Dev trial 43163356932)
@@ -146,4 +149,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # Refresh policy for all layers (D32): about thirty small whole-table snapshots, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2784"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35; #2943): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

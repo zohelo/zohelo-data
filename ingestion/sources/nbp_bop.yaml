@@ -28,8 +28,8 @@ extraction:
   production: snapshot                  # each workbook holds the complete series
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
   schedule: # UTC; release: monthly BoP about six weeks after the month, quarterly BoP and IIP about three months
-    # after the quarter (NBP release calendar); three small files, checked on weekdays
-    - {cron: "50 12 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    # after the quarter (NBP release calendar); three small files, one run a week (O46, weekly until production use; was every weekday)
+    - {cron: "50 12 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nbp_bop/
 archive_policy:

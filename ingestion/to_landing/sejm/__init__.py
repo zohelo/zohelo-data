@@ -30,7 +30,7 @@ CURRENT_TERM = 10
 OPEN_SITTINGS = 2
 PAUSE_SECONDS = 2.0
 MP_FIELDS = ("id", "active", "club", "districtNum", "districtName", "voivodeship")
-REDUCE_MPS = "ingestion.to_landing.sejm:reduce_mps"
+REDUCE_MPS = "sejm"  # bulk_file reduce kind: reduce_landing of this module
 
 
 def reduce_mps(body: bytes) -> bytes:
@@ -40,6 +40,9 @@ def reduce_mps(body: bytes) -> bytes:
         raise ValueError("MP list: not a list of objects with an id")
     kept = [{k: i[k] for k in MP_FIELDS if k in i} for i in items]
     return json.dumps(kept, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+
+
+reduce_landing = reduce_mps  # bulk_file ``reduce: sejm`` (only the MP list declares it)
 
 
 def _spec(entity: str, path: str, closed: bool = False, **extra) -> dict:

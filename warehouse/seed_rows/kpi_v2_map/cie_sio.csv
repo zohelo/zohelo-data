@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+teachers,society,A,teachers,cie_sio,teachers,cie_sio:teachers:persons:persons,A,PL;VOIV,,sum,neutral,ready,"persons on 30 September, all grades; SIO archive ends 2018"

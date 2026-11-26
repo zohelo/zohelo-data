@@ -24,8 +24,8 @@ extraction:
   initial: bulk
   production: snapshot                    # each file is the complete current state
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule:                               # UTC; daily, after the 08:00 UTC publish
-    - {cron: "50 10 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; after the 08:00 UTC publish; one run a week (O46, weekly until production use; was daily): the newest golden copy
+    - {cron: "50 10 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gleif/
 archive_folder: 05_archive/gleif/

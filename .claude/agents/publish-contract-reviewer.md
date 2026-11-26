@@ -52,7 +52,8 @@ model: opus
    might not set is a blocker. No attribution text is invented: it comes from `licence.csv`.
 6. **Values**: suppressed and missing observations are absent or flagged, never `0`; one value per KPI × source ×
    area × period; decimals and units as the seeds say; a new KPI × source has a bound in
-   `tests/metrics_value_range.sql` and its model is in that test's union. Spot-check the newest value of each new
+   `macros/value_range/<source_system>.sql` and its model is in that file's `models` (the union of
+   `tests/metrics_value_range.sql`). Spot-check the newest value of each new
    KPI × source against the figure the PR cites from the source's own page.
 7. **Validation still bites**: `gold.publish` validates every file against its schema before writing and fails
    on a problem; the PR does not loosen a schema (`additionalProperties`, dropped `required`, widened `pattern`)

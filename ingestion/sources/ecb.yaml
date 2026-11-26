@@ -59,7 +59,10 @@ archive_policy:
   prune: report
 bronze: [bronze.ecb_observations, bronze.ecb_rejected_files]
 silver: [silver.ecb_observations]
-gold: [gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.ecb_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table ecb_observations.
+gold: [gold.build_ecb, gold.metrics_m3_growth, gold.metrics_ecb_deposit_rate, gold.ecb_observations, gold.ecb_series,
+       gold.ecb_measures, gold.ecb_geography, gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   ecb_observations: {rows: 485000}  # 322,020 (Dev trial 43099368908, eight selections); 1.5 x
   poc_build_ecb: {rows: 207000}  # 138,323 (Dev trial 43099368908); 1.5 x
@@ -69,4 +72,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # 43099368908); each selection is one response with full history; rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2744"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

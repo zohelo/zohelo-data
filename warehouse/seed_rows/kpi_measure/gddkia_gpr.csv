@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+average_daily_traffic_national_roads,gddkia_gpr,gddkia_gpr:sdrr:veh_per_day:dk:motor_vehicles,"GPR table 2, national roads, length-weighted mean of measured sections, Poland and voivodeships",1,
