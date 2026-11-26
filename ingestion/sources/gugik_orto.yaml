@@ -27,7 +27,7 @@ bronze: [bronze.gugik_orto_sheets, bronze.gugik_orto_rejected_files]
 silver: [silver.gugik_orto_sheets]
 gold: [gold.build_gugik_orto]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  poc_build_gugik_orto: {rows: 9000}  # ROWS_MEASURED
+  poc_build_gugik_orto: {rows: 2900}  # 1,920: 1,183 edition rows + 737 shares, 17 areas, 1957-2026 (Dev trial 45855059566)
 
 bronze_latest_only: true   # policy #822/#845: a new year version replaces the year's file
 # Refresh policy for all layers (D32): 1.34 M index features, over the 1 M rows of a full rebuild; years change

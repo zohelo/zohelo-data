@@ -17,7 +17,7 @@ changes. A year is read whole in pages of 5,000 sorted by the download link (pag
 the same page twice held other features, Dev probe 45813550746; sorted, it came back identical, 45814802349), checked
 (numberReturned, the hits total, no feature id twice) and landed as `<version>__<ingested>__part-<nnn>.gml` with one
 receipt per page; a year whose content equals the newest copy (SHA-256 without the answer's `timeStamp`) writes
-nothing. The server is slow (about 15 minutes for the 49 hits requests, about 30 s per sorted page), so the first
+nothing. The server is slow (5 to 17 minutes for the 49 hits requests, 15 to 35 s per sorted page), so the first
 load spreads over several runs within their budget.
 
 Bronze `bronze.gugik_orto_sheets` (entity table, design #875): every feature as published, the 13 properties as text,
@@ -28,15 +28,21 @@ the GML lists northing before easting) and planar area in km² computed from the
 
 Gold `build_gugik_orto` (block `sheets`, A, `warehouse/macros/sources/gugik_orto.sql`): sheet editions by data year in
 total and by pixel class (≤ 0.05 m, 0.05–0.10, 0.10–0.25, > 0.25 m, `_U` without a pixel size) and the share of each
-class (%), for Poland (every feature) and each voivodeship (centroid inside its PRG boundary, `silver.prg_units`;
-outside every voivodeship or without a centroid: Poland only). Covered area is not given: editions overlap, so a sum of
+class (%), for Poland (every feature) and each voivodeship (the PRG gmina that contains the centroid gives it, by
+the first two TERYT digits, `silver.prg_units`; in no gmina or without a centroid: Poland only; whole voivodeship
+polygons ran out of memory for 1.3 M points, Dev trial 45824096302). Covered area is not given: editions overlap, so a sum of
 footprints overstates it. No KPI (register `kpi: false`).
 
 Licence: free use, "Ortofotomapa jest dostępna bezpłatnie do pobrania i możliwa do dowolnego wykorzystania"
 (https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/), attribution "Źródło: GUGiK, Ortofotomapa"
 (`free_use_gugik_orto`). Schedule: weekly, Friday 02:50 UTC (O46).
 
-Dev trial TRIAL_PLACEHOLDER
+Dev trial 45855059566 (code of 5b9c640, scratch `zz_dev_gugik_orto`, removed): Landing 49 years, 303 pages, 2.81 GB
+in 74 minutes; a second pass landed nothing (49 current; two years read again: unchanged). Bronze and Silver 1,337,733
+rows each (49 files; Bronze 109 MB, Silver 22 MB Parquet), second load wrote nothing, 0 rejected; `feature_id` unique,
+keys not null, every feature a one-ring Polygon. Gold 1,920 rows (17 areas, 1957-2026), 0 duplicates by series x
+date, Poland totals equal the Silver count of every year (2025: 88,648; 2024: 100,487); 14,798 features (1.1%) lie in
+no gmina and count for Poland only.
 
 Left out: the imagery, the WMS/WMTS views and the true-ortho layer; an edit to an old year that keeps its count is
 seen only when the count changes.
