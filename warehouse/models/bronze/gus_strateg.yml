@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: gus_strateg
+  description: GUS STRATEG API (register PLS-003), the indicators of the Strategy for Responsible Development (SOR)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gus_strateg/
+    loaded_by: ingestion/to_bronze/gus_strateg/
+    config: ingestion/sources/gus_strateg.yaml
+  tables:
+  - name: gus_strateg_records
+    description: >-
+      Rows of the newest copy of entity sor, values as published text: record_kind 'indicator' (one per SOR indicator
+      dimension: names, unit, objective, levels and years, the strategy's base, intermediate and target values as
+      JSON text) and 'value' (one per level x year x territory code of a real_values answer); partitioned by entity.
+  - name: gus_strateg_rejected_files
+    description: Files of gus_strateg the Bronze decoder rejected, with the reason.

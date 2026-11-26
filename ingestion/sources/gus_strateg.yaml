@@ -1,0 +1,37 @@
+source_system: gus_strateg
+description: "GUS STRATEG — indicators of the Strategy for Responsible Development (SOR) for the EU, its countries and the voivodeships (STRATEG API)"
+
+# Extraction strategy (docs/landing.md). Register PLS-003. No bulk feature: STRATEG serves its data through the REST
+# API https://strateg.stat.gov.pl/api/ (spec strateg_en.json; api-strateg.stat.gov.pl does not resolve, Dev probe
+# 43086687586). Selection: strategy 78 (SOR, 2017-2030), its 83 indicator dimensions, levels 0 (EU aggregates and
+# the EU countries) and 2 (voivodeships); other strategies and levels 3-6, M, O are left out (docs/sources/
+# gus_strateg.md). Entity = the selection, sor: one ZIP of the exact answers (about 190), version = time the read
+# started (the API gives no update time); a read equal to the newest copy writes nothing. Polite: one request at a
+# time, 9.5 s apart (anonymous quota 100 per 15 minutes), about 32 minutes a read (ingestion/to_landing/gus_strateg/).
+# Dev probes 43800593902, 45746504682 (test/428-strateg-probe, test/2430-strateg-trial).
+extraction:
+  initial: api
+  production: snapshot                  # the file is the complete selection
+  incremental_policy: changed_since_last  # SHA-256 of the read against the newest copy
+  schedule: # UTC; indicators are updated when GUS revises them, no release calendar; weekly (O46), Wednesday morning
+    - {cron: "45 8 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_strateg/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gus_strateg_records, bronze.gus_strateg_rejected_files]
+silver: [silver.gus_strateg_indicators, silver.gus_strateg_observations]
+gold: [gold.build_gus_strateg]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_strateg_indicators: {rows: 150}  # 83 measured (Dev trial of the PR)
+  gus_strateg_observations: {rows: 60000}  # measured in the Dev trial of the PR
+  poc_build_gus_strateg: {rows: 60000}  # measured in the Dev trial of the PR
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): one file of under 1 MB and a few tens of thousands of values, read whole (the
+# API has no changed-since filter); small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2430"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

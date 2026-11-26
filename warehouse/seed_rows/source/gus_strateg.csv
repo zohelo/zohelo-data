@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gus_strateg,PLS-003,GUS STRATEG (wskaźniki Strategii na rzecz Odpowiedzialnego Rozwoju),GUS STRATEG (indicators of the Strategy for Responsible Development),Główny Urząd Statystyczny (GUS),cube,api,national-public,cc_by_4_0_gus_strateg,https://strateg.stat.gov.pl/

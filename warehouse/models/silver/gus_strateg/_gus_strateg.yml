@@ -1,0 +1,49 @@
+version: 2
+models:
+  - name: gus_strateg_indicators
+    description: >-
+      GUS STRATEG API (register PLS-003; licence cc_by_4_0_gus_strateg, the licence of the STRATEG API spec): the
+      indicators of the Strategy for Responsible Development (SOR, strategy 78), names and unit as published in Polish
+      and English, the SOR objective, the territorial levels and years offered, and the strategy's base, intermediate
+      and target values as published JSON text (targets are not observations). Grain: indicator_id x dimension_id.
+    tests:
+      - unique:
+          column_name: "indicator_id || '|' || dimension_id"
+    columns:
+      - name: indicator_id
+        tests: [not_null]
+      - name: dimension_id
+        tests: [not_null]
+      - name: indicator_name_pl
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: gus_strateg_observations
+    description: >-
+      Observed values of the SOR indicators in GUS STRATEG (register PLS-003): level 0 (EU aggregates and EU
+      countries, Poland 100000000000) and level 2 (voivodeships), by year; value as published (published text in
+      value_text; text that is not a number keeps value null, value_status not_numeric, never 0); unit of the SOR list.
+      Overlaps GUS BDL and Eurostat by design (source kept, never deduplicated). Grain: indicator_id x dimension_id x
+      level_id x territory_code x period_year.
+    tests:
+      - unique:
+          column_name: "indicator_id || '|' || dimension_id || '|' || level_id || '|' || territory_code || '|' || period_year"
+    columns:
+      - name: indicator_id
+        tests: [not_null]
+      - name: dimension_id
+        tests: [not_null]
+      - name: level_id
+        tests: [not_null, {accepted_values: {arguments: {values: ['0', '2']}}}]
+      - name: territory_code
+        tests: [not_null]
+      - name: period_year
+        tests: [not_null]
+      - name: value_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, not_numeric]}}}]
+      - name: unit_code
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
