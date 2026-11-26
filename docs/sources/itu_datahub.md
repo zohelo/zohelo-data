@@ -22,17 +22,25 @@ indicator can be published in several units (subscriptions `SB` and per 100 inha
 `USD`, `PPP` and `PT_GNI_PS`, % of GNI per person). Breakdowns as published: sex, age and urbanisation for the
 internet-use indicators, skill level (`BASIC`, `ABOVE_BASIC`, no total) for the ICT skills; `_T` is the source's
 total, `_Z` not applicable. The four `IT_COMP_*` indicators (unit `CAT`) publish text (`Monopoly`, `Full competition
-(year when competition was introduced)`, `N/A`, …): kept in `value_text`, value null, never 0. Size: TRIAL_NUMBERS.
+(year when competition was introduced)`, `N/A`, …): kept in `value_text`, value null, never 0. Size (Dev trial 45874151208, 26 Nov 2026): one Landing file
+of 65.7 MB, 144,549 rows (every row of the file), 39 indicators, 236 economies, 2000-2025, every row OBS_STATUS `A`
+(normal value), OBS_CONF `PU`, UNIT_MULT `0`; 1,910 published zeros kept; no empty value.
 
 Gold block `itu_dh` (`poc_build_itu_datahub`): one measure per indicator and published unit,
 `itu_datahub:itu_dh:<UNIT_MEASURE>:<INDICATOR>`, annual; values and units as published (D33; UNIT_MULT is 0 in
 every row, and another value would stay in the unit code, unmapped). Breakdowns in `breakdown_json` (source codes,
 `_Z` left out), sex also in `sex_code`; `is_total` only where every breakdown is `_T` or `_Z`. Not loaded: the text
 indicators, rows flagged as estimate (E) or forecast (F) (none in the trial), years after the build year. Economies
-by ISO3 through `dim_geography`; codes without a Gold country stay `_X` with their code. KPIs: `internet_users`
+by ISO3 through `dim_geography` (213 matched); 23 codes without a Gold country stay `_X` with their code (2,606
+rows: historic ANT and YUG, territories such as AIA, ASC, COK, FLK, GLP, GUF, REU, SHN, TWN, WLF). Trial: 139,238
+rows, 49 measures, 12,091 series, 0 duplicates by series_key x date_key. KPIs: `internet_users`
 (existing draft KPI; ITU joins UNdata's Statistical Yearbook copy as a second source, O31) and the new drafts
 `fixed_broadband_subscriptions` (IT_NET_BBND per 100 inhabitants) and `mobile_broadband_subscriptions` (ACT_MOB_SB
-per 100 inhabitants), with metrics models, value bounds and v2 map rows.
+per 100 inhabitants), with metrics models, value bounds and v2 map rows. Poland 2024: internet users 88.58 %, fixed broadband 25.36 and
+active mobile broadband 196.42 per 100 inhabitants.
+
+Left out: `ITU_DH_INT_CONN_BAND_MBIT` (international bandwidth to 2022), which the Data360 API lists but the file
+does not hold; `INT_CONN_BAND` (the same concept, Mbit/s, to 2024) is in the file. The text indicators stay in Silver.
 
 Overlap: WDI carries several of these ITU series (IT.NET.USER.ZS, IT.NET.BBND.P2, IT.CEL.SETS.P2); UNdata SYB 314
 prints internet use for selected years. ITU is the upstream; each copy stays its own source (O31), never added.
