@@ -1,0 +1,18 @@
+version: 2
+models:
+  - name: poc_build_gddkia_gpr
+    description: >-
+      Build stage — GDDKiA traffic census GPR (editions 2020/21 and 2025), block sdrr: length-weighted average annual
+      daily traffic of motor vehicles and of trucks, and the length of the measured sections, per road class (national,
+      voivodeship roads), Poland and the 16 voivodeships; annual (date_key = 1 January of the edition year).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_average_daily_traffic_national_roads
+    description: KPI average_daily_traffic_national_roads (draft) from gold.build_gddkia_gpr (macros/poc_metrics.sql).

@@ -21,6 +21,9 @@ archive_policy:
 bronze: [bronze.teryt_records, bronze.teryt_rejected_files]
 silver: [silver.teryt_terc, silver.teryt_simc]
 gold: []                              # Gold v1: dim_geography (TERC units, TERYT unit type, gmina type, state date), map_geography (warehouse/warehouse.yaml)
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  teryt_simc: {rows: 300000}  # 101,865
+  teryt_terc: {rows: 20000}  # 4,360
 # Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
 legacy_tables: [bronze.teryt_terc, bronze.teryt_simc, bronze.teryt_ulic, silver.teryt_ulic,
                 gold.dim_territory, gold.dim_locality, gold.dim_street]

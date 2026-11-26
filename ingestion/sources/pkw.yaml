@@ -51,8 +51,11 @@ extraction:
   initial: bulk
   production: snapshot                    # each file is the final result of one election
   incremental_policy: changed_since_last  # Last-Modified, then SHA-256
-  schedule: # UTC; static after each election (corrections are rare): monthly check on the 3rd, unchanged files skipped
-    - {cron: "25 5 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  # UTC. Elections are irregular (the next national one is the Sejm in autumn 2027) and each file is static after the
+  # official results; a new election needs its files declared here by hand anyway. So a monthly check on the 3rd at
+  # the lane's slot hour (19:20), slower than O46's weekly maximum: unchanged files are skipped, a correction lands.
+  schedule:
+    - {cron: "20 19 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/pkw/
 archive_policy:

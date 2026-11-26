@@ -29,7 +29,9 @@ Iceberg commit that does not yet see the build's own `__dbt_tmp` table (#2574) f
 model, `build.py` resumes the build with `dbt retry` on fewer threads, also when a data test
 failed in the same build (#2789; the test still fails the build) (`warehouse.yaml`
 `rate_limit_retry_*`, `commit_retry_threads`), which also replaces tables a failed rename
-left as `__dbt_backup`.
+left as `__dbt_backup`. After the declared waits it goes on retrying with the last wait while
+each retry re-runs fewer nodes than the one before, up to `rate_limit_retry_max` retries and
+`rate_limit_retry_deadline_minutes` from the start of the build step (#2618).
 
 The scheduled build (empty filter) rebuilds only models whose inputs or code changed
 (owner policy #822, `changed.py`): a model is selected when its table is missing, its

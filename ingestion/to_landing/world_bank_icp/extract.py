@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """World Bank ICP Landing: the ICP 2021 database (source 90) from the World Bank API v2.
 
-Route (docs/sources.md, World Bank ICP): DataBank publishes no bulk file for ICP, so the
+Route (docs/sources/world_bank_icp.md): DataBank publishes no bulk file for ICP, so the
 entity is one series of source 90 (48 series, about 1.2 million observations in all) for every
 economy and year: ``/v2/sources/90/country/all/series/<id>/time/all?format=json&per_page=50000``.
 A series larger than one page lands one file per page (``series_<id>_p<n>``); usually one.

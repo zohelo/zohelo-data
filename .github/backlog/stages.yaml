@@ -113,14 +113,13 @@ stages:
         files:
           - create: ingestion/sources/{source_system}.yaml
           - edit: "{register_file}"
-          - edit: .github/workflows/pipeline.yml
-          - edit: docs/sources.md
+          - create: docs/sources/{source_system}.md
         steps:
           - "Create the YAML with source_system, description, extraction (initial, production, incremental_policy, schedule: [] for now), landing: 01_landing/{source_system}/, archive_policy {move: true, retention: {keep_latest: 1, keep_days: 90}, prune: report}, bronze/silver/gold lists, refresh, activities: [landing.inspect, landing.extract, landing.verify]."
           - "If the source is one or a few files at fixed URLs, use extraction.kind: bulk_file as in world_bank_wdi.yaml and write no extractor."
           - "Add `source_system: {source_system}` to register entry {id}."
-          - "Add {source_system} to the `source` options list of pipeline.yml (workflow_dispatch inputs)."
-          - "Add a section for the source to docs/sources.md: route, entity, version, restart unit."
+          - "Nothing to add to pipeline.yml or ingestion/common/lineage.py: the Pipeline `source` input is free text checked against ingestion/sources, and lineage finds the source itself (D34, docs/source-registration.md)."
+          - "Write docs/sources/{source_system}.md: route, entity, version, restart unit (copy docs/sources/owid.md); never a section in docs/sources.md."
         acceptance:
           - "PYTHONPATH=. python run.py schedule --check passes"
           - "PYTHONPATH=. python run.py plan --source {source_system} --run 'landing: inspect' prints the activity list"
@@ -323,21 +322,20 @@ stages:
         effort: L
         context: >-
           Silver = typed, normalised source data. Small sources: dbt models in
-          warehouse/models/silver/{source_system}/ (copy warehouse/models/silver/nbp/), listed in
-          warehouse/warehouse.yaml full_rebuild with a row ceiling below 1M (policy #822). Big sources
+          warehouse/models/silver/{source_system}/ (copy warehouse/models/silver/nbp/), listed under
+          full_rebuild: in ingestion/sources/{source_system}.yaml with a row ceiling below 1M (policy #822). Big sources
           (entity tables): one warehouse/entity/<table>.sql applied per Bronze file by warehouse/entity.py
           (copy warehouse/entity/dbw_observations.sql).
         files:
           - create: warehouse/models/silver/{source_system}/_{source_system}.yml
           - create: warehouse/models/silver/{source_system}/<table>.sql
-          - edit: warehouse/models/bronze/sources.yml
-          - edit: warehouse/warehouse.yaml
+          - create: warehouse/models/bronze/{source_system}.yml
           - edit: ingestion/sources/{source_system}.yaml
         steps:
-          - "Add the Bronze table to warehouse/models/bronze/sources.yml."
+          - "Declare the Bronze table in warehouse/models/bronze/{source_system}.yml (one `sources:` entry named {source_system}); never in models/bronze/sources.yml (D34)."
           - "Write one model per Silver table with typed columns (dates as date, values as double, codes as text) and a description per table and key column."
           - "Add not_null and unique tests on the grain columns in the yml."
-          - "Add the model to full_rebuild in warehouse.yaml with rows: ceiling (measure in a Dev run)."
+          - "Add the model to full_rebuild: in ingestion/sources/{source_system}.yaml with a rows: ceiling (measured in a Dev run, the count in a comment); never in warehouse.yaml (D34)."
           - "List the tables under silver: in the source YAML."
         acceptance:
           - "cd warehouse && dbt parse --profiles-dir . --target prod --no-partial-parse succeeds"
@@ -369,7 +367,7 @@ stages:
     kpi_only: true
     depends_on_epics: [data/metadata/catalogue-v1]
     done_when:
-      - "Every KPI fed by the source is a row in warehouse/seeds/kpi.csv with PL/EN names, unit, frequency, licence and primary domain subgroup"
+      - "Every KPI fed by the source is a row of the kpi list (warehouse/seed_rows/kpi/, D36) with PL/EN names, unit, frequency, licence and primary domain subgroup"
       - "Its metrics appear in the generated semantic manifest with their dimensions; lineage source → table → KPI is in the catalogue"
     todo:
       - "Tasks are rendered from the catalogue v1 pattern (kpi.csv rows, domain mapping, manifest check) once Epic data/metadata/catalogue-v1 is done"

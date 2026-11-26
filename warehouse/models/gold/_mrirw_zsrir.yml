@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: poc_build_mrirw_zsrir
+    description: >-
+      Build stage — MRiRW ZSRIR market bulletins (register PLS-032): monthly average purchase prices of cereals (by
+      grain and use), raw cow's milk and pigs for slaughter (live weight), Poland, as published in the newest issue of
+      each bulletin. Unit and currency as published (D33); cells without a price are not loaded.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_milk_purchase_price
+    description: >-
+      Gold PoC metrics view of concept milk_purchase_price (draft): average purchase price of raw cow's milk paid by
+      dairies, monthly, Poland (MRiRW ZSRIR; macros/poc_metrics.sql).
+  - name: poc_metrics_pig_purchase_price
+    description: >-
+      Gold PoC metrics view of concept pig_purchase_price (draft): average purchase price of pigs for slaughter, live
+      weight, monthly, Poland (MRiRW ZSRIR; macros/poc_metrics.sql).
+  - name: poc_metrics_wheat_purchase_price
+    description: >-
+      Gold PoC metrics view of concept wheat_purchase_price (draft): average purchase price of consumption wheat,
+      monthly, Poland (MRiRW ZSRIR; macros/poc_metrics.sql).

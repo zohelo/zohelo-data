@@ -1,0 +1,65 @@
+version: 2
+models:
+  - name: radon_institutions
+    description: >-
+      RAD-on / POL-on institutions of the higher education and science system (register PLS-023, OPI PIB; terms not
+      established: internal only), newest Landing copy. Grain: institution_uuid (POL-on's own id), every kind and
+      status. Non-person fields only (the head of the institution and contact details are dropped before Landing).
+      History: current state only (snapshot); trial run in ingestion/sources/radon.yaml.
+    columns:
+      - name: institution_uuid
+        description: POL-on's own id of the institution (the register's id).
+        tests: [not_null, unique]
+      - name: name
+        tests: [not_null]
+      - name: kind_code
+        description: >-
+          POL-on's kind code; closed list from the data (Dev run 43343139469): 10 Uczelnia niepubliczna, 5 Instytucja
+          naukowa, 13 Uczelnia publiczna, 1 Uczelnia kościelna, 16 Federacja.
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '5', '10', '13', '16']}}}]
+      - name: status_code
+        description: POL-on's status code; closed list from the data (Dev run 43343139469), named in status_name.
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '2', '3', '4', '8']}}}]
+      - name: status_name
+        description: >-
+          Status as published; closed list from the data (Dev run 43343139469): Działająca (1), W likwidacji (2),
+          Zlikwidowana (3), Przekształcona (4), Wykreślona z wykazu (8).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Działająca', 'W likwidacji', 'Zlikwidowana', 'Przekształcona', 'Wykreślona z wykazu']
+      - name: raw_sha256
+        tests: [not_null]
+  - name: radon_courses
+    description: >-
+      RAD-on / POL-on study programmes (API resource courses; register PLS-023, OPI PIB; terms not established:
+      internal only), newest Landing copy. Grain: course_uuid (POL-on's own id), every status. Level, profile, ISCED
+      field and status as published; launches (form, title, start) and disciplines kept as JSON. History: current
+      state only (snapshot); trial run in ingestion/sources/radon.yaml.
+    columns:
+      - name: course_uuid
+        description: POL-on's own id of the study programme.
+        tests: [not_null, unique]
+      - name: level_code
+        description: >-
+          POL-on's level code; closed list from the data (Dev probe 43799479082): 1 jednolite magisterskie,
+          2 pierwszego stopnia, 3 drugiego stopnia.
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '2', '3']}}}]
+      - name: profile_code
+        description: Closed list from the data (Dev probe 43799479082) 1 praktyczny, 2 ogólnoakademicki.
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '2']}}}]
+      - name: status_code
+        description: >-
+          POL-on's current status; closed list from the data (Dev probe 43799479082): 1 wygaszane, 2 zlikwidowane,
+          3 prowadzone, 4 zarchiwizowane.
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '2', '3', '4']}}}]
+      - name: main_institution_kind_code
+        description: >-
+          Kind of the main institution; closed list from the data (Dev probe 43799479082): 1 Uczelnia kościelna,
+          10 Uczelnia niepubliczna, 13 Uczelnia publiczna.
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '10', '13']}}}]
+      - name: main_institution_uuid
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

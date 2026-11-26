@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+ted_notices,PLG-023,TED ogłoszenia zamawiających z Polski,TED notices of Polish buyers,Publications Office of the European Union,registry,api,international-public,unresolved,https://docs.ted.europa.eu/api/latest/search.html

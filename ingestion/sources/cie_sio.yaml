@@ -1,0 +1,39 @@
+source_system: cie_sio
+description: "CIE / SIO — archival education statistics of cie.gov.pl (teachers, schools and pupils, graduates by voivodeship, 30 September)"
+
+# Extraction strategy (docs/landing.md). Register PLS-022. Bulk feature: the closed archive page
+# https://cie.gov.pl/archiwalne-dane-statystyczne/ links six topic pages whose plain HTML links 94 workbooks (64 .xls,
+# 30 .xlsx) under /content/uploads/2020/09/, reference dates 30 September 2010-2018 (Dev probes 43289510189 and
+# 43800731510 on test/446-sio-trial: all 94 landed and decoded, 715,454 cells, 0 rejected). Landed (SELECTION in
+# ingestion/to_landing/cie_sio/): the nine graduates workbooks (2010-2018), the tidy schools-and-pupils workbook
+# of 2018/2019 and the newest teachers workbook (2006-2018; the five older ones repeat its series). Entity = one
+# workbook, version = Last-Modified (all files 8 August 2024), written only when the SHA-256 changed. Restart
+# unit: one file. Bronze reads .xls with xlrd and .xlsx with the shared decoder.
+extraction:
+  initial: bulk
+  production: snapshot                  # each workbook as published; a changed file replaces it
+  incremental_policy: changed_since_last  # Last-Modified newer than the landed copy, then SHA-256
+  schedule: # UTC; closed archive (nothing after 30 September 2018 is published): a monthly re-read of 7 pages and
+    # 11 HEAD requests catches a reopened or corrected archive
+    - {cron: "45 6 12 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/cie_sio/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.cie_sio_cells, bronze.cie_sio_rejected_files]
+silver: [silver.cie_sio_teachers, silver.cie_sio_schools, silver.cie_sio_graduates]
+gold: [gold.build_cie_sio, gold.metrics_teachers]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 43807333288 (test/446-sio-trial)
+  cie_sio_teachers: {rows: 900}  # 580: Poland 13 dates x 20 + 16 voivodeships x 20
+  cie_sio_schools: {rows: 5700}  # 3,804
+  cie_sio_graduates: {rows: 16000}  # 10,656
+  poc_build_cie_sio: {rows: 22500}  # 15,040
+  poc_metrics_teachers: {rows: 50}  # 29: Poland 2006-2018 + 16 voivodeships 2018
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): 11 workbooks of at most 1 MB, a closed archive; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3130"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

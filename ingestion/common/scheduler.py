@@ -92,6 +92,46 @@ def _inputs(entry: dict) -> dict:
     return inputs
 
 
+LANDING_ONLY = {"landing.inspect", "landing.extract", "landing.verify"}  # no catalog calls: not limited by O46
+WEEKLY_YEAR = 2027  # any year: the weekly limit is checked on every 7-day window of it and of the turn into the next
+
+
+def _days(fields: list[set[int]]) -> list[int]:
+    """Runs per day of WEEKLY_YEAR and the first week of the next (day and weekday must both match, as in matches)."""
+    minute, hour, day, month, weekday = fields
+    start = datetime(WEEKLY_YEAR, 1, 1, tzinfo=UTC)
+    out = []
+    for n in range(366 + 7):
+        when = start + timedelta(days=n)
+        hit = when.day in day and when.month in month and (when.weekday() + 1) % 7 in weekday
+        out.append(len(minute) * len(hour) if hit else 0)
+    return out
+
+
+def weekly_problems(config: dict, plan) -> list[str]:
+    """O46 (weekly until production use): at most one scheduled run past Landing per source in any 7 days."""
+    per_source: dict[str, list[int]] = {}
+    for e in entries(config):
+        try:
+            steps = plan(e["source"], e.get("run", ""), config)
+            days = _days(parse(str(e.get("cron", ""))))
+        except (ValueError, SystemExit, KeyError):
+            continue  # reported by validate
+        if set(steps) <= LANDING_ONLY:
+            continue
+        counts = per_source.setdefault(e["source"], [0] * len(days))
+        per_source[e["source"]] = [a + b for a, b in zip(counts, days, strict=True)]
+    problems = []
+    for source, counts in sorted(per_source.items()):
+        most = max(sum(counts[i : i + 7]) for i in range(len(counts) - 6))
+        if most > 1:
+            problems.append(
+                f"{source}: {most} scheduled runs past Landing within 7 days;"
+                " at most 1 a week until production use (O46)"
+            )
+    return problems
+
+
 def validate(config: dict, plan) -> list[str]:
     """Problems with declared schedules (used by the check job and before dispatching)."""
     problems = []
@@ -103,7 +143,7 @@ def validate(config: dict, plan) -> list[str]:
                 raise ValueError(f"parallel_jobs must be 1-8, not {e['parallel_jobs']!r}")
         except (ValueError, SystemExit, KeyError) as exc:
             problems.append(f"{e.get('source')}: {e.get('run')!r}: {exc}")
-    return problems
+    return problems + weekly_problems(config, plan)
 
 
 DEFAULT_WINDOW, MAX_WINDOW = 60, 360

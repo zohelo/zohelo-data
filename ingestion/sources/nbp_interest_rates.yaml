@@ -22,8 +22,9 @@ extraction:
   initial: bulk
   production: snapshot                  # each file is complete
   incremental_policy: changed_since_last  # Last-Modified / SHA-256
-  schedule: # UTC; release: MPC decisions take effect the day after the meeting (about monthly); two small files, weekday check
-    - {cron: "40 12 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; release: MPC decisions take effect the day after the meeting (about monthly; meetings usually end
+    # on a Wednesday); two small files, one run a week, Thursday (O46, weekly until production use; was every weekday)
+    - {cron: "40 12 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nbp_interest_rates/
 archive_policy:
@@ -35,6 +36,7 @@ silver: [silver.nbp_policy_rates]
 gold: [gold.build_nbp_interest_rates]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   poc_build_nbp_interest_rates: {rows: 2500}  # 1,541 (Dev trial 43093114523)
+  nbp_policy_rates: {rows: 2000}  # 390 rows, 96 archive dates since 1998 (Dev trial 42777711811)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (owner decision #875): two files of a few hundred rows; rebuilt in full.
