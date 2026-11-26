@@ -275,7 +275,8 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
         bad = {k: v for k, v in results.items() if v[0] not in ("success", "pass")}
         runs.append({"exit": code, "nodes": len(results), "tests": sum(1 for k in results if k.startswith("test.")),
                      "status": by_status, "not_passing": bad,
-                     "own_tests": sorted(k.split(".")[2] for k in results if k.startswith("test.") and SOURCE in k)})
+                     "own_tests_passed": sum(1 for k, v in results.items() if k.startswith("test.") and SOURCE in k and v[0] == "pass"),
+                     "own_tests_run": sum(1 for k in results if k.startswith("test.") and SOURCE in k)})
         if code or {k: v for k, v in bad.items() if v[0] != "warn"}:
             failures.append(f"dbt build {attempt}: exit {code}, {bad}")
         local = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
@@ -297,7 +298,7 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
     con = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
     rel = {m: f'{s}."{a}"' for m, (s, a) in aliases.items()}
     ob, b = rel["gus_exam_results_eighth_grade"], rel["poc_build_gus_exam_results"]
-    dbt_summary = {"runs": runs, "tests_skipped_parent_missing": skipped, "own_tests_selected": own_tests,
+    dbt_summary = {"runs": runs, "tests_skipped_parent_missing": skipped, "own_tests_selected": len(own_tests),
                    "second_build_same_tables": fingerprints[0] == fingerprints[1],
                    "rows": {m: v[0] for m, v in fingerprints[0].items()},
                    "views_onto_production": len([v for v in views if not v.startswith("missing:")]),
@@ -320,6 +321,25 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
                        from {ob} group by all)
             select count(*), count(*) filter (where t < least(f, m) - 1 or t > greatest(f, m) + 1)
             from p where t is not null and f is not null and m is not null"""),
+        "total_outside_sexes_rows(area,subject,year,T,F,M)": rows(con, f"""
+            with p as (select area_name, subject_code, period_year,
+                              max(value) filter (where sex_code = 'T') t, max(value) filter (where sex_code = 'F') f,
+                              max(value) filter (where sex_code = 'M') m
+                       from {ob} group by all)
+            select * from p where t is not null and f is not null and m is not null
+              and (t < least(f, m) - 1 or t > greatest(f, m) + 1) order by all"""),
+        "total_outside_sexes_by_1(n)": one(con, f"""
+            with p as (select area_name, subject_code, period_year,
+                              max(value) filter (where sex_code = 'T') t, max(value) filter (where sex_code = 'F') f,
+                              max(value) filter (where sex_code = 'M') m
+                       from {ob} group by all)
+            select count(*) from p where t < least(f, m) or t > greatest(f, m)"""),
+        "total_with_one_sex_signed(area,subject,year,T,F,M)": rows(con, f"""
+            with p as (select area_name, subject_code, period_year,
+                              max(value) filter (where sex_code = 'T') t, max(value) filter (where sex_code = 'F') f,
+                              max(value) filter (where sex_code = 'M') m
+                       from {ob} group by all)
+            select * from p where t is not null and (f is null) <> (m is null) order by all""", 12),
         "poland_outside_voivodeships(n_checked,outside)": rows(con, f"""
             with p as (select subject_code, sex_code, period_year,
                               max(value) filter (where area_name = 'Ogółem') pl,
