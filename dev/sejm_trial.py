@@ -343,10 +343,30 @@ def sejm_trial(con) -> None:
             "mps_active": q(con, "select count(*), count(*) filter (where is_active) from sejm_mps"),
             "mps_bronze_columns": [r[0] for r in con.execute(f"describe {mp}").fetchall()],
             "mps_silver_columns": [r[0] for r in con.execute("describe sejm_mps").fetchall()],
+            "non_electronic_bronze_zero_totals": q(
+                con,
+                f"select kind, count(*), count(*) filter (where total_voted = '0'), count(*) filter (where present = '0'), "
+                f"count(*) filter (where not_participating = '0'), count(*) filter (where against_all = '0') "
+                f"from {v} where kind <> 'ELECTRONIC' group by 1 order by 1",
+            ),
             "non_electronic_silver_totals": q(
                 con,
-                "select kind, count(*), count(yes), count(no), count(abstain), min(total_voted), max(total_voted) "
+                "select kind, count(*), count(yes), count(no), count(abstain), count(total_voted), count(present), "
+                "count(not_participating), count(against_all), min(total_voted), max(total_voted) "
                 "from sejm_votings where kind <> 'ELECTRONIC' group by 1 order by 1",
+            ),
+            "days_shared_by_two_sittings": count(
+                con, "select day_date from sejm_sitting_days group by 1 having count(distinct sitting_number) > 1"
+            ),
+            "held_days_rows_vs_distinct": q(
+                con, "select count(*), count(distinct day_date) from sejm_sitting_days where is_held"
+            ),
+            "sittings_listed_without_votings": count(
+                con,
+                "select 1 from sejm_sitting_days where sitting_votings_listed > 0 and sitting_votings_loaded = 0",
+            ),
+            "not_held_days": q(
+                con, "select count(*), min(day_date), max(day_date) from sejm_sitting_days where not is_held"
             ),
         },
     )
