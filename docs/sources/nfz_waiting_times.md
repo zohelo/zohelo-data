@@ -20,7 +20,7 @@ in `warehouse/macros/sources/nfz_waiting_times.sql`), monthly, by NFZ branch (= 
 and Poland, per case: waiting lists listed in the snapshot month, persons awaiting at the end of the statistics month
 summed over the lists, and the number of lists summed. **These are zohelo calculations.** A list shown at several
 places (`many_places` Y) enters once when all its places give the same count and not at all when they differ. A
-branch may list a place across the voivodeship border (8 of 148,140 queues in November 2026); the counts follow the
+branch may list a place across the voivodeship border (8 of 148,144 queues in November 2026); the counts follow the
 branch. Draft KPIs `waiting_list_persons`, `waiting_lists` (stable case).
 
 Left out: the forecast time to the benefit (published text, not aggregated), the accessibility attributes in Gold

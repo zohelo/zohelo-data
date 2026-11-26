@@ -12,8 +12,8 @@ description: "NFZ API Terminy Leczenia v1.4 — monthly snapshot of every waitin
 # its own entity, so Bronze keeps the newest copy of each month and the months accumulate.
 # Polite: one request at a time with a 0.3 s pause (terms section III, v1.4 statute page: 10 a second per IP), bounded
 # retries; the site runs Imperva bot protection, which has never challenged these plain requests; a challenge or 403
-# fails the run and is not worked around. Dev trial 43797091426 (November 2026 snapshot): 32 entities, 5,944 pages,
-# 148,176 queues, 27.6 MB, 152.7 minutes; the second read wrote nothing.
+# fails the run and is not worked around. Dev trial 45705953620 (November 2026 snapshot, read 25 Nov): 32 entities,
+# 5,942 pages, 148,144 queues, 27.6 MB, 136.3 minutes; the second read wrote nothing.
 extraction:
   initial: api
   production: snapshot                  # each entity is the complete list of one case and voivodeship that month
@@ -32,8 +32,8 @@ bronze: [bronze.nfz_waiting_times_queues, bronze.nfz_waiting_times_rejected_file
 silver: [silver.nfz_waiting_times_queues, silver.nfz_waiting_times_providers, silver.nfz_waiting_times_monthly]
 gold: [gold.build_nfz_waiting_times, gold.metrics_waiting_list_persons, gold.metrics_waiting_lists]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  nfz_waiting_times_queues: {rows: 225000}  # 148,176 (Dev trial 43797091426; newest month only)
-  nfz_waiting_times_providers: {rows: 18000}  # 11,942 (Dev trial 43797091426; newest month only)
+  nfz_waiting_times_queues: {rows: 225000}  # 148,144 (Dev trial 45705953620; newest month only)
+  nfz_waiting_times_providers: {rows: 18000}  # 11,939 (Dev trial 45705953620; newest month only)
   nfz_waiting_times_monthly: {rows: 2500}  # 102 rows a month (3 measures x 17 areas x 2 cases), accumulating: two years
   poc_build_nfz_waiting_times: {rows: 2500}  # as the monthly counts (102 a month): two years
   poc_metrics_waiting_list_persons: {rows: 420}  # 17 areas a month, accumulating: two years

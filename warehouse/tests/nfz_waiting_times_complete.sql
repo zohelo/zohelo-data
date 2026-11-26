@@ -1,8 +1,8 @@
 -- NFZ waiting times (PLS-015), newest complete snapshot: every case x voivodeship has queues, and the places
 -- confirm the mapping of poc_geography__nfz_waiting_times (NFZ code n = TERYT code 2n): in every NFZ voivodeship
 -- the most common TERYT voivodeship of the places is 2n, and places in another voivodeship stay below 1 % of its
--- queues. A branch may contract a provider whose place lies across the border (8 of 148,140 queues in the Dev trial
--- of 13 Nov 2026); the counts are by the NFZ branch that lists the queue, so these few are kept under that branch.
+-- queues. A branch may contract a provider whose place lies across the border (8 of 148,144 queues in the Dev trial
+-- of 25 Nov 2026); the counts are by the NFZ branch that lists the queue, so these few are kept under that branch.
 -- Rows returned fail.
 with grid as (
     select

@@ -1,5 +1,5 @@
-{# NFZ waiting times (#2956), stable case, Poland the largest area: persons awaiting 4,645,039 (October 2026),
-   waiting lists 74,088 (November 2026 snapshot), Dev trial 43797091426. #}
+{# NFZ waiting times (#2956), stable case, Poland the largest area: persons awaiting 4,662,469 (October 2026),
+   waiting lists 74,072 (November 2026 snapshot), Dev trial 45705953620. #}
 {% macro poc_value_range__nfz_waiting_times() %}
     {{ return({
         'bounds': [
