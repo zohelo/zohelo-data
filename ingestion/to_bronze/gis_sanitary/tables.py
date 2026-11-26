@@ -7,7 +7,7 @@ and for domestic, imported and EU foodstuffs. It is found and checked before a s
 
 - the page: its text holds the title, the header words (``HEADER``, "UE", "Rok" or "Lata") and at least two year
   rows (the table of contents and the table by food group have none); when several pages qualify their year rows
-  must be identical (2024: pages 24 and 25, Dev trial 45899904614) and the first is kept;
+  must be identical (2024: pages 24 and 25, Dev trials of #442) and the first is kept;
 - a year row: a cell ``20yy`` followed by eight cells alternating count / share (layout text, cells split at two or
   more spaces; a count is digits with single-space thousands groups, a share at most two decimals with a comma);
 - the years: unique, without gaps, the last one the edition's report year (from the entity name);

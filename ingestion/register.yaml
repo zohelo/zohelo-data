@@ -6383,7 +6383,8 @@ sources:
   name: NMT, NMPT and airborne laser-scanning elevation products
   short_name: GUGiK elevation (NMT)
   provider: GUGiK
-  status: approved
+  source_system: gugik_nmt
+  status: built
   family: G
   kpi: false
   geography: Poland

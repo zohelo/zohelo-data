@@ -32,6 +32,10 @@ same columns and the same values for 2020 to 2023 as the 2023 edition, so they c
 not used: from 2021 they give 2020 as 3,2 % where the 2020 edition and its components give 3,09 %. KPI (draft):
 `food_samples_disqualified_share`. Schedule: monthly on the 13th (07:50 UTC), the report has no fixed date.
 
+Dev trial (#442, 26 Nov 2026; run ids in the pull request): 14 files, 247,352,188 bytes; 824 Bronze cells (103
+printed years x 8), 0 rejected; Silver 206 rows, editions 2012-2025, reference years 2010-2025; Gold 56 rows
+(14 years x 4 measures); a second Landing (nothing downloaded), Bronze and dbt run changed nothing.
+
 Licence: gov.pl terms (https://www.gov.pl/web/gov/prawa-autorskie): text CC BY-SA 4.0, official materials free to
 use; the report files carry no licence of their own. `licence_key` `gov_pl_terms_gis`, attribution "Źródło: Główny
 Inspektorat Sanitarny, Stan sanitarny kraju (<rok>)".

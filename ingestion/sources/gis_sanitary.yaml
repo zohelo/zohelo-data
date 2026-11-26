@@ -57,8 +57,8 @@ bronze: [bronze.gis_sanitary_cells, bronze.gis_sanitary_rejected_files]
 silver: [silver.gis_sanitary_food_samples]
 gold: [gold.build_gis_sanitary]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  gis_sanitary_food_samples: {rows: 320}  # provisional, set from the Dev trial
-  poc_build_gis_sanitary: {rows: 90}  # provisional, set from the Dev trial
+  gis_sanitary_food_samples: {rows: 310}  # 206 rows: 14 editions, 103 printed years x 2 origins (Dev trial, #442)
+  poc_build_gis_sanitary: {rows: 84}  # 56 rows: 14 years x 4 measures (Dev trial, #442)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): 14 PDF files, one new a year, under 100 Bronze cells per edition; small,
