@@ -22,8 +22,8 @@ line above it. Nothing is guessed from position alone.
 from __future__ import annotations
 
 import re
-import unicodedata
 from typing import Any
+import unicodedata
 
 TITLE = re.compile(r"^Barometr zawodów (20\d\d)$")
 AREA = re.compile(r"^(Polska|województwo\s+\S.*)$")
@@ -42,7 +42,14 @@ def _mul(m: list[float], n: list[float]) -> list[float]:
     """Matrix product m × n of two PDF matrices [a b c d e f]."""
     a, b, c, d, e, f = m
     a2, b2, c2, d2, e2, f2 = n
-    return [a * a2 + b * c2, a * b2 + b * d2, c * a2 + d * c2, c * b2 + d * d2, e * a2 + f * c2 + e2, e * b2 + f * d2 + f2]
+    return [
+        a * a2 + b * c2,
+        a * b2 + b * d2,
+        c * a2 + d * c2,
+        c * b2 + d * d2,
+        e * a2 + f * c2 + e2,
+        e * b2 + f * d2 + f2,
+    ]
 
 
 def _pt(m: list[float], x: float, y: float) -> tuple[float, float]:
@@ -121,7 +128,16 @@ def drawing(page, reader) -> tuple[list[dict], list[dict]]:
             m = _mul(tlm, cm)
             if abs(m[0]) < 1e-6 and abs(m[1]) > 1e-6 and font:  # rotated by 90 or 270 degrees: a tab label
                 show = [_raw(args[-1])]
-                glyphs.append({"x": m[4], "y": m[5], "tm": list(tlm), "font": font, "op": b"TJ" if op == "TJ" else b"Tj", "args": show})
+                glyphs.append(
+                    {
+                        "x": m[4],
+                        "y": m[5],
+                        "tm": list(tlm),
+                        "font": font,
+                        "op": b"TJ" if op == "TJ" else b"Tj",
+                        "args": show,
+                    }
+                )
     return shapes, glyphs
 
 
@@ -204,14 +220,15 @@ def parse(page, reader) -> dict[str, Any] | None:
         raise ValueError(f"poster page with titles {sorted(set(titles))} and areas {[a['text'] for a in areas]}")
     width = float(page.mediabox.width)
     shapes, glyphs = drawing(page, reader)
-    blocks = [s for s in shapes if s["x1"] - s["x0"] >= width / 2 and 12 <= s["y1"] - s["y0"] < 0.9 * float(page.mediabox.height)]
+    blocks = [
+        s
+        for s in shapes
+        if s["x1"] - s["x0"] >= width / 2 and 12 <= s["y1"] - s["y0"] < 0.9 * float(page.mediabox.height)
+    ]
     colours = {}
     for b in blocks:
         colours.setdefault(b["colour"], []).append(b)
-    tabs = [
-        s for s in shapes
-        if s["x1"] - s["x0"] < 70 and s["y1"] - s["y0"] > 25 and s["colour"] in colours
-    ]
+    tabs = [s for s in shapes if s["x1"] - s["x0"] < 70 and s["y1"] - s["y0"] > 25 and s["colour"] in colours]
     if not blocks:
         raise ValueError("poster page without a coloured category block")
     if not glyphs:
@@ -253,7 +270,7 @@ def parse(page, reader) -> dict[str, Any] | None:
             continue
         last_in_column[key] = len(rows)
         rows.append((name, line["text"]))
-    for name, occupation in rows:
+    for _, occupation in rows:
         if occupation in seen:
             raise ValueError(f"occupation printed twice on one poster: {occupation[:60]!r}")
         seen.add(occupation)
