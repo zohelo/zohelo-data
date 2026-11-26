@@ -147,7 +147,7 @@ def trial(cat) -> None:
     tests = {}
     for m, key in keys.items():
         nn = ["layer", key, "point_lon", "point_lat", "snapshot_date", "raw_sha256"] + (
-            ["deposit_number", "mineral_code", "mineral"] if m == "pig_midas_deposits" else ["status", "register_number"])
+            ["deposit_number", "mineral_code", "mineral"] if m == "pig_midas_deposits" else [])
         tests[m] = {
             "dup_grain": one(con, f"select count(*) from (select layer, {key} from {m} group by all having count(*) > 1)"),
             "nulls": {c: n for c, n in zip(nn, con.execute(
@@ -157,7 +157,8 @@ def trial(cat) -> None:
                                 .render(ref=lambda n: n)),
         }
         if m != "pig_midas_deposits":
-            tests[m]["status_by_layer"] = q(con, f"select layer, status, count(*) from {m} group by all order by 1")
+            tests[m]["status_by_layer"] = q(con, f"select layer, status, count(*), count(register_number), "
+                                                 f"count(legal_area_m2) from {m} group by all order by 1")
     note("midas silver", {
         "rows_two_builds": rows, "tests": tests,
         "deposits": q(con, "select layer, count(*), count(distinct deposit_number), count(distinct mineral_code), "
@@ -204,6 +205,7 @@ def trial(cat) -> None:
         "by_measure": q(con, "select measure_key, date_key, frequency, count(*), sum(is_total::int), "
                              "count(distinct geography_key) from gold_t group by all order by 1"),
         "unmatched": q(con, "select geography_source_code, count(*) from gold_t where geography_key = '_X' group by 1"),
+        "status_keys": q(con, "select observation_status_key, count(*) from gold_t group by 1"),
         "null_or_negative": one(con, "select count(*) from gold_t where value is null or value < 0"),
         "columns": [r[0] for r in con.execute("describe gold_t").fetchall()]})
 
