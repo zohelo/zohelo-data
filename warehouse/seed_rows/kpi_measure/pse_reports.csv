@@ -1,0 +1,5 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+electricity_price_rce,pse_reports,pse_reports:rce_pln:PLN/MWh:rce_pln:daily_mean,"PSE report rce-pln, daily mean of the 15-minute RCE in PLN/MWh, complete days only",1,
+electricity_demand,pse_reports,pse_reports:his_wlk_cal:MW:demand:daily_mean,"PSE report his-wlk-cal, field demand, daily mean of the 15-minute values in MW, complete days only",1,
+wind_generation,pse_reports,pse_reports:his_wlk_cal:MW:wi:daily_mean,"PSE report his-wlk-cal, field wi, daily mean of the 15-minute values in MW, complete days only",1,
+pv_generation,pse_reports,pse_reports:his_wlk_cal:MW:pv:daily_mean,"PSE report his-wlk-cal, field pv, daily mean of the 15-minute values in MW, complete days only",1,

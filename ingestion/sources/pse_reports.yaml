@@ -1,0 +1,51 @@
+source_system: pse_reports
+description: "PSE Reports API v2 — market energy price RCE (PLN/MWh) and actual power demand, wind and PV generation (MW), 15-minute values per business day"
+
+# Extraction strategy (docs/landing.md, docs/sources/pse_reports.md; register PL-ENV-019). PSE offers no bulk download;
+# API v2 is the documented route (PSE announcement: "możliwość pobierania danych liczbowych czy wykorzystania API"),
+# public, no key, no published limit. GET https://api.raporty.pse.pl/api/<report>?$filter=business_date eq '<day>'
+# answers one business day of a report in one response (at most 100 rows; pages hold 100 rows and continue through
+# nextLink with an $after cursor; $top, $skip and $count are refused with 400). A date-range filter works but pages
+# by 100 rows, so a month costs as many requests as its days: entity = report x business day, the response's exact
+# bytes, version = the newest publication_ts_utc of the day (ingestion/to_landing/pse_reports/). Missing days first
+# (oldest first), then the newest 7 days again (re-published values); unchanged bytes are not written. A day is
+# landed only when it holds all its periods (96; 92 or 100 on DST days). One request at a time, 1.2 s apart. Dev
+# probes 45790352597 and 45790863668 (test/2870-pse-probe, 26 Nov 2026). Selection #2870: rce-pln and his-wlk-cal
+# from 2024-06-14 (the API's first day); the other reports are left out (docs/sources/pse_reports.md).
+extraction:
+  initial: api
+  production: snapshot                    # each file is the complete answer of one report for one closed day
+  incremental_policy: changed_since_last  # missing days, then the newest 7 days again; unchanged bytes skipped
+  # UTC. RCE of a day is published the day before (about 13:00-14:00 UTC), his-wlk-cal after the day (about 02:52
+  # UTC the next day); the API keeps every day since 2024-06-14, so a weekly run loses nothing (O46: at most one run a
+  # week past Landing). Wednesday 04:37 lands the days up to Tuesday and loads Bronze; the Sunday platform build
+  # makes Silver and Gold.
+  schedule:
+    - {cron: "37 4 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/pse_reports/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.pse_reports_rce_pln, bronze.pse_reports_his_wlk_cal, bronze.pse_reports_rejected_files]
+silver: [silver.pse_reports_rce_pln, silver.pse_reports_his_wlk_cal]
+gold: [gold.build_pse_reports, gold.metrics_electricity_price_rce, gold.metrics_electricity_demand,
+       gold.metrics_wind_generation, gold.metrics_pv_generation]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  # Dev trial of #2870 (26 Nov 2026), 2024-06-14 to 2026-11-25 = 895 days; each report grows by about 35,000 rows a
+  # year, so the Silver ceilings are reached in about 2027-12: then raise them (still far below 1 M) or go incremental.
+  pse_reports_rce_pln: {rows: 130000}  # 85,924 measured (890 days x 96, 2 DST days x 92, 3 DST days x 100)
+  pse_reports_his_wlk_cal: {rows: 130000}  # 85,924 measured
+  poc_build_pse_reports: {rows: 5500}  # 3,580 measured (4 measures x 895 complete days)
+  poc_metrics_electricity_price_rce: {rows: 1400}  # 895 measured (build rows of the KPI's measure, Poland)
+  poc_metrics_electricity_demand: {rows: 1400}  # 895 measured
+  poc_metrics_wind_generation: {rows: 1400}  # 895 measured
+  poc_metrics_pv_generation: {rows: 1400}  # 895 measured
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a day's file
+# Refresh policy for all layers (D32): two files of about 25 and 50 KB a day, about 35,000 rows a year per report; the
+# API has no changed-since filter, so the newest 7 days are asked again. Small: Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

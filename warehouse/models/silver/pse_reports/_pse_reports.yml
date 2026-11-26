@@ -1,0 +1,61 @@
+version: 2
+models:
+  - name: pse_reports_rce_pln
+    description: >-
+      PSE Reports API v2, report rce-pln (register PL-ENV-019): market energy price RCE in PLN/MWh per 15-minute period,
+      business days from 2024-06-14 (the API's first day) to the newest landed day, from the newest copy of each day's
+      file. Grain: business_date x dtime_utc. dtime_utc is the UTC end of the period, dtime the published local end
+      (text: the repeated autumn DST hour is marked '02a:15'), dtime_local the local end as a timestamp;
+      periods_expected is 96 (92 or 100 on DST days). Dev trial: see ingestion/sources/pse_reports.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', business_date, dtime_utc)"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: business_date
+        tests: [not_null]
+      - name: dtime_utc
+        tests: [not_null]
+      - name: dtime
+        tests: [not_null]
+      - name: dtime_local
+        tests: [not_null]
+      - name: utc_offset_hours
+        tests: [not_null, {accepted_values: {arguments: {values: [1, 2], quote: false}}}]
+      - name: periods_expected
+        tests: [not_null, {accepted_values: {arguments: {values: [92, 96, 100], quote: false}}}]
+      - name: rce_pln
+        tests: [not_null]
+      - name: source_version
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: pse_reports_his_wlk_cal
+    description: >-
+      PSE Reports API v2, report his-wlk-cal (register PL-ENV-019): basic quantities of the national power system after
+      the day in MW per 15-minute period (demand, wind wi, photovoltaics pv and the generating-unit groups and exchange
+      balances under PSE's codes), business days from 2024-06-14 to the newest landed day, from the newest copy of each
+      day's file. Grain: business_date x dtime_utc. Fields PSE does not publish for a day are null, never 0.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', business_date, dtime_utc)"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: business_date
+        tests: [not_null]
+      - name: dtime_utc
+        tests: [not_null]
+      - name: dtime
+        tests: [not_null]
+      - name: dtime_local
+        tests: [not_null]
+      - name: utc_offset_hours
+        tests: [not_null, {accepted_values: {arguments: {values: [1, 2], quote: false}}}]
+      - name: periods_expected
+        tests: [not_null, {accepted_values: {arguments: {values: [92, 96, 100], quote: false}}}]
+      - name: source_version
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

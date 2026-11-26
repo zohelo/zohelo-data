@@ -380,6 +380,25 @@ SOURCES.update(
         )
     }
 )
+# NBP balance of payments and UN WPP: one Silver dbt table each, every series by rule; the curated build_nbp_bop and
+# build_un_wpp stay the KPI layer. NBP BOP is Poland's own accounts (geography PL, no lookup, as NBP's rates); UN WPP
+# maps its locations as the curated stage does.
+SOURCES.update(
+    {
+        "nbp_bop": {
+            "tables": {"nbp_bop_observations": (("silver", "nbp_bop_observations"), "gold_nbp_bop_build")},
+            "lookups": {},
+            "keyed_by": (),
+        },
+        "un_wpp": {
+            "tables": {
+                "un_wpp_demographic_indicators": (("silver", "un_wpp_demographic_indicators"), "gold_un_wpp_build")
+            },
+            "lookups": _area_map("un_wpp"),
+            "keyed_by": ("geo_map",),
+        },
+    }
+)
 SOURCES["world_bank_wgi"] = {
     "tables": {"wgi_observations": (("silver", "wgi_observations"), "gold_world_bank_wgi_build")},
     "lookups": {
