@@ -14,7 +14,8 @@ sources:
   tables:
   - name: kprm_work_list_drafts
     description: >-
-      One row per row of the work-list CSV (one draft), every value as published text. Not loaded: the two long
-      text columns (aims and substance of the draft) and the responsible official's name (Osoba odpowiedzialna).
+      One row per row of the work-list CSV (one draft), every value as published text. Not loaded: the free-text
+      columns about the draft (aims, substance, social impact, expected effects, measuring effects) and the
+      responsible official's name (Osoba odpowiedzialna).
   - name: kprm_work_list_rejected_files
     description: Work-list Landing files the Bronze decoder rejected (unknown header or unreadable CSV), with the reason.

@@ -5,9 +5,9 @@ description: "Work list of the Council of Ministers (Wykaz prac legislacyjnych i
 # (KPRM) publishes the whole work list of the Council of Ministers as one CSV ("Pobierz dane do pliku csv") on the
 # stable page https://www.gov.pl/web/premier/wplip-rm; the link (https://www.gov.pl/register-file/Rejestr_<n>.csv) is
 # read from the page at run time (url_from), because the register does not say it is stable. robots.txt of www.gov.pl:
-# "User-Agent: * Allow: /". One file, about 11 MB (UTF-8 with BOM, ';' separated, 19 columns, one row per draft since
-# 21 December 2023); the server sends no Last-Modified or ETag, so version = download time and an unchanged file (same
-# SHA-256) is skipped. Restart unit: the file. Not used: the RPL hosts legislacja.rcl.gov.pl and legislacja.gov.pl
+# "User-Agent: * Allow: /". One file, about 11 MB (UTF-8, no BOM since mid-November 2026, ';' separated, 19 columns,
+# one row per draft since 21 December 2023); the server sends no Last-Modified or ETag, so version = download time and
+# an unchanged file (same SHA-256) is skipped. Restart unit: the file. Not used: the RPL hosts legislacja.rcl.gov.pl and legislacja.gov.pl
 # (timeouts from GitHub runners, robots.txt unread), the Prime Minister's own list (Rejestr_20874196.csv) and the
 # archive of earlier terms (HTML pages without a file). Dev trial: TRIAL.
 extraction:

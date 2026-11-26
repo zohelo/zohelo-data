@@ -2,12 +2,14 @@
 """KPRM work list bronze.load: newest Landing copy of the work-list CSV → bronze.kprm_work_list_drafts.
 
 The file (``Rejestr_<n>.csv``, linked from https://www.gov.pl/web/premier/wplip-rm; see the source declaration) is
-UTF-8 with a byte order mark, ';' separated, '"' quoted (long text cells span lines), one header line with the
-HEADER below and one row per draft of the work list of the Council of Ministers. One Bronze row per CSV row, every
-value as published text. Not loaded (``None`` in HEADER): the two long text columns (aims and substance of the draft,
-up to 90,000 characters) and the responsible official's name (Osoba odpowiedzialna; register PLG-034: no personal
-data); they stay only in the landed bytes. DuckDB reads the CSV (no per-cell Python, strict: a row of another width
-fails). Another header, an unreadable CSV or a file without rows is rejected (bronze.kprm_work_list_rejected_files).
+UTF-8 (a byte order mark until mid-November 2026, none since; either is read), ';' separated, '"' quoted (long text
+cells span lines), one header line with the HEADER below (the full column names published since mid-November 2026)
+and one row per draft of the work list of the Council of Ministers. One Bronze row per CSV row, every value as
+published text. Not loaded (``None`` in HEADER): the free-text columns about the draft (aims and substance, up to
+90,000 characters; social impact, expected effects and how effects are measured, empty in the file of 26 Nov 2026)
+and the responsible official's name (Osoba odpowiedzialna; register PLG-034: no personal data); they stay only in
+the landed bytes. DuckDB reads the CSV (no per-cell Python, strict: a row of another width fails). Another header,
+text that is not UTF-8, an unreadable CSV or a file without rows is rejected (bronze.kprm_work_list_rejected_files).
 Code shared with other small bulk sources: ingestion/common/bulk_bronze.py.
 """
 
@@ -32,17 +34,17 @@ HEADER: list[tuple[str, str | None]] = [  # (CSV header as published, Bronze col
     ("Rodzaj dokumentu", "document_kind"),
     ("Typ dokumentu", "document_type"),
     ("Informacja dodatkowa", "additional_info"),
-    ("Istota rozwiązań planowanych w projekcie", None),
-    ("Cele projektu", None),
-    ("EMPTY1", "empty_1"),
-    ("EMPTY2", "empty_2"),
-    ("EMPTY3", "empty_3"),
+    ("Cele projektu oraz informacja o przyczynach i potrzebie rozwiązań planowanych w projekcie", None),
+    ("Istota rozwiązań planowanych w projekcie, w tym proponowane środki realizacji", None),
+    ("Oddziaływanie na życie społeczne nowych regulacji prawnych", None),
+    ("Spodziewane skutki i następstwa projektowanych regulacji prawnych", None),
+    ("Sposoby mierzenia efektów nowych regulacji prawnych", None),
     ("Organ odpowiedzialny za opracowanie projektu", "drafting_body"),
-    ("Organ współpracujący", "cooperating_body"),
+    ("Organ współpracujący przy opracowaniu projektu", "cooperating_body"),
     ("Osoba odpowiedzialna", None),
     ("Organ odpowiedzialny", "responsible_body"),
     ("Planowane przyjęcie przez RM", "planned_adoption"),
-    ("Informacja o rezygnacji", "withdrawal_info"),
+    ("Informacja o rezygnacji z prac nad projektem", "withdrawal_info"),
     ("Status realizacji", "status_text"),
     ("Data publikacji", "published_at"),
     ("Podgląd", "preview_url"),
@@ -57,9 +59,8 @@ ARROW = bulk_bronze.arrow_schema(COLUMNS)
 
 
 def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
-    if not body.startswith(b"\xef\xbb\xbf"):
-        raise ValueError("not UTF-8 with a byte order mark")
-    first = body[3:].split(b"\n", 1)[0].decode("utf-8").rstrip("\r")
+    body = body.removeprefix(b"\xef\xbb\xbf")  # sent until mid-November 2026, not since
+    first = body.split(b"\n", 1)[0].decode("utf-8").rstrip("\r")
     names = next(csv.reader([first], delimiter=";", quotechar='"'))
     if names != [name for name, _ in HEADER]:
         raise ValueError(f"unknown work-list header: {names}")
@@ -68,7 +69,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     kept = ", ".join(f"c{i} as {column}" for i, (_, column) in enumerate(HEADER) if column)
     with tempfile.TemporaryDirectory(prefix="zohelo-kprm-") as temporary:
         path = Path(temporary) / "work_list.csv"
-        path.write_bytes(body[3:])
+        path.write_bytes(body)
         con = duckdb.connect()
         con.execute("set preserve_insertion_order = true")
         con.execute("set threads = 1")

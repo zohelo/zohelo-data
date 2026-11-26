@@ -5,7 +5,7 @@ Council of Ministers (Wykaz prac legislacyjnych i programowych Rady Ministrów) 
 pliku csv" from https://www.gov.pl/web/premier/wplip-rm (robots.txt of www.gov.pl allows every agent). Route: the
 shared `bulk_file` pattern; the link (`/register-file/Rejestr_<n>.csv`) is read from the page on every run
 (`url_from`). Entity = the work list (`work_list`, one file); version = download time (no Last-Modified or ETag),
-written only when the SHA-256 changed; restart unit: the file. About 11 MB, UTF-8 with BOM, `;` separated, 19 columns,
+written only when the SHA-256 changed; restart unit: the file. About 11 MB, UTF-8 (a BOM until mid-November 2026), `;` separated, 19 columns,
 one row per draft since 21 December 2023 (the current government).
 
 Bronze `bronze.kprm_work_list_drafts` (`ingestion/to_bronze/kprm_work_list/`, DuckDB reads the CSV; another header
