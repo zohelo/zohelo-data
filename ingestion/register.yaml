@@ -4976,7 +4976,8 @@ sources:
   name: Database of decisions of the President of UOKiK
   short_name: UOKiK decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
-  status: approved
+  source_system: uokik_decisions
+  status: built
   family: F
   kpi: false
   geography: Poland
@@ -5044,7 +5045,8 @@ sources:
   name: Concentration decisions and notifications
   short_name: UOKiK concentration decisions
   provider: Office of Competition and Consumer Protection (UOKiK)
-  status: approved
+  source_system: uokik_decisions
+  status: built
   family: F
   kpi: false
   geography: Poland
