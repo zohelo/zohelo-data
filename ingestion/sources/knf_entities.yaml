@@ -1,0 +1,52 @@
+source_system: knf_entities
+description: "KNF supervised entities (register PLG-016), route 1: the Polish entries of the ESMA registers (esma_registers_upreg, home member state Poland), JSON"
+
+# Extraction strategy (docs/landing.md). Register PLG-016 (#2994). Route 1 only: the documented
+# application-to-application interface of the ESMA registers (https://registers.esma.europa.eu/publication/helpApp),
+# a Solr core answered as JSON (wt=json): every parent entry whose home member state is Poland (fq=ae_homeMemberState
+# "POLAND", fq=type_s:parent), sorted by id, without the response header (omitHeader: no query time in the bytes) and
+# with a field list (fl) that leaves out the head-office and branch addresses, websites, free-text comments and the
+# index's own timestamps (personal data rule of the brief; the source's index time would change the bytes without a
+# change of an entry). One request of up to 1000 rows (the help's examples use 1000); Bronze rejects a file whose
+# numFound exceeds the rows returned, so growth past 1000 entries fails loudly instead of truncating. No limits are
+# stated in the help; no Last-Modified or ETag is sent, so version = download time and an unchanged answer (same
+# SHA-256) is skipped. Restart unit: the file. Route 2 (KNF's HTML pages below www.knf.gov.pl/podmioty) waits for the
+# owner question in the register entry and is not read. Dev probes 45810797308, 45811335888, 45811761349 (26 Nov 2026):
+# 623 entries (478 Active, 145 Inactive), 422,118 bytes, three equal requests gave equal bytes; Dev trial 45814831335:
+# second Landing and Bronze passes wrote nothing.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: esma_upreg_pl
+        url: "https://registers.esma.europa.eu/solr/esma_registers_upreg/select?q=*%3A*&fq=ae_homeMemberState%3A%22POLAND%22&fq=type_s%3Aparent&fl=id,ae_dbId,ae_entityName,ae_commercialName,ae_entityTypeCode,ae_entityTypeLabel,ae_lei,ae_headOfficeLei,ae_competentAuthority,ae_homeMemberState,ae_hostMemberStates,ae_officeType,ae_status,ae_authorisationNotificationDate,ae_authorisationWithdrawalEndDate,ae_lastUpdate,ae_legalform,ae_isSme,no_of_funds&sort=id+asc&rows=1000&start=0&wt=json&omitHeader=true"
+        format: json
+        version: last_modified   # none sent: download time
+        probe: get               # a Solr select answers GET; the headers are read, the body is not
+  initial: bulk
+  production: snapshot                    # each answer is the complete Polish slice of the register
+  incremental_policy: changed_since_last  # SHA-256
+  schedule: # UTC; entries change on any working day with KNF decisions (ae_lastUpdate per entry; no release calendar);
+    # one run a week (O46), Thursday 16:15; each answer holds the whole slice, so a skipped week loses nothing
+    - {cron: "15 16 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/knf_entities/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.knf_entities_esma_entries, bronze.knf_entities_rejected_files]
+silver: [silver.knf_entities_esma_entries]
+gold: [gold.knf_supervised_entity, gold.build_knf_entities]
+# Ceilings about 1.5 x the rows of Dev trial 45814831335 (26 Nov 2026); the slice grows by a few dozen entries a year.
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  knf_entities_esma_entries: {rows: 950}  # 623 measured
+  knf_supervised_entity: {rows: 950}  # 623 measured
+  poc_build_knf_entities: {rows: 225}  # 149 measured (97 authorisations, 34 register, 18 withdrawals)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one answer of about 620 entries (0.4 MB), no changed-since filter used; a new
+# copy replaces the file and Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2994"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
