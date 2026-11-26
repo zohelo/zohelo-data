@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+- name: kprm_work_list
+  description: >-
+    Work list of the Council of Ministers (register PLG-034): the CSV "Pobierz dane do pliku csv" of
+    https://www.gov.pl/web/premier/wplip-rm, newest copy. Text as published.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/kprm_work_list/
+    loaded_by: ingestion/to_bronze/kprm_work_list/
+    config: ingestion/sources/kprm_work_list.yaml
+  tables:
+  - name: kprm_work_list_drafts
+    description: >-
+      One row per row of the work-list CSV (one draft), every value as published text. Not loaded: the free-text
+      columns about the draft (aims, substance, social impact, expected effects, measuring effects) and the
+      responsible official's name (Osoba odpowiedzialna).
+  - name: kprm_work_list_rejected_files
+    description: Work-list Landing files the Bronze decoder rejected (unknown header or unreadable CSV), with the reason.

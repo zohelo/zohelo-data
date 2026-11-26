@@ -12,8 +12,10 @@ asked with From = To = D 00:00:00 and every answer is filtered to the UTC day D,
 Selection: contract notices (`ContractNotice`) and result notices (`TenderResultNotice`) published from
 2026-01-01 (about 600 and 700 a working day; 2025: 142,424 and 148,561). Left out: the 13 other notice types
 (contract performance, notice and contract changes, intentions, competitions, concessions, notices outside the
-Act); so notices and their values stay as first published: a correction by a change notice is not applied), notices of 2021-2025 (the platform has them from 2021), and TED notices (PLG-023; overlap is by procedure
-id, never summed). Entity: one notice type on one UTC publication day (`contract_<YYYYMMDD>`,
+Act), notices of 2021-2025 (the platform has them from 2021), and TED notices (PLG-023; overlap is by procedure
+id, never summed). **Corrections are not applied:** the notice and contract change types are not loaded and notice
+versions are not reconciled, so every notice, and the contract value of `bzp_contract_value`, stays as first
+published. Entity: one notice type on one UTC publication day (`contract_<YYYYMMDD>`,
 `result_<YYYYMMDD>`); version: the day; the newest three days are asked again, unchanged bytes are skipped.
 
 **Reduced before Landing** (as news feeds, O33): the notice form `htmlBody` (about 95% of the bytes) holds contact
@@ -29,9 +31,11 @@ number; amounts parsed from "<amount> <currency>" with a decimal comma, unparsed
 their line counts; `tests/uzp_bzp_notices_days_complete.sql` checks each type-day against `notice/stats`). Gold:
 `gold.build_uzp_bzp` (block `notices`: `uzp_bzp:notices:notices` by `notice_type`, and
 `uzp_bzp:notices:PLN:contract_value`, the sum of the 8.2 contract values of the month's result notices; complete
-months, i.e. every day of the month landed for both types (`silver.uzp_bzp_days`; a day without notices is a
-marker row in Bronze); contract values only in currencies with a `unit_map` row (19 now; others are listed by the
-warning test `uzp_bzp_currency_unmapped`); Poland and the contracting authority's voivodeship, `PL02`…`PL32` = `TERC:02`…`TERC:32`) and
+months only, i.e. every day of the month landed for both types (`silver.uzp_bzp_days`, one row per landed type
+and day; a day without notices is a marker row in Bronze; test `uzp_bzp_build_months_complete`); a contract value
+in another currency is its own measure, as published; each currency code has a `unit_map` row (19 observed),
+and the warning test `uzp_bzp_unit_unmapped` lists a new code (D33: it stays as published and is reported);
+Poland and the contracting authority's voivodeship, `PL02`…`PL32` = `TERC:02`…`TERC:32`) and
 `gold.uzp_bzp_notice` (entity table keyed by the notice number). KPIs `bzp_notices` and `bzp_contract_value`
 (draft). Terms: no reuse or attribution clause found (API regulations of 24 Nov 2023); licence `unresolved`,
 internal. Refresh full (D32). Schedule weekly (O46): Saturday 02:47 UTC, Landing and Bronze (the missing days up

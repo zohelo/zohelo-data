@@ -1,0 +1,37 @@
+version: 2
+models:
+  - name: knf_espi_reports
+    description: >-
+      ESPI issuer reports in KNF's public OAM list (register CD-006), from bronze.knf_espi_reports (newest landed
+      copy of each day of receipt), from the first run's floor (1 January 2025) on; held days are kept, so it accumulates. Grain: report_id (OAM document id), one
+      row per report. Issuer name, day received, ESPI form code of the title (report_type), link to the report's
+      page, the day's stated report count. No titles (persons), no report texts or attachments, no issuer
+      identifiers (the list gives none). Completeness: tests/knf_espi_reports_complete.sql. Dev trial 43831909084:
+      2,190 reports, 525 issuers, 30 days of receipt 2026-09-30 to 2026-10-31 (the trial's window).
+    columns:
+      - name: report_id
+        tests: [not_null, unique]
+      - name: issuer_name
+        tests: [not_null]
+      - name: received_date
+        tests: [not_null]
+      - name: report_type
+        description: >-
+          ESPI form code as listed ('_U' when the title starts with none). The codes seen in Dev trial 43831909084
+          (October 2026 and the peak days 30 April, 29 May and 30 September 2026); KNF publishes no closed list of
+          them, so a new code warns (add it here after a look) instead of failing.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['RB', 'RB-W', 'RB_ASO', 'RB-W_ASO', 'Q', 'QS', 'QSr', 'PS', 'PSr', 'RR', 'SRR', 'RZ',
+                         'SA-Q', 'SA-P', 'JST-R', 'SPS', 'UNI-EN', 'UNI-PL', 'WANCI-E_30.04.18', 'WCI-E_30.04.18',
+                         'ZWCI-E_30.04.18', 'ZFO-E_30.04.18', 'ZFP-E_30.04.18', 'PC-E_30.04.18',
+                         'RB_FI_E_30.04.18', 'FIZ-Q-E_01.07.21', 'RAPORT_SPRZEDAZOWY_20220601', '_U']
+              config:
+                severity: warn
+      - name: link
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the day document (lineage to Landing/Archive).
+        tests: [not_null]

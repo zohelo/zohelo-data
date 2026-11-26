@@ -11,7 +11,9 @@ list is the checkpoint. A decoder error (ValueError, KeyError) is recorded in th
 Accumulating sources (news feeds, attention signals: each copy holds items the next one may not) pass
 ``all_versions=True``: every landed copy not yet held is loaded, not only the newest; such a source does not
 declare ``bronze_latest_only``. ``specs`` replaces the declared files for sources whose files are built from
-a seed (``to_landing/<source>/``).
+a seed (``to_landing/<source>/``). With ``per_entity=True`` a Landing file is done when the table (or the
+rejections) holds it for the same entity: identical bytes under another entity are loaded again for that entity
+(RPWDL keeps one entity per year, and a register file unchanged across 1 January lands under both years, #3139).
 """
 
 from __future__ import annotations
@@ -76,17 +78,24 @@ def load(
     lake_root: str = "02_bronze",
     all_versions: bool = False,
     specs: list[dict[str, Any]] | None = None,
+    per_entity: bool = False,
 ) -> int:
     client, cat = s3(), bf.retry(catalog, "catalog")
     lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
     table = bf.retry(lambda: bf.ensure_table(cat, table_id, columns, "entity"), "load_table")
-    done = bf.loaded_hashes(table) | bf.rejected_hashes(cat, rejected_id)
+    if per_entity:
+        pairs = bf.loaded_pairs(table) | bf.rejected_pairs(cat, rejected_id)
+    else:
+        done = bf.loaded_hashes(table) | bf.rejected_hashes(cat, rejected_id)
     receipts = []
     for spec in bulk_file.declaration(source) if specs is None else specs:
         held = bulk_file.landed(client, landing_bucket, bulk_file.prefix(source, spec["entity"], landing_root))
         if held:
             receipts += held if all_versions else [held[-1]]
-    todo = [r for r in receipts if r["sha256"] not in done]
+    if per_entity:
+        todo = [r for r in receipts if (r["entity"], r["sha256"]) not in pairs]
+    else:
+        todo = [r for r in receipts if r["sha256"] not in done]
     totals: dict[str, Any] = {"entities_landed": len(receipts), "candidates": len(todo), "appended_files": 0}
     totals.update({"rows_added": 0, "rejected": 0})
     uris, rejected = [], []

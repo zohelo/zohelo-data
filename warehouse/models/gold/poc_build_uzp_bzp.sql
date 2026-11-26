@@ -7,8 +7,9 @@
      TenderResultNotice, _T both);
    - uzp_bzp:notices:<currency>:contract_value — the sum of the contract values (8.2 lines, one per part with a
      concluded contract) that the result notices published in the month report, as published in their currency
-     (PLN; another currency is its own measure, never converted, and only with a unit_map row); a notice whose
-     value is absent, unparsed or in several currencies adds nothing (Silver keeps its line counts), so no month is filled with 0.
+     (PLN; another currency is its own measure, never converted; every code needs a unit_map row, D33: a new one
+     stays as published and tests/uzp_bzp_unit_unmapped.sql reports it); a notice whose value is absent, unparsed
+     or in several currencies adds nothing (Silver keeps its line counts), so no month is filled with 0.
    Areas: Poland (every notice) and the voivodeship of the contracting authority (each notice counts once, in
    one voivodeship, so voivodeships add up to Poland except notices without a voivodeship); a code that maps to no
    voivodeship meets in '_X' with the code kept. #}
@@ -44,14 +45,6 @@ complete as (
     select n.*
     from notices as n
     inner join complete_months as m on n.month_start = m.month_start
-),
-
-mapped_currencies as (
-    -- a contract value enters Gold only in a currency with a unit_map row of this source (each its own measure);
-    -- tests/uzp_bzp_currency_unmapped.sql lists the notices of any other currency
-    select unit_code as currency
-    from {{ ref('unit_map') }}
-    where source_system = 'uzp_bzp'
 ),
 
 geo_map as (
@@ -107,10 +100,7 @@ valued as (
         max(source_version) as source_version,
         sha256(string_agg(distinct raw_sha256, ',' order by raw_sha256)) as files_sha256
     from located
-    where
-        notice_type = 'TenderResultNotice'
-        and contract_value is not null
-        and contract_value_currency in (select m.currency from mapped_currencies as m)
+    where notice_type = 'TenderResultNotice' and contract_value is not null
     group by month_start, geography_key, contract_value_currency
 )
 

@@ -2,9 +2,12 @@ version: 2
 models:
   - name: poc_build_gios_air_quality
     description: >-
-      Build stage — GIOŚ air quality (register PL-ENV-010): daily mean concentration of PM10, PM2.5, NO2, O3 and SO2
-      (µg/m³, provisional) for Poland and the 16 voivodeships, from silver.gios_air_hourly. A sensor-day counts with at
-      least 18 hourly values; area value = mean of the sensor-day means of its stations. Frequency D only.
+      Build stage — GIOŚ air quality (register PL-ENV-010). Block air_daily (D): daily mean concentration of PM10,
+      PM2.5, NO2, O3 and SO2 (µg/m³, provisional API values) for Poland and the 16 voivodeships, from
+      silver.gios_air_hourly; a sensor-day counts with at least 18 hourly values; area value = mean of the sensor-day
+      means of its stations. Blocks air_verified_daily (D, Poland) and air_verified_monthly (M, Poland and
+      voivodeships): the verified values of GIOŚ's yearly archive (#3119) from poc_gios_air_verified, own
+      measure_keys, status ok. One frequency per measure_key.
     tests:
       - unique:
           column_name: "measure_key || '|' || geography_key || '|' || cast(date_key as varchar)"
@@ -16,4 +19,34 @@ models:
       - name: geography_key
         tests: [not_null]
       - name: value
+        tests: [not_null]
+  - name: poc_gios_air_verified
+    description: >-
+      Aggregates of the verified hourly values of GIOŚ's yearly archive (silver.gios_air_archive_values, #3119) for
+      the build stage: daily means for Poland (block air_verified_daily, at least 10 station-days of at least 18
+      hourly values) and monthly means for Poland and the voivodeships (block air_verified_monthly, station-months
+      with at least 75 % of their days; Poland at least 10 stations). Grain: block_id × indicator × area × date_key.
+    tests:
+      - unique:
+          column_name: "block_id || '|' || indicator || '|' || area || '|' || cast(date_key as varchar)"
+    columns:
+      - name: block_id
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['air_verified_daily', 'air_verified_monthly']
+      - name: indicator
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['PM10', 'PM2.5', 'NO2', 'O3', 'SO2']
+      - name: area
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
         tests: [not_null]

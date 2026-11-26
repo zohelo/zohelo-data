@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: knf_banking
+  description: KNF monthly banking-sector data (register PLG-017), the current statistics workbook (.xlsx) on knf.gov.pl
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/knf_banking/
+    loaded_by: ingestion/to_bronze/knf_banking/
+    config: ingestion/sources/knf_banking.yaml
+  tables:
+  - name: knf_banking_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of the
+      workbook; partitioned by entity.
+  - name: knf_banking_rejected_files
+    description: Files of knf_banking the Bronze decoder rejected, with the reason.

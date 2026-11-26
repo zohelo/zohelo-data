@@ -1,0 +1,50 @@
+version: 2
+models:
+  - name: arimr_payments_direct_payments
+    description: >-
+      ARiMR monthly report "Płatności bezpośrednie" (register PLS-034), tables read from the PDF text layer:
+      applications for area payments, decisions granting them and the amount of direct payments paid (PLN), by
+      campaign and voivodeship ("Razem" = 'polska'), cumulative as of the report date; the newest report holding a
+      campaign wins. Grain: measure_code x area_name x campaign_year. Values as printed; header footnote marks in
+      column_note.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', measure_code, area_name, campaign_year)"
+    columns:
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [applications, decisions, amount_paid]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [applications, decisions, PLN]}}}]
+      - name: area_name
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - polska
+                  - dolnośląskie
+                  - kujawsko-pomorskie
+                  - lubelskie
+                  - lubuskie
+                  - łódzkie
+                  - małopolskie
+                  - mazowieckie
+                  - opolskie
+                  - podkarpackie
+                  - podlaskie
+                  - pomorskie
+                  - śląskie
+                  - świętokrzyskie
+                  - warmińsko-mazurskie
+                  - wielkopolskie
+                  - zachodniopomorskie
+      - name: campaign_year
+        tests: [not_null]
+      - name: as_of_date
+        tests: [not_null]
+      - name: column_note
+        tests: [not_null, {accepted_values: {arguments: {values: ['', '*', '**']}}}]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
