@@ -27,7 +27,8 @@ models:
       Time, kind, majority, title, topic, description and totals as published; yes, no and abstain are empty for
       list votes (ON_LIST, per-option result not loaded) and traditional votes (TRADITIONAL), for which the API
       sends 0; for traditional votes total_voted, present, not_participating and against_all sent as 0 (not counted)
-      are empty as well, while list votes keep their real totals. Individual MPs' votes are not read.
+      are empty as well; present and total_voted of 0 are empty for every kind (list votes send present 0), while
+      list votes keep their real totals voted. Individual MPs' votes are not read.
     tests:
       - unique:
           column_name: "term || '|' || sitting_number || '|' || voting_number"
