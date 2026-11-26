@@ -1,4 +1,4 @@
-"""Dev trial for #486 (PKW election results, PLG-029; test branch only, never on main).
+"""Dev trial for #486 / #3084 (PKW election results, PLG-029; test branch only, never on main).
 
 Landing -> Bronze -> Silver -> Gold into scratch, Landing and Bronze twice. Landing: the shared bulk_file pattern into
 the prefix zz_dev_pkw/ (load twice: the second must land nothing), then inspect and verify. Bronze into the Iceberg
@@ -115,7 +115,7 @@ def trial() -> int:
     con.register("b_cells", cat.load_table((SCRATCH, bronze.TABLE)).scan().to_arrow())
     try:
         rejected = cat.load_table((SCRATCH, bronze.REJECTED)).scan().to_arrow().to_pylist()
-    except Exception:  # noqa: BLE001
+    except Exception:
         rejected = []
     bl = COLLECTED.get("pkw Bronze from Landing", [])
     note(
@@ -203,8 +203,9 @@ def trial() -> int:
                 "count(distinct area_key) filter (where area_kind = 'teryt') from pkw_results group by all order by all",
                 40,
             ),
-            "area_kinds": q(con, "select area_level, area_kind, count(distinct area_key) from pkw_results "
-                            "group by all order by all"),
+            "area_kinds": q(
+                con, "select area_level, area_kind, count(distinct area_key) from pkw_results group by all order by all"
+            ),
             "measures": q(
                 con,
                 "select election_key, measure_code, unit_code, count(*), min(value), max(value), "
@@ -213,6 +214,20 @@ def trial() -> int:
                 80,
             ),
             "value_null": count(con, "select 1 from pkw_results where value is null"),
+            "non_numeric_value_texts": q(
+                con, "select value_text, count(*) from pkw_results where value is null group by 1 order by 2 desc", 15
+            ),
+            "profile": q(
+                con,
+                "select count(*), count(distinct entity), count(distinct area_key), min(election_date), "
+                "max(election_date), count(*) filter (where area_key is null or election_key is null or raw_sha256 "
+                "is null) from pkw_results",
+            ),
+            "zero_values": q(
+                con,
+                "select measure_code, count(*) from pkw_results where value = 0 group by 1 order by 2 desc",
+                15,
+            ),
         },
     )
     # --- Gold ----------------------------------------------------------------------------------------------------
@@ -231,12 +246,18 @@ def trial() -> int:
     series = "measure_key || '|' || geography_key || '|' || breakdown_json"
     dups_sql = f"select {series} as series_key, date_key from poc_build_pkw group by all having count(*) > 1"
     dups = count(con, dups_sql)
+    # metrics rows of the KPI: the build rows the kpi_measure patterns of pkw select (is_total, mapped areas)
     con.execute(
-        "create or replace table metrics as select * from poc_build_pkw where is_total and geography_key <> '_X' "
-        "and measure_key in ('pkw:sejm:pct:turnout', 'pkw:pe:pct:turnout', 'pkw:sejmik:pct:turnout')"
+        "create or replace table kpi_measure as select * from read_csv('warehouse/seed_rows/kpi_measure/pkw.csv', "
+        "all_varchar = true)"
+    )
+    con.execute(
+        "create or replace table metrics as select m.kpi_key, b.* from poc_build_pkw as b inner join kpi_measure as m "
+        "on b.measure_key like m.measure_key_pattern where b.is_total and b.geography_key <> '_X'"
     )
     bound = re.search(
-        r"\('voter_turnout', 'pkw', '%', ([\d.e]+), ([\d.e]+)\)", Path("warehouse/tests/metrics_value_range.sql").read_text()
+        r"\['voter_turnout', '%', '([-\d.e]+)', '([-\d.e]+)'\]",
+        Path("warehouse/macros/value_range/pkw.sql").read_text(),
     )
     lo, hi = float(bound.group(1)), float(bound.group(2))
     note(
@@ -267,6 +288,12 @@ def trial() -> int:
             ),
             "elections": q(con, "select * from pkw_elections order by election_date"),
             "metrics_rows": count(con, "select * from metrics"),
+            "metrics_by_measure": q(
+                con, "select measure_key, count(*), min(value), max(value) from metrics group by 1 order by 1"
+            ),
+            "metrics_max_per_area_period_kpi": con.execute(
+                "select max(n) from (select kpi_key, geography_key, date_key, count(*) n from metrics group by all)"
+            ).fetchone()[0],
             "metrics_max_per_area_period": con.execute(
                 "select max(n) from (select geography_key, date_key, count(*) n from metrics group by all)"
             ).fetchone()[0],
@@ -306,6 +333,18 @@ def trial() -> int:
                 "and measure_codes = 'turnout' order by 1, 2",
                 6,
             ),
+            "sejmik_poland_turnout_like": q(
+                con,
+                "select measure_key, breakdown_json, value from poc_build_pkw where geography_key = 'PL' "
+                "and is_total order by 1",
+                10,
+            ),
+            "prezydent_r2_candidates_voivodeship_sum": q(
+                con,
+                "select breakdown_json, sum(value) from poc_build_pkw where geography_key like 'TERC:__' and "
+                "measure_key = 'pkw:prezydent:votes:candidate_votes' and date_key = date '2025-06-01' group by 1 "
+                "order by 2 desc",
+            ),
             "sejm_sum_woj_valid_votes": q(
                 con,
                 "select sum(value) from poc_build_pkw where measure_key = 'pkw:sejm:votes:valid_votes' and "
@@ -338,7 +377,9 @@ def trial() -> int:
     }
     bad = {k: v for k, v in problems.items() if v}
     note("pkw trial licence catalogue row", {"catalogue_row": catalogue})
-    note("pkw trial verdict", {"problems": bad} if bad else {"result": "all checks passed"}, "error" if bad else "notice")
+    note(
+        "pkw trial verdict", {"problems": bad} if bad else {"result": "all checks passed"}, "error" if bad else "notice"
+    )
     return 1 if bad else 0
 
 
@@ -351,11 +392,11 @@ def cleanup() -> None:
         for table in cat.list_tables(SCRATCH):
             try:
                 cat.purge_table(table)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 cat.drop_table(table)
             removed["tables"].append(".".join(table))
         cat.drop_namespace(SCRATCH)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         removed["catalog_error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
     client = s3()
     for bucket_var, label in (
@@ -380,7 +421,7 @@ def main() -> int:
     status = 1
     try:
         status = trial()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         import traceback
 
         note(
