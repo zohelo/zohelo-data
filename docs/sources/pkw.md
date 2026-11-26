@@ -25,9 +25,12 @@ powiat and gmina, and the sejmiki town/country file (Poland).
   breakdown), powiats and gminas with turnout (and eligible voters and ballots issued for the President, whose files
   print no turnout). Gminas map by the 6-digit code to the TERC gmina of type 1, 2, 3 or 8; voivodeships without a
   code and the EP 2024 rows of cities with powiat rights by name (`macros/sources/pkw.sql`). `pkw_elections`: one row
-  per election and round. Draft KPI `voter_turnout`.
-- **Left out.** Votes per list or candidate by powiat and gmina (in Silver; about 100,000 series, beyond the shared
-  `dim_series` ceiling: per-block coverage, D35), polling-district files (protocols, about 31,000 rows per
+  per election and round. Draft KPI `voter_turnout`. Two committees of one name in the sejmiki town/country file
+  (`is_ambiguous`: 12 cells, 6 keys) stay in Silver and out of Gold: the file has no column that tells them apart.
+- **Left out.** Poland totals of the Sejm, EP and President (no national file is declared; abroad and ships are
+  no area, so the voivodeships do not add up to the national result), votes per list or candidate by powiat and
+  gmina (in Silver; about 100,000 series, beyond the shared `dim_series` ceiling: per-block coverage, D35),
+  polling-district files (protocols, about 31,000 rows per
   election), candidate-by-area files of Sejm and EP, districts (okręgi), the Senate, local councils and mayors,
   older elections (`danewyborcze.kbw.gov.pl`, not inventoried) and committee-member files (personal data).
 - **Licence.** Unresolved: PKW and KBW state no reuse terms; internal only (licence gate). Attribution if used:

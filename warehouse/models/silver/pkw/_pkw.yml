@@ -7,13 +7,15 @@ models:
       2024 and President 2025 (rounds 1 and 2), newest copy of each declared file. Grain: entity x source_row x
       column_number (one published cell); semantic key election_key x area_level x file_kind x area_key x
       column_label x breakdown_code x settlement_code. Values as published (counts and per cent), TERYT codes as
-      published padded to 6 digits and cut to the level; abroad, ships and code-less rows kept with area_kind. Trial
-      run: see ingestion/sources/pkw.yaml.
+      published padded to 6 digits and cut to the level; abroad, ships and code-less rows kept with area_kind.
+      is_ambiguous marks the cells whose semantic key repeats (two committees of one name in the sejmiki town/country
+      file, 12 cells on 26 Nov 2026); they are kept here and left out of Gold. Trial run: see ingestion/sources/pkw.yaml.
     tests:
       - unique:
           column_name: "entity || '|' || source_row || '|' || column_number"
       - unique:
           column_name: "concat_ws('|', election_key, area_level, file_kind, area_key, column_label, coalesce(breakdown_code, '-'), coalesce(settlement_code, '-'))"
+          config: {where: "not is_ambiguous"}
     columns:
       - name: election_key
         tests: [not_null, {accepted_values: {arguments: {values: [sejm2023, pe2024, sejmiki2024, prezydent2025_r1, prezydent2025_r2]}}}]
@@ -43,4 +45,6 @@ models:
       - name: entity
         tests: [not_null]
       - name: raw_sha256
+        tests: [not_null]
+      - name: is_ambiguous
         tests: [not_null]
