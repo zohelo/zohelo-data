@@ -54,7 +54,7 @@ def dbt(command: str, flags: list[str], workdir: str) -> list[list]:
     for r in json.loads(results.read_text())["results"]:
         uid = r["unique_id"]
         name = uid.split(".")[-1] if uid.startswith("model.") else uid.split(".")[2]
-        out.append([name, r["status"], r["failures"], (r.get("message") or "")[:200] if r["status"] not in ("success", "pass") else ""])
+        out.append([name, r["status"], r["failures"], (r.get("message") or "")[:700] if r["status"] not in ("success", "pass") else ""])
     return out
 
 
@@ -81,6 +81,10 @@ def build(rce: pa.Table, his: pa.Table, workdir: str) -> tuple[str, dict[str, li
     out: dict[str, list] = {}
     for n in (1, 2):
         out[f"run{n}"] = dbt("run", flags, workdir)
+        if any(r[1] != "success" for r in out[f"run{n}"]):
+            out[f"rows{n}"] = None  # a model failed: its message is in run<n>, the tests would only error
+            out[f"test{n}"] = []
+            continue
         with duckdb.connect(str(catalog), read_only=True) as con:
             out[f"rows{n}"] = [con.sql(f"select count(*) from {t}").fetchall()[0][0] for t in (
                 "silver.pse_reports_rce_pln", "silver.pse_reports_his_wlk_cal", "gold.build_pse_reports")]  # fmt: skip
@@ -99,8 +103,7 @@ if __name__ == "__main__":  # local check with synthetic Bronze: python -m dev.p
     rng = random.Random(1)
     w = ZoneInfo("Europe/Warsaw")
     rows = {"rce_pln": [], "his_wlk_cal": []}
-    days = [date(2024, 6, 14) + timedelta(days=i) for i in range(5)] + [date(2024, 6, 19) + timedelta(days=i) for i in range(130, 140)]
-    days = [date(2024, 6, 14) + timedelta(days=i) for i in range((date(2024, 10, 30) - date(2024, 6, 14)).days)]
+    days = [date(2024, 6, 14) + timedelta(days=i) for i in range((date(2025, 4, 2) - date(2024, 6, 14)).days)]
     for report in rows:
         for d in days:
             start = datetime(d.year, d.month, d.day, tzinfo=w).astimezone(timezone.utc)
@@ -108,11 +111,14 @@ if __name__ == "__main__":  # local check with synthetic Bronze: python -m dev.p
             n = int((end - start).total_seconds() // 900)
             for i in range(n):
                 t_utc = start + timedelta(minutes=15 * (i + 1))
-                t_loc = t_utc.astimezone(w)
+                s_loc = (t_utc - timedelta(minutes=15)).astimezone(w)  # PSE labels the end with the offset at the start
+                label = (t_utc.replace(tzinfo=None) + s_loc.utcoffset()).strftime("%Y-%m-%d %H:%M:%S")
+                if s_loc.fold == 1:  # the repeated autumn hour: '2024-10-27 02a:15:00'
+                    label = label[:13] + "a" + label[13:]
                 row = {f: None for f in load.FIELDS[report]}
                 row.update({"business_date": str(d), "period": "x", "period_utc": "y",
-                            "dtime": t_loc.strftime("%Y-%m-%d %H:%M:%S"), "dtime_utc": t_utc.strftime("%Y-%m-%d %H:%M:%S"),
-                            "publication_ts": "2026-01-18 18:35:16.045", "publication_ts_utc": "2026-01-18 17:35:16.045"})
+                            "dtime": label, "dtime_utc": t_utc.strftime("%Y-%m-%d %H:%M:%S"),
+                            "publication_ts": "2024-10-27 02a:52:11.658", "publication_ts_utc": "2026-01-18 17:35:16.045"})
                 for f in load.VALUES[report]:
                     row[f] = None if f in ("jga", "jgo") else str(round(rng.uniform(-50, 900), 3))
                 if report == "his_wlk_cal" and d == date(2024, 7, 1) and i == 5:

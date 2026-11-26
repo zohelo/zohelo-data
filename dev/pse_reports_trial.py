@@ -300,7 +300,7 @@ def main() -> int:
             status |= 1 if bad else 0
             annotate("warning" if bad else "notice", "pse_reports trial · dbt run and test (twice)", plain({
                 "rows_silver_rce_his_gold_run1_run2": [runs["rows1"], runs["rows2"]],
-                "models_run1": [r[:2] for r in runs["run1"]],
+                "models_run1": [r[:2] + ([r[3]] if r[3] else []) for r in runs["run1"]],
                 "tests_run1_status": {s: sum(1 for r in runs["test1"] if r[1] == s) for s in {r[1] for r in runs["test1"]}},
                 "tests_run1": [n[:48] for n, _s, _f, _m in runs["test1"]],
                 "tests_run2_status": sorted({r[1] for r in runs["test2"]}), "tests_count": [len(runs["test1"]), len(runs["test2"])],
