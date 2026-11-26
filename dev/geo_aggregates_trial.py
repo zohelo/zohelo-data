@@ -112,8 +112,8 @@ def main() -> int:
                 "order by 1",
             ),
         }
-        dim["left"] = [r[0] for r in dim["left"]]
-        dim["arrived"] = [r[0] for r in dim["arrived"]]
+        left = [r[0].removeprefix("NUTS:") for r in dim.pop("left")]
+        dim["arrived"] = len(dim["arrived"])
         dim["level_changed"] = len(dim["level_changed"])
         dim["moved_with_country_prefix"] = rows(
             con,
@@ -127,7 +127,8 @@ def main() -> int:
             "select nuts_code, name_en from dim_new where level_name like 'nuts%' and regexp_matches(lower(name_en), "
             "'countr|union|euro area|bank|fund|association|community|organi|group|total|world') order by 1",
         )
-        annotate("notice", "2775 dimension", {**prod, **dim})
+        dim["left_count"] = len(left)
+        annotate("notice", "2775 dimension", {**prod, **dim, "left": ",".join(left)})
         changed = rows(
             con,
             "select n.source_system, n.source_code, o.geography_key, n.geography_key from map_new n "
