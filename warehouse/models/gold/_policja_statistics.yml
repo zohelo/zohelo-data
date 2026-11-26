@@ -1,0 +1,16 @@
+version: 2
+models:
+  - name: poc_build_policja_statistics
+    description: >-
+      Build stage — Polish Police statistics portal (register PLG-033): offences recorded, offences detected and the
+      detection rate (%), all offences and seven selected categories, Poland and the 16 voivodeships, annual from
+      1999. Values and units as published; cells without a value are not loaded.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

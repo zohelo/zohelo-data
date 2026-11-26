@@ -1,6 +1,6 @@
 # Senate of the Republic of Poland (`senat`)
 
-**Built (register PLG-025, #482; route decision D36).** No API, export or feed: term XI is read from server-rendered
+**Built (register PLG-025, #482; route decision D38).** No API, export or feed: term XI is read from server-rendered
 public pages of www.senat.gov.pl that robots.txt allows, with plain HTTP GET (no browser session), one connection, one
 request at a time at least 1.1 s apart, a clear user agent, robots.txt read first in every run; a 401/403/429 or a
 bot-protection page stops the run (`ingestion/to_landing/senat/`). Pages (entity = one page, version = download time,

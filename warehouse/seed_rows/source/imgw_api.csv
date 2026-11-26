@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+imgw_api,PL-ENV-008,IMGW-PIB API danych publicznych,IMGW-PIB public data API,Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy,cube,snapshot,national-public,unresolved,https://danepubliczne.imgw.pl/apiinfo

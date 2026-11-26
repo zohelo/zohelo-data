@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+zus_contribution_payers,labour,A,zus_contribution_payers,zus_yearbook,payers_voiv,zus_yearbook:payers_voiv:payers:payers,A,PL;VOIV,,sum,neutral,ready,"active accounts at 31 December, ZUS statistical yearbook"
