@@ -149,16 +149,40 @@ def wms_info(base: str, name: str) -> None:
             return
 
 
+def links_of(url: str, pat: str) -> None:
+    body, info = fetch(url)
+    html = (body or b"").decode("utf-8", "replace")
+    urls = sorted(set(re.findall(r"https?://[^\s\"'<>)]+", html)))
+    note("links", {"page": url, **info, "found": [u for u in urls if re.search(pat, u, re.I)][:60]})
+    text = plain(html)
+    note("links.text", {"page": url, "snippets": snippets(text, r"BDOT10k", 200, 10)})
+
+
 def main() -> None:
-    discovered = page()
-    seen = []
-    for base in CANDIDATES + discovered:
-        if base not in seen and BUDGET["requests"] > 8:
-            seen.append(base)
-            caps(base)
-    for u in ("https://opendata.geoportal.gov.pl/bdot10k/", "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/"):
-        body, info = fetch(u)
-        note("opendata.dir", {"url": u, **info, "body": (body or b"")[:3000].decode("utf-8", "replace")})
+    base = "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT/WMS/PobieranieBDOT10k"
+    body, info = fetch(f"{base}?SERVICE=WFS&REQUEST=GetCapabilities")
+    note("wfs.exception", {**info, "body": (body or b"").decode("utf-8", "replace")})
+    text = ""
+    for v in ("1.3.0", "1.1.1", "1.3.0"):
+        body, info = fetch(f"{base}?SERVICE=WMS&VERSION={v}&REQUEST=GetCapabilities")
+        text = (body or b"").decode("utf-8", "replace")
+        note("wms.caps", {"version": v, **info, "head": text[:200]})
+        if info.get("status") == 200 and "Capabilities" in text[:3000]:
+            break
+        time.sleep(5)
+    if "Capabilities" in text[:3000]:
+        note("wms.caps.body", text[:12000])
+        names = re.findall(r"<Name>([^<]+)</Name>", text)
+        for name in [n for n in names if n not in ("WMS",)][:4]:
+            wms_info(base, name)
+    links_of("https://www.geoportal.gov.pl/pl/usluga/uslugi-pobierania-wfs/", r"BDOT|skorowid|Pobieranie")
+    links_of("https://www.geoportal.gov.pl/pl/usluga/uslugi-przegladania-wms-i-wmts/", r"BDOT|skorowid|Pobieranie")
+    for u in ("https://opendata.geoportal.gov.pl/bdot10k/schemat2021/SHP/14/1465_SHP.zip",
+              "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/GML/14/1465_GML.zip",
+              "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/14/1465_GML.zip",
+              "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/14/1465_SHP.zip"):
+        _, h = fetch(u, "HEAD")
+        note("guess.head", {"url": u, **h})
     note("budget", BUDGET)
 
 
