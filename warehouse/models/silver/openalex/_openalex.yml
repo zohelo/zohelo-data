@@ -1,0 +1,100 @@
+version: 2
+models:
+  - name: openalex_works_pl_counts
+    description: >-
+      OpenAlex REST API (register CD-028; licence cc0_openalex): works with at least one authorship affiliated with
+      an institution in Poland (filter institutions.country_code:PL, each work once), by publication year, as
+      published: selection all, open_access, or field (primary topic's OpenAlex field, field_id with field and
+      domain names). Every publication year OpenAlex holds; the year of the copy is still filling. Grain: selection
+      x field_id x publication_year (field_id '_T' outside selection field). History 1812-2027 (Dev trial 45825975173: 175 years, 1,818,049 works; 1,290 works of meta.count have no
+      publication year and no group).
+    tests:
+      - unique:
+          column_name: "selection || '|' || field_id || '|' || publication_year"
+    columns:
+      - name: selection
+        tests: [not_null, {accepted_values: {arguments: {values: [all, open_access, field]}}}]
+      - name: field_id
+        description: >-
+          OpenAlex field id (the 26 fields of the topic classification, 11-36 in Dev probe 45813299261), '_T' outside
+          selection field.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - '_T'
+                  - '11'
+                  - '12'
+                  - '13'
+                  - '14'
+                  - '15'
+                  - '16'
+                  - '17'
+                  - '18'
+                  - '19'
+                  - '20'
+                  - '21'
+                  - '22'
+                  - '23'
+                  - '24'
+                  - '25'
+                  - '26'
+                  - '27'
+                  - '28'
+                  - '29'
+                  - '30'
+                  - '31'
+                  - '32'
+                  - '33'
+                  - '34'
+                  - '35'
+                  - '36'
+      - name: domain_id
+        tests: [{accepted_values: {arguments: {values: ['1', '2', '3', '4']}}}]
+      - name: publication_year
+        tests: [not_null]
+      - name: works
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: openalex_institutions_pl
+    description: >-
+      The institutions OpenAlex places in Poland (register CD-028): OpenAlex id, URI, ROR as published, name, type,
+      city and region text, coordinates, all-time works and citation counts at the read, parent ids, updated date.
+      Organisations only. Grain: institution_id.
+    columns:
+      - name: institution_id
+        tests: [not_null, unique]
+      - name: display_name
+        tests: [not_null]
+      - name: institution_type
+        description: OpenAlex institution type; the nine types of the Polish institutions in Dev probe 45816100460.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [archive, company, education, facility, funder, government, healthcare, nonprofit, other]
+      - name: country_code
+        tests: [not_null, {accepted_values: {arguments: {values: [PL]}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: openalex_institution_works_by_year
+    description: >-
+      Works and open-access works per year of each institution OpenAlex places in Poland (counts_by_year: the recent
+      years OpenAlex lists; a year not listed has no row; citations per year are not kept, 0 in years OpenAlex does
+      not cover). Not additive over institutions. Grain: institution_id x year.
+    tests:
+      - unique:
+          column_name: "institution_id || '|' || year"
+    columns:
+      - name: institution_id
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: works_count
+        tests: [not_null]
+      - name: oa_works_count
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

@@ -6,8 +6,9 @@
    local end, and on the autumn DST day PSE marks the repeated hour with an 'a': '2025-10-26 02a:15:00', period
    '03:00 - 02a:15', so dtime stays text). dtime_local is the local (Europe/Warsaw) end as a timestamp: dtime_utc plus
    utc_offset_hours, the offset in force at the start of the period (1 in winter, 2 in summer; taken at the start
-   because the end of the last period before a switch is the switch instant itself); it equals dtime without the 'a'
-   (checked by tests/pse_reports_rce_pln_complete.sql). publication_ts (local) stays text for the same reason, beside
+   because the end of the last period before a switch is the switch instant itself); it equals dtime without the 'a',
+   except at a switch instant, which PSE labels with either offset (2025-03-30 '02:00', 2026-03-29 '03:00'; checked
+   by tests/pse_reports_rce_pln_complete.sql). publication_ts (local) stays text for the same reason, beside
    the typed publication_ts_utc. periods_expected is the number of 15-minute periods of the
    local day (96; 92 and 100 on the DST days), the completeness reference of that test and of the Gold daily means.
    Values are cast strictly: a text that is not a number fails the build instead of becoming null. RCE can be negative
