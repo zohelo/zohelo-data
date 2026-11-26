@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+pse_reports,PL-ENV-019,PSE Raporty OSP (API v2): cena RCE i praca KSE,PSE market reports (API v2): RCE price and power system operation,Polskie Sieci Elektroenergetyczne S.A.,cube,day,national-public,unresolved,https://raporty.pse.pl/
