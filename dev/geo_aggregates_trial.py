@@ -134,11 +134,32 @@ def main() -> int:
             "substr(nuts_code, 3, 1)) from dim_new where level_name like 'nuts%' and "
             "regexp_matches(substr(nuts_code, 3, 1), '[A-Z]') group by 1 order by 1",
         )
-        moved = dim.pop("moved_with_country_prefix")
+        dim.pop("moved_with_country_prefix")
         annotate("notice", "2775 dimension", {**prod, **dim})
+        countries = (
+            "'AT','BE','BG','CY','CZ','DE','DK','EE','EL','ES','FI','FR','HR','HU','IE','IT','LT','LU','LV','MT',"
+            "'NL','PL','PT','RO','SE','SI','SK','UK','CH','IS','LI','NO','AL','BA','ME','MK','RS','TR','UA','XK'"
+        )
         annotate("notice", "2775 dimension: NUTS keys that leave (all)", {
             "left": ",".join(left),
-            "moved_with_country_prefix": ",".join(r[0] for r in moved),
+            "names_left_nuts_country_prefix": [
+                f"{r[0]}={r[1]}" for r in rows(
+                    con,
+                    "select o.nuts_code, o.name_en from dim_old o anti join dim_new n using (geography_key) "
+                    f"where o.level_name like 'nuts%' and substr(o.nuts_code, 1, 2) in ({countries}) order by 1",
+                )
+            ],
+            "names_uk_a_b_kept": [
+                f"{r[0]}={r[1]}" for r in rows(
+                    con, "select nuts_code, name_en from dim_new where level_name like 'nuts%' and "
+                    "regexp_matches(nuts_code, '^UK[AB]') order by 1",
+                )
+            ],
+            "names_pl_aggregates": [
+                f"{r[0]}={r[1]}" for r in rows(
+                    con, "select geography_key, name_en from dim_new where geography_key like 'EUROSTAT:PL%' order by 1"
+                )
+            ],
         })
         changed = rows(
             con,
