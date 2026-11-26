@@ -7,8 +7,9 @@ size and the sheet footprint (polygon, EPSG:2180). Entity = one year's feature t
 download time (the service gives no version). A year is landed whole, as pages of PAGE features
 ``<version>__<ingested>__part-<nnn>.gml`` (WFS count/startIndex sorted by the download link, one request at a time,
 PAUSE apart), each page the exact bytes of the answer with a receipt after it; the parts are uploaded only after every
-page of the year was read and checked (a FeatureCollection, numberReturned = members, the year's total = its resultType=hits count, no feature
-id twice), and not at all when their combined SHA-256 equals the newest landed version's (unchanged).
+page of the year was read and checked (a FeatureCollection, numberReturned = members, the year's total = its
+resultType=hits count, no feature id twice), and not at all when their content equals the newest landed version's
+(unchanged: the SHA-256 of the pages without the answer's timeStamp attribute, which changes on every read).
 
 A year is ``missing`` (no landed version), ``stale`` (its hits count differs from the newest version's, or it is the
 current or the previous year and that version is older than REFRESH_DAYS) or ``current``. Older years are read again
@@ -46,6 +47,7 @@ PAGE, PAUSE, RETRIES, REFRESH_DAYS = 5000, 1.0, 4, 28
 SORT = "gugik:url_do_pobrania ASC"
 WFS = "{http://www.opengis.net/wfs/2.0}"
 GML_ID = "{http://www.opengis.net/gml/3.2}id"
+STAMP = re.compile(rb'\stimeStamp="[^"]*"')  # the answer's creation time, the only part that changes on every read
 RECEIPT = re.compile(r"([a-z0-9_]+)/([0-9TZ]+)__([0-9TZ]+)__part-(\d{3})\.receipt\.json")
 
 
@@ -162,15 +164,16 @@ def land_year(client, bucket: str, s: requests.Session, entity: str, matched: in
             params = {**_query(year), "COUNT": PAGE, "STARTINDEX": index * PAGE, "SORTBY": SORT}
             body = _get(s, params, path)
             ids += check_page(path)
-            pages.append((path, params, sha256(body).hexdigest(), len(body)))
+            content = sha256(STAMP.sub(b"", body[:4096], count=1) + body[4096:]).hexdigest()
+            pages.append((path, params, sha256(body).hexdigest(), len(body), content))
         if len(ids) != matched or len(set(ids)) != len(ids):
             raise RuntimeError(f"{entity}: {len(ids)} features ({len(set(ids))} distinct) read, hits said {matched}")
-        combined = sha256("".join(p[2] for p in pages).encode()).hexdigest()
+        combined = sha256("".join(p[4] for p in pages).encode()).hexdigest()
         if held and held["receipt"]["detail"].get("version_sha256") == combined:
             return {"entity": entity, "outcome": "unchanged", "features": matched}
         ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         folder = f"{LANDING_ROOT}/{SOURCE}/snapshot/data/{entity}/"
-        for index, (path, params, digest, size) in enumerate(pages):
+        for index, (path, params, digest, size, _content) in enumerate(pages):
             key = f"{folder}{ingested}__{ingested}__part-{index:03d}.gml"
             client.upload_file(
                 str(path), bucket, key, ExtraArgs={"ContentType": "application/gml+xml", "Metadata": {"sha256": digest}}
