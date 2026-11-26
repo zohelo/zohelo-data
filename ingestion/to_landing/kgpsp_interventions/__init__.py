@@ -13,7 +13,7 @@ entity (``tabele_<year>``). Guards, never a silent first-link pick: a year with 
 without any, or a gap between the first and the newest year listed stops the run.
 Version = Last-Modified when gov.pl sends it, else download time; an attachment URL already landed is not downloaded
 again, a new URL (a replaced file) lands as a new version when its bytes differ. Restart unit: one file. One request
-at a time, PAUSE seconds apart.
+at a time, PAUSE seconds apart. A listed year the server refuses fails the run after the other years have landed.
 
 landing.inspect  the table links the page lists vs Landing (to land / held); no writes
 landing.extract  every listed file whose URL is not landed yet
@@ -123,8 +123,10 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
         "deferred_to_next_run": deferred,
         "refused": refused,
     }
-    annotate("warning" if refused else "notice", f"{SOURCE} landing extract", summary)
-    return 1 if refused and not results else 0
+    # a listed year the server refuses fails the run (as bulk_file.main does without missing_ok); the other years
+    # are landed first, so the next run retries only the refused ones
+    annotate("error" if refused else "notice", f"{SOURCE} landing extract", summary)
+    return 1 if refused else 0
 
 
 def _extract(p) -> int:

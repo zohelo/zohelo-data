@@ -7,7 +7,8 @@
    publishes gmina rows only: a voivodeship is the sum of its gmina rows (TERYT WWPPGG, WW = the voivodeship) and Poland
    the sum of all, kept only when every gmina row of the area has a number for the measure (a non-number never counts
    as 0) and the area's cities with districts (TERYT: Wrocław 0264, Łódź 1061, Kraków 1261, Warszawa 1465, Poznań
-   3064) are printed with their district rows: the 2025 tables have one row for each of these cities (Warszawa 1,852
+   3064) are printed with all their codes, the city row and every district (6, 6, 5, 19 and 6 codes; macro
+   poc_kgpsp_interventions_incomplete_cities): the 2025 tables have one row for each of these cities (Warszawa 1,852
    incidents against 22,847 summed over 19 rows in 2024; Dev trial 45756529767), so 2025 has no value for Poland and
    those five voivodeships. Gmina rows themselves are not in Gold yet. #}
 with silver as (
@@ -27,16 +28,10 @@ published as (
     where area_level in ('country', 'voivodeship') and value_status = 'ok'
 ),
 
--- a city with districts printed as a single row: its voivodeship and Poland are not summed for that year and table
+-- a city with districts whose tables lack any of its TERYT codes (the city row and every district; one rule with the
+-- warning test kgpsp_interventions_city_districts): its voivodeship and Poland are not summed for that year and table
 incomplete_cities as (
-    select
-        report_year,
-        table_code,
-        left(area_code, 2) as voivodeship_code
-    from silver
-    where area_level = 'gmina' and left(area_code, 4) in ('0264', '1061', '1261', '1465', '3064')
-    group by report_year, table_code, left(area_code, 4), left(area_code, 2)
-    having count(distinct area_code) < 2
+    {{ poc_kgpsp_interventions_incomplete_cities(ref('kgpsp_interventions_counts')) }}
 ),
 
 from_gminas as (
