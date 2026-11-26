@@ -1,0 +1,16 @@
+version: 2
+models:
+  - name: poc_build_cckp_era5
+    description: >-
+      Build stage — World Bank CCKP ERA5 0.25-degree (register GL-036), block era5: mean air temperature (degC) and
+      precipitation total (mm), monthly and annual as separate measures, for countries and territories (ISO3) and
+      Poland's 16 voivodeships (stated CCKP code map); reanalysis estimates as published; licence cc_by_4_0_cckp_era5.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

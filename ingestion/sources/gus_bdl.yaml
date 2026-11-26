@@ -33,8 +33,7 @@ silver: [silver.bdl_observations, silver.bdl_variables, silver.bdl_units]
 # Gold: the curated KPI selection is poc_build_bdl (gold.build_bdl, below). Full coverage (O43, D35,
 # docs/gold-coverage.md): every loaded subgroup by rule, one file per subgroup and table, written by
 # gold.observations (warehouse/observations.py, build stage warehouse/entity/gold_gus_bdl_build.sql), not
-# by dbt. observations_rejected is the rejections table of every per-block source. The activity is not
-# authorized here yet: adding gold.observations to `activities` is the separate scheduling Task.
+# by dbt. observations_rejected is the rejections table of every per-block source.
 gold: [gold.gus_bdl_observations, gold.gus_bdl_series, gold.gus_bdl_measures, gold.gus_bdl_geography,
        gold.observations_rejected, gold.build_bdl]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
@@ -49,4 +48,8 @@ refresh: {mode: incremental, unit: subgroup, decided: "#875"}
 # landing.extract = API metadata (variables, units); with "web" in the filter: website export of
 # subgroups missing from Landing (web_export.py); with "refresh": the steady-state API refresh of
 # changed held subgroups (refresh.py, today's share), then variables of new versions.
-activities: [landing.inspect, landing.extract, bronze.load, bronze.verify, landing.archive]
+# gold.observations (owner decisions O36, O43; D35; #1178): the platform's weekly run keeps Gold current with
+# the subgroups that changed; the first load is started by hand (Pipeline run "gold: observations" of
+# gus_bdl with filter * or subgroup ids) and continued by every later run, each within its time budget, in
+# the order subgroups to voivodeships and subregions, to powiats, to gminas and below.
+activities: [landing.inspect, landing.extract, bronze.load, bronze.verify, landing.archive, gold.observations]

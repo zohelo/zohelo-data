@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+groundwater_nitrate_above_50_share,poland,A,groundwater_nitrate_above_50_share,gios_groundwater,nitrate,gios_groundwater:nitrate:%:above_50_share.%,A,PL;VOIV,,rate,down,ready,"2019 on; diagnostic network (every groundwater body) in 2019 and 2022, operational network (bodies at risk) in the other years"

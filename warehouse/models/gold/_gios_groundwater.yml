@@ -1,0 +1,18 @@
+version: 2
+models:
+  - name: poc_build_gios_groundwater
+    description: >-
+      Build stage — GIOŚ groundwater quality monitoring (register PL-ENV-012), block nitrate, annual 2019 on, Poland
+      and voivodeships: monitoring points with nitrate results, points with a sample above 50 mg/l NO3 and their
+      share, per monitoring kind (diagnostic, operational). Licence cc_by_4_0_gios_groundwater.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_groundwater_nitrate_above_50_share
+    description: KPI groundwater_nitrate_above_50_share (draft) from gold.build_gios_groundwater (macros/poc_metrics.sql).

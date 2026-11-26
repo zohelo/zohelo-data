@@ -1,0 +1,51 @@
+source_system: pig_midas
+description: "PIG-PIB MIDAS — documented mineral deposits, mining areas and mining terrains (current and selected archival layers), WFS"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-015. The SHP packages of the download manager (dm.pgi.gov.pl)
+# are sent by e-mail only, so the route is MIDAS's public WFS (ArcGIS, WFS 2.0, robots.txt 404, no published limits):
+# one GetFeature per feature type, outputFormat GEOJSON (EPSG:4326 lon/lat, every attribute), declared as files of the
+# shared bulk_file pattern (no extractor code). Dev probes on test/2870-pig-midas: 45817073166 (capabilities: six
+# feature types, ImplementsResultPaging TRUE; resultType=hits 18,186 / 6,176 / 6,001 / 4,002 / 5,061 / 4,799),
+# 45818533713 (every layer paged by count=2000: all features, OBJECTID never repeated, 2-3.5 MB and 4-11 s a page),
+# 45820730349 (one request for a whole layer: 4,002 of 4,002 features, 5.0 MB in 3.8 s). One request per layer is
+# lighter for the server than 3-10 pages and needs no paging code; the Dev trial compared each layer's features with
+# resultType=hits. The server answers HEAD with 500, so landing.inspect asks with a streamed GET (probe: get).
+# Entity = one feature type; the WFS gives no version, so version = download time, and a copy lands only when its
+# SHA-256 changed. Restart unit: one layer. The layers change about daily (dated download packages).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - {entity: deposits, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_udokumentowane_złoża_kopalin&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_areas, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_obszary_górnicze&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_terrains, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_tereny_górnicze&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: deposits_removed, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS___złoża_wybilansowane__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_areas_archival, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_archiwalne_obszary_górnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_terrains_archival, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_archiwalne_tereny_górnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+  initial: bulk
+  production: snapshot                    # each response is the whole current layer
+  incremental_policy: changed_since_last  # SHA-256 of the response (the WFS sends no Last-Modified)
+  schedule: # UTC; the producer edits the layers continuously; a register snapshot a month is enough (O46): the 17th at 04:55, six requests, one at a time
+    - {cron: "55 4 17 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/pig_midas/
+# GeoJSON stored zstd-compressed in the Archive. Newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.pig_midas_features, bronze.pig_midas_rejected_files]
+silver: [silver.pig_midas_deposits, silver.pig_midas_mining_areas, silver.pig_midas_mining_terrains]
+gold: [gold.build_pig_midas]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the Dev trial of the final code (PR body)
+  pig_midas_deposits: {rows: 34000}  # 22,188 = 18,186 documented + 4,002 removed contours
+  pig_midas_mining_areas: {rows: 17000}  # 11,239 = 6,176 current + 5,063 archival
+  pig_midas_mining_terrains: {rows: 16500}  # 10,801 = 6,000 current + 4,801 archival
+  poc_build_pig_midas: {rows: 650}  # 410: deposits 378 (total and 60 minerals by area), mining areas 32
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): six responses of 5-30 MB, about 44,000 features in all, no changed-since filter
+# in the WFS; each response is the whole layer, so a new copy replaces its entity and Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

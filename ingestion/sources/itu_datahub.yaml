@@ -1,0 +1,49 @@
+source_system: itu_datahub
+description: "ITU DataHub ICT indicators by country and year (International Telecommunication Union), as republished by the World Bank Data360 dataset ITU_DH: one bulk CSV (register GL-031)"
+
+# Extraction strategy (docs/landing.md). Register GL-031. Bulk first: the World Bank Data360 metadata of every ITU_DH
+# indicator names a CSV (csv_link, data360files.worldbank.org/data360-data/data/ITU_DH/<indicator>.csv), and the same
+# folder holds the whole dataset in one file, ITU_DH.csv (65,676,828 bytes, Last-Modified 3 Apr 2026; Dev probe
+# 45872579778, 26 Nov 2026): the 40 indicators in SDMX-CSV with labels (STRUCTURE … OBS_CONF, then a *_LABEL column per
+# code). So kind bulk_file and no extractor code; the Data360 REST API (/data360/data?DATABASE_ID=ITU_DH, 1,000
+# observations a page) is not used: a full read in Dev probe 45871438953 returned 153,289 rows in 154 pages, among
+# them every PRI_HU_VD row twice (9,436 against 4,718 in its CSV), so its paging is not a reliable full load. The
+# producer's own hosts datahub.itu.int and api.datahub.itu.int refuse runners (robots.txt HTTP 403) and are never
+# used; data360files.worldbank.org answers robots.txt with an Azure storage error (HTTP 400, no rules). Entity = the
+# dataset file; version = its Last-Modified; a copy is written only when the SHA-256 changed. Restart unit: the file.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: itu_dh   # every ITU_DH indicator, all countries and years, SDMX-CSV with labels
+        url: https://data360files.worldbank.org/data360-data/data/ITU_DH/ITU_DH.csv
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                    # the file is the complete dataset of one Data360 update
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: # UTC; ITU publishes its DataHub indicators about once a year with corrections between (no release
+    # calendar; the Data360 copy was last updated 3 Apr 2026); a monthly check on the 16th. The run ends with Bronze;
+    # the platform's weekly Sunday run builds Silver and Gold (O46).
+    - {cron: "35 6 16 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/itu_datahub/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.itu_datahub_observations, bronze.itu_datahub_rejected_files]
+silver: [silver.itu_datahub_observations]
+gold: [gold.build_itu_datahub, gold.metrics_fixed_broadband_subscriptions, gold.metrics_mobile_broadband_subscriptions]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45874151208 (26 Nov 2026), 1.5 x
+  itu_datahub_observations: {rows: 217000}  # 144,549: every row of ITU_DH.csv (39 indicators, 236 economies, 2000-2025)
+  poc_build_itu_datahub: {rows: 209000}  # 139,238 = Silver less the 5,311 text rows (unit CAT); 2,606 of 23 codes without a Gold country (_X)
+  poc_metrics_fixed_broadband_subscriptions: {rows: 6500}  # 4,300: IT_NET_BBND per 100 inhabitants, 208 economies, 2000-2024
+  poc_metrics_mobile_broadband_subscriptions: {rows: 2600}  # 1,698: ACT_MOB_SB per 100 inhabitants, 176 economies, 2007-2024
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one file of about 66 MB and some 145,000 rows, replaced whole by each Data360
+# update (no changed-since); small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2418"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

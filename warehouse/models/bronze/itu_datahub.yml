@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: itu_datahub
+  description: ITU DataHub indicators as republished by World Bank Data360 (dataset ITU_DH, register GL-031), one bulk CSV
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/itu_datahub/
+    loaded_by: ingestion/to_bronze/itu_datahub/
+    config: ingestion/sources/itu_datahub.yaml
+  tables:
+  - name: itu_datahub_observations
+    description: >-
+      One row per row of the newest copy of entity itu_dh (ITU_DH.csv): the 41 SDMX-CSV columns (codes, value,
+      attributes and their labels) as published text, names in lower case; partitioned by entity.
+  - name: itu_datahub_rejected_files
+    description: ITU DataHub Landing files the Bronze decoder rejected, with the reason.

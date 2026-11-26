@@ -1,0 +1,3 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+patent_grants_filing_office,economy,A,patent_grants_filing_office,wipo_ip_stats,dc_indicator_patent_5_grant_by_technology,wipo_ip_stats:patent_grants:grants:by_office,A,PL;EU,,sum,neutral,ready,"2000-2022 in the file of April 2024; sum of the technology fields; licence restricted (internal)"
+patent_grants_applicant_origin,economy,A,patent_grants_applicant_origin,wipo_ip_stats,dc_indicator_patent_5_grant_by_technology,wipo_ip_stats:patent_grants:grants:by_origin,A,PL;EU,,sum,up,ready,"2000-2022 in the file of April 2024; residents at all offices, sum of the technology fields; licence restricted (internal)"

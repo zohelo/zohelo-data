@@ -212,7 +212,7 @@ full_rebuild:   # model: {rows: ceiling}
   poc_metrics_credit_to_gdp: {rows: 14000}  # 9,380 (Dev trial 43290214779); 1.5 x
   poc_metrics_debt_service_ratio: {rows: 5200}  # 3,476 (Dev trial 43290214779); 1.5 x
   poc_metrics_hdi: {rows: 1400}  # 947 (Dev trial 43290214779); 1.5 x
-  poc_metrics_internet_users: {rows: 300}  # 196 (Dev trial 43290214779); 1.5 x
+  poc_metrics_internet_users: {rows: 7700}  # 196 UNdata (Dev trial 43290214779) + 4,898 ITU DataHub (Dev trial 45874151208); 1.5 x
   poc_metrics_health_expenditure_gdp: {rows: 250}  # 162 (Dev trial 43290214779); 1.5 x
   geo_unit: {rows: 4300}  # 2,876 (Dev trial 43099545187)
   geo_neighbour: {rows: 25000}  # 16,224 (Dev trial 43099545187)
