@@ -1,0 +1,58 @@
+source_system: wipo_ip_stats
+description: "WIPO IP Statistics (World Intellectual Property Organization): patent publications and grants by filing office, applicant origin, WIPO technology field and year; industrial design applications and registrations (design counts) by office, origin, Locarno class and year (register GL-032)"
+
+# Extraction strategy (docs/landing.md). Register GL-032. Bulk files of the shared bulk_file pattern, no extractor code:
+# the ZIPs linked from https://www.wipo.int/en/web/ip-statistics, found on that page by file name (url_from; the paths
+# change with releases). www3.wipo.int (the interactive Data Center) is disallowed by its robots.txt and never used.
+# Dev probes on test/1262-wipo-ip-stats-probe, 26 Nov 2026: 45871388485 (page: 11 file links; the patent ZIP 4.0 MB,
+# Last-Modified 11 Apr 2024, holds dc_indicator_patent_4_publication_by_technology.csv (663,584 rows) and
+# dc_indicator_patent_5_grant_by_technology.csv (428,490) with the technology-field names workbook; the design ZIP
+# 1.5 MB, 21 Jun 2024, holds the application and registration design counts by Locarno class (202,802 and 202,591
+# rows); all CSVs year,office,origin,<tec_id|class_id>,count, 2000-2022) and 45872152431 (partitions and totals).
+# The patent ZIP holds no application counts, so Gold has publications and grants, not applications.
+# Left out: the trademark ZIP (application and registration class counts by Nice class, 2,362,827 and 2,381,783 rows:
+# above the 1 M ceiling of a full-rebuild model, D28, needs an incremental design), wipo_ip_historical_data.zip
+# (pre-1980 and PCT 1985-1999), ipc_technology.xlsx and the top-applicant workbooks.
+# Entity = one ZIP; version = its Last-Modified; a copy lands only when its SHA-256 changed. Restart unit: one ZIP.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: patent_indicators
+        url_from: {page: "https://www.wipo.int/en/web/ip-statistics", pattern: "/wipo-data-patent-indicators\\.zip$"}
+        format: zip
+        version: last_modified
+      - entity: design_indicators
+        url_from: {page: "https://www.wipo.int/en/web/ip-statistics", pattern: "/docs-en-wipo-data-design-indicators\\.zip$"}
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                    # each ZIP is the whole current table set of its right
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256
+  schedule: # UTC; WIPO releases these files once a year at most (the files on the page date from April and June 2024);
+    # a monthly check on the 19th at 05:35, two downloads one at a time (O46: at most one run a week past Landing)
+    - {cron: "35 5 19 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/wipo_ip_stats/
+# ZIPs stored as exact bytes in the Archive. Newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.wipo_ip_stats_counts, bronze.wipo_ip_stats_rejected_files]
+silver: [silver.wipo_ip_stats_patent_publications, silver.wipo_ip_stats_patent_grants, silver.wipo_ip_stats_designs]
+gold: [gold.build_wipo_ip_stats, gold.metrics_patent_grants_filing_office, gold.metrics_patent_grants_applicant_origin]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the Dev trial of the final code (PR body), 1.5 x
+  wipo_ip_stats_patent_publications: {rows: 995000}  # 663,584 (office x origin x technology field x year, 2000-2022)
+  wipo_ip_stats_patent_grants: {rows: 643000}  # 428,490
+  wipo_ip_stats_designs: {rows: 609000}  # 405,393 = 202,802 applications + 202,591 registrations
+  poc_build_wipo_ip_stats: {rows: 564000}  # 375,863: by office and by origin per field or class, patent totals; 15,168 _X
+  poc_metrics_patent_grants_filing_office: {rows: 1900}  # 1,250: office-years of 64 countries (EP, EA, ** ... are _X)
+  poc_metrics_patent_grants_applicant_origin: {rows: 4700}  # 3,132: origin-years of 195 countries
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two ZIPs of 4 MB and 1.5 MB (about 1.5 M rows), replaced whole about once a
+# year with no changed-since filter; each copy restates the whole history, so Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #1262"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
