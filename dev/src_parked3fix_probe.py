@@ -772,7 +772,59 @@ def four():
     emit("fix3268d errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
 
 
+def gios5():
+    out = {}
+    api = "https://wody.gios.gov.pl/pjwp/api"
+    r = get(f"{api}/publications/publication/367", 3000000, 60)
+    content = json.loads(r["body"].decode("utf-8", "replace")).get("content", "") if "body" in r else ""
+    anchors = [(plain(a)[:90], h) for h, a in re.findall(r'(?is)<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', content)]
+    rows = re.findall(r"(?is)<tr\b.*?</tr>", content)
+    print(f"=== GIOS 367 anchors={len(anchors)} rows={len(rows)}", flush=True)
+    for a, h in anchors:
+        print(f"  A {a} | {h}", flush=True)
+    for row in rows[:40]:
+        print(f"  ROW {plain(row)[:300]}", flush=True)
+    end()
+    media = [urllib.parse.urljoin("https://wody.gios.gov.pl/", h) for _, h in anchors if "/publications/media/" in h]
+    heads = []
+    for u in media[:3] + media[-2:]:
+        g = get(u, 200000, 90)
+        heads.append({"u": u[-40:], **{k: g.get(k) for k in ("st", "ct", "len", "cd", "lm", "err") if g.get(k)}, "magic": g["body"][:4].hex() if "body" in g else None})
+    out["n_media"] = len(media)
+    out["media"] = heads
+    out["anchors"] = [f"{a[:50]}|{h[-12:]}" for a, h in anchors[:24]]
+    return out
+
+
+def ela5():
+    base = "https://ela.nauka.gov.pl/"
+    got = page(base + "pl", text=100)
+    if not got:
+        return {"err": "failed"}
+    srcs = [urllib.parse.urljoin(base, s) for s in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', got[2])]
+    rt = [s for s in srcs if "runtime-es2015" in s]
+    allt = "\n".join(bundle(u) for u in chunks_classic(base, bundle(rt[0]))[:40]) if rt else ""
+    cands = set(re.findall(r'["\'`]((?:report|infographic|ranking|search|dictionar|filter|graduat|institution|major|study)[\w-]*/[\w/-]{2,60})["\'`]', allt))
+    cands |= set(re.findall(r'["\'`]([a-z]+-[a-zA-Z]+/[\w/-]{2,60})["\'`]', allt))
+    cands = sorted(c for c in cands if not re.search(r"(?i)\.(js|css|svg|png)$|^application/|^text/", c))
+    print(f"=== ELA5 candidates {cands}\n=== END", flush=True)
+    tried = {}
+    for c in cands[:16]:
+        u = base + "sla-server/v6.0/" + c + "?lang=pl"
+        r = rawget(u, 400000, 1200)
+        tried[c] = {k: r.get(k) for k in ("st", "len", "err") if r.get(k)}
+    return {"cands": cands[:40], "tried": tried}
+
+
+def five():
+    res = {"gios": gios5()}
+    emit("fix3268e PL-ENV-011 gios", res["gios"])
+    res["ela"] = ela5()
+    emit("fix3268e PLS-024 ela", res["ela"])
+    emit("fix3268e errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
+
+
 if __name__ == "__main__":
     import sys
 
-    {"one": one, "two": two, "three": three, "four": four}.get((sys.argv[1:] or ["one"])[0], one)()
+    {"one": one, "two": two, "three": three, "four": four, "five": five}.get((sys.argv[1:] or ["one"])[0], one)()
