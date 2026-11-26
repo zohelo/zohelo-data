@@ -94,7 +94,7 @@ if __name__ == "__main__":  # local check with synthetic Bronze: python -m dev.n
         for atc in ["_T", "A", "C", "N"]:
             for n in range(96):
                 y, m = 2017 + n // 12, n % 12 + 1
-                v = [round(rng.uniform(1, 1e6), 2) for _ in range(4)]
+                v = [0.0] * 4 if (area == "07" and n < 3) else [round(rng.uniform(1, 1e6), 2) for _ in range(4)]
                 rows.append({"entity": f"{area}_{'T' if atc == '_T' else atc}", "area_code": area, "atc_code": atc,
                              "atc_name": None if atc == "_T" else f"GROUP {atc}", "year": str(y), "month": str(m),
                              "quantity": str(v[0]), "refund": str(v[1]), "donation": str(v[2]),

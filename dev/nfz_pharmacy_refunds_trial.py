@@ -1,4 +1,4 @@
-"""Dev trial of nfz_pharmacy_refunds (#2930): the full load Landing → Bronze → Silver → Gold into scratch.
+"""Dev trial of nfz_pharmacy_refunds (#2930), final head with value_status: the full load Landing → Bronze → Silver → Gold into scratch.
 
 Landing: the real extractor, all 255 entities, into zz_dev_nfz_pharmacy_refunds/01_landing, run twice (the second run
 counts its requests and the objects written), then verify. Bronze: the real loader into the namespace
@@ -14,7 +14,6 @@ Everything written to R2 is removed in `finally`. Deleted before merge.
 from __future__ import annotations
 
 import contextlib
-import csv
 import io
 import json
 from pathlib import Path
@@ -176,11 +175,20 @@ def analyse(path: str, dim, yearly) -> dict:
             count(*) filter (where abs(value - refund - contribution_of_patient) < 0.015),
             count(*) filter (where abs(value - refund - contribution_of_patient - donation) < 0.015) from silver""")[0],
         "months_per_entity": q(con, "select n, count(*) from (select entity, count(*) n from silver group by 1) group by 1"),
+        "value_status_rows": q(con, "select value_status, count(*) from silver group by 1 order by 1"),
+        "all_zero_area_months": q(con, "select area_code, list(distinct strftime(period_start, '%Y-%m') order by 1), count(*) "
+                                       "from silver where value_status = 'all_zero' group by 1 order by 1"),
+        "national_without_province_months": q(con, "select list(distinct strftime(period_start, '%Y-%m') order by 1), count(*) "
+                                                   "from silver where value_status = 'national_without_province'")[0],
+        "all_five_zero_rows_by_status": q(con, "select value_status, count(*) from silver where quantity = 0 and refund = 0 "
+                                               "and donation = 0 and contribution_of_patient = 0 and value = 0 group by 1"),
     }}
     out["gold"] = {
         "rows_measures_series_min_max_freq": q(con, f"select count(*), count(distinct measure_key), count(distinct {series}), "
                                                     "min(date_key), max(date_key), list(distinct frequency) from gold")[0],
         "rows_per_block": q(con, "select block_id, count(*) from gold group by 1"),
+        "gold_rows_expected_from_ok_silver_x5": q(con, "select 5 * count(*) from silver where value_status = 'ok'")[0][0],
+        "gold_zero_values": q(con, "select count(*) from gold where value = 0")[0][0],
         "grain_duplicates_series_key_x_date_key": q(con, f"select count(*) from (select {series}, date_key from gold group by all having count(*) > 1)")[0][0],
         "rows_X_and_keys_not_in_dim_geography": q(con, "select count(*) filter (where geography_key = '_X'), list(distinct geography_key) "
                                                        "filter (where geography_key not in (select geography_key from dim_geography)) from gold")[0],
@@ -330,8 +338,9 @@ def main() -> int:
                 gold = res["gold"]
                 annotate("warning" if gold["grain_duplicates_series_key_x_date_key"] or any(gold["rows_X_and_keys_not_in_dim_geography"]) else "notice",
                          "nfz_pharmacy_refunds trial · Gold block", plain(gold))
-                with open(ROOT / "warehouse/seeds/source.csv", newline="") as s, open(ROOT / "warehouse/seeds/licence.csv", newline="") as lic:
-                    sources, licences = list(csv.DictReader(s)), list(csv.DictReader(lic))
+                from warehouse import seed_rows
+
+                sources, licences = seed_rows.rows("source"), seed_rows.rows("licence")
                 row = next(r for r in sources if r["source_key"] == "nfz_pharmacy_refunds")
                 annotate("notice", "nfz_pharmacy_refunds trial · reconciliation, partition, licence gate", plain({
                     "recon_2024_sum_of_months_vs_yearly_diff": res["recon_2024_sum_of_months_vs_yearly_diff"],
