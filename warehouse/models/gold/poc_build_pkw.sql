@@ -11,7 +11,8 @@
      (President, both rounds). Votes per list or candidate by powiat and gmina stay in Silver: about 100,000 more
      series than the shared dim_series ceiling leaves room for (per-block full coverage, D35, takes them later).
    No share or turnout is computed here: values as published (D33). Abroad (one row per country) and ships are
-   not areas and are left out; code-less rows map by name (voivodeships of the files without a code column, the
+   not areas and are left out, as are the cells of two committees of one name (is_ambiguous: never picked, the
+   Poland file of the sejmiki gives no column that tells them apart); code-less rows map by name (voivodeships of the files without a code column, the
    EP 2024 gmina rows of cities with powiat rights), macros/sources/pkw.sql. #}
 with silver as (
     select
@@ -23,7 +24,7 @@ with silver as (
             when 'city_powiat_name' then 'city:' || lower(wojewodztwo_name) || ':' || lower(area_name)
         end as geography_source_code
     from {{ ref('pkw_results') }}
-    where area_kind not in ('abroad', 'ships') and value is not null
+    where area_kind not in ('abroad', 'ships') and value is not null and not is_ambiguous
 ),
 
 picked as (

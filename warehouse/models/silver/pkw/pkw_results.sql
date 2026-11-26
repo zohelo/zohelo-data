@@ -15,7 +15,10 @@
    (Powiat 'zagranica', one row per country), ships ('statki'), voivodeships of the files without a code column (by
    name), and in the EP 2024 gmina file the 66 cities with powiat rights (code only at powiat level). Values as
    published (decimal comma read), never rescaled; an empty cell is absent (Bronze keeps non-empty cells only); a
-   non-numeric cell keeps value null and fails the completeness test. #}
+   non-numeric cell keeps value null and fails the completeness test.
+   is_ambiguous marks cells whose semantic key repeats: two committees of one name (the sejmiki 2024 town/country
+   file lists 'KOMITET WYBORCZY WYBORCÓW RUCH OBRONY POLSKI' twice, registered in two voivodeships, with no column
+   that tells them apart). Both are kept here and left out of Gold; neither is picked. #}
 with elections (election_key, election_type, election_round, election_date) as (
     values
     ('sejm2023', 'sejm', 1, date '2023-10-15'),
@@ -175,41 +178,51 @@ values_classified as (
     inner join files as f on b.entity = f.entity
     inner join rows_located as r on b.entity = r.entity and b.source_row = r.source_row
     where not b.is_key
+),
+
+results as (
+    select
+        v.election_key,
+        e.election_type,
+        e.election_round,
+        e.election_date,
+        v.area_level,
+        v.file_kind,
+        v.area_code,
+        v.area_name,
+        v.area_kind,
+        coalesce(
+            v.area_code, v.area_kind || ':' || coalesce(v.wojewodztwo_name, '') || ':' || coalesce(v.area_name, '')
+        ) as area_key,
+        v.wojewodztwo_name,
+        v.powiat_name,
+        v.district_number,
+        v.unit_type,
+        v.column_label,
+        v.measure_code,
+        v.breakdown_code,
+        v.settlement_code,
+        case
+            when v.measure_code in ('turnout', 'valid_votes_pct', 'invalid_votes_pct', 'list_share') then 'pct'
+            when v.measure_code = 'protocol' and v.file_kind = 'pct' then 'pct'
+            when v.measure_code in ('eligible_voters', 'ballots_issued') then 'persons'
+            when v.measure_code in ('valid_votes', 'invalid_votes', 'list_votes', 'candidate_votes') then 'votes'
+            else 'number'
+        end as unit_code,
+        v.value,
+        v.value_text,
+        v.entity,
+        v.source_row,
+        v.column_number,
+        v.source_version,
+        v.raw_sha256
+    from values_classified as v
+    left join elections as e on v.election_key = e.election_key
 )
 
 select
-    v.election_key,
-    e.election_type,
-    e.election_round,
-    e.election_date,
-    v.area_level,
-    v.file_kind,
-    v.area_code,
-    v.area_name,
-    v.area_kind,
-    coalesce(v.area_code, v.area_kind || ':' || coalesce(v.wojewodztwo_name, '') || ':' || coalesce(v.area_name, ''))
-        as area_key,
-    v.wojewodztwo_name,
-    v.powiat_name,
-    v.district_number,
-    v.unit_type,
-    v.column_label,
-    v.measure_code,
-    v.breakdown_code,
-    v.settlement_code,
-    case
-        when v.measure_code in ('turnout', 'valid_votes_pct', 'invalid_votes_pct', 'list_share') then 'pct'
-        when v.measure_code = 'protocol' and v.file_kind = 'pct' then 'pct'
-        when v.measure_code in ('eligible_voters', 'ballots_issued') then 'persons'
-        when v.measure_code in ('valid_votes', 'invalid_votes', 'list_votes', 'candidate_votes') then 'votes'
-        else 'number'
-    end as unit_code,
-    v.value,
-    v.value_text,
-    v.entity,
-    v.source_row,
-    v.column_number,
-    v.source_version,
-    v.raw_sha256
-from values_classified as v
-left join elections as e on v.election_key = e.election_key
+    *,
+    count(*) over (
+        partition by election_key, area_level, file_kind, area_key, column_label, breakdown_code, settlement_code
+    ) > 1 as is_ambiguous
+from results

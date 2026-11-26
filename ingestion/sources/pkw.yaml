@@ -18,7 +18,8 @@ description: "PKW / KBW election results — area-level result files (voivodeshi
 # grain the register asks for), candidate-by-area files of Sejm and EP, district (okręg) files, the Senate, local
 # councils and mayors, the 2020 President and older elections (danewyborcze.kbw.gov.pl, not inventoried), and the
 # committee-member files (sklad_komisji_*: personal data, register).
-# Dev trial: TRIAL.
+# Dev trial of the PR (26 Nov 2026, test/486-pkw-trial): 25 files, 2.0 MB; 738,166 Bronze cells, 0 rejected;
+# 633,215 Silver cells, no non-numeric value and no marker (an empty cell is absent, never 0).
 extraction:
   kind: bulk_file
   bulk_file:
@@ -66,10 +67,10 @@ bronze: [bronze.pkw_cells, bronze.pkw_rejected_files]
 silver: [silver.pkw_results]
 gold: [gold.build_pkw, gold.pkw_elections, gold.metrics_voter_turnout]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  pkw_results: {rows: 1000000}  # TRIAL
-  poc_build_pkw: {rows: 1000000}  # TRIAL
-  pkw_elections: {rows: 20}  # 5 elections and rounds
-  poc_metrics_voter_turnout: {rows: 1000000}  # TRIAL
+  pkw_results: {rows: 950000}  # 633,215 measured (Dev trial of the PR); a national election adds about 130,000
+  poc_build_pkw: {rows: 32500}  # 21,622 measured
+  pkw_elections: {rows: 10}  # 5 measured (elections and rounds)
+  poc_metrics_voter_turnout: {rows: 13000}  # 8,670 measured: 2,890 areas x 3 elections
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): 25 files of at most 0.5 MB, static after each election, no changed-since
