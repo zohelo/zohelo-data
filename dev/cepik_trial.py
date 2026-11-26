@@ -109,12 +109,17 @@ def main(argv) -> int:
         spec = yaml.safe_load((ROOT / "warehouse/models/silver/cepik/_cepik.yml").read_text())["models"][0]
         failures = {}
         failures["unique"] = n(
-            "select count(*) from (select 1 from s group by table_code, group_code, period_year, period_month having count(*) > 1)"
+            "select count(*) from (select 1 from s where cell_status <> 'outside_table' group by table_code, group_code, period_year, period_month having count(*) > 1)"
         )
         for column in spec["columns"]:
             for test in column["tests"]:
                 if test == "not_null":
                     failures[f"not_null {column['name']}"] = n(f"select count(*) from s where {column['name']} is null")
+                elif isinstance(test, dict) and "not_null" in test:
+                    where = test["not_null"]["config"]["where"]
+                    failures[f"not_null {column['name']}"] = n(
+                        f"select count(*) from s where {column['name']} is null and ({where})"
+                    )
                 elif isinstance(test, dict) and "accepted_values" in test:
                     values = test["accepted_values"]["arguments"]["values"]
                     con.execute("create or replace temp table allowed as select unnest(?) as v", [values])
@@ -134,6 +139,7 @@ def main(argv) -> int:
             "check_status": n("select string_agg(check_status || '=' || c, ' ') from (select check_status, count(*) c from s group by 1)"),
             "order_suspect": n("select string_agg(distinct entity || ' month ' || period_month, ', ') from s where check_status <> 'ok'"),
             "non_numeric_value_cells": n("select count(*) from s where value is null"),
+            "outside_table_warn": n("select string_agg(entity || ' ' || group_code || '=' || value, '; ') from s where cell_status = 'outside_table'"),
         }
         annotate("notice" if not any(failures.values()) else "error", "cepik trial silver", silver_stats)
 
