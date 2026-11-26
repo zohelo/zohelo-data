@@ -17,8 +17,15 @@ danych z informacji ze zdarzeń", one CSV of about 0.5 M records a year).
 - **Silver** `silver.kgpsp_interventions_counts` (year × table × area × measure, header text read, never by
   position); **Gold** `gold.build_kgpsp_interventions`, blocks `incidents` and `casualties`, Poland and voivodeships;
   from 2023 the voivodeship and Poland values are sums of the published gmina rows, except where a city with districts
-  (Wrocław, Łódź, Kraków, Warszawa, Poznań) is printed as one row: the 2025 tables do so, so 2025 has no Poland value
-  and none for those five voivodeships (warning test `kgpsp_interventions_city_districts`). The 2024 tables print three
+  is printed without all its TERYT codes, the city row and every district (Wrocław 0264: 6 codes, Łódź 1061: 6,
+  Kraków 1261: 5, Warszawa 1465: 19, Poznań 3064: 6; macro `poc_kgpsp_interventions_incomplete_cities`, shared by the
+  build and the warning test `kgpsp_interventions_city_districts`): the 2025 tables print each of these cities as one
+  row, so 2025 has no Poland value and none for those five voivodeships; 2023 and 2024 have every code (Dev trial
+  45781372123). Layout break 2022/2023, checked: the 2022 gmina copies (`1_2_2022.xlsx`, `10_2_2022.xlsx`; 2,479
+  gmina rows) summed per voivodeship equal the published 2022 voivodeship and Poland rows in every cell (table 1:
+  272 of 272, table 10: 306 of 306; Dev trial 45781372123), so summing gmina rows reproduces the published totals.
+  It cannot show whether the new gmina tables of 2023 on leave incidents out; the fall in 2023 (Poland, all
+  incidents: 608,818 in 2022, 486,055 in 2023) is as the producer's gmina rows give it. The 2024 tables print three
   TERYT codes twice, for two gminas each; Silver keeps the gmina name in the grain. Draft KPIs: fire_service_fires,
   fire_service_local_hazards, fire_service_false_alarms.
 - **Left out:** the other 31 numbered tables and tables A-C (causes, objects, times, units, equipment, losses), the
