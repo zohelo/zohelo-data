@@ -173,7 +173,7 @@ one. It is retried when its recipe changes.
   where a monthly figure is taken once a quarter or once a year. The territorial dimension is the
   dimension slot with the most positions named like Polish areas in the block's own dictionary; the
   other dimensions are breakdowns, DBW's dimension and position ids as published. Detail:
-  [sources.md](sources.md), GUS DBW.
+  [sources/gus_dbw.md](sources/gus_dbw.md).
 - **World Bank WDI.** `world_bank_wdi:wdi_observations:_Z:<indicator code>@A`: an indicator code is one
   measure whole (WDI's codes for a sex or an age band are its own indicators), so no series has a
   breakdown. The unit is not in the key (`_Z`): WDI states it in the indicator's name and in a metadata

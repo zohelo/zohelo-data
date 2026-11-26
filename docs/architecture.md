@@ -28,7 +28,7 @@ Target architecture, C4 views, gap and fitness checks per product (Architect, O2
 
 `run.py` is the single entry point: it plans a run and executes one activity.
 Activities and workflows are described in [operating.md](operating.md); Landing
-rules in [landing.md](landing.md); per-source routes in [sources.md](sources.md).
+rules in [landing.md](landing.md); per-source routes in [sources/](sources/) (one file per source, [sources.md](sources.md)).
 
 ## Layers
 
