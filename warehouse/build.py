@@ -332,7 +332,7 @@ def build_once(
             ran = sorted(held[r["unique_id"]] for r in results if r["unique_id"] in held)
             summary["changed_only"]["waiting_tests"] = {"left_out": len(held), "ran": ran}
         summary["changed_only"]["properties"] = changed.record(
-            changed_plan["cat"], changed_plan["meta"], results, started_ms
+            changed_plan["cat"], changed_plan["meta"], results, started_ms, changed_plan["full_refresh"]
         )
     if target == "prod" and any(r["unique_id"].startswith("model.") and r["status"] == "success" for r in results):
         try:
