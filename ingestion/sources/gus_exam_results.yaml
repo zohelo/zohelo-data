@@ -34,8 +34,8 @@ bronze: [bronze.gus_exam_results_means, bronze.gus_exam_results_rejected_files]
 silver: [silver.gus_exam_results_eighth_grade]
 gold: [gold.build_gus_exam_results]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  gus_exam_results_eighth_grade: {rows: 4300}  # 2,856: 17 areas x 8 subjects x 3 sex groups x 7 years 2019-2025 (Dev trial, see the PR)
-  poc_build_gus_exam_results: {rows: 3600}  # 2,347: the rows with a value (509 flagged rows have none) (Dev trial, see the PR)
+  gus_exam_results_eighth_grade: {rows: 4300}  # 2,856: 17 areas x 8 subjects x 3 sex groups x 7 years 2019-2025 (Dev trial 45901699841)
+  poc_build_gus_exam_results: {rows: 3600}  # 2,347: the rows with a value (509 flagged rows have none) (Dev trial 45901699841)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of about 340 kB and 2,856 rows, one new year a year, no changed-since

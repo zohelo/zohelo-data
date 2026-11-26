@@ -1,6 +1,6 @@
 {# GUS mean eighth-grade exam results (#449): a share of the maximum number of points, so 0 to 100 by definition
-   (Dev trial on the final code, see the PR, for the measured range). The KPIs have no metrics model yet, so the
-   bounds wait ('models': []). #}
+   (Dev trial 45901699841: 9 to 100 over all subjects and areas; totals: Polish 55-69, mathematics 40-63, English
+   50-74). The KPIs have no metrics model yet, so the bounds wait ('models': []). #}
 {% macro poc_value_range__gus_exam_results() %}
     {{ return({
         'bounds': [

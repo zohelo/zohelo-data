@@ -18,7 +18,9 @@ and sex, 2019-2025; grain area × subject × sex × year. GUS sends value `0` wi
 unreliable data) and `(–)` (did not occur, e.g. no pupil of the area took that language). Such rows keep value null
 and the sign (`observation_status` `missing` / `nil`), never 0. Gold block `exam8`, registered in
 `warehouse/macros/sources/gus_exam_results.sql`: one measure per subject, sex as the breakdown, signed rows not
-loaded. Draft KPIs `exam8_polish`, `exam8_mathematics`, `exam8_english` (unit `pct_max_points`). Monthly check on the
+loaded. Values are kept as published: in 2 of 731 cells with all three sex groups the total lies outside the
+girls'/boys' range by more than 1 point (2025: Podkarpackie French 91 vs 95/94, Zachodniopomorskie Russian 93 vs
+95/98; Dev trial 45901699841). Draft KPIs `exam8_polish`, `exam8_mathematics`, `exam8_english` (unit `pct_max_points`). Monthly check on the
 14th, 09:40 UTC (results in July; GUS republishes later in the year).
 
 Licence: GUS terms (https://stat.gov.pl/copyright; copying allowed with the source given; commercial reuse not
