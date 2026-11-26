@@ -1,4 +1,10 @@
-{{ config(alias='build_public_finance', tags=['gold_block']) }}
+{# config meta source_systems: the four source_systems this block writes, so the metrics models of their KPIs are
+   scoped to it (warehouse/changed.py block_sources, #3204). #}
+{{ config(
+    alias='build_public_finance',
+    tags=['gold_block'],
+    meta={'source_systems': ['mf_public_debt', 'mf_treasury_debt', 'mf_state_budget', 'krus']}
+) }}
 {# Gold build stage: Polish public finance from the Ministry of Finance and KRUS (Silver public_debt,
    treasury_debt, budget_execution, krus_benefits), Poland only, no breakdown (the instrument, item or benefit
    is part of the measure). Blocks:
