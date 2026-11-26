@@ -50,8 +50,13 @@ YEAR_2027 = datetime(2027, 1, 5, 12, 0, tzinfo=UTC)
 annotate = report.annotate
 
 
+BRONZE_NOTICES: list[dict] = []
+
+
 def quiet(level: str, title: str, data) -> None:
     print(f"[{level}] {title}: {json.dumps(data, default=str)[:3000]}", flush=True)
+    if "Bronze from Landing" in title:
+        BRONZE_NOTICES.append(data)
 
 
 bulk_file.annotate = quiet  # the modules' own annotations would pass the limit of 10 per step
@@ -183,17 +188,23 @@ def main(argv) -> int:
         def bronze_round(today, label: str) -> list[dict]:
             rounds = []
             for attempt in (1, 2):
+                BRONZE_NOTICES.clear()
                 rc = bronze.load(0, landing_root=LAND, namespace=SCRATCH, today=today)
-                snap = {}
+                snap = {"candidates": sum(n.get("candidates", 0) for n in BRONZE_NOTICES),
+                        "rows_added": sum(n.get("rows_added", 0) for n in BRONZE_NOTICES)}
                 for table in bronze.TABLES:
                     t = cat.load_table((SCRATCH, table))
                     rows = t.scan(selected_fields=("entity",)).to_arrow().column("entity").to_pylist()
                     years: dict[str, int] = {}
                     for e in rows:
                         years[e[-4:]] = years.get(e[-4:], 0) + 1
-                    snap[table] = {"files": len(bf.loaded_pairs(t)), "rows_by_year": years}
+                    files = t.inspect.data_files().column("file_path").to_pylist()
+                    snap[table] = {"data_files": len(files), "entity_sha_pairs": len(bf.loaded_pairs(t)),
+                                   "rows_by_year": years}
                 rounds.append({"exit": rc, **snap})
-            if rounds[0] != rounds[1] or any(r["exit"] for r in rounds):
+            first = {k: v for k, v in rounds[0].items() if k not in ("candidates", "rows_added")}
+            second = {k: v for k, v in rounds[1].items() if k not in ("candidates", "rows_added")}
+            if first != second or rounds[1]["candidates"] or any(r["exit"] for r in rounds):
                 failures.append(f"bronze {label}: second load changed the tables or failed")
             return rounds
 
