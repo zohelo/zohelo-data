@@ -301,8 +301,9 @@ def bronze_profile(con) -> dict:
         "null_keys": one(con, f"select count(*) from {v} where entity is null or table_code is null or row_label is null "
                               f"or column_label is null or value_text is null or raw_sha256 is null"),
         "non_numeric_values(table,column,value,n)": rows(con, f"select table_code, column_label, value_text, count(*) from {v} "
-                                                             f"where not regexp_full_match(value_text, '-?[0-9][0-9 ]*(,[0-9]+)?') "
+                                                             f"where column_label <> 'kontrola' and not regexp_full_match(value_text, '-?[0-9][0-9 ]*(,[0-9]+)?') "
                                                              f"group by all order by all", 40),
+        "kontrola(table,group,row,files)": rows(con, f"select table_code, row_group, row_label, count(*) from {v} where column_label = 'kontrola' group by all order by 4 desc", 15),
         "zeros(table,column,n)": rows(con, f"select table_code, column_label, count(*) from {v} where value_text = '0' group by all order by all"),
         "stated_sources": rows(con, f"select table_code, stated_source, count(distinct entity) from {v} group by all order by all"),
         "fob_markets(group,market,files)": rows(con, f"select row_group, row_label, count(distinct entity) from {v} "
@@ -366,6 +367,7 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
                 "by_measure(commodity,market,rows,values,first,last)": rows(con, f"select commodity_code, market_code, count(*), count(value), "
                                                                                  f"min(quote_date), max(quote_date) from {fob} group by all order by all"),
                 "dup_grain": one(con, f"select count(*) from (select commodity_code, market_code, quote_date from {fob} group by all having count(*) > 1)"),
+                "flags": rows(con, f"select coalesce(value_flag, 'value'), count(*) from {fob} group by 1 order by 1"),
                 "null_keys": one(con, f"select count(*) from {fob} where commodity_code is null or market_code is null or quote_date is null or area_code is null"),
                 "quote_minus_week_end_days(min,max)": rows(con, f"select min(quote_date - (report_week + 6)), max(quote_date - (report_week + 6)) from {fob}"),
                 "value(min,max)": rows(con, f"select min(value), max(value) from {fob}")},
