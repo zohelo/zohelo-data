@@ -447,7 +447,44 @@ def two():
         emit(f"parked1b {k}", res[k])
 
 
+THREE = ["https://www.epo.org/en/about-us/statistics/data-download", "https://www.epo.org/en/terms-of-use", "https://www.epo.org/en/legal-notice",
+         "https://link.epo.org/web/linked_open_ep_data_user_guide_en.pdf", "https://data.epo.org/linked-data/", "https://publication-bdds.apps.epo.org/raw-data/products",
+         "https://www.gpw.pl/disclaimer"]
+KW3 = r"(?i)bulk|download|dump|n-?triples|zip|weekly|licen|CC BY|Creative Commons|reuse|re-use|reproduc|copyright|free of charge|statistic|source:|consent|zgod|informacyjn"
+
+
+def three():
+    res = {}
+    for u in THREE:
+        r = get(u, 30000000, 90, robots_timeout=40)
+        if "err" in r:
+            fail(u, r)
+            res[tag(u)[:55]] = r["err"][:70]
+            continue
+        b = r.pop("body")
+        if b[:5] == b"%PDF-":
+            p, n = pdf_text(b)
+            ll = []
+        else:
+            t = b.decode("utf-8", "replace")
+            p, ll = plain(t), links(t, r.get("final") or u)
+        print(f"=== THREE {u}\nMETA {json.dumps({k: v for k, v in r.items() if v}, ensure_ascii=False)} chars={len(p)} read={len(b)}", flush=True)
+        for s in around(p, KW3, 300, 1200, 16):
+            print(f"  KW {s}", flush=True)
+        files = [(a, x) for a, x in ll if re.search(r"(?i)\.(xlsx?|csv|zip|gz|nt|ttl|json)(\?|$)|download|bulk", a + " " + x)]
+        for a, x in files[:60]:
+            print(f"  F {a} | {x}", flush=True)
+        end()
+        heads = []
+        for a, x in [f for f in files if re.search(r"(?i)\.(xlsx?|csv|zip|gz)(\?|$)", f[1])][:3]:
+            h = get(x, method="HEAD", timeout=60)
+            heads.append({"u": x[-70:], "st": h.get("st") or h.get("err"), "len": h.get("len"), "lm": h.get("lm")})
+        res[tag(u)[:55]] = {"st": r.get("st"), "ct": r.get("ct"), "chars": len(p), "files": len(files), "heads": heads}
+    res["errors"] = {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:12]}
+    emit("parked1c", res)
+
+
 if __name__ == "__main__":
     import sys
 
-    two() if sys.argv[1:] == ["two"] else main()
+    {"two": two, "three": three}.get((sys.argv[1:] or ["main"])[0], main)()
