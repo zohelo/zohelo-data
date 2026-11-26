@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Barometr Zawodów bronze.load: newest copy of each landed PDF → bronze.barometr_zawodow_occupations.
+"""Barometr Zawodów bronze.load: newest copy of each landed poster → bronze.barometr_zawodow_occupations.
 
-Every poster page of a file is read (posters.py): the national poster (entity plakat_<year>, one poster: Polska)
-and the posters printed in the national report (raport_<year>: the 16 voivodeships, in most years Polska too). One
-Bronze row per occupation printed on a poster: forecast year and area as printed in the poster's header, the
-category label of the block the occupation is printed in (as printed, e.g. "DEFICYT"), the labels of all blocks of
-the poster top to bottom, and the occupation name as printed (lines joined, ligatures resolved).
+Each file is one poster (posters.py): the national poster (entity plakat_<year>: Polska) or the poster of the
+voivodeship page NN (plakat_p<NN>_<year>). One Bronze row per occupation printed on it: forecast year and area as
+printed in the poster's header, the category label of the block the occupation is printed in (as printed, e.g.
+"DEFICYT"), the labels of all blocks of the poster top to bottom, and the occupation name as printed (wrapped lines
+joined, ligatures resolved).
 
 A file is rejected whole (bronze.barometr_zawodow_rejected_files, with the reason) when a poster page does not read
-cleanly (posters.py), the posters' year differs from the entity's year, an area is printed on two posters of one
-file, a report holds no voivodeship poster or the poster file not exactly one Polska poster, or the file has no
-poster page at all (a scanned file or a new layout). It is never half-read.
+cleanly (posters.py), the poster's year differs from the entity's year, the national file holds another poster than
+one for Polska, a voivodeship file not exactly one voivodeship poster, or the file has no poster page at all (a
+scanned file or a new layout). It is never half-read.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ SOURCE = "barometr_zawodow"
 TABLE_ID = ("bronze", "barometr_zawodow_occupations")
 REJECTED_ID = ("bronze", "barometr_zawodow_rejected_files")
 COLUMNS = [
-    ("entity", "VARCHAR"),  # raport_<year> or plakat_<year> (file kind and forecast year, from the publication page)
+    ("entity", "VARCHAR"),  # plakat_<year> (Polska) or plakat_p<NN>_<year> (voivodeship page NN), from the page
     ("page_number", "BIGINT"),
     ("edition_year", "VARCHAR"),  # the year of the poster's title "Barometr zawodów <year>" (the forecast year)
     ("area_label", "VARCHAR"),  # as printed: "Polska" or "województwo <name>"
@@ -92,16 +92,15 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
             )
     if not rows:
         raise ValueError("no poster page found (a scanned PDF or a new layout)")
-    voivodeships = [a for a in areas if a != "Polska"]
     if kind == "plakat" and list(areas) != ["Polska"]:
         raise ValueError(f"the national poster file holds the posters {sorted(areas)}, not one for Polska")
-    if kind == "raport" and not voivodeships:
-        raise ValueError(f"the report holds no voivodeship poster (posters: {sorted(areas)})")
+    if kind != "plakat" and (len(areas) != 1 or "Polska" in areas):
+        raise ValueError(f"the voivodeship poster file holds the posters {sorted(areas)}, not one voivodeship")
     return pa.Table.from_pylist(rows, schema=ARROW)
 
 
 def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze") -> int:
-    """budget_minutes is unused: 22 PDFs of 0.1-11 MB, decoded in memory one at a time."""
+    """budget_minutes is unused: 17 posters a year of 0.1-0.3 MB, decoded in memory one at a time."""
     from ingestion.to_landing import barometr_zawodow as landing
 
     return bulk_bronze.load(

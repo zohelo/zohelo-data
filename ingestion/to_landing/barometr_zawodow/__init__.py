@@ -1,15 +1,16 @@
-"""Barometr Zawodów national report and poster: Landing activities (register PLS-030).
+"""Barometr Zawodów posters: Landing activities (register PLS-030).
 
-Both files of every forecast year are declared in ingestion/sources/barometr_zawodow.yaml with
-``years: {from: 2016, open: 2}`` and found on the year's national publication page (``url_from``); Landing, receipts
-and versions are the shared bulk_file pattern's. This module adds what the declaration cannot say:
+The national poster and the 16 voivodeship posters of every forecast year are declared in
+ingestion/sources/barometr_zawodow.yaml with ``years: {from: 2016, open: 2}`` and found on the year's publication page
+of the country or the voivodeship (``url_from``); Landing, receipts and versions are the shared bulk_file pattern's.
+This module adds what the declaration cannot say:
 
 - the year in the link pattern (``{year}``): a page that links another year's file is not taken;
 - format ``pdf``: an HTML answer with status 200 is not landed (the declaration allows only raw for PDFs);
 - the next year's page as optional: the edition for year N is published in December of N-1 or January of N, while
   ``expand_years`` stops at the current year; a page without the files yet is a notice, not a failure;
-- one request at a time, PAUSE seconds apart; inspect leaves out closed years, extract reads a closed year only
-  while Landing holds no copy of it.
+- one request at a time, every request PAUSE_SECONDS after the previous one (page reads, HEADs and downloads);
+  inspect leaves out closed years, extract reads a closed year only while Landing holds no copy of it.
 
 landing.inspect  open and missing years vs Landing (one page read and one HEAD per file); no writes
 landing.extract  open and missing years, written only when the SHA-256 changed
@@ -49,20 +50,34 @@ def _with_year(spec: dict[str, Any], year: int) -> dict[str, Any]:
     return {**spec, "url_from": url_from, "format": "pdf"}
 
 
+def _paced(request):
+    """The request, PAUSE_SECONDS after the previous one."""
+
+    def paced(*args, **kwargs):
+        time.sleep(PAUSE_SECONDS)
+        return request(*args, **kwargs)
+
+    return paced
+
+
 def _run(mode: str, landing_root: str = "01_landing", today: datetime | None = None) -> int:
     from ingestion.to_landing.patterns import bulk_file
 
     chosen = specs(today)
-    if mode == "inspect":  # the shared inspect does not pause: one file per call, PAUSE seconds apart
-        status = 0
-        for n, spec in enumerate(s for s in chosen if not s.get("closed")):
-            if n:
-                time.sleep(PAUSE_SECONDS)
-            status = max(status, bulk_file.main(SOURCE, mode, landing_root=landing_root, specs=[spec]))
-        return status
-    # load: bulk_file skips a closed year that Landing holds (no request) and downloads one that is missing
-    pause = PAUSE_SECONDS if mode == "load" else 0.0
-    return bulk_file.main(SOURCE, mode, landing_root=landing_root, specs=chosen, pause_seconds=pause)
+    if mode == "verify":
+        return bulk_file.main(SOURCE, mode, landing_root=landing_root, specs=chosen)
+    if mode == "inspect":
+        chosen = [s for s in chosen if not s.get("closed")]
+    # every request to the site (page read, HEAD, download) waits PAUSE_SECONDS; the shared pattern pauses only
+    # between files. load: a closed year that Landing holds is skipped without a request, a missing one is read.
+    saved = {name: getattr(bulk_file, name) for name in ("page_links", "probe", "download")}
+    for name, request in saved.items():
+        setattr(bulk_file, name, _paced(request))
+    try:
+        return bulk_file.main(SOURCE, mode, landing_root=landing_root, specs=chosen)
+    finally:
+        for name, request in saved.items():
+            setattr(bulk_file, name, request)
 
 
 ACTIVITIES = {
