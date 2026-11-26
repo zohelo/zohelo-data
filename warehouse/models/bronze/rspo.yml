@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: rspo
+  description: >-
+    RSPO register of schools and educational institutions (register PLS-021): the Ministry of National Education's
+    yearly lists on dane.gov.pl (dataset 839, state of 30 September, 2020-2025); allowlisted columns only (no names,
+    addresses, contacts, REGON or governing-body identity), values as source text.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/rspo/
+    loaded_by: ingestion/to_bronze/rspo/
+    config: ingestion/sources/rspo.yaml
+  tables:
+  - name: rspo_institutions
+    description: One row per sheet row of the newest copy of each yearly list (entity school_list_<year>).
+  - name: rspo_rejected_files
+    description: Files of rspo the Bronze decoder rejected, with the reason.
