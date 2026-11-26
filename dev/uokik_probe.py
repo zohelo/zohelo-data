@@ -77,7 +77,35 @@ def text(fragment: str) -> str:
     return " ".join(html.unescape(re.sub(r"(?s)<[^>]+>", " ", fragment)).split())
 
 
+def network() -> dict:
+    """Addresses of the host and whether a TCP connection to 443 and 80 opens (one try each, 20 s)."""
+    import socket
+
+    out = {}
+    try:
+        infos = socket.getaddrinfo("decyzje.uokik.gov.pl", 443, proto=socket.IPPROTO_TCP)
+    except OSError as exc:
+        return {"resolve_error": str(exc)}
+    for family, kind, proto, _, address in infos:
+        for port in (443, 80):
+            sock = socket.socket(family, kind, proto)
+            sock.settimeout(20)
+            try:
+                sock.connect((address[0], port, *address[2:]))
+                out[f"{address[0]}:{port}"] = "open"
+            except OSError as exc:
+                out[f"{address[0]}:{port}"] = f"{type(exc).__name__}: {exc}"[:120]
+            finally:
+                sock.close()
+    return out
+
+
 def main() -> int:
+    reach = network()
+    print("NETWORK", json.dumps(reach), flush=True)
+    annotate("notice", "uokik probe network", reach)
+    if not any(k.endswith(":443") and v == "open" for k, v in reach.items()):
+        return 1
     # 1. categories
     top = get(BASE + "&CollapseView&count=200")
     cats = []
