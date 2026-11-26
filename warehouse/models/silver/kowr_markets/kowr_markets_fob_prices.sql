@@ -3,7 +3,8 @@
    at the US Gulf, Rouen, Bordeaux and the Black Sea ports, as of the quotation date the table names (one date per
    report, a weekday after the report week). Stated source: "opracowanie Biura Analiz i Strategii KOWR na podstawie
    danych KE, EBC, NBP" (kept in stated_source). Only the EUR price is kept: the changes in % and the zł/t price are
-   KOWR's own derivations (NBP rate). "-" (brak danych) keeps value null. A quotation date printed by two reports
+   KOWR's own derivations (NBP rate). "-" (brak danych) and a lone "0" (Bordeaux, 2023) keep value null, the text in
+   value_flag; never 0. A quotation date printed by two reports
    keeps the newer report's row (ranked by report week, so two files of one week and one key fail the unique test).
    Grain: commodity_code x market_code x quote_date. #}
 with cells as (
@@ -45,8 +46,8 @@ select
     quote_date,
     report_week,
     'EUR_T' as unit_code,
-    try_cast(replace(value_text, ',', '.') as decimal(12, 2)) as value,
-    value_text,
+    case when value_text not in ('-', '0') then cast(replace(value_text, ',', '.') as decimal(12, 2)) end as value,
+    case when value_text in ('-', '0') then value_text end as value_flag,
     stated_source,
     entity,
     source_version,
