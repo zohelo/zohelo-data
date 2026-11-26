@@ -21,8 +21,11 @@ extraction:
   initial: web_pages
   production: snapshot                  # each page as published; a changed page replaces its entity
   incremental_policy: changed_since_last  # new sitting days and votes; the list pages and open sittings again
-  schedule: # UTC; the Senate sits every two to four weeks (Tuesday to Thursday); weekly, Saturday night off-peak
-    - {cron: "40 3 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  # UTC; the Senate sits every two to four weeks, Tuesday to Thursday; weekly at most past Landing (O46): Wednesday
+  # 19:20, after a sitting day's votes are on its page; a sitting still running is read again the next week. Silver
+  # and Gold are built by the weekly platform run (Sunday).
+  schedule:
+    - {cron: "20 19 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/senat/
 archive_policy:

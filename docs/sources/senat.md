@@ -17,7 +17,8 @@ the number of senators per printed mark; names not loaded), `senat_senators`. Si
 each day read from the printed dates), `senat_votes` (totals empty until the vote's page is read), `senat_senators`
 (name and end of mandate only). Gold: entity tables `senate_sitting_days`, `senate_votes`; build stage `build_senat`
 (blocks `sitting_days`, `votes`: counts of finished sittings per month and per year, Poland, only periods with a
-sitting); draft KPIs `senate_sitting_days`, `senate_votes` (no v2 map row). Weekly, Saturday 03:40 UTC. Licence:
+sitting); draft KPIs `senate_sitting_days`, `senate_votes` (no v2 map row). Weekly, Wednesday 19:20 UTC (O46: the source run ends with Bronze, the
+Sunday platform run builds Silver and Gold). Licence:
 re-use terms of the site (free, source and processing named; commercial reuse not addressed): `senat_psi_reuse`.
 Left out: individual senators' votes and attendance, per-club results, bills and their texts, committees, terms
 before XI.

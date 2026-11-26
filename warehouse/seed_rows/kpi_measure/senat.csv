@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+senate_sitting_days,senat,senat:sitting_days:days:monthly,"sitting days per month of finished sittings, term XI",1,days
+senate_votes,senat,senat:votes:votes:monthly,"votes per month of finished sittings, by the sitting day, term XI",1,votes
