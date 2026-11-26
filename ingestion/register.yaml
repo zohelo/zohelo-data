@@ -6054,7 +6054,8 @@ sources:
   name: Ortofotomapa (ORTO)
   short_name: GUGiK orthophoto
   provider: GUGiK
-  status: approved
+  source_system: gugik_orto
+  status: built
   family: G
   kpi: false
   geography: Poland
