@@ -32,7 +32,9 @@ ANNOTATE = report_module.annotate
 
 
 def collect(level: str, title: str, data) -> None:
-    COLLECTED.setdefault(title, []).append({"level": level, **(data if isinstance(data, dict) else {"data": data})})
+    COLLECTED.setdefault(title, []).append(
+        {"level": level, **(data if isinstance(data, dict) else {"data": data})}
+    )
     print(f"[{level}] {title}: {json.dumps(data, default=str)[:3000]}", flush=True)
 
 
@@ -40,21 +42,35 @@ def note(title: str, data, level: str = "notice") -> None:
     print(f"FULL {title}: {json.dumps(data, default=str)}", flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
     with (OUT / "pkw_trial.jsonl").open("a") as handle:
-        handle.write(json.dumps({"title": title, "level": level, "data": data}, default=str) + "\n")
+        handle.write(
+            json.dumps({"title": title, "level": level, "data": data}, default=str)
+            + "\n"
+        )
     ANNOTATE(level, title, data)
 
 
 def q(con, sql: str, limit: int = 60) -> list:
     rows = con.execute(sql).fetchall()[:limit]
-    return [[v if isinstance(v, int | float) or v is None else str(v) for v in r] for r in rows]
+    return [
+        [v if isinstance(v, int | float) or v is None else str(v) for v in r]
+        for r in rows
+    ]
 
 
 def count(con, sql: str) -> int:
     return con.execute(f"select count(*) from ({sql})").fetchone()[0]
 
 
-def render(path_or_text: str, refs: dict[str, str] | None = None, sources: dict[str, str] | None = None) -> str:
-    text = Path(path_or_text).read_text() if path_or_text.endswith(".sql") else path_or_text
+def render(
+    path_or_text: str,
+    refs: dict[str, str] | None = None,
+    sources: dict[str, str] | None = None,
+) -> str:
+    text = (
+        Path(path_or_text).read_text()
+        if path_or_text.endswith(".sql")
+        else path_or_text
+    )
     return (
         Environment(extensions=["jinja2.ext.do"])
         .from_string(MACROS + text)
@@ -78,9 +94,15 @@ def trial() -> int:
     bulk_bronze.step_summary = lambda _m: None
     # --- Landing -------------------------------------------------------------------------------------------------
     t0 = time.monotonic()
-    exits = [bulk_file.main("pkw", "load", landing_root=SCRATCH, pause_seconds=2) for _ in (1, 2)]
+    exits = [
+        bulk_file.main("pkw", "load", landing_root=SCRATCH, pause_seconds=2)
+        for _ in (1, 2)
+    ]
     loads = COLLECTED.get("pkw landing load", [])
-    first = [{k: f.get(k) for k in ("entity", "outcome", "size_mb", "version")} for f in loads[0]["files"]]
+    first = [
+        {k: f.get(k) for k in ("entity", "outcome", "size_mb", "version")}
+        for f in loads[0]["files"]
+    ]
     second = sorted({f["outcome"] for f in loads[1]["files"]})
     exits.append(bulk_file.main("pkw", "inspect", landing_root=SCRATCH))
     exits.append(bulk_file.main("pkw", "verify", landing_root=SCRATCH))
@@ -91,7 +113,9 @@ def trial() -> int:
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
     held = []
     for spec in bulk_file.declaration("pkw"):
-        rows = bulk_file.landed(client, bucket, bulk_file.prefix("pkw", spec["entity"], SCRATCH))
+        rows = bulk_file.landed(
+            client, bucket, bulk_file.prefix("pkw", spec["entity"], SCRATCH)
+        )
         held += rows
     note(
         "pkw trial Landing (scratch zz_dev_pkw)",
@@ -100,7 +124,9 @@ def trial() -> int:
             "files": len(held),
             "bytes": sum(r["size_bytes"] for r in held),
             "versions": sorted({r["version_token"] for r in held}),
-            "content_types": sorted({str(r["detail"]["http"]["content_type"]) for r in held}),
+            "content_types": sorted(
+                {str(r["detail"]["http"]["content_type"]) for r in held}
+            ),
             "second_load_outcomes": second,
             "inspect_states": sorted({f.get("state") for f in inspect}),
             "verify_missing": sum(f.get("missing_data", 0) for f in verify),
@@ -114,7 +140,9 @@ def trial() -> int:
     con = duckdb.connect()
     con.register("b_cells", cat.load_table((SCRATCH, bronze.TABLE)).scan().to_arrow())
     try:
-        rejected = cat.load_table((SCRATCH, bronze.REJECTED)).scan().to_arrow().to_pylist()
+        rejected = (
+            cat.load_table((SCRATCH, bronze.REJECTED)).scan().to_arrow().to_pylist()
+        )
     except Exception:
         rejected = []
     bl = COLLECTED.get("pkw Bronze from Landing", [])
@@ -122,10 +150,18 @@ def trial() -> int:
         "pkw trial Bronze (scratch)",
         {
             "exits": bexits,
-            "loads": [{k: x.get(k) for k in ("candidates", "appended_files", "rows_added", "rejected")} for x in bl],
+            "loads": [
+                {
+                    k: x.get(k)
+                    for k in ("candidates", "appended_files", "rows_added", "rejected")
+                }
+                for x in bl
+            ],
             "rows": count(con, "select * from b_cells"),
             "files": count(con, "select distinct raw_sha256 from b_cells"),
-            "rejected": [{k: r.get(k) for k in ("entity", "error")} for r in rejected][:5],
+            "rejected": [{k: r.get(k) for k in ("entity", "error")} for r in rejected][
+                :5
+            ],
             "per_entity": q(
                 con,
                 "select entity, count(*), max(row_number), max(column_number), count(distinct sheet_name) "
@@ -168,11 +204,13 @@ def trial() -> int:
     tests = {
         "unique cell": "select entity, source_row, column_number from pkw_results group by all having count(*) > 1",
         "unique semantic": "select election_key, area_level, file_kind, area_key, column_label, breakdown_code, "
-        "settlement_code from pkw_results group by all having count(*) > 1",
+        "settlement_code from pkw_results where not is_ambiguous group by all having count(*) > 1",
+        "ambiguous cells (kept out of Gold, reported)": "select 1 from pkw_results where is_ambiguous and not ("
+        "election_key = 'sejmiki2024' and area_level = 'kraj')",
         "not_null keys": "select 1 from pkw_results where election_key is null or election_type is null or "
         "election_date is null or area_level is null or file_kind is null or area_kind is null or area_key is null "
         "or column_label is null or measure_code is null or unit_code is null or value_text is null or entity is null "
-        "or raw_sha256 is null",
+        "or raw_sha256 is null or is_ambiguous is null",
         "accepted area_kind": "select 1 from pkw_results where area_kind not in ('country', 'teryt', 'abroad', "
         "'ships', 'voivodeship_name', 'city_powiat_name')",
         "accepted measure_code": "select 1 from pkw_results where measure_code not in ('turnout', 'eligible_voters', "
@@ -189,7 +227,9 @@ def trial() -> int:
             "tests_failing_rows": failing,
             "failing_samples": samples,
             "unknown_labels": q(
-                con, "select distinct entity, column_label from pkw_results where measure_code = 'unknown'", 15
+                con,
+                "select distinct entity, column_label from pkw_results where measure_code = 'unknown'",
+                15,
             ),
             "odd_area_kind": q(
                 con,
@@ -204,7 +244,8 @@ def trial() -> int:
                 40,
             ),
             "area_kinds": q(
-                con, "select area_level, area_kind, count(distinct area_key) from pkw_results group by all order by all"
+                con,
+                "select area_level, area_kind, count(distinct area_key) from pkw_results group by all order by all",
             ),
             "measures": q(
                 con,
@@ -214,8 +255,15 @@ def trial() -> int:
                 80,
             ),
             "value_null": count(con, "select 1 from pkw_results where value is null"),
+            "ambiguous": q(
+                con,
+                "select election_key, area_level, breakdown_code, count(*), count(distinct column_label) "
+                "from pkw_results where is_ambiguous group by all",
+            ),
             "non_numeric_value_texts": q(
-                con, "select value_text, count(*) from pkw_results where value is null group by 1 order by 2 desc", 15
+                con,
+                "select value_text, count(*) from pkw_results where value is null group by 1 order by 2 desc",
+                15,
             ),
             "profile": q(
                 con,
@@ -231,7 +279,9 @@ def trial() -> int:
         },
     )
     # --- Gold ----------------------------------------------------------------------------------------------------
-    con.register("geo_arrow", cat.load_table(("gold", "dim_geography")).scan().to_arrow())
+    con.register(
+        "geo_arrow", cat.load_table(("gold", "dim_geography")).scan().to_arrow()
+    )
     con.execute("create or replace table geo as select * from geo_arrow")
     gmap = render("{{ poc_geography__pkw() }}")
     con.execute(f"create or replace table gmap as with {gmap} select * from pkw")
@@ -265,7 +315,9 @@ def trial() -> int:
         {
             "rows_two_builds": gold,
             "map_rows": count(con, "select * from gmap"),
-            "map_duplicate_codes": count(con, "select source_code from gmap group by 1 having count(*) > 1"),
+            "map_duplicate_codes": count(
+                con, "select source_code from gmap group by 1 having count(*) > 1"
+            ),
             "dup_series_date": dups,
             "dup_samples": q(con, dups_sql, 5),
             "series": count(con, f"select distinct {series} from poc_build_pkw"),
@@ -289,7 +341,8 @@ def trial() -> int:
             "elections": q(con, "select * from pkw_elections order by election_date"),
             "metrics_rows": count(con, "select * from metrics"),
             "metrics_by_measure": q(
-                con, "select measure_key, count(*), min(value), max(value) from metrics group by 1 order by 1"
+                con,
+                "select measure_key, count(*), min(value), max(value) from metrics group by 1 order by 1",
             ),
             "metrics_max_per_area_period_kpi": con.execute(
                 "select max(n) from (select kpi_key, geography_key, date_key, count(*) n from metrics group by all)"
@@ -298,7 +351,9 @@ def trial() -> int:
                 "select max(n) from (select geography_key, date_key, count(*) n from metrics group by all)"
             ).fetchone()[0],
             "metrics_range": q(con, "select min(value), max(value) from metrics"),
-            "metrics_out_of_bounds": count(con, f"select 1 from metrics where value < {lo} or value > {hi}"),
+            "metrics_out_of_bounds": count(
+                con, f"select 1 from metrics where value < {lo} or value > {hi}"
+            ),
         },
     )
     note(
@@ -372,13 +427,19 @@ def trial() -> int:
         "silver_rebuild_differs": len(set(silver)) > 1,
         "gold_rebuild_differs": [k for k, v in gold.items() if len(set(v)) > 1],
         "dup_series_date": dups,
-        "metrics_out_of_bounds": count(con, f"select 1 from metrics where value < {lo} or value > {hi}"),
-        "licence_row": catalogue if not catalogue or catalogue[0][1] != "unresolved" else None,
+        "metrics_out_of_bounds": count(
+            con, f"select 1 from metrics where value < {lo} or value > {hi}"
+        ),
+        "licence_row": catalogue
+        if not catalogue or catalogue[0][1] != "unresolved"
+        else None,
     }
     bad = {k: v for k, v in problems.items() if v}
     note("pkw trial licence catalogue row", {"catalogue_row": catalogue})
     note(
-        "pkw trial verdict", {"problems": bad} if bad else {"result": "all checks passed"}, "error" if bad else "notice"
+        "pkw trial verdict",
+        {"problems": bad} if bad else {"result": "all checks passed"},
+        "error" if bad else "notice",
     )
     return 1 if bad else 0
 
@@ -404,7 +465,9 @@ def cleanup() -> None:
         ("STORAGE_LAKEHOUSE_BUCKET_NAME", "lake_objects"),
     ):
         bucket = req(bucket_var)
-        for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=f"{SCRATCH}/"):
+        for page in client.get_paginator("list_objects_v2").paginate(
+            Bucket=bucket, Prefix=f"{SCRATCH}/"
+        ):
             keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
             if keys:
                 client.delete_objects(Bucket=bucket, Delete={"Objects": keys})
@@ -412,7 +475,9 @@ def cleanup() -> None:
     removed["objects_left"] = sum(
         len(p.get("Contents", []))
         for b in ("STORAGE_LANDING_BUCKET_NAME", "STORAGE_LAKEHOUSE_BUCKET_NAME")
-        for p in client.get_paginator("list_objects_v2").paginate(Bucket=req(b), Prefix=f"{SCRATCH}/")
+        for p in client.get_paginator("list_objects_v2").paginate(
+            Bucket=req(b), Prefix=f"{SCRATCH}/"
+        )
     )
     note("pkw trial scratch removed", removed)
 
@@ -426,7 +491,10 @@ def main() -> int:
 
         note(
             "pkw trial failed",
-            {"error": f"{type(exc).__name__}: {str(exc)[:1500]}", "tb": traceback.format_exc()[-1800:]},
+            {
+                "error": f"{type(exc).__name__}: {str(exc)[:1500]}",
+                "tb": traceback.format_exc()[-1800:],
+            },
             "error",
         )
     finally:
