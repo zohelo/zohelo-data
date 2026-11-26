@@ -1877,8 +1877,9 @@ sources:
 - id: GL-035
   name: IRENASTAT / Statistics Time Series
   short_name: IRENASTAT
+  source_system: irena_stat
   provider: International Renewable Energy Agency
-  status: approved
+  status: built
   family: G
   kpi: true
   geography: worldwide
