@@ -71,11 +71,29 @@ def main() -> int:
     if bad:
         examples = _show(
             "1b examples",
-            f"select * from ({union}) as t where value <= 0 order by 1, 2, 3, 5 limit 40",
+            f"select * from ({union}) as t where value <= 0 order by 1, 2, 3, 5",
             40,
         )
         if examples is not None:
             annotate("notice", "1b examples", examples[:40])
+    wdi = _show(
+        "2 WDI Silver text",
+        "select economy_code, indicator_code, year, value, value_text, source_version from r2.silver.wdi_observations "
+        "where economy_code in ('SRB', 'RS') and indicator_code in ('NY.GDP.MKTP.CN', 'NY.GDP.MKTP.KN', "
+        "'NY.GDP.MKTP.CD', 'PA.NUS.FCRF') and year between 1988 and 1996 order by 2, 3",
+        60,
+    )
+    if wdi is not None:
+        annotate("notice", "2 WDI Silver, Serbia 1988-1996 (value_text as in the bulk CSV)", wdi)
+    try:
+        import requests
+
+        url = "https://api.worldbank.org/v2/country/SRB/indicator/NY.GDP.MKTP.CN?format=json&date=1988:1996"
+        got = requests.get(url, timeout=60)
+        annotate("notice", "3 World Bank API, SRB NY.GDP.MKTP.CN 1988-1996", {"status": got.status_code,
+                                                                               "body": got.text[:3000]})
+    except Exception as exc:
+        annotate("warning", "3 World Bank API failed", f"{type(exc).__name__}: {str(exc)[:500]}")
     return 0
 
 
