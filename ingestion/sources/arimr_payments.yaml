@@ -1,0 +1,41 @@
+source_system: arimr_payments
+description: "ARiMR — direct-payment statistics: applications, decisions and amounts paid by campaign and voivodeship (monthly report)"
+
+# Extraction strategy (docs/landing.md). Register PLS-034. ARiMR publishes its programme statistics only as PDF
+# attachments of gov.pl scheme pages ("Wdrażane programy i działania - dane liczbowe"); no XLSX/CSV there (Dev probe
+# 43343134150: 0 spreadsheet attachments on the index and 13 scheme pages) and api.dane.gov.pl timed out from the
+# runner. The page https://www.gov.pl/web/arimr/platnosci-bezposrednie2 lists one report a month, "Dane wg stanu na
+# <date>" (Dec 2017 to the newest month), Excel sheets printed to PDF (text layer, probe 43345651745). Each report
+# restates all campaigns cumulatively, so only the newest report and the year-end (31 December) reports are landed
+# (ingestion/to_landing/arimr_payments/): when Bronze rejects one year-end report (31.12.2025 prints a voivodeship
+# twice, Dev run 45747874758), the next older one holds the same campaigns. Entity = one report (report_<yyyymmdd>); version = download time
+# (gov.pl sends no version); a landed attachment URL is not downloaded again. Restart unit: one file. Bronze reads
+# the text layer with pypdf (requirements.txt) into table cells, guarded (ingestion/to_bronze/arimr_payments/).
+# Left out: the PS WPR 2023-2027 intervention reports, national aid, RDP/KPO/fisheries programmes (other pages).
+extraction:
+  initial: bulk
+  production: snapshot                  # each report restates every campaign as of its date
+  incremental_policy: changed_since_last  # new attachment URL
+  schedule: # UTC; the month's report appears about the 25th-28th of the next month; monthly check on the 2nd (the run
+    # ends with Bronze; the platform's weekly Sunday run builds Silver and Gold, O46)
+    - {cron: "45 5 2 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/arimr_payments/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.arimr_payments_cells, bronze.arimr_payments_rejected_files]
+silver: [silver.arimr_payments_direct_payments]
+gold: [gold.build_arimr_payments]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  # 1,156 measured each (Dev trial of 26 Nov 2026, run in PR #3143): 17 areas x (23 campaigns of amounts and of
+  # applications, 22 of decisions); one campaign a year adds 51 rows
+  arimr_payments_direct_payments: {rows: 1750}
+  poc_build_arimr_payments: {rows: 1750}
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): two PDF reports of a few thousand cells a month; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2487"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

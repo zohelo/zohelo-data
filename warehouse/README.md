@@ -86,7 +86,13 @@ leaves out the block list and the per-source macro files, so a new source is a b
 The block list they were built with is the property `zohelo.build_blocks`; when it differs, the plan says "blocks
 changed" and the model is rebuilt incrementally. A full refresh happens when the model's code changed, it has no
 build properties or no table, or more than half of its counted rows are position deletes ("position deletes";
-`total-records` in the snapshot summary still counts deleted rows). A build that is not the changed-only plan (an
+`total-records` in the snapshot summary still counts deleted rows), or more than 64 data and delete files were
+added since its last full build ("file growth": compaction is off, so a small block replaced every run adds files
+without ever reaching the position-delete share; the live files after a full build are the property
+`zohelo.base_files`). Every column of the six is cast to its type in the model, so a run that reads only the
+changed blocks has the same column types as the full union (`on_schema_change='fail'`). A failed run or a failing
+test does not clear an incremental table's properties (it is the same table, not a swapped one): the next plan
+finds the blocks newer than its last recorded build ("input changed") and replaces each of them again. A build that is not the changed-only plan (an
 explicit filter, `fqn:*`) has no `changed_blocks` var and rebuilds them in full, as before. They have no
 `full_rebuild` ceiling; the grain tests (`fact_grain`, unique `series_key` in `dim_series`) catch a series that
 two blocks emit.

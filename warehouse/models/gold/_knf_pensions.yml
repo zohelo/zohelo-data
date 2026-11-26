@@ -1,0 +1,14 @@
+version: 2
+models:
+  - name: poc_build_knf_pensions
+    description: >-
+      Build stage — KNF quarterly PPK information (register PLG-018): net asset value of the PPK target-date funds,
+      one measure knf_pensions:ppk_net_assets:thousand_pln, frequency Q from 2020 Q1, Poland; the total and each
+      managing institution (breakdown manager); values as published (thousand PLN).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]

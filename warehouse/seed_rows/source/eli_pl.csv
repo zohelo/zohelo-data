@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+eli_pl,PLG-026,ELI: Dziennik Ustaw i Monitor Polski (API Sejmu),ELI Poland: Dziennik Ustaw and Monitor Polski (Sejm API),Kancelaria Sejmu,registry,api,national-public,unresolved,https://api.sejm.gov.pl/eli.html
