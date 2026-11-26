@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+government_drafts_published,kprm_work_list,kprm_work_list:drafts_published:drafts:total:monthly,"Work-list CSV of gov.pl/web/premier/wplip-rm, all drafts by month of Data publikacji, Poland",1,

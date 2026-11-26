@@ -3,7 +3,7 @@
 The run filter becomes dbt's --select (e.g. "silver.nbp" or "nbp_fx_rates+"). An empty
 filter (the scheduled run) builds only the models whose inputs or code changed since their
 last build (warehouse/changed.py, owner policy #822), incremental models incrementally unless
-their code changed; "fqn:*" builds everything (incremental models incrementally). Eurostat and
+their code changed; "fqn:*" builds everything (the per-block incremental Gold models in full, #3204 PR B). Eurostat and
 GUS BDL observations are not dbt models: their loaders write Silver per entity (design #875,
 warehouse/entity/). A build whose failed models all failed on transient catalog errors (the rate limit, HTTP
 429, or an Iceberg commit that does not yet see a table the build just created, #2574) is
@@ -86,6 +86,9 @@ def changed_only(target: str, variables: dict | None) -> int:
     variables = dict(variables or {})
     if plan["full_refresh"]:
         variables["full_refresh_models"] = plan["full_refresh"]
+    # Always set in the changed-only build, also when empty: without it a per-block model rebuilds in full
+    # (macros/poc_incremental.sql poc_block_full_refresh).
+    variables["changed_blocks"] = plan["changed_blocks"]
     if plan["empty_blocks"]:  # the only Gold blocks poc_observations() may find without a table
         variables["waiting_blocks"] = plan["empty_blocks"]
     if plan["waiting"]:  # the only optional inputs poc_optional_ref() may find without a table
@@ -136,6 +139,8 @@ def _why(plan: dict) -> dict:
         "empty_blocks": plan.get("empty_blocks", []),  # waiting Gold blocks the facts read as zero rows
         # models the unscoped rule would also rebuild: metrics models whose blocks did not change (#3204)
         "scoped_skipped": len(plan.get("scoped_skipped", [])),
+        # Gold blocks the per-block incremental models replace (#3204 PR B); the step summary has the names
+        "changed_blocks": len(plan.get("changed_blocks", [])),
     }
 
 
@@ -327,7 +332,7 @@ def build_once(
             ran = sorted(held[r["unique_id"]] for r in results if r["unique_id"] in held)
             summary["changed_only"]["waiting_tests"] = {"left_out": len(held), "ran": ran}
         summary["changed_only"]["properties"] = changed.record(
-            changed_plan["cat"], changed_plan["meta"], results, started_ms
+            changed_plan["cat"], changed_plan["meta"], results, started_ms, changed_plan["full_refresh"]
         )
     if target == "prod" and any(r["unique_id"].startswith("model.") and r["status"] == "success" for r in results):
         try:

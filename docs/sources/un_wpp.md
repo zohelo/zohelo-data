@@ -18,7 +18,7 @@ groups summed from the five-year groups, dependency ratios; the five-year rows s
 ~1M full-rebuild policy). Gold: `gold.build_un_wpp` for the EU27 members, the WPP group "European Union
 (EU: 27)" (LocID 1551, EU27_2020) and World; every indicator is an `:estimate` (to 2023) and a `:projection`
 (2024-2100, status forecast) measure; values, unit and scale as published (D33; population in thousands); latest revision only, no vintages; areas through
-`poc_map_geography` (section `un_wpp`, static codes); draft KPIs total_fertility_rate, life_expectancy,
+`poc_geography__un_wpp()` (`warehouse/macros/sources/un_wpp.sql`, static codes); draft KPIs total_fertility_rate, life_expectancy,
 old_age_dependency (computed from the five-year age groups) and population_projection. Licence `unresolved`: no UN
 page states the WPP terms (Dev probe 43098349843), so WPP is kept out of the published layer: no row for the
 published KPI population, and its `kpi_v2_map` rows are needs-block. Monthly check (3rd, 06:25 UTC), full rebuild (D32).

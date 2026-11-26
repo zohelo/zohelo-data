@@ -30,6 +30,16 @@ per_area as (
     group by all
 ),
 
+table_areas as (
+    select distinct
+        report_year,
+        table_code,
+        layout,
+        area_code,
+        voivodeship_code
+    from t
+),
+
 per_table as (
     select
         report_year,
@@ -38,8 +48,15 @@ per_table as (
         count(*) filter (where area_code = 'PL') as poland,
         count(*) filter (where area_code <> 'PL') as areas,
         count(distinct voivodeship_code) filter (where area_code <> 'PL') as voivodeships
-    from (select distinct report_year, table_code, layout, area_code, voivodeship_code from t)
+    from table_areas
     group by all
+),
+
+tables_present as (
+    select distinct
+        report_year,
+        table_code
+    from t
 ),
 
 names as (
@@ -70,29 +87,86 @@ sums as (
     from t
     where table_code = '1'
     group by all
+),
+
+missing_tables as (
+    select
+        y.report_year,
+        y.table_code,
+        'table missing' as problem
+    from years as y
+    left join tables_present as h
+        on y.report_year = h.report_year and y.table_code = h.table_code
+    where h.report_year is null
+),
+
+wrong_measures as (
+    select
+        report_year,
+        table_code,
+        'area ' || area_code || ' ' || area_name || ': ' || measures || ' measures in ' || cells
+        || ' cells' as problem
+    from per_area
+    where measures <> (case table_code when '1' then 16 else 18 end) or cells <> measures
+),
+
+wrong_areas as (
+    select
+        report_year,
+        table_code,
+        layout || ': Poland ' || poland || ', areas ' || areas || ', voivodeships ' || voivodeships as problem
+    from per_table
+    where
+        (layout = 'voivodeship' and (poland <> 1 or areas <> 16 or voivodeships <> 16))
+        or (layout = 'gmina' and (poland <> 0 or areas < 2400 or voivodeships <> 16))
+),
+
+wrong_voivodeships as (
+    select distinct
+        t.report_year,
+        t.table_code,
+        'gmina ' || t.area_code || ' printed in ' || coalesce(t.voivodeship_name, '?') as problem
+    from t
+    left join names as n on t.voivodeship_code = n.voivodeship_code
+    where t.layout = 'gmina' and t.voivodeship_name is distinct from n.voivodeship_name
+),
+
+wrong_sums as (
+    select
+        report_year,
+        '1' as table_code,
+        'area ' || area_code || ' ' || area_name || ' does not add up: '
+        || concat_ws(' ', p, p_parts, mz, mz_parts, af, af_parts, total) as problem
+    from sums
+    where not_numbers = 0 and (p <> p_parts or mz <> mz_parts or af <> af_parts or total <> p + mz + af)
 )
 
-select y.report_year, y.table_code, 'table missing' as problem
-from years as y
-left join (select distinct report_year, table_code from t) as h
-    on y.report_year = h.report_year and y.table_code = h.table_code
-where h.report_year is null
+select
+    report_year,
+    table_code,
+    problem
+from missing_tables
 union all
-select report_year, table_code, 'area ' || area_code || ' ' || area_name || ': ' || measures || ' measures in ' || cells || ' cells'
-from per_area
-where measures <> (case table_code when '1' then 16 else 18 end) or cells <> measures
+select
+    report_year,
+    table_code,
+    problem
+from wrong_measures
 union all
-select report_year, table_code, layout || ': Poland ' || poland || ', areas ' || areas || ', voivodeships ' || voivodeships
-from per_table
-where
-    (layout = 'voivodeship' and (poland <> 1 or areas <> 16 or voivodeships <> 16))
-    or (layout = 'gmina' and (poland <> 0 or areas < 2400 or voivodeships <> 16))
+select
+    report_year,
+    table_code,
+    problem
+from wrong_areas
 union all
-select distinct t.report_year, t.table_code, 'gmina ' || t.area_code || ' printed in ' || coalesce(t.voivodeship_name, '?')
-from t
-left join names as n on t.voivodeship_code = n.voivodeship_code
-where t.layout = 'gmina' and t.voivodeship_name is distinct from n.voivodeship_name
+select
+    report_year,
+    table_code,
+    problem
+from wrong_voivodeships
 union all
-select report_year, '1', 'area ' || area_code || ' ' || area_name || ' does not add up: ' || concat_ws(' ', p, p_parts, mz, mz_parts, af, af_parts, total)
-from sums
-where not_numbers = 0 and (p <> p_parts or mz <> mz_parts or af <> af_parts or total <> p + mz + af)
+select
+    report_year,
+    table_code,
+    problem
+from wrong_sums

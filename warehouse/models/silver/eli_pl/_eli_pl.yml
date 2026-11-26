@@ -1,0 +1,44 @@
+version: 2
+models:
+  - name: eli_pl_acts
+    description: >-
+      ELI Poland (register PLG-026): one row per act published in Dziennik Ustaw (DU) or Monitor Polski (MP), metadata
+      only. Grain: eli_id, which encodes journal / year / issue (volume, 'Nr') / position, so the act's address
+      journal x year x volume x position is unique too. Position alone is not unique within a journal year before
+      2012, when acts were cited by issue and position: the API lists two or three different acts (distinct ELI ids,
+      issues and titles) under one position in Monitor Polski 1946 (positions 45, 90, 91, 92, 95, 96, 97, 98, 170) and
+      2000 (469); all are kept, none is picked (Dev trial 43856642960). Title, type and status as published,
+      promulgation and announcement dates (the API gives no promulgation date for many older acts), text flags;
+      acts_listed = the journal's act count on /eli/acts. History and trial run: ingestion/sources/eli_pl.yaml.
+    tests:
+      - unique:
+          column_name: "row(publisher, year, volume, position)"
+    columns:
+      - name: eli_id
+        tests: [not_null, unique]
+      - name: publisher
+        tests: [not_null, {accepted_values: {arguments: {values: ['DU', 'MP']}}}]
+      - name: year
+        tests: [not_null]
+      - name: volume
+        tests: [not_null]
+      - name: position
+        tests: [not_null]
+      - name: act_type
+        # the 46 types seen in both journals 1918-2026 (Dev trial; /eli/types lists 51); a new one warns
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Rozporządzenie', 'Obwieszczenie', 'Zarządzenie', 'Postanowienie', 'Uchwała', 'Ustawa', 'Oświadczenie rządowe', 'Komunikat', 'Orzeczenie', 'Umowa międzynarodowa', 'Dekret', 'Konwencja', 'Ogłoszenie', 'Okólnik', 'Lista', 'Instrukcja', 'Porozumienie', 'Protokół', 'Układ', 'Decyzja', 'Traktat', 'Pismo okólne', 'Rezolucja', 'Oświadczenie', 'Wykaz', 'Dokument wypowiedzenia', 'Umowa', 'Statut', 'Apel', 'Przepisy', 'Deklaracja', 'Przepisy wykonawcze', 'Regulamin', 'Stanowisko', 'Wytyczne', 'Orędzie', 'Zawiadomienie', 'Sprostowanie', 'Sprawozdanie', 'Reskrypt', 'Umowa zbiorowa', 'Akt', 'Opinia', 'Informacja', 'Wyjaśnienie', 'Wypis']
+              config: {severity: warn}
+      - name: status
+        # the 14 statuses seen (Dev trial; /eli/statuses lists 15); a new one warns
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['bez statusu', 'uchylony', 'uznany za uchylony', 'akt indywidualny', 'obowiązujący', 'akt jednorazowy', 'nieobowiązujący - uchylona podstawa prawna', 'wygaśnięcie aktu', 'akt objęty tekstem jednolitym', 'uchylony wykazem', 'akt posiada tekst jednolity', 'brak mocy prawnej', 'wydane z naruszeniem prawa', 'nieobowiązujący - przyczyna nieustalona']
+              config: {severity: warn}
+      - name: raw_sha256
+        tests: [not_null]

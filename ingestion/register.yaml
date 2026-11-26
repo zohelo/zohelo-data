@@ -2222,7 +2222,8 @@ sources:
   name: GUS thematic publications with downloadable statistical tables
   short_name: GUS publication tables
   provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
-  status: approved
+  source_system: gus_health
+  status: built
   family: B
   kpi: true
   geography: Poland and regional Poland
@@ -2257,12 +2258,18 @@ sources:
   research:
     priority: review-next
     evidence: documented
-    connection: not-tested
+    connection: tested
     blockers:
-    - Choose publication-family whitelist
-    - 'Check each chosen publication for embedded third-party material (owners'' terms apply)'
+    - 'Whitelist (#2451): this entry is built as the health family, source gus_health ("Zdrowie i ochrona zdrowia w
+      <year> r.", editions 2012-2024; Dev probe 45746829360): medical personnel and general hospitals by voivodeship.
+      Culture, cultural participation and tourism are their own entries (PLS-027, PLS-028, PLS-035); the census,
+      labour and prices tables are built elsewhere. Other health tables are in Bronze, not modelled.'
+    - 'Third-party material: the modelled tables name as source "dane Ministerstwa Zdrowia, Ministerstwa Spraw
+      Wewnętrznych i Administracji oraz GUS" (public administration data published by GUS); no NFZ or other
+      third-party tables are modelled.'
     references:
     - https://stat.gov.pl/obszary-tematyczne/
+    - https://stat.gov.pl/obszary-tematyczne/zdrowie/zdrowie/
     - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
     - https://stat.gov.pl/en/copyright/
 - id: PLS-005
@@ -3091,7 +3098,8 @@ sources:
   name: Rejestr Szkół i Placówek Oświatowych (RSPO) API and search
   short_name: RSPO schools register
   provider: Ministerstwo Edukacji Narodowej / System Informacji Oświatowej
-  status: approved
+  source_system: rspo
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -3099,42 +3107,49 @@ sources:
   domains: [schools, education institutions, reference data]
   entities: [school, education establishment, governing body, territorial unit]
   granularity: One school/establishment register entry, integrating SIO data and searchable by location or governing body.
-  coverage: Current register; historical coverage/change semantics unknown.
+  coverage: Current register via the API (credentials); yearly lists of the register's state on 30 September on dane.gov.pl
+    (dataset 839; 58-column layout 2020-2025, older layouts 2017-2018, per-voivodeship XLS 2013-2015).
   access:
-    endpoint: https://api.rspo.gov.pl/
-    kind: api
-    interfaces: [REST API, OpenAPI 3.1 (JSON)]
-    auth: Free, but credentials (basic auth) are granted only after an e-mail request to rspo@cie.gov.pl ("Wniosek o dostęp
-      do API <entity>"), decided within 14 days; CIE may refuse without reason.
+    endpoint: https://api.dane.gov.pl/1.4/datasets/839/resources
+    kind: bulk
+    interfaces: [dane.gov.pl public API (JSON, no key), XLSX per year; REST API api.rspo.gov.pl (OpenAPI 3.1, credentials)]
+    auth: 'dane.gov.pl: none. api.rspo.gov.pl: free, but credentials (basic auth) are granted only after an e-mail request
+      to rspo@cie.gov.pl ("Wniosek o dostęp do API <entity>"), decided within 14 days; CIE may refuse without reason.'
     cost: free
-    limits: CIE "may introduce request limits" (Regulamin point 3.5); none published. Free of charge (Regulamin 1.5).
+    limits: 'dane.gov.pl: none published. API: CIE "may introduce request limits" (Regulamin point 3.5); none published.'
   licence:
-    status: unresolved
-    notes: 'Terms: API regulations https://api.rspo.gov.pl/files/Regulamin.pdf: API access is free ("Dostęp do usługi jest
-      bezpłatny"), possible only after an approved application, the administrator of the RSPO data is CIE, credentials must
-      not be passed on, use must match the application; CIE is not liable for the effects of using the data. The regulations
-      carry no licence, no attribution text and no statement on public redistribution; licence stays unresolved (internal
-      only) until CIE confirms redistribution of the school list in writing (the application asks for the purpose, so state
-      public display).'
-  updates: Operational register; cadence not documented.
+    status: open-conditional
+    notes: 'Terms: dane.gov.pl dataset 839 "Wykaz szkół i placówek oświatowych" (https://dane.gov.pl/pl/dataset/839, read
+      through https://api.dane.gov.pl/1.4/datasets/839 on 26 Nov 2026, Dev probe 45747111363): license_name "CC BY 4.0",
+      license_condition_default_cc40 true (the default condition of the portal; its legacy field license_description reads
+      "Other (Public Domain)"). Attribution: "Źródło: Ministerstwo Edukacji Narodowej, Wykaz szkół i placówek
+      oświatowych (dane.gov.pl)". CC BY 4.0 allows commercial reuse and modification with attribution and an
+      indication of changes. The API regulations (https://api.rspo.gov.pl/files/Regulamin.pdf) carry no licence and
+      apply only to the API, which is not used.'
+  updates: Yearly list of the state on 30 September (dane.gov.pl update frequency "Rocznie"; 2025 published 16 Feb 2026,
+    2024 on 17 Mar 2025); the register itself is operational.
   ingestion:
-    history: Enumerate only after current API documentation and terms are reviewed.
-    incremental: Poll modified/current entities if supported; otherwise periodic full reconciliation, without CDC claim.
-    identifiers: RSPO number should be primary; REGON can link governing/legal entity but may be shared; address links need
-      TERYT codes where supplied.
+    history: Yearly lists 2020/2021-2025/2026 (state of 30 September) in one layout; 2017 and 2018 lists in other layouts
+      and the 2013-2015 per-voivodeship XLS files are not landed.
+    incremental: A list whose file URL is not landed yet (new year or corrected upload, dated path); weekly check.
+    identifiers: RSPO number is primary (unique per list); TERYT codes of gmina, powiat and voivodeship; REGON is
+      published but not loaded.
   modelling:
-    notes: Model institution, site, governing body and school type separately; status and validity dates matter.
+    notes: Model institution, site, governing body and school type separately; status and validity dates matter. The lists
+      publish no start or liquidation dates; Gold keeps the years in which a number is listed.
     overlap: Overlaps SIO aggregates and GUS education establishment counts; one is entity-level register, others aggregates.
   research:
     priority: review-first
     evidence: tested
     connection: tested
     blockers:
-    - 'Owner action: send the access request to rspo@cie.gov.pl (the application form is https://api.rspo.gov.pl/files/Wniosek.pdf);
-      credentials arrive within 14 days'
-    - 'Licence unresolved: ask CIE for the redistribution terms in the same e-mail'
-    - Define allowed public fields (contact and person-related fields are minimised)
+    - 'Not used: the RSPO API (owner action: send the access request to rspo@cie.gov.pl, application form
+      https://api.rspo.gov.pl/files/Wniosek.pdf); the yearly lists on dane.gov.pl are the route (#3031)'
+    - 'Allowed public fields: no institution name, address, contact, REGON or governing-body identity is loaded (7,742 of
+      55,741 entries of 2025 are run by a natural person)'
     references:
+    - https://dane.gov.pl/pl/dataset/839
+    - https://api.dane.gov.pl/1.4/datasets/839/resources
     - https://api.rspo.gov.pl/
     - https://rspo.gov.pl/institutions
     - https://api.rspo.gov.pl/v3/api-docs.yaml
@@ -3784,7 +3799,8 @@ sources:
   name: Programme implementation and payment statistics
   short_name: ARiMR payment statistics
   provider: Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)
-  status: approved
+  source_system: arimr_payments
+  status: built
   family: D
   kpi: true
   geography: Poland and regional Poland, programme-dependent
@@ -3808,9 +3824,10 @@ sources:
       (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
       attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
       consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
-      The report files carry no licence of their own. Aggregate statistics only; personal beneficiary data stay out
-      of scope. Attribution: "Źródło: ARiMR, <report title> (<date>)" / "Source: Agency for Restructuring and
-      Modernisation of Agriculture (ARiMR), <report title> (<date>)".'
+      The report files carry no licence of their own; each direct-payment report states "Wykorzystanie danych możliwe
+      za podaniem źródła." (use of the data is possible with the source named; probe 43345651745). Aggregate
+      statistics only; personal beneficiary data stay out of scope. Attribution: "Źródło: ARiMR, <report title>
+      (<date>)" / "Source: Agency for Restructuring and Modernisation of Agriculture (ARiMR), <report title> (<date>)".'
   updates: Campaign/programme-dependent; frequent operational updates for some schemes.
   ingestion:
     history: Curate aggregate statistics only after identifying stable named report families.
@@ -3823,15 +3840,15 @@ sources:
       from all farms.
   research:
     priority: conditional
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: documented
+    connection: tested
     blockers:
-    - 'Dev probes 43086687586 and 43091539492: gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe links per-scheme pages (e.g. platnosci-bezposrednie2) with no single statistics file index; the per-scheme attachments are still to be inventoried.'
-    - Locate canonical aggregate statistics index
-    - Exclude personal beneficiary records
-    - Document cumulative-status semantics
+    - 'Curated selection only (Dev probes 43343134150, 43345651745): the index page links 13 scheme pages whose attachments are all PDF (no XLSX/CSV; api.dane.gov.pl timed out from the runner). Built: the monthly "Płatności bezpośrednie" report (newest and every year-end report), applications, decisions and amounts paid by campaign and voivodeship, cumulative as of the report date (newest report wins; open campaigns provisional). Not modelled: PS WPR 2023-2027 intervention reports, national aid, RDP 2014-2020 / 2007-2013 measures, KPO, fisheries and market-mechanism pages.'
+    - No beneficiary-level data: only voivodeship aggregates reach Bronze; the report footers (names of the ARiMR staff responsible) stay in the Landing file.
     references:
     - https://www.gov.pl/web/arimr
+    - https://www.gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe
+    - https://www.gov.pl/web/arimr/platnosci-bezposrednie2
     - https://www.gov.pl/web/gov/prawa-autorskie
 - id: PLS-035
   name: Turystyka – annual accommodation-establishment tables
@@ -4774,7 +4791,8 @@ sources:
   name: Banking-sector data and sector information
   short_name: KNF banking sector data
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_banking
+  status: built
   family: C
   kpi: true
   geography: Poland
@@ -4822,6 +4840,12 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Built (#2871): source knf_banking, the current workbook "Dane miesięczne sektora bankowego" found on the
+      stable page (bulk_file url_from), every value in Silver (silver.knf_banking_series: 13 sheets, blocks by bank
+      group, items by heading and label path, January 2018 on), seven items in Gold (total assets, net profit year to
+      date, non-financial receivables without and with impairment, non-financial deposits, employees; total capital
+      ratio quarterly). Dev probe 45758367857: robots.txt of www.knf.gov.pl allows every agent. Not built: the archive
+      workbook to December 2017 (another layout, before the IFRS 9 changes).'
     - Quarterly and annual KNF banking tables were not found on the statistics listing (only the monthly page is listed there);
       search again when building.
     references:
@@ -4833,7 +4857,8 @@ sources:
   name: Insurance, pension and other financial-sector information
   short_name: KNF insurance and pensions data
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_pensions
+  status: built
   family: C
   kpi: true
   geography: Poland
@@ -4886,6 +4911,10 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Built (#2871), smallest selection: source knf_pensions, the newest quarterly PPK release found on the listing
+      (ingestion/to_landing/knf_pensions), Tabela 2 in Silver and Gold (net asset value of PPK target-date funds by
+      managing institution and the total, thousand PLN, 2020 Q1 on). Not built yet: monthly OFE data, the OFE and
+      insurance quarterly bulletins, IKE and IKZE (one file per period each; an accumulating entity per series).'
     - Listing paging parameters and the first year of each series are not established; inventory them in the Landing trial.
     - Workbook layouts were not opened; confirm sheets and item codes before Silver.
     references:
@@ -5279,7 +5308,8 @@ sources:
   name: ELI Poland — Dziennik Ustaw and Monitor Polski
   short_name: ELI Dziennik Ustaw
   provider: Government Legislation Centre (RCL) / Chancellery of the Sejm
-  status: approved
+  source_system: eli_pl
+  status: built
   family: F
   kpi: false
   geography: Poland
@@ -5432,7 +5462,8 @@ sources:
   name: Election and referendum results data service
   short_name: PKW election results
   provider: National Electoral Commission (PKW) / National Electoral Office (KBW)
-  status: approved
+  source_system: pkw
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -5461,15 +5492,15 @@ sources:
   ingestion:
     history: 'Bulk feature, one site per election: https://wybory.gov.pl/<election>/ redirects to https://<election>.pkw.gov.pl/<election>/
       (sejmsenat2023, pe2024, samorzad2024, prezydent2025, prezydent20200628 are linked from wybory.gov.pl). Files are /<election>/data/csv/<name>_csv.zip
-      (and <name>_xlsx.zip). Tested: https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_listy_po_wojewodztwach_sejm_csv.zip
-      (application/zip, 2,790 bytes) and .../wyniki_gl_na_listy_po_gminach_sejm_csv.zip (155,899 bytes). The "dane w arkuszach"
-      page is a JavaScript shell: the file names of each election come from its script bundle (/<election>/j/<stamp>.min.js
-      builds data/csv/<name>_csv.zip); a wrong name returns the HTML shell with status 200, so check Content-Type. Names for
-      pe2024, samorzad2024 and prezydent2025 are still to be listed (the names guessed by the probe were wrong). Older elections:
-      https://danewyborcze.kbw.gov.pl/ (a static archive; its front page only redirects, content not inventoried).'
+      (and <name>_xlsx.zip). The "dane w arkuszach" page is a JavaScript shell: the file names of each election come from
+      its script bundle (/<election>/j/<stamp>.min.js, module csv_links); pe2024 and prezydent2025 add a stamp from data/config.blob
+      (<name>_csv.<ts>.zip); samorzad2024 publishes the sejmik results as XLSX (data/csv/2024-sejmiki-po-<level>[-proc].xlsx).
+      A wrong name returns the HTML shell with status 200 (rejected as not a ZIP). Built (#486, Dev probes 43807885985, 43812026752,
+      43813029784): 25 area-level files of Sejm 2023, EP 2024, sejmiki 2024 and President 2025, docs/sources/pkw.md. Older
+      elections: https://danewyborcze.kbw.gov.pl/ (a static archive; its front page only redirects, content not inventoried).'
     incremental: 'Static after each election: land once per election (snapshot), version = Last-Modified; add the next election
       by hand when it is called.'
-    identifiers: Election id (site name), territorial code (TERYT expected, to confirm in the files), list or candidate number.
+    identifiers: Election id (site name), territorial code (TERYT, 6 digits without the gmina type digit), list or candidate number.
   modelling:
     notes: 'Smallest Gold selection: voivodeship and gmina results files of Sejm 2023, EP 2024, voivodeship assemblies 2024
       and president 2025. New KPIs: voter turnout (%) and vote share by list or candidate, Poland and voivodeships; new dimension:
@@ -5485,7 +5516,8 @@ sources:
       materials with the attribution "Źródło: Państwowa Komisja Wyborcza"?'
     - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): Sejm 2023 files fetched by HEAD
       (application/zip); file names of the 2024 and 2025 elections not yet listed; danewyborcze.kbw.gov.pl content not inventoried.'
-    - Confirm the territorial code column (TERYT) in the files at the Landing trial.
+    - 'TERYT confirmed (Dev probe 43807885985): gmina files carry a 6-digit code without the type digit (the CSV drops the
+      leading zero), powiat files WWPP00, voivodeship files a name (Sejm, EP, President) or WW0000 (sejmiki per-cent file).'
     references:
     - https://wybory.gov.pl/
     - https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/pl/dane_w_arkuszach
@@ -5759,9 +5791,10 @@ sources:
   name: Government Legislative Process portal (RPL), including consultations
   short_name: RCL legislative process (RPL)
   provider: Government Legislation Centre (RCL)
-  status: approved
+  source_system: kprm_work_list
+  status: built
   family: F
-  kpi: false
+  kpi: true
   geography: Poland
   provider_type: national-public
   domains: [legislation, public consultation]
@@ -6332,8 +6365,8 @@ sources:
   domains: [air quality, environment]
   entities: [monitoring station, sensor, observation]
   granularity: Station/sensor pollutant readings and indexes.
-  coverage: 'Current operational data; the API keeps the last three days of hourly values (Dev probes of #2960), so history
-    starts with the first daily pass.'
+  coverage: 'Current operational data; the API keeps the last three days of hourly values (Dev probes of #2960), so its
+    history starts with the first daily pass. Verified values 2000 to 2025 from the yearly archive files (#3119).'
   access:
     endpoint: https://powietrze.gios.gov.pl/pjp/content/api
     kind: api
@@ -6354,15 +6387,20 @@ sources:
       Modification, section 5: allowed with a notice ("użytkownik zobowiązany jest do zamieszczenia stosownej informacji o
       przetworzeniu (zmianie)"). Commercial reuse: allowed under CC BY 4.0 (the Regulamin does not restrict it). GIOŚ accepts
       no liability for processed information (section 6). Attribution (section 4): "Źródło danych: GIOŚ - EKOINFONET", with
-      the measurement time and a note when values are processed. GIOŚ warns current data are unverified and may change.'
+      the measurement time and a note when values are processed. GIOŚ warns current data are unverified and may change.
+      The Regulamin covers every material published on the site ("Korzystanie przez użytkowników z materiałów
+      opublikowanych w serwisie powietrze.gios.gov.pl jest bezpłatne"; "W serwisie udostępniane są również wyniki
+      pomiarów z manualnych stanowisk pomiarowych"), so also the yearly archive files on /pjp/archives (re-read 26 Nov
+      2026 by Dev probe 45750149567, #3119).'
   updates: Operational updates can be delayed by transmission outages and may be revised after verification.
   ingestion:
     history: 'New API v1: https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId} (measurements), /aqindex/getIndex/{stationId},
-      station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Archive series of validated data are published
-      separately: yearly ZIP files listed on https://powietrze.gios.gov.pl/pjp/archives (/pjp/archives/downloadFile/<id>; the
-      job log of Dev probe 43322192937 shows 2022 to 2025, not downloaded) and the API v1 archivalData services (getDataBySensor,
-      getDataForAllStationsByYearAndVoivodeship; limit 2 requests a minute; untested); not loaded by the first build (#2960),
-      follow-up #3119.'
+      station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Verified values (#3119): the yearly files
+      of https://powietrze.gios.gov.pl/pjp/archives (plain links /pjp/archives/downloadFile/<id>; no robots.txt; the
+      page''s reCAPTCHA guards only its own query export), "Wyniki pomiarów z <year> roku" 2000 to 2025 (ZIPs of 2.3 to
+      75 MB, one workbook per indicator and averaging time) and the station workbook; GIOŚ replaces a file under a new id
+      (Dev probes 45746079470, 45747293591, 45750149567, 45750793415, 45756304318). The API v1 archivalData services
+      (2 requests a minute) are not used.'
     incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
     identifiers: Station, sensor/parameter and observation timestamp.
   modelling:
@@ -6374,7 +6412,6 @@ sources:
     connection: tested
     blockers:
     - 'Current data are not validated and may change (GIOŚ): keep snapshots and mark them provisional'
-    - Validated archive (yearly files) not loaded yet (#3119)
     references:
     - https://powietrze.gios.gov.pl/pjp/content/api
     - https://powietrze.gios.gov.pl/pjp/content/terms_of_service
@@ -8226,15 +8263,16 @@ sources:
   name: Electronic Information Transmission System (ESPI)
   short_name: KNF ESPI
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_espi
+  status: built
   family: I
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [corporate-filings, financial-markets]
   entities: [issuer, filing, security]
-  granularity: 'One row per issuer report in KNF''s public OAM list: issuer, date received, report type and title, link to
-    the file.'
+  granularity: 'One row per issuer report in KNF''s public OAM list: issuer, date received, the form code of the title,
+    OAM document id, link to the report''s page (the title itself is not stored).'
   coverage: Regulated-market issuers (423 issuers and about 2,000 periodic reports in 2023, KNF supervision report); the depth
     of the public OAM list is not measured yet.
   access:
@@ -8254,8 +8292,8 @@ sources:
       links "Enter OAM" (moam.knf.gov.pl/moam.nsf); the KNF pages carry only "Copyrights © 2023 Komisja Nadzoru Finansowego";
       the ESPI rules (https://www.knf.gov.pl/knf/pl/komponenty/img/Regulamin_korzystania_z_ESPI_66994.pdf, linked from https://www.knf.gov.pl/dla_rynku/espi)
       govern issuers, not readers. Commercial reuse: not stated. Modification: not stated. Attribution sentence: none given
-      (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal. Only issuer, title, type, date and link
-      are stored (O32, O33): no report text, no attachments.'
+      (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal. Only issuer, form code, date, report id
+      and link are stored: no title (titles can name natural persons), no report text, no attachments.'
   updates: Event-driven, every day; the list showed "Liczba raportów za dzień 2026-11-12 wynosi 87" at 19:37 UTC. Corrections
     arrive as new reports. From July 2027 the EU single access point (ESAP) is to be public (ESMA press release of 10 Jul
     2026, desk reading).
@@ -8280,10 +8318,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: a polite read of public list pages that robots.txt does not forbid. The playbook asks for an owner
-      decision or a D row per web source; this approval follows the orchestrator verdict on PR #2878 ("a polite crawl of public
-      pages is a valid route") under the owner rule of 12 Nov 2026 (issue #2873). The D row in docs/decisions.md is still
-      to be written before the build.'
+    - 'Route decision: D40 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+      public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
+      Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): http://moam.knf.gov.pl/moam.nsf
       redirected to https and answered 200 (text/html, 14,916 bytes) with the day''s list of 87 reports (issuer, date, title,
       file link); robots.txt 404; https://www.knf.gov.pl/dla_rynku/espi answered 200 and links only the issuer-side ESPI pages.'
@@ -8298,15 +8335,16 @@ sources:
   name: Electronic Information Base (EBI)
   short_name: GPW EBI
   provider: Warsaw Stock Exchange (GPW)
-  status: approved
+  source_system: gpw_ebi
+  status: built
   family: I
   kpi: false
   geography: Poland
   provider_type: commercial
   domains: [corporate-filings, financial-markets]
   entities: [issuer, filing, security]
-  granularity: 'One row per EBI report in GPW''s public report list: time, category, report number, issuer with ISIN, title,
-    link.'
+  granularity: 'One row per EBI report in GPW''s public report list: time, category, report number, issuer with ISIN,
+    geru_id, link (the title is not stored).'
   coverage: NewConnect and Catalyst issuers; the list page shows the newest reports (10 to 12 Nov 2026 on the probe day);
     the depth reachable through paging is not measured yet.
   access:
@@ -8328,7 +8366,8 @@ sources:
       2: reports are "niezwłocznie publikowane na odpowiednich stronach internetowych administrowanych przez Giełdę". GPW''s
       paid information-services rules do not mention issuer reports. Commercial reuse: not stated. Modification: not stated.
       Attribution sentence: none given (working text: "Źródło: GPW, Elektroniczna Baza Informacji"). Stays internal. Only
-      headline, link, report number, type, category and publication time are stored (O32, O33).'
+      issuer, ISIN, link, report id, report number, category and publication time are stored: no title (titles can name
+      natural persons).'
   updates: Event-driven, every day; corrections are separate reports with their own numbers.
   ingestion:
     history: 'Web route: https://www.gpw.pl/espi-ebi-reports lists ESPI and EBI reports together (HTML, 107,890 bytes; rows
@@ -8351,10 +8390,9 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: a polite read of public list pages that robots.txt does not forbid. The playbook asks for an owner
-      decision or a D row per web source; this approval follows the orchestrator verdict on PR #2878 ("a polite crawl of public
-      pages is a valid route") under the owner rule of 12 Nov 2026 (issue #2873). The D row in docs/decisions.md is still
-      to be written before the build.'
+    - 'Route decision: D40 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+      public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
+      Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.gpw.pl/espi-ebi-reports
       answered 200 (107,890 bytes) with report rows and detail links (geru_id=500444 to 500453); https://www.gpw.pl/rss and
       /disclaimer answered 200 (the RSS page is an HTML page, no report feed was confirmed); https://www.gpw.pl/ebi answered

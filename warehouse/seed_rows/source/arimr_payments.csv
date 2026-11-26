@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+arimr_payments,PLS-034,ARiMR statystyka płatności bezpośrednich,ARiMR direct-payment statistics,Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR),cube,file,national-public,gov_pl_terms_arimr,https://www.gov.pl/web/arimr/platnosci-bezposrednie2

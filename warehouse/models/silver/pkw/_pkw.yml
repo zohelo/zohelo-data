@@ -1,0 +1,50 @@
+version: 2
+models:
+  - name: pkw_results
+    description: >-
+      PKW election results (register PLG-029): every value cell of the area-level result files (voivodeship, powiat,
+      gmina; sejmiki also Poland by town and country) of Sejm 2023, European Parliament 2024, voivodeship assemblies
+      2024 and President 2025 (rounds 1 and 2), newest copy of each declared file. Grain: entity x source_row x
+      column_number (one published cell); semantic key election_key x area_level x file_kind x area_key x
+      column_label x breakdown_code x settlement_code. Values as published (counts and per cent), TERYT codes as
+      published padded to 6 digits and cut to the level; abroad, ships and code-less rows kept with area_kind.
+      is_ambiguous marks the cells whose semantic key repeats (two committees of one name in the sejmiki town/country
+      file, 12 cells on 26 Nov 2026); they are kept here and left out of Gold. Trial run: see ingestion/sources/pkw.yaml.
+    tests:
+      - unique:
+          column_name: "entity || '|' || source_row || '|' || column_number"
+      - unique:
+          column_name: "concat_ws('|', election_key, area_level, file_kind, area_key, column_label, coalesce(breakdown_code, '-'), coalesce(settlement_code, '-'))"
+          config: {where: "not is_ambiguous"}
+    columns:
+      - name: election_key
+        tests: [not_null, {accepted_values: {arguments: {values: [sejm2023, pe2024, sejmiki2024, prezydent2025_r1, prezydent2025_r2]}}}]
+      - name: election_type
+        description: Null when a declared entity names an election the model does not list (the test then fails).
+        tests: [not_null, {accepted_values: {arguments: {values: [sejm, pe, sejmik, prezydent]}}}]
+      - name: election_date
+        tests: [not_null]
+      - name: area_level
+        tests: [not_null, {accepted_values: {arguments: {values: [kraj, wojewodztwo, powiat, gmina]}}}]
+      - name: file_kind
+        tests: [not_null, {accepted_values: {arguments: {values: [count, pct]}}}]
+      - name: area_kind
+        tests: [not_null, {accepted_values: {arguments: {values: [country, teryt, abroad, ships, voivodeship_name, city_powiat_name]}}}]
+      - name: area_key
+        tests: [not_null]
+      - name: column_label
+        tests: [not_null]
+      - name: measure_code
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: [turnout, eligible_voters, ballots_issued, valid_votes, valid_votes_pct, invalid_votes, invalid_votes_pct, list_votes, list_share, candidate_votes, protocol]}}
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [pct, persons, votes, number]}}}]
+      - name: value_text
+        tests: [not_null]
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+      - name: is_ambiguous
+        tests: [not_null]

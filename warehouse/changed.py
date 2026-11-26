@@ -20,9 +20,22 @@ every model of every source. A model is rebuilt when
   Eurostat and BDL observations, written per entity by their loaders, #875).
 
 An incremental model (materialized='incremental') is rebuilt
-incrementally, except when its own code changed or it has no build properties: then it is
+incrementally, except when its own code changed, it has no build properties or no table: then it is
 listed in ``full_refresh`` and the build passes it as the dbt var ``full_refresh_models``
 (the model's config turns that into a full refresh of that model only).
+
+Per-block incremental models (#3204 PR B, D39; incremental_strategy ``gold_blocks``, macros/poc_incremental.sql): the
+five facts and poc_dim_series replace only the Gold blocks listed in ``changed_blocks`` (the blocks rebuilt in this
+run, and those changed after the model's last build) and delete the rows of blocks no longer registered. Their
+fingerprint leaves out the block list and the per-source macro files (the "core"), so a new source is a block
+change, not "code changed"; the block list they were built with is the property ``zohelo.build_blocks``, and a
+different list ("blocks changed") rebuilds them incrementally. Once more than half of a table's counted rows are
+position deletes ("position deletes"), it is rebuilt in full. Compaction is off (#875), so every replacement adds a
+data file and delete files, and a small block replaced every run never reaches that share: the live data and delete
+files after their last full build are the property ``zohelo.base_files``, and once more than FILE_GROWTH_LIMIT files
+were added since ("file growth"), the table is rebuilt in full too. A failed run or test does not clear the
+properties of an incremental table (it is the same table, unlike a swapped one): the next plan sees "input changed"
+for the blocks newer than its last recorded build and replaces each of them again (``since``).
 
 A model whose source table does not exist yet (a new source before its first Bronze load), directly or
 through other models, is left out and listed under ``waiting``. A Gold block (a model tagged ``gold_block``,
@@ -44,7 +57,8 @@ Block-scoped metrics (#3204, kill switch ``metrics_scoped`` in warehouse.yaml): 
 the shared facts and dimensions, which union all Gold blocks, so one changed block used to rebuild all of them. A
 metrics model whose concept's sources (seed_rows/kpi_measure) all map to Gold blocks (``block_sources()``) is
 "scoped": its parents that derive from blocks (facts, dimensions, concept measures) are replaced by its scope blocks
-and by the inputs of those parents that do not derive from blocks (kpi_measure, kpi, unit, gold_coverage). It is
+and by the inputs of those parents that do not derive from blocks (kpi_measure, kpi, unit; not gold.coverage, whose
+rows never reach a metrics row: OUTSIDE_METRICS, enforced by a data test). It is
 rebuilt when one of those or one of its other parents was rebuilt in this run or changed after its build, not when
 another source's block changed. Its fingerprint carries the code of the block-derived models above it (without the
 per-source macro files and the block parents), its scope blocks and its sources' macro files, so an edit to a fact
@@ -92,8 +106,22 @@ EXTERNAL_MODELS: frozenset[str] = frozenset()  # models built outside the schedu
 # A Bronze commit stamped just before a build started may become visible only after dbt
 # read that table; the recorded start is moved back by this margin (an extra rebuild at worst).
 START_MARGIN_MS = 10 * 60 * 1000
-# Rebuild reasons after which an incremental model's rows cannot be trusted to follow its code.
-FULL_REFRESH_REASONS = ("no build properties", "code changed")
+# Rebuild reasons after which an incremental model's rows cannot be trusted to follow its code, or (position deletes)
+# its table should be rewritten.
+FULL_REFRESH_REASONS = ("no build properties", "code changed", "table missing", "position deletes", "file growth")
+# Per-block incremental models (#3204 PR B, D39, macros/poc_incremental.sql): the facts and poc_dim_series replace
+# only the Gold blocks the plan lists in ``changed_blocks``.
+BLOCK_STRATEGY = "gold_blocks"  # their incremental_strategy
+BUILD_BLOCKS = "zohelo.build_blocks"  # property: digest of the block models such a model was built with
+# Position deletes pile up when blocks are replaced wholesale. In the snapshot summary total-records still counts
+# the deleted rows, so the table is rewritten in full once more than half of its counted rows are deleted
+# (total-position-deletes > total-records / 2; the spec's "deletes > records" can never fire, Dev 45750296222).
+POSITION_DELETE_SHARE = 0.5
+# Compaction is off (#875): each incremental replacement adds a data file and one or more delete files, and every scan
+# of the table reads them all (R2 GETs). The live data + delete files right after a full build are recorded as
+# BASE_FILES; more than FILE_GROWTH_LIMIT files added since then rebuilds the table in full ("file growth", #3204 B2).
+BASE_FILES = "zohelo.base_files"
+FILE_GROWTH_LIMIT = 64
 # Block-scoped metrics (#3204): the models, the one macro call each must be, and where a block names its sources.
 METRICS_PREFIX = "poc_metrics_"
 CONCEPT_CALL = re.compile(r"\bpoc_concept_metrics\(\s*'([a-z0-9_]+)'\s*\)")
@@ -103,6 +131,12 @@ SOURCE_REGISTRATION = "poc_source__"  # macros/sources/<source>.sql: {'block_mod
 REGISTERED_MODEL = re.compile(r"['\"]block_model['\"]\s*:\s*['\"](\w+)['\"]")
 SOURCE_SYSTEMS = "source_systems"  # config meta of a block that emits more source_systems than it is declared for
 SCOPED_SWITCH = "metrics_scoped"  # warehouse.yaml; false = every metrics model reads all blocks (the rule before #3204)
+# Sources (`<source>.<table>`) that a block-derived ancestor reads but whose rows never reach a metrics row, so they
+# are not scope inputs (#3204 PR A2). gold.coverage adds only activated = false rows to poc_dim_measure, and the
+# metrics read activated measures only. Not assumed: the data test warehouse/tests/gold_coverage_outside_metrics.sql
+# fails the build when a coverage row could reach a metrics model, and ops/repo_check.py requires that test.
+OUTSIDE_METRICS = ("gold_coverage.coverage",)
+OUTSIDE_METRICS_TEST = "warehouse/tests/gold_coverage_outside_metrics.sql"
 
 
 def metrics_scoped() -> bool:
@@ -202,6 +236,16 @@ def files_digest(files: list[str]) -> str:
     return digest.hexdigest()
 
 
+def block_set(meta: dict[str, Any]) -> str:
+    """Digest of the project's Gold block model names (tag gold_block): what a per-block model was built with."""
+    names = sorted(
+        node["name"]
+        for node in meta["nodes"].values()
+        if node.get("resource_type") == "model" and BLOCK_TAG in node.get("tags", [])
+    )
+    return hashlib.sha256("\n".join(names).encode()).hexdigest()[:32]
+
+
 def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """unique_id → name, namespace, table, parents (unique ids of models, seeds and sources), fingerprint, core
     (the fingerprint without per-source macro files and block parents), scope (metric_scopes(); None for others).
@@ -249,14 +293,20 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
             sort_keys=True,
             default=str,
         )
+        config = node.get("config", {})
+        incremental = config.get("materialized") == "incremental"
+        per_block = incremental and config.get("incremental_strategy") == BLOCK_STRATEGY
         out[uid] = {
             "name": node["name"],
             "namespace": relation(node)[0],
             "table": relation(node)[1],
             "parents": [p for p in upstream if p.startswith(("model.", "source.", "seed."))],
-            "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
+            # A per-block model's code is its core: a block added or removed is not "code changed" (a full refresh)
+            # but a block change, replaced incrementally (block_set()).
+            "fingerprint": hashlib.sha256((core if per_block else code).encode()).hexdigest()[:32],
             "core": hashlib.sha256(core.encode()).hexdigest()[:32],
-            "incremental": node.get("config", {}).get("materialized") == "incremental",
+            "incremental": incremental,
+            "per_block": per_block,
             "block": uid in blocks,
             "optional": set(node.get("config", {}).get("meta", {}).get(OPTIONAL_PARENTS) or []),
             "scope": None,
@@ -306,6 +356,11 @@ def block_sources(meta: dict[str, Any]) -> dict[str, set[str]]:
     return out
 
 
+def outside_metrics(uid: str) -> bool:
+    """True for a source node listed in OUTSIDE_METRICS (``source.<project>.<source>.<table>``)."""
+    return uid.startswith("source.") and ".".join(uid.split(".")[-2:]) in OUTSIDE_METRICS
+
+
 def concept_sources() -> dict[str, set[str]]:
     """kpi_key → the source_systems of its kpi_measure rows (seed_rows/kpi_measure)."""
     out: dict[str, set[str]] = {}
@@ -319,8 +374,9 @@ def metric_scopes(meta: dict[str, Any], graph: dict[str, dict[str, Any]]) -> dic
 
     A scope is {"concept", "sources", "blocks": block unique ids, "ancestors": the block-derived models above it
     (reached without passing a block), "inputs": its parents and its ancestors' parents that neither are nor derive
-    from a block}. Unscoped: the model is not exactly one poc_concept_metrics('<kpi>') call, the concept has no
-    kpi_measure rows, or one of its sources maps to no block of the project."""
+    from a block, without the ancestors' OUTSIDE_METRICS sources}. Unscoped: the model is not exactly one
+    poc_concept_metrics('<kpi>') call, the concept has no kpi_measure rows, or one of its sources maps to no block of
+    the project."""
     by_source = block_sources(meta)
     sources_of = concept_sources()
     names = {m["name"]: uid for uid, m in graph.items()}
@@ -352,14 +408,15 @@ def metric_scopes(meta: dict[str, Any], graph: dict[str, dict[str, Any]]) -> dic
         inputs: set[str] = set()
         queue = [uid]
         while queue:
-            for p in graph[queue.pop()]["parents"]:
+            child = queue.pop()
+            for p in graph[child]["parents"]:
                 if p in graph and graph[p]["block"]:
                     continue
                 if block_derived(p):
                     if p not in ancestors:
                         ancestors.add(p)
                         queue.append(p)
-                else:
+                elif child == uid or not outside_metrics(p):  # read by the metrics model itself: always an input
                     inputs.add(p)
         out[uid] = {
             "concept": calls[0],
@@ -388,16 +445,36 @@ def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
         return None
     snapshot = loaded.current_snapshot()
     props = loaded.properties
+    summary = snapshot.summary if snapshot and snapshot.summary else None
     return {
         "snapshot_ms": snapshot.timestamp_ms if snapshot else 0,
         "built_from_ms": int(props[BUILT_FROM]) if BUILT_FROM in props else None,
         "fingerprint": props.get(FINGERPRINT),
+        "build_blocks": props.get(BUILD_BLOCKS),
+        "records": int(summary["total-records"] or 0) if summary else 0,
+        "position_deletes": int(summary["total-position-deletes"] or 0) if summary else 0,
+        "files": live_files(summary),
+        "base_files": int(props[BASE_FILES]) if BASE_FILES in props else None,
     }
+
+
+def live_files(summary: Any) -> int | None:
+    """Live data + delete files of a snapshot summary; None when the summary does not count them."""
+    if not summary or summary["total-data-files"] is None:
+        return None
+    return int(summary["total-data-files"]) + int(summary["total-delete-files"] or 0)
+
+
+def file_growth(own: dict[str, Any]) -> bool:
+    """True when more than FILE_GROWTH_LIMIT data + delete files were added since the last full build."""
+    files, base = own.get("files"), own.get("base_files")
+    return files is not None and base is not None and files - base > FILE_GROWTH_LIMIT
 
 
 def plan(cat, meta: dict[str, Any], scoped: bool | None = None) -> dict[str, Any]:
     """{"select": model names to build, "reasons": name → why, "unchanged": count,
-    "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
+    "full_refresh": incremental models among them to rebuild in full, "changed_blocks": the Gold blocks the
+    per-block incremental models replace (the dbt var changed_blocks), "waiting": models left out because a
     source table they read does not exist yet, "empty_blocks": the Gold blocks among them that have no table
     either, read as zero rows, "stalled": waiting model → the missing source tables, for every waiting model
     that has a table (the build must stop on any), "waiting_tests": the data tests that read a waiting model
@@ -466,12 +543,18 @@ def plan(cat, meta: dict[str, Any], scoped: bool | None = None) -> dict[str, Any
                 reason = "no build properties"
             elif own["fingerprint"] != model["fingerprint"]:
                 reason = "code changed"
+            elif model["per_block"] and own.get("position_deletes", 0) > POSITION_DELETE_SHARE * own.get("records", 0):
+                reason = "position deletes"
+            elif model["per_block"] and file_growth(own):
+                reason = "file growth"
             elif upstream:
                 reason = "upstream rebuilt: " + ", ".join(graph[p]["name"] for p in upstream[:3])
             else:
                 newer = [p for p in inputs if updated(p) > own["built_from_ms"]]
                 if newer:
                     reason = "input changed: " + ", ".join(".".join(relations[p]) for p in newer[:3])
+                elif model["per_block"] and own.get("build_blocks") != blocks_now:
+                    reason = "blocks changed"  # a block removed (an added one is rebuilt itself: upstream rebuilt)
             if reason:
                 reasons[model["name"]] = reason
             done[uid] = reason is not None
@@ -481,18 +564,34 @@ def plan(cat, meta: dict[str, Any], scoped: bool | None = None) -> dict[str, Any
             stale(uid)
         return reasons
 
+    blocks_now = block_set(meta)
     use_scope = metrics_scoped() if scoped is None else scoped
     reasons = rebuild(use_scope)
     skipped = sorted(set(rebuild(False)) - set(reasons)) if use_scope else []
     waits = sorted(graph[u]["name"] for u, b in blocked.items() if b)
     full = sorted(
-        m["name"] for m in graph.values() if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
+        m["name"]
+        for m in graph.values()
+        if m["incremental"] and reasons.get(m["name"], "").partition(":")[0] in FULL_REFRESH_REASONS
+    )
+    # The blocks the per-block models replace: each block rebuilt in this run, and each block whose table changed
+    # after the last build of a per-block model rebuilt incrementally (its rows there may be older). Replacing a
+    # block that did not change rewrites the same rows, so one list serves every such model.
+    incremental_now = [u for u, m in graph.items() if m["per_block"] and m["name"] in reasons and m["name"] not in full]
+    since = min((state[u]["built_from_ms"] for u in incremental_now), default=None)
+    changed_blocks = sorted(
+        m["name"]
+        for u, m in graph.items()
+        if m["block"]
+        and not blocked.get(u)
+        and (m["name"] in reasons or (since is not None and state[u] is not None and updated(u) > since))
     )
     return {
         "select": sorted(reasons),
         "reasons": reasons,
         "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
+        "changed_blocks": changed_blocks,
         "scoped": use_scope,
         "scoped_skipped": skipped,
         "waiting": waits,
@@ -528,15 +627,27 @@ def waiting_tests(meta: dict[str, Any], waiting: Iterable[str]) -> dict[str, str
 TEST_OK = ("pass", "warn")  # dbt test statuses that leave a model trusted
 
 
-def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started_ms: int) -> dict[str, Any]:
+def record(
+    cat,
+    meta: dict[str, Any],
+    results: Iterable[dict[str, Any]],
+    started_ms: int,
+    full_refresh: Iterable[str] = (),
+) -> dict[str, Any]:
     """Set the build properties on each model the build wrote whose own tests all passed (dbt
-    run results). A model with a failing test, or whose property write fails, keeps no
-    properties and is rebuilt (and tested) next time; write failures are reported, not raised.
+    run results). A table model with a failing test, or whose property write fails, keeps no
+    properties (the build swapped in a new table) and is rebuilt (and tested) next time; write failures are reported,
+    not raised. An incremental table keeps its old properties instead, so the next plan finds its inputs newer than
+    its last recorded build ("input changed") and, for a per-block model, replaces those blocks again.
+    ``full_refresh``: the plan's full refreshes; a per-block model among them (or one without the property yet)
+    records its live files as BASE_FILES, the baseline of "file growth".
     A `warn` result is a pass at the severity the project declared (e.g. bdl_observations.year
     not_null warns on every build), so only `fail`, `error`, `skipped` and unknown statuses
     make a model untrusted."""
     results = list(results)
+    full_refresh = set(full_refresh)
     graph = {m["name"]: m for m in models(meta).values()}
+    blocks_now = block_set(meta)
     failed_tests = {
         r["unique_id"] for r in results if r["unique_id"].startswith("test.") and r["status"] not in TEST_OK
     }
@@ -555,8 +666,15 @@ def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started
             continue
         try:
             table = cat.load_table((model["namespace"], model["table"]))
+            props = {BUILT_FROM: str(started_ms - START_MARGIN_MS), FINGERPRINT: model["fingerprint"]}
+            if model["per_block"]:
+                props[BUILD_BLOCKS] = blocks_now
+                snapshot = table.current_snapshot()
+                files = live_files(snapshot.summary if snapshot else None)
+                if files is not None and (name in full_refresh or BASE_FILES not in table.properties):
+                    props[BASE_FILES] = str(files)
             with table.transaction() as tx:
-                tx.set_properties({BUILT_FROM: str(started_ms - START_MARGIN_MS), FINGERPRINT: model["fingerprint"]})
+                tx.set_properties(props)
             recorded += 1
         except Exception as exc:  # any failure only means a rebuild next run
             failed.append(f"{name}: {type(exc).__name__}: {str(exc)[:200]}")
