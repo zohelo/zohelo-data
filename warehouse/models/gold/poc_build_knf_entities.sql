@@ -75,7 +75,7 @@ observations as (
         'register_entries' as block_id,
         'Polish entries of the ESMA registers by status' as block_name,
         'knf_entities:register_entries:entries:' || r.status as measure_key,
-        'Entries of the ESMA registers with home member state Poland, status ' || r.status as measure_name,
+        'Polish entries of the ESMA registers, status ' || r.status as measure_name,
         r.status as measure_codes,
         'D' as frequency,
         s.snapshot_date as date_key,
@@ -95,10 +95,8 @@ observations as (
         end as block_name,
         'knf_entities:' || y.block_id || ':entries' as measure_key,
         case y.block_id
-            when 'authorisations'
-                then 'Entries of the ESMA registers with home member state Poland, by year of authorisation'
-                || ' or notification'
-            else 'Entries of the ESMA registers with home member state Poland, by year of withdrawal'
+            when 'authorisations' then 'Polish entries of the ESMA registers, by year of authorisation or notification'
+            else 'Polish entries of the ESMA registers, by year of withdrawal'
         end as measure_name,
         y.measure_codes,
         'A' as frequency,
