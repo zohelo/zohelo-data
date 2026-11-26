@@ -22,8 +22,10 @@ Bronze `bronze.pse_reports_rce_pln` and `bronze.pse_reports_his_wlk_cal` (one ro
 published text); a file with another field set, a non-scalar value or another business day is rejected into
 `bronze.pse_reports_rejected_files`. Silver `silver.pse_reports_rce_pln` (RCE, PLN/MWh) and
 `silver.pse_reports_his_wlk_cal` (demand, wind `wi`, photovoltaics `pv` and the report's other quantities under PSE's
-codes, MW), grain business day × `dtime_utc`, local and UTC end of each period kept, `periods_expected` from the
-Warsaw calendar; one completeness test per model (every day from 2024-06-14 to the newest, all periods, one file).
+codes, MW), grain business day × `dtime_utc`; the published local texts are kept (`dtime`, `period`: on the autumn
+DST day PSE marks the repeated hour `02a:15`) beside `dtime_local`, the local end derived from `dtime_utc` and the
+offset at the start of the period, and `periods_expected` from the Warsaw calendar; one completeness test per model
+(every day from 2024-06-14 to the newest, all periods, one file, `dtime` equal to `dtime_local`).
 Gold `build_pse_reports`, frequency D, Poland: daily means of the 15-minute values of RCE (block `rce_pln`) and of
 demand, wind and PV generation (block `his_wlk_cal`), complete days only, units as published; KPIs
 `electricity_price_rce`, `electricity_demand`, `wind_generation`, `pv_generation` (draft, `environment.energy`).

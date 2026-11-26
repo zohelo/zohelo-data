@@ -4,7 +4,8 @@ models:
     description: >-
       PSE Reports API v2, report rce-pln (register PL-ENV-019): market energy price RCE in PLN/MWh per 15-minute period,
       business days from 2024-06-14 (the API's first day) to the newest landed day, from the newest copy of each day's
-      file. Grain: business_date x dtime_utc. dtime / dtime_utc are the local and UTC ends of the period;
+      file. Grain: business_date x dtime_utc. dtime_utc is the UTC end of the period, dtime the published local end
+      (text: the repeated autumn DST hour is marked '02a:15'), dtime_local the local end as a timestamp;
       periods_expected is 96 (92 or 100 on DST days). Dev trial: see ingestion/sources/pse_reports.yaml.
     tests:
       - unique:
@@ -17,6 +18,8 @@ models:
       - name: dtime_utc
         tests: [not_null]
       - name: dtime
+        tests: [not_null]
+      - name: dtime_local
         tests: [not_null]
       - name: utc_offset_hours
         tests: [not_null, {accepted_values: {arguments: {values: [1, 2], quote: false}}}]
@@ -45,6 +48,8 @@ models:
       - name: dtime_utc
         tests: [not_null]
       - name: dtime
+        tests: [not_null]
+      - name: dtime_local
         tests: [not_null]
       - name: utc_offset_hours
         tests: [not_null, {accepted_values: {arguments: {values: [1, 2], quote: false}}}]
