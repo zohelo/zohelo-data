@@ -34,4 +34,6 @@ months; Poland and the contracting authority's voivodeship, `PL02`…`PL32` = `T
 (draft). Terms: no reuse or attribution clause found (API regulations of 24 Nov 2023); licence `unresolved`,
 internal. Refresh full (D32). Schedule weekly (O46): Saturday 02:47 UTC, Landing and Bronze (the missing days up
 to Friday, about 14 files; the API keeps every past day, so nothing is lost between runs); Silver and Gold come
-from the platform's Sunday build. Restart unit: one notice type on one day.
+from the platform's Sunday build. Restart unit: one notice type on one day. Dev trial 45748222888 (26 Nov 2026):
+658 files (341 MB reduced from 6.3 GB of answers) for 2026-01-01 to 2026-11-25, 238,341 notices in Bronze and Silver,
+839 Gold build rows (complete months 2026-01 to 2026-10); Poland's October counts equal `notice/stats`.

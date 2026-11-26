@@ -48,6 +48,20 @@ A manual run (any filter; `fqn:*` builds everything) writes no properties, so th
 scheduled run rebuilds what it built, once. A model table changed by anything but dbt
 (other than compaction) is not noticed downstream: only dbt writes Silver and Gold.
 
+Metrics models are block-scoped (#3204, D38; kill switch `metrics_scoped` in `warehouse.yaml`). A
+`poc_metrics_<kpi>` model is exactly one `poc_concept_metrics('<kpi>')` call (`repo_check`); its scope is the
+Gold blocks of the KPI's sources (`seed_rows/kpi_measure`; source → block from `poc_legacy_block_models()`,
+each `poc_source__<source>()` and a block's config meta `source_systems`). It is rebuilt when one of those
+blocks was rebuilt in this run or after its last build, or when a parent that does not derive from a block
+(`kpi`, `kpi_measure`, `unit`, `unit_map`, `poc_dim_geography`, `poc_dim_calendar`) changed; a rebuilt fact or
+dimension alone no longer rebuilds all of them. `gold_coverage.coverage` is not an input (`OUTSIDE_METRICS` in
+`changed.py`): it adds only non-activated rows to `poc_dim_measure`, which no metrics model reads; the data test
+`tests/gold_coverage_outside_metrics.sql` fails the build if that stops being true. Its
+fingerprint includes the code of the facts and dimensions above it (not the block list or the per-source macro
+files), so an edit to `poc_fact_annual.sql` still rebuilds every metrics model and a new source none of the
+others. A KPI with a source that maps to no block stays unscoped. The plan lists the metrics models the old rule
+would have rebuilt as `scoped_skipped` (a count in the build annotation).
+
 Incremental models (`materialized='incremental'`; today `silver.bdl_observations`, ~229 M
 rows) are rebuilt incrementally when selected. `bdl_observations` keys each row by its
 recipe: subgroup, Bronze file (`raw_sha256`) and `variables_key` (digest of the subgroup's

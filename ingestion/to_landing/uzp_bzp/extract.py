@@ -102,8 +102,8 @@ LINE_RE = re.compile(
     r"<h3[^>]*>\s*(\d+(?:\.\d+)*\.\))\s*([^<:]{1,200}?)\s*:\s*<span[^>]*>\s*([^<]{0,200}?)\s*</span>", re.S
 )
 PART_RE = re.compile(r">\s*Część\s+(\d+)\s*<|\(dla części\s+(\d+)\)")
-# Free-text fields kept: an e-mail address written into them (a contact person's, Dev trial 43842705235 found 31
-# notices with "@" in their text) is replaced before Landing.
+# Free-text fields kept: an e-mail address written into them (a contact person's) is replaced before Landing. Dev
+# trials 43842705235 and 45748222888 found "@" in 33 notice subjects, none of them in the shape of an address.
 FREE_TEXT = ("orderObject", "organizationName", "organizationCity")
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 EMAIL_MARK = "[e-mail]"
