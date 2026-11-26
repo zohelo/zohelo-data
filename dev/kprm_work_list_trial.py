@@ -1,11 +1,13 @@
-"""Dev trial for #491 (KPRM work list of the Council of Ministers, PLG-034; test branch only, never on main).
+"""Dev trial for #2972 (KPRM work list of the Council of Ministers, PLG-034; test branch only, never on main).
 
 Landing -> Bronze -> Silver -> Gold into scratch, each step twice. Landing through the shared bulk_file pattern into
 the prefix zz_dev_kprm/ (pass 2 must be `unchanged`), then landing inspect and verify. The landed file is profiled
 with DuckDB (header, columns, closed lists, shapes; never the official's name column or long texts). Bronze into the
 Iceberg namespace zz_dev_kprm and lake prefix zz_dev_kprm/ (twice: the second appends nothing). Silver, the Gold
 entity table and the build stage are the dbt SQL rendered with Jinja and run in local DuckDB over the scratch Bronze
-table, each built twice, with the model tests. Everything written is removed in `finally`.
+table, each built twice, with the model tests; the KPI's metrics rows (is_total series of its kpi_measure pattern) are
+checked against the value-range bound; the licence rows come from warehouse/seed_rows. Everything written is removed
+in `finally`.
 """
 
 from __future__ import annotations
@@ -23,8 +25,8 @@ from ingestion.common import report as report_module
 
 SOURCE = "kprm_work_list"
 SCRATCH = "zz_dev_kprm"
-MACROS = "".join(p.read_text() for p in sorted(Path("warehouse/macros").glob("*.sql")))
-MACROS += Path(f"warehouse/macros/sources/{SOURCE}.sql").read_text()
+MACROS = Path(f"warehouse/macros/sources/{SOURCE}.sql").read_text()  # the models call no other macro
+KPI = "government_drafts_published"
 COLLECTED: dict[str, list] = {}
 ANNOTATE = report_module.annotate
 
@@ -48,7 +50,7 @@ def q(con, sql: str, limit: int = 80) -> list:
 
 
 def count(con, sql: str) -> int:
-    return con.execute(f"select count(*) from ({sql})").fetchone()[0]
+    return con.execute(f"select count(*) from ({sql})").fetchall()[0][0]
 
 
 def render(path_or_text: str, refs: dict[str, str] | None = None, sources: dict[str, str] | None = None) -> str:
@@ -84,7 +86,7 @@ def profile_raw(body: bytes) -> None:
             qc = f'"{c}"'
             nn, nd, ml = con.execute(
                 f"select count({qc}) filter (where trim({qc}) <> ''), count(distinct {qc}), max(length({qc})) from t"
-            ).fetchone()
+            ).fetchall()[0]
             prof.append([i, c, nn, nd, ml])
         note(
             "kprm trial raw file",
@@ -92,7 +94,7 @@ def profile_raw(body: bytes) -> None:
                 "bytes": len(body),
                 "bom": body[:3] == b"\xef\xbb\xbf",
                 "crlf": b"\r\n" in body[:20000],
-                "rows": con.execute("select count(*) from t").fetchone()[0],
+                "rows": con.execute("select count(*) from t").fetchall()[0][0],
                 "profile": prof,
             },
         )
@@ -120,6 +122,28 @@ def network() -> dict:
     return out
 
 
+def licence_quotes() -> dict:
+    """The licence sentences of KPRM's two statements as published today (one GET each, 5 s apart)."""
+    import html as html_lib
+    import time
+
+    import requests
+
+    from ingestion.to_landing.patterns.bulk_file import USER_AGENT
+
+    out = {}
+    for n, url in enumerate(("https://www.gov.pl/web/premier/wplip-rm", "https://www.gov.pl/web/premier/ponowne-wykorzystywanie")):
+        if n:
+            time.sleep(5)
+        try:
+            r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
+            text = re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", r.text)))
+            out[url] = [r.status_code, sorted({s.strip()[:400] for s in re.findall(r"[^.]*(?:licencj|Creative Commons)[^.]*\.", text)})]
+        except requests.RequestException as exc:
+            out[url] = f"{type(exc).__name__}: {str(exc)[:200]}"
+    return out
+
+
 def trial() -> int:
     from ingestion.common import bulk_bronze
     from ingestion.common.r2 import catalog, req, s3
@@ -130,7 +154,7 @@ def trial() -> int:
         module.annotate = collect
         module.step_summary = lambda _m: None
     # --- Landing ---------------------------------------------------------------------------------------------
-    note("kprm trial network", network())
+    reach = network()
     exits = [bulk_file.main(SOURCE, "load", landing_root=SCRATCH) for _ in (1, 2)]
     loads = [r["files"] for r in COLLECTED.get(f"{SOURCE} landing load", [])]
     inspect_exit = bulk_file.main(SOURCE, "inspect", landing_root=SCRATCH)
@@ -140,6 +164,7 @@ def trial() -> int:
     note(
         "kprm trial Landing (scratch zz_dev_kprm)",
         {
+            "network": reach,
             "exits_load_load_inspect_verify": [*exits, inspect_exit, verify_exit],
             "loads": loads,
             "inspect": [r["files"] for r in COLLECTED.get(f"{SOURCE} landing inspect", [])],
@@ -184,7 +209,7 @@ def trial() -> int:
             ),
             "non_empty": {c: count(con, f"select 1 from {b} where nullif(trim({c}), '') is not null") for c in cols},
             "distinct": {c: count(con, f"select distinct {c} from {b}") for c in cols},
-            "max_length": {c: con.execute(f"select max(length({c})) from {b}").fetchone()[0] for c in cols},
+            "max_length": {c: con.execute(f"select max(length({c})) from {b}").fetchall()[0][0] for c in cols},
         },
     )
     closed = {
@@ -308,6 +333,42 @@ def trial() -> int:
             ),
         },
     )
+    # --- KPI, value range, licence ---------------------------------------------------------------------------
+    from warehouse import seed_rows
+
+    pattern = next(r for r in seed_rows.rows("kpi_measure") if r["kpi_key"] == KPI)["measure_key_pattern"]
+    bound = re.findall(r"\['" + KPI + r"', '([^']*)', '([^']*)', '([^']*)'\]",
+                       Path(f"warehouse/macros/value_range/{SOURCE}.sql").read_text())
+    lo, hi = (float(bound[0][1]), float(bound[0][2])) if bound else (None, None)
+    m = f"(select * from {p} where is_total and geography_key <> '_X' and measure_key like '{pattern}')"
+    source_row = next(r for r in seed_rows.rows("source") if r["source_key"] == SOURCE)
+    licence_row = next((r for r in seed_rows.rows("licence") if r["licence_key"] == source_row["licence_key"]), None)
+    note(
+        "kprm trial KPI and licence",
+        {
+            "kpi": KPI,
+            "pattern": pattern,
+            "metrics_rows": count(con, f"select * from {m}"),
+            "max_rows_per_area_period": con.execute(
+                f"select max(c) from (select count(*) c from {m} group by geography_key, date_key)"
+            ).fetchall()[0][0],
+            "range": q(con, f"select min(date_key), max(date_key), min(value), max(value) from {m}"),
+            "max_month": q(con, f"select period_label, value from {m} order by value desc limit 3"),
+            "bound": [lo, hi],
+            "outside_bound": count(con, f"select 1 from {m} where value < {lo} or value > {hi}") if bound else None,
+            "poland_last_months": q(
+                con, f"select period_label, value, observation_status_key from {m} order by date_key desc limit 6"
+            ),
+            "poland_years": q(
+                con,
+                f"select period_label, value, observation_status_key from {p} where measure_key = "
+                "'kprm_work_list:drafts_published:drafts:total:annual' order by 1",
+            ),
+            "source_licence_key": source_row["licence_key"],
+            "licence_row": licence_row,
+        },
+    )
+    note("kprm trial licence statements (KPRM pages today)", licence_quotes())
     return 0
 
 
