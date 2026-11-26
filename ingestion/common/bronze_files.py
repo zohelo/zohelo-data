@@ -164,6 +164,30 @@ def loaded_hashes(table) -> set[str]:
     return hashes
 
 
+def loaded_pairs(table) -> set[tuple[str, str]]:
+    """(entity, raw SHA-256) of every Landing file already in a table partitioned by entity.
+
+    For sources whose identical bytes can sit under several entities, each to be loaded (a register file that is
+    unchanged across a year boundary lands under the new year's entity, #3139): a hash already loaded for one
+    entity does not make the same bytes of another entity done. The entity is the file's partition value; a file
+    not named after a SHA-256 (compacted) is read for its raw_sha256 values, as in loaded_hashes."""
+    if table.current_snapshot() is None:
+        return set()
+    pairs: set[tuple[str, str]] = set()
+    files = table.inspect.data_files()
+    for path, partition in zip(
+        files.column("file_path").to_pylist(), files.column("partition").to_pylist(), strict=True
+    ):
+        entity = next(iter((partition or {}).values()), None)
+        stem = Path(path).stem.split(".", 1)[0]
+        if SHA_RE.fullmatch(stem):
+            pairs.add((entity, stem))
+            continue
+        column = read_columns(table, path, ["raw_sha256"]).column("raw_sha256")
+        pairs.update((entity, h) for h in pc.unique(column).to_pylist() if h)
+    return pairs
+
+
 def duplicated_hashes(table) -> dict[str, set[str]]:
     """Landing files (raw SHA-256) whose rows the table holds twice; read by bronze.verify only.
 
@@ -217,6 +241,18 @@ def rejected_hashes(cat, table_id: tuple[str, str]) -> set[str]:
     if table.current_snapshot() is None:
         return set()
     return set(table.scan(selected_fields=("raw_sha256",)).to_arrow().column("raw_sha256").to_pylist())
+
+
+def rejected_pairs(cat, table_id: tuple[str, str], entity_column: str = "entity") -> set[tuple[str, str]]:
+    """(entity, raw SHA-256) of every rejected Landing file (see loaded_pairs)."""
+    try:
+        table = cat.load_table(table_id)
+    except NoSuchTableError:
+        return set()
+    if table.current_snapshot() is None:
+        return set()
+    data = table.scan(selected_fields=(entity_column, "raw_sha256")).to_arrow()
+    return set(zip(data.column(entity_column).to_pylist(), data.column("raw_sha256").to_pylist(), strict=True))
 
 
 def _missing(exc: botocore.exceptions.ClientError) -> bool:
