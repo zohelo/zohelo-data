@@ -6,8 +6,8 @@ warehouse/ and run in local DuckDB over the scratch Bronze tables, each built tw
 the singular completeness tests. Read-only extras: three KNF peak days profiled for form codes (not landed), the
 producers' terms pages (KNF legal note, GPW disclaimer) for the licence quotes. Deleted before merge.
 
-Window (declared): KNF days of receipt 2026-09-30 to 2026-11-01 (today fixed at 2026-11-01, backfill 32 days: one
-whole month, October 2026, for Gold); GPW from 2025-01-01 (the production floor) to today.
+Window (declared): KNF days of receipt 2026-09-30 to 2026-11-03 (today fixed at 2026-11-03, backfill 34 days: one
+whole month, October 2026, for Gold, closed by the November days held); GPW from 2025-01-01 (the production floor) to today.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from ingestion.to_landing.patterns import bulk_file
 
 SCRATCH = "zz_dev_espi_ebi"
 CAPTURED: list = []
-KNF_TODAY, KNF_BACKFILL = date(2026, 11, 1), 32
+KNF_TODAY, KNF_BACKFILL = date(2026, 11, 3), 34
 PEAK_DAYS = (date(2026, 4, 30), date(2026, 5, 29), date(2026, 9, 30))
 CONTRACT = [
     "source_system",
