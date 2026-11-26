@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+kgpsp_interventions,EX-003,KG PSP interwencje PSP (tabele stałych zestawień),State Fire Service interventions (standard tables),Komenda Główna Państwowej Straży Pożarnej,cube,file,national-public,cc_by_4_0_kgpsp,https://www.gov.pl/web/kgpsp/interwencje-psp
