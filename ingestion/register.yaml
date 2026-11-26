@@ -1701,7 +1701,8 @@ sources:
   name: IP Statistics Data Center
   short_name: WIPO IP Statistics
   provider: World Intellectual Property Organization
-  status: approved
+  source_system: wipo_ip_stats
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1753,7 +1754,10 @@ sources:
       with 6 XLSX and 5 ZIP links; HEAD wipo_ip_historical_data.zip 200 (425,299 bytes, Last-Modified 18 Jun 2024), docs-en-wipo-data-design-indicators.zip
       200 (1,463,477 bytes, 21 Jun 2024), ipc_technology.xlsx 200 (45,518 bytes, 19 Mar 2026); the patent and trademark ZIPs
       were listed but not sized. www3.wipo.int robots.txt disallows all agents.'
-    - Document download format stability (file contents not opened in this run)
+    - 'Built (26 Nov 2026, #1262; docs/sources/wipo_ip_stats.md): Dev probes 45871388485 and 45872152431 opened the files.
+      The patent ZIP holds publications and grants by office, origin and technology field (no applications); the design
+      ZIP design counts by Locarno class; both 2000-2022, files of April and June 2024. The trademark ZIP (2.4 M rows per
+      file) is left out until an incremental design (D28).'
     references:
     - https://www.wipo.int/en/web/ip-statistics
     - https://www.wipo.int/en/web/ip-statistics/about

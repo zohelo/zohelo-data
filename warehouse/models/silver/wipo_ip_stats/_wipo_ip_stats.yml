@@ -1,0 +1,76 @@
+version: 2
+models:
+  - name: wipo_ip_stats_patent_publications
+    description: >-
+      WIPO patent publications by filing office, applicant origin, technology field (35 WIPO fields and 0 Unknown) and
+      year, 2000-2022 in the file of April 2024 (register GL-032; licence restricted: no republishing, internal). Codes
+      and counts as published; field names from the ZIP's names workbook. Grain: office_code x origin_code x
+      technology_field_code x year.
+    tests:
+      - unique:
+          column_name: "office_code || '|' || origin_code || '|' || technology_field_code || '|' || year"
+    columns: &patent_columns
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [patent_indicators]}}}]
+      - name: measure
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: office_code
+        tests: [not_null]
+      - name: origin_code
+        tests: [not_null]
+      - name: technology_field_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17',
+                         '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33',
+                         '34', '35']
+      - name: technology_field
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: wipo_ip_stats_patent_grants
+    description: >-
+      WIPO patent grants by filing office, applicant origin, technology field (35 WIPO fields and 0 Unknown) and year,
+      2000-2022 in the file of April 2024 (register GL-032; licence restricted, internal). Codes and counts as
+      published. Grain: office_code x origin_code x technology_field_code x year.
+    tests:
+      - unique:
+          column_name: "office_code || '|' || origin_code || '|' || technology_field_code || '|' || year"
+    columns: *patent_columns
+  - name: wipo_ip_stats_designs
+    description: >-
+      WIPO industrial design counts in applications and in registrations by office, applicant origin, Locarno class and
+      year, 2000-2022 in the file of June 2024 (register GL-032; licence restricted, internal); only the offices that
+      report by class, so yearly sums are not office totals. Grain: measure x office_code x origin_code x
+      locarno_class x year.
+    tests:
+      - unique:
+          column_name: "measure || '|' || office_code || '|' || origin_code || '|' || locarno_class || '|' || year"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [design_indicators]}}}]
+      - name: measure
+        tests: [not_null, {accepted_values: {arguments: {values: [applications, registrations]}}}]
+      - name: year
+        tests: [not_null]
+      - name: office_code
+        tests: [not_null]
+      - name: origin_code
+        tests: [not_null]
+      - name: locarno_class
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17',
+                         '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32']
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
