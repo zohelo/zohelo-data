@@ -9,7 +9,8 @@ description: "Work list of the Council of Ministers (Wykaz prac legislacyjnych i
 # one row per draft since 21 December 2023); the server sends no Last-Modified or ETag, so version = download time and
 # an unchanged file (same SHA-256) is skipped. Restart unit: the file. Not used: the RPL hosts legislacja.rcl.gov.pl and legislacja.gov.pl
 # (timeouts from GitHub runners, robots.txt unread), the Prime Minister's own list (Rejestr_20874196.csv) and the
-# archive of earlier terms (HTML pages without a file). Dev trial: TRIAL.
+# archive of earlier terms (HTML pages without a file). Dev trial 45757552453 (26 Nov 2026): 11,503,160 bytes, 1,551 drafts
+# published 2023-12-21 to 2026-11-24, second Landing and Bronze passes wrote nothing.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -36,15 +37,17 @@ archive_policy:
 bronze: [bronze.kprm_work_list_drafts, bronze.kprm_work_list_rejected_files]
 silver: [silver.kprm_work_list_drafts]
 gold: [gold.government_drafts, gold.build_kprm_work_list, gold.metrics_government_drafts_published]
+# Ceilings about 1.5 x the rows of Dev trial 45757552453; the list grows by about 600 drafts a year, so Silver and the
+# entity table reach theirs in about 18 months (spring 2028): measure again then and raise them (D32: still small).
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  kprm_work_list_drafts: {rows: 2500}  # TRIAL
-  government_drafts: {rows: 2500}  # TRIAL
-  poc_build_kprm_work_list: {rows: 5000}  # TRIAL
-  poc_metrics_government_drafts_published: {rows: 100}  # TRIAL
+  kprm_work_list_drafts: {rows: 2400}  # 1,551 measured
+  government_drafts: {rows: 2400}  # 1,551 measured
+  poc_build_kprm_work_list: {rows: 1450}  # 944 measured (8 measures, 36 months, 4 years)
+  poc_metrics_government_drafts_published: {rows: 55}  # 36 measured (Dec 2023 to Nov 2026, Poland)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of about 1,500 drafts (a few hundred new ones a year), no changed-since
 # filter; a new copy replaces the file and Silver and Gold are rebuilt in full.
-refresh: {mode: full, decided: "D32 + #491"}
+refresh: {mode: full, decided: "D32 + #2972"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

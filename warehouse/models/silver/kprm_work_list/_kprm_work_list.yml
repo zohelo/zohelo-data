@@ -5,8 +5,8 @@ models:
       Work list of the Council of Ministers (register PLG-034, #491; CSV of https://www.gov.pl/web/premier/wplip-rm,
       CC BY-SA 4.0): one row per government draft of the newest landed list. Grain: draft_number (Numer projektu).
       Text as published; status_key from Status realizacji (empty = in_progress); published_at from Data
-      publikacji; planned_adoption_text is a plan in free text, kept as published. History and trial run:
-      ingestion/sources/kprm_work_list.yaml.
+      publikacji; planned_adoption_text is a plan in free text, kept as published. History: drafts published from
+      21 Dec 2023 (1,551 on 26 Nov 2026, Dev trial in ingestion/sources/kprm_work_list.yaml).
     columns:
       - name: draft_number
         tests: [not_null, unique]
@@ -14,6 +14,8 @@ models:
         tests: [not_null]
       - name: document_kind
         tests: [not_null, {accepted_values: {arguments: {values: ['Projekty ustaw', 'Projekty rozporządzeń', 'Projekty innych dokumentów rządowych']}}}]
+      - name: document_type
+        tests: [not_null, {accepted_values: {arguments: {values: ['D – pozostałe projekty', 'C – projekty implementujące UE', 'DER – projekty deregulacyjne', 'PRO – projekty priorytetowe', 'A - projekty wynikające z expose']}}}]
       - name: status_key
         tests: [not_null, {accepted_values: {arguments: {values: ['in_progress', 'realised', 'withdrawn']}}}]
       - name: published_at
