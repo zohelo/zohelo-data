@@ -33,8 +33,9 @@ layer (~7.4 GB on the runner's disk), reads it with DuckDB spatial in 8 GB memor
 entity in `bronze.prg_address_points` (attributes as text, x and y as printed, `.prj` text) and in
 `silver.prg_address_points` (`warehouse/entity/prg_address_points.sql`). A rerun with both files current writes
 nothing; a package with other attributes, another row count than its `.shx`, a repeated `ID_IIP`, a null key, a
-gmina code that is not 7 digits or a point outside Poland is rejected into `bronze.prg_rejected_files` and the tables
-keep the previous package.
+gmina code that is not 7 digits or a point outside Poland is rejected into `bronze.prg_rejected_files`; Silver keeps
+the previous package (Bronze's copy of it is then superseded and removed by the latest-only prune after the load,
+#845).
 
 **Silver** `silver.prg_address_points` (entity table, not a dbt model): grain `address_id` (`ID_IIP`: namespace, local
 id and version stamp), TERC of the gmina (`TERYT_GMI`), SIMC (`ID_SIMC`), ULIC (`ID_ULIC`, null without a street),
