@@ -19,8 +19,10 @@ select
     {{ poc_lasy_bdl_code('inspectorate_cd', 'lasy_bdl_districts') }} as inspectorate_code,
     case
         when starts_with(adress_forest, region_cd || '-' || inspectorate_cd || '-') then adress_forest
-        else error('lasy_bdl_districts: forest address ' || coalesce(adress_forest, 'NULL') || ' does not start with '
-            || coalesce(region_cd, 'NULL') || '-' || coalesce(inspectorate_cd, 'NULL'))
+        else error(
+            'lasy_bdl_districts: forest address ' || coalesce(adress_forest, 'NULL') || ' does not start with '
+            || coalesce(region_cd, 'NULL') || '-' || coalesce(inspectorate_cd, 'NULL')
+        )
     end as forest_address,
     {{ poc_lasy_bdl_text('inspectorate_name') }} as name,
     {{ poc_lasy_bdl_year('a_year', 'lasy_bdl_districts') }} as data_year,
