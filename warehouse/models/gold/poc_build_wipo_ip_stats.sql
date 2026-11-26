@@ -38,13 +38,13 @@ counts as (
     from {{ ref('wipo_ip_stats_patent_publications') }}
     union all
     select
-        'patent_grants',
-        'grants',
-        'technology_field',
+        'patent_grants' as block_id,
+        'grants' as unit_code,
+        'technology_field' as class_dimension,
         office_code,
         origin_code,
-        technology_field_code,
-        technology_field,
+        technology_field_code as class_code,
+        technology_field as class_label,
         year,
         value,
         source_version,
@@ -52,13 +52,13 @@ counts as (
     from {{ ref('wipo_ip_stats_patent_grants') }}
     union all
     select
-        case measure when 'applications' then 'design_applications' else 'design_registrations' end,
-        'designs',
-        'locarno_class',
+        case measure when 'applications' then 'design_applications' else 'design_registrations' end as block_id,
+        'designs' as unit_code,
+        'locarno_class' as class_dimension,
         office_code,
         origin_code,
-        locarno_class,
-        'Locarno class ' || locarno_class,
+        locarno_class as class_code,
+        'Locarno class ' || locarno_class as class_label,
         year,
         value,
         source_version,
