@@ -152,6 +152,10 @@ def bronze_profile(con) -> dict:
         "value_shapes": rows(con, f"select regexp_replace(coalesce(value, 'null'), '[0-9]+', 'n', 'g'), count(*) from {v} "
                                   "group by 1 order by 2 desc limit 10"),
         "zeros": one(con, f"select count(*) from {v} where try_cast(value as double) = 0"),
+        "zeros_by_indicator(id,unit,zeros,values,zero_texts,areas)": rows(con, f"select v.indicator_id || chr(46) || v.dimension_id, any_value(i.unit_pl), "
+            f"count(*) filter (where try_cast(v.value as double) = 0), count(*), string_agg(distinct v.value, chr(124)) filter (where try_cast(v.value as double) = 0), "
+            f"string_agg(distinct v.territory_code, chr(124)) filter (where try_cast(v.value as double) = 0) from {v} v join {i} i using (indicator_id, dimension_id) "
+            "group by 1 having count(*) filter (where try_cast(v.value as double) = 0) > 0 order by 3 desc", 25),
         "non_year_periods": rows(con, f"select period, count(*) from {v} where not regexp_full_match(period, '[0-9]{{4}}') group by 1 limit 5"),
         "level0_codes": rows(con, f"select territory_code, count(*) from {v} where level_id = '0' group by 1 order by 1", 70),
         "level2_codes": rows(con, f"select territory_code, count(*) from {v} where level_id = '2' group by 1 order by 1", 30),
@@ -395,7 +399,9 @@ def main(argv: list[str]) -> int:
         con = duckdb.connect()
         con.register("bronze", arrow)
         prof = bronze_profile(con)
-        note(f"{SOURCE} bronze profile", prof)
+        detail = ("level0_codes", "zeros_by_indicator(id,unit,zeros,values,zero_texts,areas)")
+        note(f"{SOURCE} bronze profile", {k: v for k, v in prof.items() if k not in detail})
+        note(f"{SOURCE} bronze codes and zeros", {k: prof[k] for k in detail})
         con.close()
         work = Path(tempfile.mkdtemp(prefix="strateg-dbt-"))
         try:
