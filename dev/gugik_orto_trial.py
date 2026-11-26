@@ -107,7 +107,9 @@ def trial(cat):
                                     sum(sv.column("file_size_in_bytes").to_pylist())]})
 
     con = duckdb.connect()
-    con.execute("SET memory_limit = '10GB'; install spatial; load spatial")
+    # the platform build's settings (warehouse/profiles.yml): 10 GB, 4 threads, insertion order not kept
+    con.execute("SET memory_limit = '10GB'; SET threads = 4; SET preserve_insertion_order = false; "
+                "SET temp_directory = '/tmp/duckdb_spill'; install spatial; load spatial")
     from warehouse import entity
 
     entity._remote(con)
@@ -137,6 +139,12 @@ def trial(cat):
         "unique_feature_id": one(con, "select count(*) from (select feature_id from silver_s group by 1 having count(*) > 1)"),
         "not_null": q(con, "select " + ", ".join(f"count(*) filter (where {c} is null)" for c in (
             "entity", "feature_id", "sheet_id", "data_year", "raw_sha256")) + " from silver_s"),
+        "accepted_values_fails": q(con, "select count(*) filter (where colour not in ('RGB', 'CIR', 'B/W')), count(*) "
+                                        "filter (where data_source not in ('Zdj. cyfrowe', 'Zdj. analogowe', 'Scena "
+                                        "sat.')), count(*) filter (where crs_xy not in ('PL-1992', 'PL-2000:S5', "
+                                        "'PL-2000:S6', 'PL-2000:S7', 'PL-2000:S8')), count(*) filter (where "
+                                        "sheet_filled not in ('TAK', 'NIE')), count(*) filter (where geometry_type <> "
+                                        "'Polygon') from silver_s"),
         "complete": q(con, render("warehouse/tests/gugik_orto_sheets_complete.sql", {},
                                   {"gugik_orto_sheets": "silver_s"})),
     }
@@ -155,7 +163,7 @@ def trial(cat):
         "by_year_sample": q(con, "select data_year, count(*) from silver_s group by 1 order by 1 desc limit 4")})
 
     prg = cat.load_table(("silver", "prg_units")).scan(
-        row_filter="unit_level == 'wojewodztwo'", selected_fields=("unit_level", "teryt_code", "geometry_wkb")).to_arrow()
+        row_filter="unit_level == 'gmina'", selected_fields=("unit_level", "teryt_code", "geometry_wkb")).to_arrow()
     con.register("prg_a", prg)
     con.execute("create table prg_t as select * from prg_a")
     geo = cat.load_table(("gold", "dim_geography")).scan(
@@ -175,7 +183,7 @@ def trial(cat):
     series = "measure_key || '|' || geography_key || '|' || breakdown_json"
     total = "measure_key = 'gugik_orto:sheets:map_sheets:editions' and is_total"
     note("orto gold build_gugik_orto", {
-        "rows_seconds_two_builds": gold_rows, "prg_voivodeships": prg.num_rows,
+        "rows_seconds_two_builds": gold_rows, "prg_gminas": prg.num_rows,
         "dup_series_x_date": one(con, f"select count(*) from (select {series}, date_key from gold_t group by all "
                                       "having count(*) > 1)"),
         "by_measure": q(con, "select measure_key, count(*), count(distinct geography_key), min(date_key), "
