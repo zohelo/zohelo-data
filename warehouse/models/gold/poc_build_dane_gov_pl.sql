@@ -46,11 +46,14 @@ publishers as (
     from datasets
 ),
 
--- one name per institution number: the label of the breakdown (a number with two spellings keeps the newest)
+-- one name per institution number, the label of the breakdown: the name on its newest named dataset (records of
+-- 367 datasets give the institution link without a name, Dev probe 45818878323)
 publisher_names as (
     select
         coalesce(cast(publisher_number as varchar), '_U') as publisher_code,
-        arg_max(coalesce(publisher_name, 'nie podano (not given)'), modified_at) as publisher_label
+        coalesce(
+            arg_max(publisher_name, modified_at) filter (where publisher_name is not null), 'nie podano (not given)'
+        ) as publisher_label
     from datasets
     group by 1
 ),
