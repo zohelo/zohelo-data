@@ -51,7 +51,7 @@ sources:
         tests:
           - accepted_values:
               arguments:
-                values: ['1g', '24g']
+                values: ['1g', '24g', '1t']
       - name: validation_status
         tests:
           - accepted_values:
