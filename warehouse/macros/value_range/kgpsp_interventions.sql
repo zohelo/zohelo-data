@@ -1,6 +1,6 @@
-{# KG PSP standard tables (#2970): incidents a year, Poland and voivodeships, 2016-2025. Measured in the Dev probes
-   45746735646 (2016-2022 voivodeship workbooks): fires 2,885 (Podlaskie 2017) to 149,434 (Poland 2018); local hazards
-   6,213 (Świętokrzyskie 2016) to 428,041 (Poland 2021); false alarms 297 (Podlaskie 2016) to 47,895 (Poland 2022). #}
+{# KG PSP standard tables (#2970): incidents a year, Poland and voivodeships, 2016-2025. Measured in Dev trial
+   45756529767 (Gold build stage): fires 2,441 to 153,520 (Poland 2019); local hazards 6,176 to 428,041 (Poland 2021);
+   false alarms 297 (Podlaskie 2016) to 53,398 (Poland 2024). #}
 {% macro poc_value_range__kgpsp_interventions() %}
     {{ return({
         'bounds': [
