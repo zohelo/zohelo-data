@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: poc_build_arimr_payments
+    description: >-
+      Build stage — ARiMR direct-payment statistics (register PLS-034): applications for area payments, decisions
+      granting them and direct payments paid (PLN) by campaign, Poland and the 16 voivodeships, cumulative as of the
+      newest report holding the campaign; campaigns whose payment window was still open at that date are
+      'provisional'. Values and units as published.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: observation_status_key
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, provisional]}}}]

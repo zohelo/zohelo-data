@@ -1,0 +1,80 @@
+version: 2
+# RSPO register of schools and educational institutions (PLS-021): the yearly lists 2020/2021-2025/2026 of
+# dane.gov.pl dataset 839; route, trial run and counts: ingestion/sources/rspo.yaml and docs/sources/rspo.md. Privacy
+# allowlist in ingestion/to_bronze/rspo/load.py. Closed code lists below are the codes of the six lists (Dev probe
+# 45748207131); a new code fails the build. TERYT codes: no relationships test (a test with a shared parent would be
+# selected by builds of teryt_terc before this table exists); tests/rspo_institutions_complete.sql checks the years,
+# the 16 voivodeships and that every gmina code lies in its powiat and every powiat in its voivodeship.
+models:
+  - name: rspo_institutions
+    description: >-
+      Register entries of RSPO (schools, institutions, complexes, branches) per school year, state of 30 September,
+      2020/2021 to 2025/2026: type, unit kind, public status, pupil category, governing-body type, TERYT codes,
+      pupils, classes and teachers as published. Grain: rspo_number x school_year.
+    tests:
+      - unique:
+          column_name: "school_year || '|' || rspo_number"
+    columns:
+      - name: school_year
+        tests: [not_null]
+      - name: rspo_number
+        tests: [not_null]
+      - name: voivodeship_teryt
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']
+      - name: powiat_teryt
+        tests: [not_null]
+      - name: gmina_teryt
+        tests: [not_null]
+      - name: gmina_type
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'Gm', 'M-Gm']}}}]
+      - name: is_school
+        tests: [not_null]
+      - name: institution_type_id
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1', '3', '4', '14', '15', '16', '17', '19', '20', '21', '24', '26', '27', '29', '31', '37',
+                         '38', '39', '40', '41', '42', '43', '44', '45', '46', '48', '49', '50', '51', '52', '53', '54',
+                         '55', '56', '57', '58', '60', '61', '63', '64', '65', '74', '75', '80', '81', '82', '83', '85',
+                         '86', '87', '88', '89', '90', '91', '92', '93', '94', '96', '97', '100']
+      - name: parent_type_id
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['1', '3', '37', '38', '43', '46', '48', '51', '53', '54', '58', '60', '61', '63', '81', '83',
+                         '85', '88', '96', '100']
+      - name: unit_kind_id
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '3', '6', '7']}}}]
+      - name: public_status_id
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '3', '4', '5', '6']}}}]
+      - name: pupil_category_id
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '2', '3']}}}]
+      - name: school_specificity_id
+        tests: [{accepted_values: {arguments: {values: ['1', '100']}}}]
+      - name: organisational_link_id
+        tests: [{accepted_values: {arguments: {values: ['1', '3', '4', '5', '7', '8', '9', '10', '11', '100']}}}]
+      - name: governing_body_type_id
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['109', '120', '121', '122', '123', '125', '127', '128', '129', '130', '131', '132', '133',
+                         '134', '135', '136', '137', '138', '139', '140', '141', '142', '143', '144', '145', '146',
+                         '148', '150']
+      - name: governing_body_class
+        tests: [not_null, {accepted_values: {arguments: {values: ['jst', 'minister', 'inne osoby fizyczne i prawne']}}}]
+      - name: registering_body_type_id
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['120', '121', '122', '123', '125', '127', '128', '129', '130', '131', '132', '133']
+      - name: entity
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

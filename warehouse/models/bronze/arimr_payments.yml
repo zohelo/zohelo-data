@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: arimr_payments
+  description: ARiMR direct-payment statistics (register PLS-034), monthly PDF reports "Płatności bezpośrednie" on gov.pl
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/arimr_payments/
+    loaded_by: ingestion/to_bronze/arimr_payments/
+    config: ingestion/sources/arimr_payments.yaml
+  tables:
+  - name: arimr_payments_cells
+    description: >-
+      One row per table cell of the report's text layer (page, table, title, "Dane na dzień" date, column header
+      as printed, row label, value as printed) of the newest copy of each landed report; partitioned by entity.
+  - name: arimr_payments_rejected_files
+    description: Files of arimr_payments the Bronze decoder rejected (layout not recognised), with the reason.
