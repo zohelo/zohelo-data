@@ -306,8 +306,10 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
     s = {
         "observations_by_level": rows(con, f"select level_id, count(*), count(distinct indicator_id), count(distinct territory_code), "
                                            f"min(period_year), max(period_year) from {ob} group by 1 order by 1"),
-        "value_status": rows(con, f"select value_status, count(*) from {ob} group by 1"),
-        "not_numeric_texts": rows(con, f"select value_text, count(*) from {ob} where value is null group by 1 order by 2 desc limit 10"),
+        "value_status": rows(con, f"select value_status, count(*) from {ob} group by 1 order by 1"),
+        "zero_filled(indicator,years,rows)": rows(con, f"select indicator_id || chr(46) || dimension_id, count(distinct period_year), count(*) "
+                                                      f"from {ob} where value_status = 'zero_filled' group by 1 order by 1"),
+        "not_numeric_texts": rows(con, f"select value_text, count(*) from {ob} where value_status = 'not_numeric' group by 1 order by 2 desc limit 10"),
         "indicators_without_values": rows(con, f"select i.indicator_id, i.dimension_id from {ind} i anti join {ob} o "
                                                 "using (indicator_id, dimension_id)"),
         "voivodeships_per_indicator_year(min,max)": rows(con, f"select min(c), max(c) from (select indicator_id, period_year, count(*) c "
