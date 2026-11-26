@@ -1,5 +1,6 @@
 {{ config(alias='build_barometr_zawodow', tags=['gold_block']) }}
-{# Gold build stage: Barometr Zawodów (register PLS-030, #454), block 'forecast', from silver.barometr_zawodow_forecasts.
+{# Gold build stage: Barometr Zawodów (register PLS-030, #454), block 'forecast', from
+   silver.barometr_zawodow_forecasts.
    A forecast is not an observation: this block holds no forecast value. It counts the published classifications:
    how many occupations an edition's poster puts in each forecast category, per area (Poland and the 16
    voivodeships) and forecast year. measure_key barometr_zawodow:forecast:occupations:<category_key> (deficyt,
@@ -20,13 +21,20 @@ geo as (
     where source_system = 'barometr_zawodow'
 ),
 
-editions as (  -- one file per area and year (Silver: Poland from the poster, voivodeships from the report); a
+editions as (  -- one file per area and year (Silver: the national poster and the 16 voivodeship posters); a
     -- second file would repeat the area's rows and fail the grain checks, never be picked
     select distinct
         forecast_year,
         area_code,
         source_version,
         raw_sha256
+    from f
+),
+
+categories as (  -- the categories an edition uses, in any area
+    select distinct
+        forecast_year,
+        category_key
     from f
 ),
 
@@ -38,7 +46,7 @@ grid as (
         e.source_version,
         e.raw_sha256
     from editions as e
-    inner join (select distinct forecast_year, category_key from f) as c on e.forecast_year = c.forecast_year
+    inner join categories as c on e.forecast_year = c.forecast_year
 ),
 
 counts as (

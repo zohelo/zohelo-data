@@ -1,9 +1,8 @@
 {# Barometr Zawodów (register PLS-030, #454): the forecast category of every occupation the experts assessed, per
    forecast year and area, as published on the edition's posters (bronze.barometr_zawodow_occupations, newest copy of
    each file). Grain: forecast_year x area_code x occupation_name.
-   - Poland: the national poster file (plakat_<year>); the 16 voivodeships: the posters printed in the national
-     report (raport_<year>). The report's own Polska poster (most years) is not used: one source per area, by file
-     kind, never a pick between two rows of one key.
+   - Poland: the national poster (plakat_<year>); the 16 voivodeships: the poster of each voivodeship page
+     (plakat_p<NN>_<year>). One file per area and year; a second file for an area fails the unique test.
    - A forecast, not an observation: the edition is the forecast year (survey in Q3/Q4 of the year before); an
      occupation is named as printed on that edition's posters (the Barometr's own list, no code on the posters;
      names and the list change between editions, so there is no cross-year mapping).
@@ -20,14 +19,14 @@ with occupations as (
 picked as (
     select
         *,
-        split_part(entity, '_', 1) as file_kind,
+        case when entity like 'plakat\_p%' escape '\' then 'province' else 'national' end as file_kind,
         regexp_replace(
-            replace(lower(strip_accents(regexp_replace(area_label, '^województwo\s+', ''))), 'ł', 'l'), '[^a-z]', '', 'g'
+            replace(lower(strip_accents(regexp_replace(area_label, '^województwo\s+', ''))), 'ł', 'l'),
+            '[^a-z]',
+            '',
+            'g'
         ) as name_key
     from occupations
-    where
-        (split_part(entity, '_', 1) = 'plakat' and area_label = 'Polska')
-        or (split_part(entity, '_', 1) = 'raport' and area_label <> 'Polska')
 ),
 
 voivodeships as (
