@@ -31,7 +31,7 @@ import duckdb
 from ingestion.common import entity_tables as et
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.common.report import annotate
-from ingestion.to_landing.gus_bdl.api import Bdl
+from ingestion.to_landing.gus_bdl.api import BASE, Bdl
 from warehouse import observations as obs
 
 NS = "zz_dev_gold_bdl2"
@@ -117,6 +117,60 @@ def zeros(con, silver: dict, chan: dict) -> dict:
         "zero_share_by_subgroup": con.execute(
             "select subgroup_id, channel, count(value), round(100.0 * count(*) filter (where value = 0) / "
             "nullif(count(value), 0), 1) from z group by all order by 1"
+        ).fetchall(),
+    }
+
+
+def api_probe(bdl: Bdl) -> dict:
+    """One request with a short timeout, so an unreachable API is reported in seconds (run 45829968475 spent 12
+    minutes in the client's retries and ended 'BDL API kept failing')."""
+    import requests
+
+    try:
+        r = bdl.session.get(f"{BASE}/attributes", params={"format": "json", "lang": "pl"}, timeout=20)
+        bdl.requests += 1
+        out = {"status": r.status_code, "ok": r.status_code == 200}
+        if r.status_code == 200:
+            out["attributes"] = [
+                [a.get("id"), a.get("symbol"), (a.get("description") or "")[:50]] for a in r.json().get("results") or []
+            ]
+        else:
+            out["body"] = r.text[:300]
+        return out
+    except requests.RequestException as exc:
+        return {"ok": False, "error": f"{type(exc).__name__}: {str(exc)[:300]}"}
+
+
+def same_variable(con) -> dict:
+    """Empty cells and zeros side by side: the web-export variable with the most zeros, by unit and year."""
+    sub, var, n = one(
+        con,
+        "select subgroup_id, variable_id, count(*) from z where channel = 'web_export' and value = 0 "
+        "and variable_id is not null group by all order by 3 desc limit 1",
+    )
+    return {
+        "pick": [sub, var, n],
+        "web_subgroups_with_empty_and_zero": one(
+            con,
+            "select count(*) filter (where e > 0 and z > 0), count(*) from (select subgroup_id, "
+            "count(*) filter (where value is null) as e, count(*) filter (where value = 0) as z from z "
+            "where channel = 'web_export' group by 1)",
+        ),
+        "by_year": con.execute(
+            f"select year, count(*), count(*) filter (where value is null), count(*) filter (where value = 0), "
+            f"count(*) filter (where value > 0) from z where subgroup_id = '{sub}' and variable_id = {int(var)} "
+            "group by 1 order by 1"
+        ).fetchall(),
+        "units_with_empty_and_zero_years": one(
+            con,
+            f"select count(*) filter (where e > 0 and z > 0), count(*) filter (where z > 0 and p > 0), count(*) "
+            f"from (select unit_code, count(*) filter (where value is null) as e, count(*) filter (where value = 0) "
+            f"as z, count(*) filter (where value > 0) as p from z where subgroup_id = '{sub}' "
+            f"and variable_id = {int(var)} group by 1)",
+        ),
+        "measure_unit_and_texts": con.execute(
+            f"select value_text, attribute, count(*) from z where subgroup_id = '{sub}' and variable_id = {int(var)} "
+            "and (value is null or value = 0) group by all order by 3 desc limit 6"
         ).fetchall(),
     }
 
@@ -238,10 +292,9 @@ def cleanup(cat, client) -> dict:
 
 
 def build_sample(silver: dict) -> list[str]:
-    curated = [b for b in CURATED if b in silver]
-    rest = sorted((b for b in silver if b not in curated), key=lambda b: silver[b]["rows"], reverse=True)
-    rng = random.Random(26)
-    return sorted(set(curated + rest[:2] + rng.sample(rest[2:], 8)))
+    """Second run: the curated subgroups whose curated rows were not all found under the rule's key in run
+    45829968475 (P1873, P2497), and P2392 as a control; the first run built 21 subgroups."""
+    return sorted(b for b in ("P1873", "P2392", "P2497") if b in silver)
 
 
 def gold_checks(con, cat, blocks: list[str], silver: dict) -> dict:
@@ -309,11 +362,24 @@ def poland_and_curated(con, cat, blocks: list[str]) -> dict:
                       select 1 from o as x where x.geography_key = c.geography_key and x.date_key = c.date_key
                       and x.value = c.value and split_part(x.measure_key, ':', 2) = c.block_id)) as same_value_other_key
            from cur as c left join new as n
-             on n.measure_key = c.measure_key and n.geography_key = c.geography_key and n.date_key = c.date_key
+             on regexp_replace(n.measure_key, '@[A-Z]$', '') = c.measure_key
+            and n.geography_key = c.geography_key and n.date_key = c.date_key
             and coalesce(n.breakdown_json, '') = coalesce(c.breakdown_json, '')
            group by 1 order by 1"""
     ).fetchall()
-    return {"poland_newest": newest, "curated_by_block": found}
+    missing = con.execute(
+        """with new as (select regexp_replace(o.measure_key, '@[A-Z]$', '') as k, o.geography_key, o.date_key,
+                               s.breakdown_json, o.value from o inner join s using (series_key))
+           select c.block_id, c.measure_key, c.geography_key, c.date_key::varchar, c.breakdown_json, c.value,
+                  (select list(distinct n.value) from new as n where n.k = c.measure_key
+                     and n.geography_key = c.geography_key and n.date_key = c.date_key) as rule_values
+           from cur as c where not exists (select 1 from new as n where n.k = c.measure_key
+             and n.geography_key = c.geography_key and n.date_key = c.date_key
+             and coalesce(n.breakdown_json, '') = coalesce(c.breakdown_json, '') and n.value = c.value)
+           limit 12"""
+    ).fetchall()
+    keys = con.execute("select block_id, measure_key, count(*) from cur group by all order by 1, 2 limit 20").fetchall()
+    return {"poland_newest": newest, "curated_by_block": found, "curated_not_matched": missing, "cur_keys": keys}
 
 
 def main() -> None:
@@ -330,28 +396,22 @@ def main() -> None:
     try:
         silver = obs.silver_blocks(cat, SOURCE)
         con = connect()
+        chan = channels(cat)
         try:
-            bdl = Bdl.shared()
-            attrs = bdl.get("/attributes", lang="pl", **{"page-size": 100})
-            annotate(
-                "notice",
-                "bdl trial: API attributes",
-                {
-                    "silver_blocks": len(silver),
-                    "silver_rows": sum(v["rows"] for v in silver.values()),
-                    "attributes": [
-                        [a.get("id"), a.get("symbol"), (a.get("description") or "")[:60]]
-                        for a in attrs.get("results") or []
-                    ],
-                },
-            )
-            chan = channels(cat)
             annotate("notice", "bdl trial: zeros by channel", zeros(con, silver, chan))
-            annotate(
-                "notice", "bdl trial: zeros against the API", {**api_compare(con, bdl), "api_requests": bdl.requests}
-            )
+            annotate("notice", "bdl trial: zeros and empty cells, one variable", same_variable(con))
         except Exception:
             annotate("error", "bdl trial: zero check failed", {"traceback": traceback.format_exc()[-3000:]})
+        try:
+            bdl = Bdl.shared()
+            probe = api_probe(bdl)
+            out = {"silver_blocks": len(silver), "silver_rows": sum(v["rows"] for v in silver.values()), **probe}
+            if probe.get("ok"):
+                out.update(api_compare(con, bdl))
+            out["api_requests"] = bdl.requests
+            annotate("notice", "bdl trial: zeros against the API", out)
+        except Exception:
+            annotate("error", "bdl trial: API compare failed", {"traceback": traceback.format_exc()[-3000:]})
         blocks = build_sample(silver)
         try:
             runs = {"guard": run("--continue-only")}
