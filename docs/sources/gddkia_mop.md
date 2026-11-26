@@ -27,7 +27,10 @@ workshop, waste disposal, shower, hydrogen, CNG, LNG, snow ramps).
 - **Gold:** `gold.build_gddkia_mop`, block `rest_areas`: `gddkia_mop:rest_areas:facilities`, the count of listed
   rest areas per edition month (frequency M), Poland and the 16 voivodeships (printed names matched to the TERYT
   names of dim_geography), breakdown current category as published and `_T`. `gold.gddkia_mop_rest_area`: entity
-  table of the newest edition keyed by Lp. Draft KPI `road_rest_areas` (no metrics model yet).
+  table of the newest edition keyed by Lp. Draft KPI `road_rest_areas` (no metrics model yet). Dev trial 45829412455
+  (edition 2026-09): 424 rest areas in Silver and the entity table, 63 Gold rows, Poland 424 (MOP funkcja podstawowa
+  189, komercyjna 159, Parking prywatny 70, Parking 6), voivodeships add up to Poland, no unmatched area. Lp. is the
+  only key: 13 combinations of branch, locality and name repeat (31 rows, e.g. private parkings named "OOUR").
 - **Left out:** the parking-place and the 17 amenity columns of the MOP table (to be profiled and typed first), the
   road-programme status PDF (no PDF text reader on the platform yet), its contractor and legend PDFs, and the
   road-obstruction XML feed on archiwum.gddkia.gov.pl (a live operational feed; the host did not answer runners).

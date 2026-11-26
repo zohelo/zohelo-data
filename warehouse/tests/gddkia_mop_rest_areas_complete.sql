@@ -1,6 +1,6 @@
 -- GDDKiA rest areas (models/silver/gddkia_mop/gddkia_mop_rest_areas.sql): a column role that stops matching or rows
 -- that are not read fail here. Rows returned = problems, per edition:
---   (1) at least 300 rest areas (measured: see ingestion/sources/gddkia_mop.yaml);
+--   (1) at least 300 rest areas (424 in the September 2026 edition, Dev trial 45829412455);
 --   (2) Lp. runs from 1 without gaps (the rows read are all the rows the producer numbered);
 --   (3) every row has its branch, locality and rest-area name.
 with editions as (
