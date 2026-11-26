@@ -3,13 +3,15 @@ description: "GDDKiA — existing rest areas (MOP) and parkings on national road
 
 # Extraction strategy (docs/landing.md). Register PL-ENV-023, Task #2995. Bulk feature: the page
 # https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop links one XLSX attachment "Tabela MOP - <month> <year> r."
-# (September 2026 edition: 89,285 bytes, one sheet "Arkusz1"; columns Lp., Oddział, Województwo, Zarządca,
-# Miejscowość, rest-area name, current and target category). Attachment uuids change per edition, so the page is the
+# (September 2026 edition: 89,285 bytes, one sheet "Arkusz1", 424 rows, 35 columns: Lp., Oddział, Województwo,
+# Zarządca, Miejscowość, rest-area name, current and target category, x, y, road class, road number, chainage,
+# direction, parking places, 17 amenity columns). Attachment uuids change per edition, so the page is the
 # entry (ingestion/to_landing/gddkia_mop/). Entity = one edition (mop_<yyyy>_<mm>, the month of the link text),
-# version = Last-Modified, a new attachment URL lands only when its bytes differ. Restart unit: one file. Dev probes
-# 43282997907 and 43288930412 (12 Nov 2026: page and workbook read from a runner). Left out of this source (register
-# entry): the road-programme status PDF (no PDF text reader yet) and the road-obstruction feed on archiwum.gddkia.gov.pl
-# (live operational feed, not reachable from runners).
+# version = Last-Modified when read, else download time; a new attachment URL lands only when its bytes differ.
+# Restart unit: one file. Dev probes 43282997907 and 43288930412 (12 Nov 2026: page and workbook read from a runner).
+# Left out (register entry): the parking-place and amenity columns (Silver reads 14 of the 35), the road-programme
+# status PDF (no PDF text reader yet) and the road-obstruction feed on archiwum.gddkia.gov.pl (live operational feed,
+# not reachable from runners).
 extraction:
   initial: bulk
   production: snapshot                  # each edition is the table as published for its month
