@@ -100,8 +100,11 @@ sources:
     connection: not-tested
     blockers:
     - 'Out of scope: AGENTS.md excludes Eurostat Comext (DS-*) from the Eurostat authorization; reopen only on an owner decision.'
-    - 'Commercial display: drop the excepted reporters and declarations first'
-    - 'Plan commodity-classification bridges'
+    - 'Re-review 26 Nov 2026 (Task #2916): still parked, reason re-confirmed on main (AGENTS.md "Authorizations": "Comext
+      (DS-*) is out of scope"). Not a technical reason: an owner exclusion; no probe needed. Trade in goods for Poland reaches
+      us through UNCTAD (GL-021) and the WTO files (GL-020).'
+    - Commercial display: drop the excepted reporters and declarations first
+    - Plan commodity-classification bridges
     references:
     - https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
     - https://ec.europa.eu/eurostat/data/database
@@ -464,7 +467,7 @@ sources:
   name: Enterprise Surveys
   short_name: World Bank Enterprise Surveys
   provider: World Bank
-  status: parked
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -474,35 +477,55 @@ sources:
   granularity: Anonymized firm response with survey weights; published indicators by economy/topic.
   coverage: Over 160 economies; survey years and panels vary; formal, informal and micro-enterprise programs differ.
   access:
-    endpoint: https://www.enterprisesurveys.org/en/enterprisesurveys
-    kind: bulk_file
-    interfaces: [HTML, registered download]
-    auth: registration for granular files
+    endpoint: https://data360api.worldbank.org/data360/data?DATABASE_ID=WB_ES
+    kind: api
+    interfaces: ['World Bank Data360 REST API (JSON; paging with skip; indicator list /data360/indicators?datasetId=WB_ES)',
+                 HTML, 'microdata portal (registered, not used)']
+    auth: None for the Data360 API; microdata only after login under the Data Access Protocol (not used).
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: None published; one page answers up to 1,000 observations (`count` gives the total, `skip` pages), as for GL-031.
   licence:
-    status: restricted
-    notes: 'Terms: https://www.enterprisesurveys.org/en/citing-the-data — microdata only through a Data Portal login
-      under the signed Data Access Protocol; downloaded datasets may not be passed to third parties (no public
-      redistribution); no open licence is stated; reuse terms of the published economy/topic indicators are not
-      stated. Attribution: "Source: World Bank Enterprise Surveys, www.enterprisesurveys.org" with the dataset
-      name and publication date.'
+    status: unresolved
+    notes: 'Terms: two statements for the site read (the World Bank), none labelling WB_ES itself. (1) World Bank Dataset Terms
+      https://www.worldbank.org/ext/en/legal/terms-conditions/datasets (read by the runner 26 Nov 2026): "Unless specifically
+      labeled otherwise, these Datasets are provided to you under a Creative Commons Attribution 4.0 International License
+      (CC BY 4.0), with the additional terms below."; https://data.worldbank.org/summary-terms-of-use (same run): "Unless
+      indicated otherwise in the data or indicator metadata, you are free to copy, distribute, adapt, display or include
+      the data in other products for commercial or noncommercial purposes at no cost under a Creative Commons Attribution
+      4.0 International License"; both also say some datasets "are provided by third parties, and may not be redistributed
+      or reused without the consent of the original data provider". (2) Enterprise Surveys https://www.enterprisesurveys.org/en/citing-the-data
+      (same run): users may not pass on microdata, "as that would violate the terms of the “Data Access Protocol” signed
+      when gaining access to the Data Portal"; nothing on the published indicators. The WB_ES catalogue label could not be
+      read (the catalogue API answered HTTP 429), so the status stays unresolved and the source internal until the label
+      is read. Microdata are not used. Attribution if published: "Source: World Bank Enterprise Surveys, www.enterprisesurveys.org".'
   updates: Country survey releases are episodic; panel and expanded files appear separately.
   ingestion:
-    history: Archive complete named releases with metadata and vintage.
-    incremental: Reload a named release or affected period after publication; no CDC.
-    identifiers: Use published economy and indicator IDs; preserve survey/round/vintage where applicable.
+    history: 'Full load of the Data360 dataset WB_ES: 1,196,747 observations (count of the first page), about 1,200 pages of
+      1,000; indicator list 12,414 bytes (WB_ES_M_*, WB_ES_S_*, WB_ES_T_* codes). Rows carry INDICATOR, REF_AREA (ISO3), TIME_PERIOD,
+      FREQ "A", UNIT_MEASURE, OBS_VALUE, OBS_STATUS, OBS_CONF, DECIMALS and breakdowns (SEX, AGE, URBANISATION, COMP_BREAKDOWN_1-3).'
+    incremental: 'Snapshot per survey release: Enterprise Surveys publish one economy at a time; reload the dataset monthly
+      at most (O46: weekly runs at most) and keep the newest TIME_PERIOD per economy and indicator; LATEST_DATA marks the
+      newest value.'
+    identifiers: INDICATOR + REF_AREA + TIME_PERIOD + breakdown codes.
   modelling:
-    notes: Model observations at stated grain; retain uncertainty, status, unit, source and methodology fields.
-    overlap: Firm data are distinct from business registers; overlaps WDI aggregate business indicators only.
+    notes: 'Smallest Gold selection: the Enterprise Surveys indicators for Poland and the EU economies (firms reporting corruption,
+      access to finance as an obstacle, female top manager, days to obtain an operating licence, share of firms with a website),
+      one value per survey year (FREQ A, survey years irregular). Keep OBS_STATUS and OBS_CONF; a missing value is not zero.
+      WDI repeats about 20 of these (IC.FRM.*): keep both, the WDI copy stays the published one.'
+    overlap: WDI (GL-005) carries a subset (IC.FRM.*, IC.TAX.*); firm data are distinct from business registers.
   research:
     priority: specialist
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: microdata licence forbids redistribution; indicator reuse terms not stated'
-    - 'Microdata may not be redistributed; reuse terms of the published indicators are not stated'
-    - 'Apply disclosure and survey-weight rules'
+    - 'Re-review 26 Nov 2026 (Task #2916): approved for internal build through the World Bank Data360 API; the old parking
+      reason (microdata licence) does not touch the published indicators. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+      https://data360api.worldbank.org/data360/data?DATABASE_ID=WB_ES&top=3&skip=0 HTTP 200 (count 1,196,747); Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+      /data360/indicators?datasetId=WB_ES HTTP 200 (12,414 bytes), World Bank Dataset Terms and Summary Terms of Use read;
+      the World Bank Data Catalog search API answered HTTP 429 (not retried).'
+    - 'Licence unresolved: internal only until the WB_ES catalogue label is read (CC BY 4.0 under the Dataset Terms unless
+      labelled otherwise).'
+    - 'Apply disclosure and survey-weight rules: indicators are survey estimates; keep the survey year as published.'
     references:
     - https://www.enterprisesurveys.org/en/enterprisesurveys
     - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
@@ -556,7 +579,7 @@ sources:
   name: World Economic Outlook (WEO) Database
   short_name: IMF WEO
   provider: International Monetary Fund
-  status: parked
+  status: reviewing
   family: A
   kpi: true
   geography: worldwide
@@ -593,14 +616,24 @@ sources:
       official observations.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
-      owner to request it from copyright@imf.org'
-    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
-    - 'Resolve API account and production status'
-    - 'Seek/record IMF response for intended commercial reuse'
+    - 'Owner question: the IMF terms (https://www.imf.org/en/about/copyright-and-terms, read by the runner 26 Nov 2026) let
+      users "download, extract, copy, create derivative works, publish, distribute, and use Data" with attribution, but also
+      say "The IMF prohibits bulk download of information by automated technology without explicit permission" and "For
+      any potential commercial reuse of IMF Data, email copyright@imf.org to request permission." The IMF''s own API answers
+      GitHub runners (api.imf.org SDMX 2.1 dataflow list HTTP 200; DataMapper API HTTP 200). Do you want to email copyright@imf.org
+      asking for explicit permission to load WEO, IFS and DOTS for Poland, the EU and comparator countries through api.imf.org
+      on a weekly schedule (one request at a time) and to show them on zohelo.com and bi.zohelo.com, or leave the IMF datasets
+      out (Eurostat, OECD, ECB, BIS, World Bank and UNCTAD cover most of the same series and are loaded)?'
+    - 'Re-review 26 Nov 2026 (Task #2916): the parking reason stands and is now an owner question (one question for GL-012,
+      GL-013 and GL-014). Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+      the terms page (8,161 characters) still carries the bulk-download sentence above; https://data.imf.org/en/Resource-Pages/IMF-API
+      points to https://portal.api.imf.org/apis; https://api.imf.org/external/sdmx/2.1/dataflow/all/all/latest HTTP 200
+      (463,527 bytes, SDMX structure) and https://www.imf.org/external/datamapper/api/v1/indicators HTTP 200 (48,417 bytes).
+      Route and licence are otherwise known: with the permission, WEO is built through api.imf.org (SDMX, one dataflow at
+      a time).'
     references:
     - https://data.imf.org/en/datasets/IMF.RES%3AWEO
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -609,7 +642,7 @@ sources:
   name: International Financial Statistics (IFS)
   short_name: IMF IFS
   provider: International Monetary Fund
-  status: parked
+  status: reviewing
   family: A
   kpi: true
   geography: worldwide
@@ -644,15 +677,24 @@ sources:
     overlap: Overlaps national, WDI, BIS and trade aggregators; keep IMF as a separately sourced observation.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
-      owner to request it from copyright@imf.org'
-    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
-    - 'Inventory current dataflows and coverage'
-    - 'Resolve API account status'
-    - 'Seek/record commercial-reuse permission'
+    - 'Owner question: the IMF terms (https://www.imf.org/en/about/copyright-and-terms, read by the runner 26 Nov 2026) let
+      users "download, extract, copy, create derivative works, publish, distribute, and use Data" with attribution, but also
+      say "The IMF prohibits bulk download of information by automated technology without explicit permission" and "For
+      any potential commercial reuse of IMF Data, email copyright@imf.org to request permission." The IMF''s own API answers
+      GitHub runners (api.imf.org SDMX 2.1 dataflow list HTTP 200; DataMapper API HTTP 200). Do you want to email copyright@imf.org
+      asking for explicit permission to load WEO, IFS and DOTS for Poland, the EU and comparator countries through api.imf.org
+      on a weekly schedule (one request at a time) and to show them on zohelo.com and bi.zohelo.com, or leave the IMF datasets
+      out (Eurostat, OECD, ECB, BIS, World Bank and UNCTAD cover most of the same series and are loaded)?'
+    - 'Re-review 26 Nov 2026 (Task #2916): the parking reason stands and is now an owner question (one question for GL-012,
+      GL-013 and GL-014). Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+      the terms page (8,161 characters) still carries the bulk-download sentence above; https://data.imf.org/en/Resource-Pages/IMF-API
+      points to https://portal.api.imf.org/apis; https://api.imf.org/external/sdmx/2.1/dataflow/all/all/latest HTTP 200
+      (463,527 bytes, SDMX structure) and https://www.imf.org/external/datamapper/api/v1/indicators HTTP 200 (48,417 bytes).
+      Route and licence are otherwise known: with the permission, IFS is built through api.imf.org (SDMX, one dataflow at
+      a time).'
     references:
     - https://data.imf.org/
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -661,7 +703,7 @@ sources:
   name: Direction of Trade Statistics (DOTS)
   short_name: IMF DOTS
   provider: International Monetary Fund
-  status: parked
+  status: reviewing
   family: A
   kpi: true
   geography: worldwide
@@ -696,15 +738,24 @@ sources:
     overlap: Overlaps national, WDI, BIS and trade aggregators; keep IMF as a separately sourced observation.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: IMF terms prohibit bulk download by automated technology without explicit permission (https://www.imf.org/en/about/copyright-and-terms);
-      owner to request it from copyright@imf.org'
-    - 'Automated bulk download needs explicit IMF permission (copyright@imf.org)'
-    - 'Inventory current dataflows and coverage'
-    - 'Resolve API account status'
-    - 'Seek/record commercial-reuse permission'
+    - 'Owner question: the IMF terms (https://www.imf.org/en/about/copyright-and-terms, read by the runner 26 Nov 2026) let
+      users "download, extract, copy, create derivative works, publish, distribute, and use Data" with attribution, but also
+      say "The IMF prohibits bulk download of information by automated technology without explicit permission" and "For
+      any potential commercial reuse of IMF Data, email copyright@imf.org to request permission." The IMF''s own API answers
+      GitHub runners (api.imf.org SDMX 2.1 dataflow list HTTP 200; DataMapper API HTTP 200). Do you want to email copyright@imf.org
+      asking for explicit permission to load WEO, IFS and DOTS for Poland, the EU and comparator countries through api.imf.org
+      on a weekly schedule (one request at a time) and to show them on zohelo.com and bi.zohelo.com, or leave the IMF datasets
+      out (Eurostat, OECD, ECB, BIS, World Bank and UNCTAD cover most of the same series and are loaded)?'
+    - 'Re-review 26 Nov 2026 (Task #2916): the parking reason stands and is now an owner question (one question for GL-012,
+      GL-013 and GL-014). Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+      the terms page (8,161 characters) still carries the bulk-download sentence above; https://data.imf.org/en/Resource-Pages/IMF-API
+      points to https://portal.api.imf.org/apis; https://api.imf.org/external/sdmx/2.1/dataflow/all/all/latest HTTP 200
+      (463,527 bytes, SDMX structure) and https://www.imf.org/external/datamapper/api/v1/indicators HTTP 200 (48,417 bytes).
+      Route and licence are otherwise known: with the permission, DOTS is built through api.imf.org (SDMX, one dataflow at
+      a time).'
     references:
     - https://data.imf.org/
     - https://data.imf.org/en/Resource-Pages/IMF-API
@@ -874,7 +925,7 @@ sources:
   name: Global SDG Indicators Database and API
   short_name: UN SDG Indicators
   provider: United Nations Statistics Division
-  status: parked
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -884,39 +935,44 @@ sources:
   granularity: Indicator/series/geography/time with SDG disaggregations, nature/status and source attributes.
   coverage: Global reporting for the 2030 Agenda; time and country coverage vary by indicator.
   access:
-    endpoint: https://unstats.un.org/SDGAPI/swagger/
+    endpoint: https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false
     kind: api
-    interfaces: [HTML, SDMX REST API, Swagger, bulk-files]
+    interfaces: ['SDG API v1 (JSON: Goal/List, Series/List, Series/Data per series code)', Swagger, HTML]
     auth: public
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: None published; one series at a time.
   licence:
     status: unresolved
-    notes: 'No data-specific terms found (28 Oct 2026): the SDG data portal and SDG API pages (https://unstats.un.org/sdgs/dataportal,
-      https://unstats.un.org/SDGAPI/swagger/) state no licence or reuse terms; their footer links only the UN website
-      terms (https://www.un.org/en/about-us/terms-of-use: personal, non-commercial use; no redistribution or derivative
-      works), which are website terms, not database terms. Many series come from custodian agencies with their own terms.
-      Owner decision needed (noted on the Epic issue): ask UNSD (statistics@un.org) or treat as restricted. Attribution
-      if allowed: "Source: UN DESA, Global SDG Indicators Database, https://unstats.un.org/sdgs/dataportal".'
+    notes: 'Terms: none for the database. The SDG data portal and indicator database pages are JavaScript shells (https://unstats.un.org/sdgs/dataportal
+      gave 5 characters of text and https://unstats.un.org/sdgs/indicators/database/ none to the runner on 26 Nov 2026), and
+      the API states no licence; the UN website terms (https://www.un.org/en/about-us/terms-of-use, read 28 Oct 2026: personal,
+      non-commercial use) are website terms. The UNdata terms (https://data.un.org/Host.aspx?Content=UNdataUse, read by
+      the runner 26 Nov 2026: "All data and metadata provided on UN data''s website are available free of charge and may
+      be copied freely, duplicated and further distributed provided that UN data is cited as the reference.") cover data.un.org,
+      not this API. Commercial reuse and modification: not stated, so unresolved and internal. Many series come from custodian
+      agencies with their own terms. Attribution if published: "Source: UN DESA, Global SDG Indicators Database, https://unstats.un.org/sdgs/dataportal".'
   updates: Custodian submissions and global releases revise past observations; cadence varies by series.
   ingestion:
     history: Snapshot global release, data structures, codelists and metadata.
     incremental: Reload release partitions or changed indicator-period keys; no CDC.
     identifiers: SDG series code + geoAreaCode + timePeriod + complete disaggregation key.
   modelling:
-    notes: Many ratios, rates and global/regional aggregates are non-additive; retain nature and reporting-status
-      flags.
+    notes: 'Smallest Gold selection: the SDG series reported for Poland (geoAreaCode 616) and the EU countries, one measure per
+      series code and frequency (mostly annual), with the disaggregation key as breakdown; ratios, rates and regional aggregates
+      are non-additive; keep the nature (C, CA, E, M, G, N) and reporting-status attributes. Series that are already loaded
+      from their custodian (WHO, ILO, FAO, UNESCO, World Bank) stay published from the custodian.'
     overlap: Custodian sources overlap WHO, ILO, FAO, UNESCO, UNICEF, WDI and Eurostat SDG sets.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: reuse terms unresolved (no database licence; UN website terms are non-commercial); owner decision noted
-      on the Epic'
-    - 'Reuse terms unresolved: no database licence; UN website terms are non-commercial (owner decision)'
-    - 'Open current API guide beyond Swagger shell'
-    - 'Map global versus national SDG series'
+    - 'Re-review 26 Nov 2026 (Task #2916): approved for internal build. The parking reason (no database licence) is not a reason
+      to skip an internal build; the route is the SDG API. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+      https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?includechildren=false HTTP 200 (7,910 bytes JSON); Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+      https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false HTTP 200 (181,379 bytes JSON).'
+    - 'Licence unresolved: internal only until UNSD states reuse terms for the database (non-blocking owner option: ask statistics@un.org).'
+    - 'Builder: page Series/Data per series code for Poland and EU geoAreaCodes; count the series and rows before scheduling.'
     references:
     - https://unstats.un.org/SDGAPI/swagger/
     - https://unstats.un.org/sdgs/dataportal
@@ -925,7 +981,7 @@ sources:
   name: UN Comtrade
   short_name: UN Comtrade
   provider: United Nations Statistics Division
-  status: parked
+  status: reviewing
   family: A
   kpi: true
   geography: worldwide
@@ -938,17 +994,19 @@ sources:
   access:
     endpoint: https://comtradeplus.un.org/
     kind: api
-    interfaces: [HTML, REST API, bulk-files]
-    auth: public tier plus subscription-key plans; exact current tiers unresolved
-    cost: mixed
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    interfaces: [HTML, 'REST API (comtradeapi.un.org, subscription key)', bulk files (premium)]
+    auth: 'Subscription key from a UN Comtrade account for the API; bulk files for premium subscribers (comtradeplus.un.org:
+      "Premium subscribers get bulk files and higher limits")'
+    cost: free tier with a key; premium paid
+    limits: Per the subscription plan (help pages "Subscription Plans", "Acquiring API Subscription Keys"); not read in detail.
   licence:
-    status: restricted
-    notes: 'Terms: UN Comtrade licence agreement, https://comtrade.un.org/licenseagreement.html (s.5: "any copying,
-      automated browsing or downloading, redistribution, publication, or commercial exploitation" needs prior written
-      permission from the Director of the UN Statistics Division; s.6 provided "as is"); Comtrade+ (comtradeplus.un.org)
-      shows no separate terms. Public display is not allowed without that permission. Attribution if permitted: "Source:
-      United Nations, UN Comtrade Database (comtradeplus.un.org)"; keep authorship and copyright notices.'
+    status: unresolved
+    notes: 'Terms: not settled for the current site. The licence agreement recorded on 28 Oct 2026 (https://comtrade.un.org/licenseagreement.html,
+      s.5: "any copying, automated browsing or downloading, redistribution, publication, or commercial exploitation" needs
+      prior written UNSD permission) now answers HTTP 404 (runner, 26 Nov 2026). The help centre https://uncomtrade.org/docs/
+      lists "Policy on Comtrade Data Use" and "Re-dissemination of data" pages, which were not read in this run. Until they
+      are read the status is unresolved, and the old s.5 wording is the last known reading (no public display without UNSD
+      permission). Attribution if permitted: "Source: United Nations, UN Comtrade Database (comtradeplus.un.org)".'
   updates: Reporter revisions and classification changes occur; monthly/annual observations differ.
   ingestion:
     history: Bulk by period/classification where licensed; archive raw release metadata.
@@ -959,13 +1017,21 @@ sources:
     overlap: Overlaps Eurostat Comext, WTO and UNCTAD; asymmetries and methodological differences are expected.
   research:
     priority: review-first
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: UN Comtrade licence forbids redistribution and publication without written UNSD permission'
-    - 'Redistribution and publication need written UNSD permission (licence agreement s.5)'
-    - 'Document current API tiers/quotas'
-    - 'Design classification concordances'
+    - 'Owner question: UN Comtrade serves its data only through an API that needs a subscription key from a UN Comtrade account
+      (bulk files only for paid premium subscribers), and its last known licence (s.5 of the former licence agreement) required
+      written UNSD permission for automated downloading, redistribution and publication; the current "Policy on Comtrade
+      Data Use" was not read. Do you want to create a free UN Comtrade account and API key for zohelo (and accept its data-use
+      policy), so that Poland''s goods trade by partner and HS chapter is loaded for internal use, or leave Comtrade out and
+      rely on UNCTAD (GL-021) and the WTO files (GL-020) for trade aggregates (Eurostat Comext is out of scope)?'
+    - 'Re-review 26 Nov 2026 (Task #2916): Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): comtradeplus.un.org answered
+      (5,195 characters: API documentation, bulk files and tariff-line files for premium subscribers); https://uncomtrade.org/docs/
+      answered (help centre); https://comtrade.un.org/licenseagreement.html HTTP 404. Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+      https://uncomtrade.org/docs/api-subscription-keys/ and /docs/bulk-files-2/ answered (their policy links listed, not
+      followed). Not parked: an account and key are an owner decision.'
+    - Design classification concordances
     references:
     - https://comtradeplus.un.org/
     - https://comtradeapi.un.org/swagger/index.html
@@ -974,7 +1040,7 @@ sources:
   name: WTO Stats
   short_name: WTO Stats
   provider: World Trade Organization
-  status: parked
+  status: approved
   family: A
   kpi: true
   geography: worldwide
@@ -985,38 +1051,50 @@ sources:
     time series.
   coverage: WTO members and broader economies depending dataset; histories vary.
   access:
-    endpoint: https://timeseries.wto.org/
-    kind: api
-    interfaces: [HTML, CSV download, API]
-    auth: public portal; API/auth conditions unresolved
+    endpoint: https://www.wto.org/english/res_e/statis_e/trade_datasets_e.htm
+    kind: bulk_file
+    interfaces: ['Bulk ZIP/CSV/XLSX files on www.wto.org (OECD-WTO BaTIS, TiSMoS)', 'Timeseries API (api.wto.org, key required:
+        HTTP 401 without)', 'HTML']
+    auth: None for the bulk files; a free API key from apiportal.wto.org for the Timeseries API (not used).
     cost: free
-    limits: Unknown; no explicit numeric quota found in reviewed documentation.
+    limits: None published for the files.
   licence:
     status: unresolved
-    notes: 'No terms found for the WTO Stats portal or its API (28 Oct 2026): https://www.wto.org/english/res_e/statis_e/statis_e.htm
-      and https://apiportal.wto.org/ ("free"; footer "Copyright and permissions" page not retrievable) state no licence.
-      The only explicit WTO data terms found are for a different product (Tariff and Trade Data, https://ttd.wto.org/docs/Terms_of_Use_WTO_Tariff_and_Trade_Data.pdf:
-      non-commercial use, WTO acknowledged as source, user disclaimer, mass downloads prohibited without permission).
-      Owner decision needed (noted on the Epic issue). Attribution if allowed: "Source: World Trade Organization, WTO
-      Stats".'
+    notes: 'Terms: WTO "Copyright and permissions" https://www.wto.org/english/info_e/copyrights_permissions_e.htm (linked from
+      apiportal.wto.org, read by the runner 26 Nov 2026): "This site and its contents are the copyright of the World Trade
+      Organization."; "Other material such as official publications can be reproduced for non-commercial purposes provided
+      attribution is given to the WTO and the WTO is informed. Commercial use of materials from the website requires written
+      permission from the WTO." No terms specific to the data files; BaTIS is a joint OECD-WTO dataset. Commercial reuse:
+      not allowed without permission; modification: not stated. Unresolved: internal only. Attribution if published: "Source:
+      WTO, <dataset> (OECD-WTO BaTIS / TiSMoS)".'
   updates: Release calendars and revisions vary; no common cadence found.
   ingestion:
-    history: Snapshot named datasets with metadata and classifications.
-    incremental: Reload changed releases/periods; do not infer CDC.
-    identifiers: WTO indicator/dataset code + economy/partner/product/period.
+    history: 'Bulk: the "Bulk download of select statistics" page lists nine files (Dev probe run 45855054117): OECD-WTO_BATIS_data_BPM6-1.zip
+      (534,470,198 bytes, Last-Modified 25 Nov 2026), OECD-WTO_BATIS_codes_BPM6-1.zip (31,374 bytes), the older BPM5 OECD-WTO_BATIS_data.zip
+      (104,034,363 bytes, 2017) and its codes, Tismos_imports.zip, Tismos_exports.zip, Tismos_codes.xlsx, Tismos_addendum_FATS.csv
+      and Tismos.zip ("Download all"; sizes not measured).'
+    incremental: 'Snapshot per file version (Last-Modified/ETag); the BaTIS BPM6 file is rebuilt on update (25 Nov 2026); the
+      BPM5 file is frozen (2017) and loaded once if at all.'
+    identifiers: Reporter, partner, service item (EBOPS 2010), year, flow; TiSMoS adds mode of supply.
   modelling:
-    notes: Separate trade flows, tariffs and indices; aggregates and overlapping product levels are non-additive.
-    overlap: Trade values overlap UN Comtrade/UNCTAD; WTO may derive or harmonize sources.
+    notes: 'Smallest Gold selection: Poland''s trade in services by partner and EBOPS main item (exports, imports), annual,
+      from BaTIS BPM6; then TiSMoS services trade by mode of supply for Poland. Balanced (estimated) values are not reported
+      statistics: keep the flag. The goods time series of the Timeseries API stay out (key).'
+    overlap: Overlaps UNCTAD services trade (GL-021), Eurostat and OECD trade-in-services data; BaTIS is the reconciled OECD-WTO
+      matrix.
   research:
     priority: review-next
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: reuse terms unresolved (no published WTO Stats terms; related WTO data terms are non-commercial); owner
-      decision noted on the Epic'
-    - 'Reuse terms unresolved: no published terms for WTO Stats; related WTO data terms are non-commercial (owner decision)'
-    - 'Locate current official API documentation'
-    - 'Confirm dataset lineage'
+    - 'Re-review 26 Nov 2026 (Task #2916): approved for internal build through the bulk files on www.wto.org; the parking
+      reason (terms) does not stop an internal build. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): https://www.wto.org/english/res_e/statis_e/statis_e.htm
+      links "Bulk download of select statistics"; stats.wto.org is a JavaScript shell; https://api.wto.org/timeseries/v1/indicators
+      HTTP 401 (key). Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026): the bulk page lists nine files; HEAD of the first three HTTP 200
+      (sizes above); the copyright page read.'
+    - 'Licence unresolved: non-commercial reproduction with attribution and informing the WTO; internal only until the WTO
+      grants more (non-blocking owner option: write to the WTO, and a free Timeseries API key for goods trade).'
+    - 'Builder: BaTIS BPM6 is 534 MB zipped: stream it and keep Poland as reporter or partner (and EU aggregates) in Silver.'
     references:
     - https://timeseries.wto.org/
     - https://www.wto.org/english/res_e/statis_e/statis_e.htm
@@ -1183,7 +1261,7 @@ sources:
   name: Global Health Observatory (GHO) OData API
   short_name: WHO GHO
   provider: World Health Organization
-  status: parked
+  status: reviewing
   family: A
   kpi: true
   geography: worldwide
@@ -1218,14 +1296,21 @@ sources:
     overlap: Overlaps WDI, UNICEF, SDG database and data.who.int; migration path must avoid duplicate canonicals.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: GHO terms allow use for public health purposes only and forbid alteration without WHO written authorization;
-      the same indicators come from data.who.int (GL-025, CC BY 4.0)'
-    - 'Prefer data.who.int (GL-025, CC BY 4.0) for overlapping series; GHO terms forbid alteration without WHO authorization'
-    - 'Confirm legacy GHO deprecation plan'
-    - 'Map overlap with data.who.int datasets'
+    - 'Owner question: the GHO terms (https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions, read by
+      the runner 26 Nov 2026) grant a right "to use, reproduce, extract, download, copy, distribute, display or include the
+      Datasets and data contained therein in other products for public health purposes", and say that changes beyond minor
+      style edits "may be made only with the prior written authorization of WHO"; the same WHO indicators published on
+      data.who.int are CC BY 4.0 and loaded (GL-025, `who`). Do you want to ask WHO for written authorization to load the
+      GHO indicators that are not on data.who.int and show them on zohelo.com and bi.zohelo.com, or keep GHO out and use
+      only data.who.int?'
+    - 'Re-review 26 Nov 2026 (Task #2916): Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): the GHO terms page (9,208 characters),
+      the data.who.int terms page https://data.who.int/about/data/terms-and-conditions (8,411 characters, links CC BY 4.0)
+      and the GHO OData API page answered. Not "contained": data.who.int does not yet carry every GHO indicator, so the entry
+      waits for the owner instead of being parked as contained.'
+    - 'Prefer data.who.int (GL-025, CC BY 4.0) for overlapping series.'
     references:
     - https://www.who.int/data/gho/info/gho-odata-api
     - https://data.who.int/about/data/terms-and-conditions
@@ -1337,7 +1422,7 @@ sources:
   name: UNICEF Data Warehouse Explorer and SDMX API
   short_name: UNICEF Data Warehouse
   provider: United Nations Children’s Fund
-  status: parked
+  status: reviewing
   family: A
   kpi: true
   geography: worldwide
@@ -1371,13 +1456,21 @@ sources:
     overlap: Overlaps WHO, UIS, WDI and SDG database; UNICEF may be custodian or downstream.
   research:
     priority: review-first
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: reuse terms unresolved (no data licence; UNICEF site terms are personal/educational use only); owner
-      decision noted on the Epic'
-    - 'Reuse terms unresolved: no data licence; UNICEF site terms are personal/educational use only (owner decision)'
-    - 'Avoid labels-only CSV as exchange key'
+    - 'Owner question: UNICEF states no data licence that the platform can read: data.unicef.org (its terms, open-data and
+      SDMX documentation pages) refuses GitHub runners (robots.txt HTTP 403, not worked around), and the UNICEF legal page
+      https://www.unicef.org/legal (read by the runner 26 Nov 2026) says "The use of UNICEF Internet material for any purpose,
+      including repackaging in hard copy or compilation for CD-ROM or any other electronic media, is prohibited unless prior
+      written permission is obtained." The SDMX API itself answers (https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/all/all/latest
+      HTTP 200). Do you want to ask UNICEF (data@unicef.org) for written permission to load child-related indicators for
+      Poland and the EU from the SDMX API and show them, or leave UNICEF out (most series come from WHO, UNESCO, ILO and
+      the World Bank, which are loaded)?'
+    - 'Re-review 26 Nov 2026 (Task #2916): Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): data.unicef.org robots.txt HTTP 403 for
+      /open-data/, /terms-of-use/ and /sdmx-api-documentation/; www.unicef.org/legal 48,308 characters; the SDMX dataflow
+      list HTTP 200 (25,687 bytes). Route known (SDMX REST, one dataflow at a time); the licence is the open item.'
+    - Avoid labels-only CSV as exchange key
     references:
     - https://data.unicef.org/sdmx-api-documentation/
     - https://www.unicef.org/legal
@@ -1518,12 +1611,17 @@ sources:
     overlap: Strong overlap with UNHCR, UN DESA, ILO, World Bank and national sources; prefer upstream.
   research:
     priority: conditional
-    evidence: catalogue-only
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
     - 'Parked: IOM terms forbid redistribution and derivatives without written permission; use the upstream sources'
+    - 'Re-review 26 Nov 2026 (Task #2916): still parked. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026) and Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+      https://www.migrationdataportal.org/terms-use answered HTTP 503 twice (the portal home page answered and still links
+      "Terms of use"), so the terms of 28 Oct 2026 are the last reading (personal, non-commercial use; no derivative works;
+      extraction needs IOM''s prior written permission). No API or bulk file is offered. The portal republishes other producers''
+      data: migrant stock and remittances are in WDI (GL-005, SM.POP.TOTL, BX.TRF.PWKR.CD.DT), refugees in UNHCR (GL-029);
+      re-check the terms page when it answers.'
     - 'Redistribution and derivatives need IOM written permission; use upstream sources'
-    - 'No stable API/bulk interface identified'
     references:
     - https://www.migrationdataportal.org/
     - https://www.migrationdataportal.org/terms-use
