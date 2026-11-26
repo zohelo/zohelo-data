@@ -339,5 +339,54 @@ def main():
     emit("parked4 errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
 
 
+PAGES2 = ["https://www.worldbank.org/ext/en/legal/terms-conditions/datasets", "https://data.worldbank.org/summary-terms-of-use",
+          "https://www.wto.org/english/res_e/statis_e/trade_datasets_e.htm", "https://apiportal.wto.org/",
+          "https://uncomtrade.org/docs/api-subscription-keys/", "https://uncomtrade.org/docs/bulk-files-2/", "https://comtradeplus.un.org/",
+          "https://www.migrationdataportal.org/terms-use", "https://www.unicef.org/legal", "https://data.un.org/Host.aspx?Content=UNdataUse"]
+RAW2 = ["https://data360api.worldbank.org/data360/indicators?datasetId=WB_ES",
+        "https://datacatalogapi.worldbank.org/ddhxext/Search?qname=dataset&qterm=Enterprise%20Surveys&$top=5",
+        "https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false"]
+
+
+def two():
+    res = {}
+    for u in PAGES2:
+        got = page(u, text=200)
+        if not got:
+            res[tag(u)[:60]] = ERR[-1][-70:] if ERR else "failed"
+            continue
+        p, ll, t = got
+        snips = around(p, TERMS, 50, 900, 14)
+        for s in snips:
+            print(f"  TERMS {s}", flush=True)
+        files = [(a, x) for a, x in ll if re.search(r"(?i)\.(xlsx?|csv|zip|json)(\?|$)", x)]
+        for a, x in files[:60]:
+            print(f"  FILE {a} | {x}", flush=True)
+        tl = [(a, x) for a, x in ll if re.search(r"(?i)copyright|terms|licen|polic|permission", a + " " + x)]
+        for a, x in tl[:30]:
+            print(f"  TLINK {a} | {x}", flush=True)
+        end()
+        heads = []
+        for a, x in files[:3]:
+            h = get(x, method="HEAD", timeout=60)
+            heads.append({"u": x[-70:], "st": h.get("st") or h.get("err"), "len": h.get("len"), "lm": h.get("lm")})
+        fol = {}
+        for a, x in [f for f in tl if re.search(r"(?i)copyright|terms", f[0])][:2]:
+            g = page(x, text=200)
+            if g:
+                for s in around(g[0], TERMS, 50, 900, 10):
+                    print(f"  TERMS2 {s}", flush=True)
+                end()
+                fol[x[-60:]] = len(g[0])
+        res[tag(u)[:60]] = {"chars": len(p), "files": len(files), "heads": heads, "follow": fol}
+    for u in RAW2:
+        r = rawget(u, 3000000, 4000)
+        res["raw " + tag(u)[:55]] = {k: r.get(k) for k in ("st", "ct", "len", "err") if r.get(k)}
+    emit("parked4b pages", res)
+    emit("parked4b errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+
+    {"two": two}.get((sys.argv[1:] or ["main"])[0], main)()
