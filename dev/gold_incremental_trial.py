@@ -110,6 +110,30 @@ def pyiceberg_blocks(cat, name: str) -> dict[str, list]:
     return out
 
 
+KEY = ("gold_block", "measure_key", "geography_key", "breakdown_json", "date_key", "value")
+
+
+def exact_rows(con, cat, table: str, name: str) -> dict:
+    """Every row (KEY columns) read by DuckDB and by a PyIceberg scan, compared exactly as sorted lists."""
+    cols = ", ".join(KEY)
+    duck = sorted(tuple(r) for r in con.execute(f"SELECT {cols} FROM {table}").fetchall())
+    arrow = cat.load_table((NAMESPACE, name)).scan(selected_fields=KEY).to_arrow()
+    py = sorted(zip(*(arrow.column(c).to_pylist() for c in KEY), strict=True))
+    return {
+        "rows": len(duck),
+        "equal": duck == py,
+        "only_duckdb": len(set(duck) - set(py)),
+        "only_py": len(set(py) - set(duck)),
+    }
+
+
+def close(a: dict, b: dict) -> bool:
+    """Same blocks, same counts, sums equal to 1e-9 relative (float sums depend on the order of addition)."""
+    return a.keys() == b.keys() and all(
+        a[k][0] == b[k][0] and abs((a[k][1] or 0) - (b[k][1] or 0)) <= 1e-9 * max(1.0, abs(a[k][1] or 0)) for k in a
+    )
+
+
 def snapshot_info(cat, name: str) -> dict:
     table = cat.load_table((NAMESPACE, name))
     snap = table.current_snapshot()
@@ -134,11 +158,11 @@ def expect(step: dict, before: dict, after: dict, changed: str, removed: str, ze
     for block, value in before.items():
         if block in (changed, removed):
             continue
-        if after.get(block) != value:
+        if block not in after or not close({block: value}, {block: after[block]}):
             problems.append(f"untouched {block}: {value} -> {after.get(block)}")
     if removed in after:
         problems.append(f"removed {removed} still has {after[removed]}")
-    if after.get(changed) != new_rows:
+    if changed not in after or not close({changed: new_rows}, {changed: after[changed]}):
         problems.append(f"changed {changed}: expected {new_rows}, got {after.get(changed)}")
     if zero in after:
         problems.append(f"zero-row block {zero} has rows")
@@ -156,7 +180,7 @@ def step_duckdb(con, cat, table: str, name: str, blocks: list[str], explicit: bo
     con.execute(f"CREATE OR REPLACE TEMP TABLE staged AS SELECT * FROM {table} WHERE gold_block = '{changed}'")
     con.execute("DELETE FROM staged WHERE hash(measure_key, geography_key, breakdown_json, date_key) % 2 = 0")
     con.execute("UPDATE staged SET value = value + 1")
-    new_rows = list(con.execute("SELECT count(*), round(sum(value), 6) FROM staged").fetchone())
+    new_rows = list(con.execute("SELECT count(*), round(sum(value), 6) FROM staged").fetchall()[0])
     snaps = snapshot_info(cat, name)["snapshots"]
     calls = dict(r2.CATALOG_CALLS)
     reset_http(con)
@@ -183,8 +207,11 @@ def step_duckdb(con, cat, table: str, name: str, blocks: list[str], explicit: bo
     after = per_block(con, table)
     expect(step, before, after, changed, removed, zero, new_rows)
     scan = pyiceberg_blocks(cat, name)
-    if scan != after:
+    if not close(scan, after):
         step["problems"].append(f"pyiceberg scan differs: {scan} vs duckdb {after}")
+    step["exact"] = exact_rows(con, cat, table, name)
+    if not step["exact"]["equal"]:
+        step["problems"].append(f"row sets differ between DuckDB and PyIceberg: {step['exact']}")
     info = snapshot_info(cat, name)
     step.update(
         snapshots_added=info["snapshots"] - snaps,
@@ -216,7 +243,7 @@ def step_pyiceberg(con, cat, table: str, name: str, blocks: list[str]) -> dict:
     con.execute(f"CREATE OR REPLACE TEMP TABLE staged AS SELECT * FROM {table} WHERE gold_block = '{changed}'")
     con.execute("DELETE FROM staged WHERE hash(measure_key, geography_key, breakdown_json, date_key) % 3 = 0")
     con.execute("UPDATE staged SET value = value * 2")
-    new_rows = list(con.execute("SELECT count(*), round(sum(value), 6) FROM staged").fetchone())
+    new_rows = list(con.execute("SELECT count(*), round(sum(value), 6) FROM staged").fetchall()[0])
     iceberg = cat.load_table((NAMESPACE, name))
     arrow = to_arrow(con.sql("SELECT * FROM staged")).cast(iceberg.schema().as_arrow())
     snaps = len(iceberg.metadata.snapshots)
@@ -235,8 +262,11 @@ def step_pyiceberg(con, cat, table: str, name: str, blocks: list[str]) -> dict:
     after = per_block(con, table)
     expect(step, before, after, changed, removed, zero, new_rows)
     scan = pyiceberg_blocks(cat, name)
-    if scan != after:
+    if not close(scan, after):
         step["problems"].append(f"pyiceberg scan differs: {scan} vs duckdb {after}")
+    step["exact"] = exact_rows(con, cat, table, name)
+    if not step["exact"]["equal"]:
+        step["problems"].append(f"row sets differ between DuckDB and PyIceberg: {step['exact']}")
     info = snapshot_info(cat, name)
     step.update(
         snapshots_added=info["snapshots"] - snaps, snapshot=info, pyiceberg_calls=calls_since(calls), after=after
