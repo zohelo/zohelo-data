@@ -12,7 +12,8 @@ description: "KNF supervised entities (register PLG-016), route 1: the Polish en
 # stated in the help; no Last-Modified or ETag is sent, so version = download time and an unchanged answer (same
 # SHA-256) is skipped. Restart unit: the file. Route 2 (KNF's HTML pages below www.knf.gov.pl/podmioty) waits for the
 # owner question in the register entry and is not read. Dev probes 45810797308, 45811335888, 45811761349 (26 Nov 2026):
-# 623 entries (478 Active, 145 Inactive), 422,118 bytes, three equal requests gave equal bytes.
+# 623 entries (478 Active, 145 Inactive), 422,118 bytes, three equal requests gave equal bytes; Dev trial 45814831335:
+# second Landing and Bronze passes wrote nothing.
 extraction:
   kind: bulk_file
   bulk_file:
@@ -37,11 +38,11 @@ archive_policy:
 bronze: [bronze.knf_entities_esma_entries, bronze.knf_entities_rejected_files]
 silver: [silver.knf_entities_esma_entries]
 gold: [gold.knf_supervised_entity, gold.build_knf_entities]
-# Ceilings about 1.5 x the rows of Dev trial TRIAL_RUN (26 Nov 2026); the slice grows by a few dozen entries a year.
+# Ceilings about 1.5 x the rows of Dev trial 45814831335 (26 Nov 2026); the slice grows by a few dozen entries a year.
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   knf_entities_esma_entries: {rows: 950}  # 623 measured
   knf_supervised_entity: {rows: 950}  # 623 measured
-  poc_build_knf_entities: {rows: 450}  # BUILD_ROWS measured
+  poc_build_knf_entities: {rows: 225}  # 149 measured (97 authorisations, 34 register, 18 withdrawals)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one answer of about 620 entries (0.4 MB), no changed-since filter used; a new
