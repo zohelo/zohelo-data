@@ -25,12 +25,16 @@ three tables, each found by its title line, one row per cell with the period and
 A file is rejected into `bronze.kowr_markets_rejected_files`, with the reason, when a title is missing or printed
 twice, a header, rate or source line is missing, a market, country or commodity is unknown or repeated, a row has the
 wrong number of values, a value is not a number or "-" / "####" / "0" as printed, a period does not end on the file's
-Sunday, a zł/t price differs from the EUR price times the rate printed under the table (FOB: NBP, ±1 % + 1 zł; EU: ECB,
-±1 % + 2 zł), or an exchange average lies outside its minimum and maximum.
+Sunday, more than two EU columns of a block disagree with the EUR price times the ECB rate printed under the table
+(shifted columns), or an exchange average lies outside its minimum and maximum. The commodity of each EU block is read
+from the text positions (its heading row lies above it), because the text layer prints the headings in no fixed order.
+A single FOB row or EU cell whose converted price disagrees with its EUR price (FOB: NBP rate, ±1 % + 1 zł; EU: ECB
+rate, ±1 % + 2 zł) is kept with a `kontrola` cell, and Silver loads no price from it (which of the two is wrong cannot
+be told; Black Sea barley in most reports of mid-2024 to 2025).
 
 **Silver.** Only the published prices: the changes in % and the converted PLN prices are KOWR's derivations and are
 not kept. "-" (brak danych) and, in the EU table, "0" (printed for a member state without a report) keep the value
-null, never 0. The FOB table is dated by quotation day (a weekday after the report week); the other two are weekly.
+null, never 0, as do the rows marked `kontrola` (`value_flag`). The FOB table is dated by quotation day (a weekday after the report week); the other two are weekly.
 
 **Gold.** Block `fob_export_prices` (`poc_build_kowr_markets`, frequency D at the quotation date, one quotation a
 week; EUR/t as published, unit `eur_per_tonne`); areas US and FR, the Black Sea ports stay `_X` (`BLACK_SEA`, no area

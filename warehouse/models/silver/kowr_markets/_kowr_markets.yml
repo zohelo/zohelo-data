@@ -4,7 +4,8 @@ models:
     description: >-
       KOWR weekly grain report (register PLS-033), table "Eksportowe ceny zbóż na rynkach zagranicznych (na bazie
       FOB)": export prices FOB in EUR/t of milling wheat, feed barley and maize by export market, as of the quotation
-      date the table names (one date per report). Stated source KE, EBC, NBP (stated_source). "-" and a lone "0" keep value null (value_flag);
+      date the table names (one date per report). Stated source KE, EBC, NBP (stated_source). "-", a lone "0" and a row whose zł/t price disagrees with
+      its EUR price keep value null (value_flag);
       a quotation date printed by two reports keeps the newer report. Grain: commodity_code x market_code x
       quote_date. History from the quotation of 29.03.2023 (report week 20-26.03.2023).
     tests:
@@ -24,7 +25,7 @@ models:
       - name: unit_code
         tests: [not_null, {accepted_values: {arguments: {values: [EUR_T]}}}]
       - name: value_flag
-        tests: [{accepted_values: {arguments: {values: ['-', '0']}}}]
+        tests: [{accepted_values: {arguments: {values: ['-', '0', zl_t_mismatch]}}}]
       - name: stated_source
         tests: [not_null]
       - name: raw_sha256
@@ -33,7 +34,8 @@ models:
     description: >-
       KOWR weekly grain report (register PLS-033), table "Ceny zakupu zbóż w krajach UE": purchase prices of wheat,
       barley and maize in EUR/t in the 27 member states and the EU average, per report week (Monday to Sunday).
-      Stated source Komisja Europejska (stated_source). "-" and "0" keep value null with the text in value_flag.
+      Stated source Komisja Europejska (stated_source). "-", "0" and a cell whose PLN price disagrees with its EUR price
+      keep value null (value_flag).
       Weekly, so Silver only (no weekly fact model in curated Gold). Grain: commodity_code x country_name x
       report_week. History from the report week 20-26.03.2023.
     tests:
@@ -55,7 +57,7 @@ models:
       - name: unit_code
         tests: [not_null, {accepted_values: {arguments: {values: [EUR_T]}}}]
       - name: value_flag
-        tests: [{accepted_values: {arguments: {values: ['-', '0']}}}]
+        tests: [{accepted_values: {arguments: {values: ['-', '0', pln_mismatch]}}}]
       - name: stated_source
         tests: [not_null]
       - name: raw_sha256
