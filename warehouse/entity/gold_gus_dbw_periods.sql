@@ -6,7 +6,7 @@
 --   dane miesięczne + month → M (also when the cycle is a year or a quarter: a monthly figure taken once a
 --   year or once a quarter; the cycle then becomes part of the measure key, cycle_frequency).
 -- Everything else has no frequency and its rows are not loaded (counted as explained exclusions,
--- docs/gold-coverage.md decision 6): cumulative periods ("dane narastające": January to the month, first
+-- docs/gold-coverage.md decision 5): cumulative periods ("dane narastające": January to the month, first
 -- quarter to the quarter), three-year data ("dane trzyletnie") and years that are not calendar years
 -- ("rok - dane roczne - lipiec - czerwiec"). They are never folded into another frequency.
 with read as (
