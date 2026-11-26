@@ -1,0 +1,4 @@
+source_system,unit_code,measure_key_pattern,unit_key
+wipo_ip_stats,publications,,patent_publications
+wipo_ip_stats,grants,,ip_rights
+wipo_ip_stats,designs,,designs
