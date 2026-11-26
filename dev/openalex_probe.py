@@ -38,6 +38,9 @@ def get(name: str, url: str, params: dict | None = None) -> dict:
             info["groups_sum"] = sum(int(x.get("count") or 0) for x in g)
             info["group_sample"] = g[:3] + g[-2:]
             info["group_keys"] = sorted({k for x in g for k in x})
+            keys = sorted(str(x.get("key")) for x in g)
+            info["key_range"] = [keys[0], keys[-1]] if keys else []
+            info["non_numeric_keys"] = [k for k in keys if not k.isdigit()][:10]
         if isinstance(body, dict) and body.get("results"):
             res = body["results"]
             info["results"] = len(res)
@@ -105,15 +108,32 @@ def main(argv: list[str]) -> int:
         OUT["counts_by_year_lengths"] = [min(cby), max(cby)]
         years = sorted({c["year"] for r in body["results"] for c in (r.get("counts_by_year") or [])})
         OUT["counts_by_year_years"] = [years[0], years[-1]] if years else []
+        OUT["institution_types"] = sorted({str(r.get("type")) for r in body["results"]})
+        nxt = (body.get("meta") or {}).get("next_cursor")
+        if nxt:
+            get("institutions_pl_page2", f"{API}/institutions",
+                {"filter": "country_code:PL", "per_page": 200, "cursor": nxt,
+                 "select": "id,ror,display_name,type,country_code,geo,works_count,cited_by_count,counts_by_year,"
+                           "lineage,updated_date"})
     get("works_pl_by_institution", f"{API}/works", {"filter": pl, "group_by": "authorships.institutions.lineage"})
-    get("works_pl_mailto", f"{API}/works", {"filter": pl, "group_by": "publication_year", "mailto": "noreply@example.org"})
+    b1 = get("works_pl_by_year_cursor", f"{API}/works",
+             {"filter": pl, "group_by": "publication_year", "per_page": 200, "cursor": "*"})
+    nxt = (b1.get("meta") or {}).get("next_cursor") if isinstance(b1, dict) else None
+    if nxt:
+        get("works_pl_by_year_cursor2", f"{API}/works",
+            {"filter": pl, "group_by": "publication_year", "per_page": 200, "cursor": nxt})
+    get("works_pl_by_year_pp200", f"{API}/works", {"filter": pl, "group_by": "publication_year", "per_page": 200})
+    get("works_pl_by_year_keyonly", f"{API}/works",
+        {"filter": pl, "group_by": "publication_year", "select": "key,count"})
+    get("works_pl_mailto",f"{API}/works", {"filter": pl, "group_by": "publication_year", "mailto": "noreply@example.org"})
     get("works_pl_by_year_bad", f"{API}/works", {"filter": "institutions.country_code:PL,publication_year:2300",
                                                   "group_by": "publication_year"})
     compact = {}
     for k, v in OUT.items():
         if isinstance(v, dict):
             compact[k] = {kk: vv for kk, vv in v.items() if kk in ("status", "bytes", "meta", "groups", "groups_sum",
-                                                                  "results", "headers", "error", "error_body", "updated")}
+                                                                  "results", "headers", "error", "error_body", "updated",
+                                                                  "key_range", "non_numeric_keys", "hits")}
         else:
             compact[k] = v
     text = json.dumps(compact, ensure_ascii=False)
