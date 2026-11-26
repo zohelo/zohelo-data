@@ -1,0 +1,51 @@
+version: 2
+sources:
+- name: imgw_archive
+  description: >-
+    IMGW-PIB public observation archive (register PL-ENV-009), daily synoptic station files
+    (dane_meteorologiczne/dobowe/synop, one ZIP per station and period); one file per ZIP, replaced whole (design #875).
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/imgw_archive/
+    loaded_by: ingestion/to_bronze/imgw_archive/entities.py
+    config: ingestion/sources/imgw_archive.yaml
+  tables:
+  - name: imgw_archive_synop_daily
+    description: >-
+      The s_d member of each newest ZIP as published: one row per station and day, the 65 fields of s_d_nagłówek.csv
+      as text (lower-case names: nsp station code, post name, rok, mc, dz, then value/status pairs such as std/wstd),
+      provenance (raw_sha256, source_version, ingested_at) and source_row_number; partitioned by entity (the ZIP).
+  - name: imgw_archive_rejected_files
+    description: ZIPs of imgw_archive the decoder or the Silver checks rejected, with the reason.
+- name: imgw_archive_entities
+  description: >-
+    Silver table of imgw_archive written per ZIP by the loader, not by dbt (design #875): exactly the newest version
+    of every entity, from warehouse/entity/imgw_archive_synop_daily.sql, checked per file before it is accepted
+    (station_code x observation_date x parameter unique, keys not null, status codes known).
+  database: r2
+  schema: silver
+  tables:
+  - name: imgw_archive_synop_daily
+    description: >-
+      IMGW daily synoptic observations, long: one row per station_code (IMGW 9-digit code) x observation_date x
+      parameter (TMAX, TMIN, STD, TMNG in °C, SMDB mm, PKSN cm, USL h), value only for a measured observation,
+      status_code as published ('8' no measurement, '9' phenomenon absent) and observation_status.
+    tests:
+      - unique:
+          column_name: "station_code || '|' || cast(observation_date as varchar) || '|' || parameter"
+    columns:
+      - name: station_code
+        tests: [not_null]
+      - name: observation_date
+        tests: [not_null]
+      - name: parameter
+        tests: [not_null, {accepted_values: {arguments: {values: [TMAX, TMIN, STD, TMNG, SMDB, PKSN, USL]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [degC, mm, cm, h]}}}]
+      - name: status_code
+        tests: [{accepted_values: {arguments: {values: ['8', '9']}}}]
+      - name: observation_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, no_measurement, phenomenon_absent]}}}]
+      - name: raw_sha256
+        tests: [not_null]
