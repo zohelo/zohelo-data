@@ -3,7 +3,7 @@ models:
   - name: pzh_epimeld_cases
     description: >-
       Registered cases of infectious diseases and poisonings and incidence per 100,000 population (live births for the
-      congenital diseases), per year, disease (the bulletin's disease line, name and ICD-10 codes) and area (Poland
+      congenital diseases, children for the tables of children under 2 and aged 0-14), per year, disease (the bulletin's disease line, name and ICD-10 codes) and area (Poland
       'PL', voivodeships by TERYT code), from the
       per-disease voivodeship tables of NIZP PZH-PIB's annual bulletins "Choroby zakaźne i zatrucia w Polsce"
       (register PLS-019; bronze.pzh_epimeld_rows). Grain: period_year x disease_key x area_code. Each value from the
@@ -43,7 +43,17 @@ models:
         description: The incidence column's header as printed (the denominator).
         tests: [not_null, {accepted_values: {arguments: {values: ['na 100 tys.', 'na 100 tys. urodzeń żywych']}}}]
       - name: incidence_unit_code
-        tests: [not_null, {accepted_values: {arguments: {values: [per_100k, per_100k_live_births]}}}]
+        description: >-
+          The incidence denominator: per_100k (population), per_100k_live_births, per_100k_children_under_2,
+          per_100k_children_0_14 (from the disease line where the header says only "na 100 tys.").
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [per_100k, per_100k_live_births, per_100k_children_under_2, per_100k_children_0_14]
+      - name: incidence_dropped
+        description: The block's POLSKA rows imply a denominator outside the band of incidence_unit_code; incidence null.
+        tests: [not_null]
       - name: quarters_match
         description: The row's printed quarters add up to its printed year (false = a misprint in the bulletin).
       - name: preliminary
