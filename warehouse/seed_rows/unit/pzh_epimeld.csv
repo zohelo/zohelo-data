@@ -1,3 +1,4 @@
 unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
 disease_cases,zach.,registered cases of disease,zachorowania (zarejestrowane przypadki),false,disease_cases,1
 per_100k_population,/100 tys.,per 100000 population,na 100 tys. ludności,true,per_100k_population,1
+per_100k_live_births,/100 tys. urodz.,per 100000 live births,na 100 tys. urodzeń żywych,true,per_100k_live_births,1

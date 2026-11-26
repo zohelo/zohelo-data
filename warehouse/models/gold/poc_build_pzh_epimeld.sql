@@ -1,10 +1,11 @@
 {{ config(alias='build_pzh_epimeld', tags=['gold_block']) }}
 {# Gold build stage: NIZP PZH-PIB EPIMELD annual bulletins (register PLS-019), annual observations of
-   silver.pzh_epimeld_cases. Block 'annual': per disease (ICD-10 codes of the bulletin's table title, part of the
-   measure) two measures, registered cases ('cases') and incidence per 100,000 population ('per_100k', the
-   denominator stays with the measure); frequency A only. Geography: Poland ('PL') and the voivodeships (TERYT code,
-   poc_geography__pzh_epimeld). No breakdown (is_total). Values and units as published (D33); a value of a bulletin
-   whose text says "wstępne" is 'provisional'. #}
+   silver.pzh_epimeld_cases. Block 'annual': per disease (disease_key: the bulletin's disease line, part of the
+   measure) two measures, registered cases ('cases') and incidence ('per_100k' per 100,000 population or
+   'per_100k_live_births' for the congenital diseases: the denominator stays with the measure); frequency A only.
+   Geography: Poland ('PL') and the voivodeships (TERYT code, poc_geography__pzh_epimeld). No breakdown (is_total).
+   Values and units as published (D33). Status: 'provisional' for a bulletin whose text says "wstępne", 'flagged'
+   for a printed row whose quarters do not add up to its year (a misprint kept as published), else 'ok'. #}
 with geo as (
     select
         source_code,
@@ -27,14 +28,19 @@ select
     'pzh_epimeld' as source_system,
     'annual' as block_id,
     'NIZP PZH-PIB infectious diseases: cases and incidence by disease (annual bulletins)' as block_name,
-    'pzh_epimeld:annual:' || s.unit_code || ':' || s.disease_codes as measure_key,
-    case s.measure
+    'pzh_epimeld:annual:' || s.unit_code || ':' || s.disease_key as measure_key,
+    case s.unit_code
         when 'cases' then 'Registered cases: '
-        else 'Incidence per 100,000 population: '
+        when 'per_100k' then 'Incidence per 100,000 population: '
+        else 'Incidence per 100,000 live births: '
     end || s.disease_label || ' (NIZP PZH-PIB, annual)' as measure_name,
-    s.disease_codes as measure_codes,
+    coalesce(s.disease_codes, s.disease_key) as measure_codes,
     s.unit_code,
-    case s.unit_code when 'cases' then 'cases' else 'per 100,000 population' end as unit_name,
+    case s.unit_code
+        when 'cases' then 'cases'
+        when 'per_100k' then 'per 100,000 population'
+        else 'per 100,000 live births'
+    end as unit_name,
     s.area_code as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,
     'A' as frequency,
@@ -45,7 +51,11 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     s.value,
-    case when s.preliminary then 'provisional' else 'ok' end as observation_status_key,
+    case
+        when s.preliminary then 'provisional'
+        when not s.quarters_match then 'flagged'
+        else 'ok'
+    end as observation_status_key,
     s.source_version,
     s.raw_sha256
 from measures as s
