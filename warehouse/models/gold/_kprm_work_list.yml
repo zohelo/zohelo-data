@@ -1,0 +1,37 @@
+version: 2
+models:
+  - name: government_drafts
+    description: >-
+      Entity table (documents): one row per government draft on the work list of the Council of Ministers
+      (register PLG-034, #491), keyed by the work-list number; date_key = the day it was published on the list.
+      Kind, type, bodies, status and the planned adoption (free text, a plan) as published; no texts of the drafts
+      and no personal data.
+    columns:
+      - name: draft_number
+        tests: [not_null, unique]
+      - name: date_key
+        tests: [not_null]
+  - name: poc_build_kprm_work_list
+    description: >-
+      Build stage - government drafts published on the work list of the Council of Ministers, Poland, per month
+      (measures ...:monthly, M) and per year (...:annual, A): in total, by kind of document, by current status and
+      by responsible body (one measure_key per breakdown and frequency). Only periods with a published draft have a
+      row (no zero filling); the period of the download date is provisional; planned adoption dates are not counted.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || breakdown_json || '|' || date_key"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M', 'A']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_government_drafts_published
+    description: >-
+      KPI government_drafts_published (draft) from gold.build_kprm_work_list: drafts published per month on the work
+      list of the Council of Ministers, Poland (macros/poc_metrics.sql).

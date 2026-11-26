@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+direct_payments_paid,arimr_payments,arimr_payments:direct_payments:PLN:amount_paid,"ARiMR monthly report Płatności bezpośrednie, amount paid by campaign, Poland and voivodeships",1,

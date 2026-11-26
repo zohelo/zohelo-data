@@ -1,0 +1,45 @@
+source_system: knf_espi
+description: "KNF OAM list of ESPI issuer reports (regulated information of issuers on the regulated market): one row per report — issuer, day received, form code, report id, link"
+
+# Extraction strategy (docs/landing.md). No bulk feature, API or feed: the public copy of ESPI is KNF's OAM list,
+# https://moam.knf.gov.pl/moam.nsf (Lotus Domino HTML; robots.txt 404). Route (decision D40): its own view by day
+# of receipt, mOAM?readForm&RestrictToCategory=<YYYY-MM-DD>&start=<n>&count=20, list pages only, one request at a
+# time 5 s apart, the platform's User-Agent, bounded retries; a 4xx stops the run. Never a report page or file.
+# Each day lands as one reduced JSON document (issuer, day, the form code of the title, document id, link; no
+# title: titles can name natural persons); written only when its SHA-256 changed. Code: ingestion/to_landing/
+# knf_espi/ on ingestion/common/report_lists.py. Proven from Actions by the Dev probes 43321077523 and
+# 43326025983 (about 90 reports a day, history to 2009 and earlier) and the Dev trial cited in the PR.
+# History: the first runs read back to 1 January of the previous year (newest first, 45 minutes a run); held days are
+# kept, so it accumulates.
+extraction:
+  initial: web
+  production: delta                       # one document per day of receipt; days accumulate
+  incremental_policy: changed_since_last  # each weekly run reads today and 8 days back, plus days not held yet; SHA-256
+  schedule: # UTC; ESPI reports arrive every day until late evening (Warsaw). Weekly until production use (O46): Tuesday
+    # 05:20; each run reads the 8 days before (REREAD_DAYS), so the days since the last run are read again in full
+    - {cron: "20 5 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/knf_espi/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 30}
+  prune: report
+bronze: [bronze.knf_espi_reports, bronze.knf_espi_rejected_files]
+silver: [silver.knf_espi_reports]
+gold: [gold.build_knf_espi, gold.filing_knf_espi]
+# Row ceilings (owner policy #822; above: a warning, above twice: the build fails). Dev trial 43831909084 measured
+# 2,190 reports for 30 days of receipt (2,006 in October 2026) and 23 build rows for one month (total + 22 form codes).
+# The first production runs fill the history from 1 January 2025 (about 48,000 reports) and held days are kept, so the
+# tables accumulate about 26,000 reports a year. Ceilings: 1.5 × the measured rate (2,190 a month) over the 36 months
+# to the end of 2027 (78,800); build: 36 months × 25 rows (23 measured, form codes vary) × 1.5. Raise them in 2027.
+full_rebuild:
+  knf_espi_reports: {rows: 118000}
+  filing_knf_espi: {rows: 118000}    # one row per Silver report
+  poc_build_knf_espi: {rows: 1350}
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a day
+# Refresh policy for all layers (D32): small (about 90 reports a day, under 70,000 rows for the two years held);
+# Landing reads only the days that can change, Bronze appends a changed day, Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #1486"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

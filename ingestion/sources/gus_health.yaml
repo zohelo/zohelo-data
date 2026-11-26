@@ -1,0 +1,38 @@
+source_system: gus_health
+description: "GUS — Zdrowie i ochrona zdrowia (health and health care), annual publication tables (PLS-004, health family)"
+
+# Extraction strategy (docs/landing.md). Register PLS-004 (GUS thematic publications), health family only; the other
+# families of PLS-004 are other sources (docs/sources/gus_health.md). Bulk feature: stat.gov.pl publishes the annual
+# publication 'Zdrowie i ochrona zdrowia w <year> r.' (2024 edition published 29 January 2026) on its own page with a
+# tables file: a ZIP of chapter workbooks for 2012-2015 ("... tablice", 2012 under the edition title), one XLSX
+# workbook from 2016 ("Tablice w formacie XLSX", "Aneks tabelaryczny w formacie XLSX"). The health subject page links
+# the newest edition, each edition page links the other editions (2012-2024). Entity = one edition (the reference
+# year), version = download time (no Last-Modified), written only when the SHA-256 changed; the newest edition is
+# downloaded again on every run, older landed editions are not (ingestion/common/gus_publications.py,
+# ingestion/to_landing/gus_health/). Restart unit: one edition. Dev probe 45746829360 on test/2451-gus-health-trial.
+# History: editions 2012-2024, 13 files; see full_rebuild for the trial counts.
+extraction:
+  initial: bulk
+  production: snapshot                  # each edition file as published; a correction replaces it
+  incremental_policy: changed_since_last  # new editions; SHA-256 of the newest edition
+  schedule: # UTC; annual edition (late January); monthly check on the first Tuesday (O46: under one run a week)
+    - {cron: "15 8 1-7 * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_health/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gus_health_cells, bronze.gus_health_rejected_files]
+silver: [silver.gus_health_tables]
+gold: [gold.build_gus_health]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_health_tables: {rows: 2000}  # 1,326 rows: 13 editions 2012-2024 x 6 measures x 17 areas (Dev trial in #2451)
+  poc_build_gus_health: {rows: 2000}  # 1,326 (Dev trial in #2451)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): thirteen edition files of 0.5 to 6.5 MB, one new a year, about 400,000
+# cells; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2451"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

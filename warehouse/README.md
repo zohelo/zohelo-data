@@ -76,6 +76,27 @@ Bronze rows rewritten under the same `raw_sha256` (a to_bronze re-decode) are no
 such a fix must also change the model's code (e.g. a line in its header comment), so the
 next scheduled build rebuilds it in full; announce it in the Work log.
 
+The five Gold facts and `poc_dim_series` are incremental per Gold block (#3204 PR B, D39;
+`macros/poc_incremental.sql`). Every row carries its block model in a trailing column `gold_block`
+(`poc_observations()`). The changed-only plan lists `changed_blocks`: the blocks rebuilt in the run, and the blocks
+whose table changed after such a model's last build. `build.py` passes them as a dbt var, and the model reads only
+those blocks. The strategy `gold_blocks` then deletes the rows of those blocks and of every block that is no
+longer registered, and inserts the new rows, in one explicit transaction: one Iceberg commit. Their fingerprint
+leaves out the block list and the per-source macro files, so a new source is a block change, not a code change.
+The block list they were built with is the property `zohelo.build_blocks`; when it differs, the plan says "blocks
+changed" and the model is rebuilt incrementally. A full refresh happens when the model's code changed, it has no
+build properties or no table, or more than half of its counted rows are position deletes ("position deletes";
+`total-records` in the snapshot summary still counts deleted rows), or more than 64 data and delete files were
+added since its last full build ("file growth": compaction is off, so a small block replaced every run adds files
+without ever reaching the position-delete share; the live files after a full build are the property
+`zohelo.base_files`). Every column of the six is cast to its type in the model, so a run that reads only the
+changed blocks has the same column types as the full union (`on_schema_change='fail'`). A failed run or a failing
+test does not clear an incremental table's properties (it is the same table, not a swapped one): the next plan
+finds the blocks newer than its last recorded build ("input changed") and replaces each of them again. A build that is not the changed-only plan (an
+explicit filter, `fqn:*`) has no `changed_blocks` var and rebuilds them in full, as before. They have no
+`full_rebuild` ceiling; the grain tests (`fact_grain`, unique `series_key` in `dim_series`) catch a series that
+two blocks emit.
+
 Every other model is a full-rebuild table (the project default) and must be small (owner
 policy #822: below ~1M rows). `full_rebuild` (in the source's own YAML, or `warehouse.yaml` for a shared model) gives each one a row ceiling;
 `repo_check` fails when a non-incremental model has none, when a listed model is gone or

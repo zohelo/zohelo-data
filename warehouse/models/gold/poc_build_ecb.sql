@@ -5,7 +5,7 @@
    the PLN series carries the breakdown {"currency":"EUR"} as the NBP rates do: the zloty price of one euro), FM ecb:FM:<rate id> (key ECB rates at their change dates),
    EST ecb:EST:WT, HICP/ICP ecb:<flow>:<item>:ANR, IRS ecb:IRS:L40 (10-year convergence yield in the country's
    currency), BSI ecb:BSI:<item>:<data type>:<suffix>. Areas through poc_map_geography (section ecb, static codes
-   of poc_ecb_areas): ISO countries, U2 → EUROSTAT:EA, I8 → NUTS:EA19, I9 → NUTS:EA20, B6 → EUROSTAT:EU27_2020,
+   of poc_ecb_areas): ISO countries, U2 → EUROSTAT:EA, I8 → EUROSTAT:EA19, I9 → EUROSTAT:EA20, B6 → EUROSTAT:EU27_2020,
    B0/D0 → EUROSTAT:EU; FM, EST and BSI are euro area (U2). IRS: an area with series in two currencies (BG: lev
    and euro) has as its total the series with the latest last period, then the longest, then the lowest
    series_key; the other keeps its currency as the breakdown. #}
