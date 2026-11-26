@@ -282,6 +282,20 @@ gus_culture_participation as (
         'PL' as geography_key
 ),
 
+gus_health as (
+    select
+        'gus_health' as source_system,
+        lower(g.name_pl) as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'wojewodztwo'
+    union all
+    select
+        'gus_health' as source_system,
+        'polska' as source_code,
+        'PL' as geography_key
+),
+
 gus_nsp2021 as (
     select
         'gus_nsp2021' as source_system,
@@ -525,6 +539,60 @@ owid as (
     where g.level_name = 'country' and g.iso3 = 'XKX'
 ),
 
+pkw_woj as (
+    select
+        g.terc_code,
+        lower(g.name_pl) as name_l,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'wojewodztwo'
+),
+
+pkw as (
+    select
+        'pkw' as source_system,
+        'PL' as source_code,
+        'PL' as geography_key
+    union all
+    select
+        'pkw' as source_system,
+        w.terc_code as source_code,
+        w.geography_key
+    from pkw_woj as w
+    union all
+    select
+        'pkw' as source_system,
+        'woj:' || w.name_l as source_code,
+        w.geography_key
+    from pkw_woj as w
+    union all
+    select
+        'pkw' as source_system,
+        g.terc_code as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'powiat'
+    union all
+    select
+        'pkw' as source_system,
+        substr(g.terc_code, 1, 6) as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'gmina' and length(g.terc_code) = 7 and substr(g.terc_code, 7, 1) in ('1', '2', '3', '8')
+    union all
+    select
+        'pkw' as source_system,
+        'city:' || w.name_l || ':' || lower(g.name_pl) as source_code,
+        g.geography_key
+    from geo as g
+    inner join pkw_woj as w on substr(g.terc_code, 1, 2) = w.terc_code
+    where
+        g.level_name = 'gmina'
+        and length(g.terc_code) = 7
+        and substr(g.terc_code, 7, 1) = '1'
+        and substr(g.terc_code, 3, 2) >= '61'
+),
+
 policja_statistics as (
     select
         'policja_statistics' as source_system,
@@ -558,6 +626,20 @@ rpwdl as (
     union all
     select
         'rpwdl' as source_system,
+        'PL' as source_code,
+        'PL' as geography_key
+),
+
+rspo as (
+    select
+        'rspo' as source_system,
+        g.terc_code as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name in ('wojewodztwo', 'powiat', 'gmina') and g.terc_code is not null
+    union all
+    select
+        'rspo' as source_system,
         'PL' as source_code,
         'PL' as geography_key
 ),
@@ -1253,6 +1335,8 @@ from (
     union all
     select * from gus_culture_participation
     union all
+    select * from gus_health
+    union all
     select * from gus_nsp2021
     union all
     select * from gus_psr2020
@@ -1285,11 +1369,15 @@ from (
     union all
     select * from owid
     union all
+    select * from pkw
+    union all
     select * from policja_statistics
     union all
     select * from radon
     union all
     select * from rpwdl
+    union all
+    select * from rspo
     union all
     select * from ted_notices
     union all

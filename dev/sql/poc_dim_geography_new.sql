@@ -71,11 +71,12 @@ geo_codes as (
 -- NUTS regions (#2775): a GEO code of 3 to 5 characters is a NUTS region only when its first two characters are a
 -- country with NUTS or statistical regions (EU members, EL and UK, EFTA, and the candidate and neighbouring countries
 -- Eurostat gives regions: AL, BA, ME, MK, RS, TR, UA, XK) and its third character is a NUTS 1 character of that
--- country: a digit, Z (extra-regio) or X (not regionalised), or the letters some countries use (DE A–G, FR A–M and
--- Y, IT C–I, UK A–N with the UKA and UKB of NUTS 1995, TR A–C). Every other GEO code is an aggregate: the euro areas (EA11 … EA21), the EU of a past
--- composition (EU15, EU28), EFTA, world regions (AFR, ASI), institutions (ECB, EIB), and codes that only begin like a
+-- country: a digit, Z (extra-regio), X (not regionalised), or the letters some countries use (DE A–G; EL S, the
+-- self-governed region ELS; FR A–M and Y; IT C–I; UK A–N, with Scotland UKA and Northern Ireland UKB of NUTS 1995;
+-- TR A–C). Every other GEO code is an aggregate: the euro areas (EA11 … EA21), the EU of a past composition (EU15,
+-- EU28), EFTA, world regions (AFR, ASI, MEL), institutions (ECB, EIB, ESTAT), and the codes that only begin like a
 -- country: the European Economic Area (EEA, EEA31), Baltic countries (BAL), Mediterranean Basin (MED), non-OECD
--- countries (NOECD), transit country (TRS).
+-- countries (NOECD), transit country (TRS), the former territory of the FRG (DEW), southern polar regions (PLR).
 geo_shapes as (
     select
         code,
@@ -90,6 +91,7 @@ geo_shapes as (
         and (
             regexp_matches(substr(code, 3, 1), '^[0-9XZ]$')
             or (substr(code, 1, 2) = 'DE' and substr(code, 3, 1) between 'A' and 'G')
+            or (substr(code, 1, 2) = 'EL' and substr(code, 3, 1) = 'S')
             or (substr(code, 1, 2) = 'FR' and (substr(code, 3, 1) between 'A' and 'M' or substr(code, 3, 1) = 'Y'))
             or (substr(code, 1, 2) = 'IT' and substr(code, 3, 1) between 'C' and 'I')
             or (substr(code, 1, 2) = 'UK' and substr(code, 3, 1) between 'A' and 'N')
