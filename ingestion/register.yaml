@@ -5218,7 +5218,7 @@ sources:
   short_name: Senate data
   provider: Chancellery of the Senate
   source_system: senat
-  status: built
+  status: reviewing
   family: F
   kpi: false
   geography: Poland
@@ -5231,7 +5231,9 @@ sources:
     endpoint: https://www.senat.gov.pl/prace/proces-legislacyjny-w-senacie/
     kind: web
     interfaces: [HTML]
-    auth: public browsing; no API, export or feed found
+    auth: 'public browsing; no API or feed. Export: vote results per term as XML on dane.gov.pl (dataset 4648, CC0 1.0,
+      resource 2592577 = https://www.senat.gov.pl/gfx/senat/glosowania_wyniki/senat_kadencja_11.xml, modified 8 Sep 2026,
+      Dev trial 45757645915), under /gfx/, which robots.txt disallows for every agent: not read (owner question on #482)'
     cost: free
     limits: 'None published. robots.txt, read in full by the probe: "User-agent: * Disallow: /gfx/ Disallow: /pdf/ Allow:
       /*.pdf$ Allow: /*.doc$ Allow: /*.xls$ Allow: /*.rtf$" and "User-agent: Fasterfox Disallow: /". The pages of this route
@@ -5264,6 +5266,18 @@ sources:
     evidence: documented
     connection: tested
     blockers:
+    - 'Owner question: www.senat.gov.pl is behind Cloudflare, which sometimes answers GitHub runners with its bot check ("Just
+      a moment...", HTTP 403, server cloudflare) already on /robots.txt, and the only bulk export (the CC0 vote results XML
+      of dane.gov.pl dataset 4648) is under /gfx/, which robots.txt disallows; we work around neither. Should zohelo write
+      to the Chancellery of the Senate (Kancelaria Senatu) asking it to let the user agent "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data;
+      public statistics platform)" through its bot check for a weekly read and to allow the download of senat_kadencja_11.xml?'
+    - 'Runs from GitHub runners, same user agent, one request at a time: Dev probe 43326678967 (12 Nov) 200; Dev trial 43813034164
+      (16 Nov) HTTP 403 on /robots.txt; Dev probe 45746035725 (26 Nov 02:59 UTC) 200 on /robots.txt (unchanged) and /prace/posiedzenia/
+      (96,275 bytes, 88 sitting-day links); Dev trial 45757645915 (26 Nov 04:50 UTC) HTTP 403 on /robots.txt, server cloudflare,
+      page "Just a moment..." (5,618 bytes): stopped, not retried, nothing landed, scratch removed (objects_left 0). The same
+      trial read the dane.gov.pl metadata: dataset 4648 "Głosowania Senatu" (Kancelaria Senatu, CC0 1.0, update frequency
+      daily), resources 2592577 (term XI) and 2592581 (term X), XML, modified 8 Sep 2026, both linking /gfx/senat/glosowania_wyniki/.
+      The code (Landing, Bronze, Silver, Gold) is kept without a schedule (#482); the schedule comes with the answer.'
     - 'Route decided: polite crawl of public pages that robots.txt allows, following the orchestrator verdict on PR #2878
       under the owner rule of 12 Nov 2026 (issue #2873); recorded as decision D38 in docs/decisions.md by the build pull
       request (#482), which the owner may overrule.'

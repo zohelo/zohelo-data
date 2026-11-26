@@ -1,6 +1,11 @@
 # Senate of the Republic of Poland (`senat`)
 
-**Built (register PLG-025, #482; route decision D38).** No API, export or feed: term XI is read from server-rendered
+**Reviewing (register PLG-025, #482; route decision D38): code built, not scheduled.** www.senat.gov.pl is behind
+Cloudflare, which answered two of four Dev runs from GitHub runners with its bot check (HTTP 403 "Just a moment..." on
+`/robots.txt`); the extractor stops there and never works around it, so the weekly slot (Wednesday 19:20 UTC) waits for
+the owner's answer (register entry, first blocker). No API or feed. The one export, the vote results per term as
+XML (dane.gov.pl dataset 4648 "Głosowania Senatu", CC0 1.0, file `senat_kadencja_11.xml`), sits under `/gfx/`, which
+robots.txt disallows for every agent, so it is not read until the owner decides (#482). Term XI is read from server-rendered
 public pages of www.senat.gov.pl that robots.txt allows, with plain HTTP GET (no browser session), one connection, one
 request at a time at least 1.1 s apart, a clear user agent, robots.txt read first in every run; a 401/403/429 or a
 bot-protection page stops the run (`ingestion/to_landing/senat/`). Pages (entity = one page, version = download time,
@@ -17,8 +22,9 @@ the number of senators per printed mark; names not loaded), `senat_senators`. Si
 each day read from the printed dates), `senat_votes` (totals empty until the vote's page is read), `senat_senators`
 (name and end of mandate only). Gold: entity tables `senate_sitting_days`, `senate_votes`; build stage `build_senat`
 (blocks `sitting_days`, `votes`: counts of finished sittings per month and per year, Poland, only periods with a
-sitting); draft KPIs `senate_sitting_days`, `senate_votes` (no v2 map row). Weekly, Wednesday 19:20 UTC (O46: the source run ends with Bronze, the
-Sunday platform run builds Silver and Gold). Licence:
+sitting); draft KPIs `senate_sitting_days`, `senate_votes` (no v2 map row). Once scheduled: weekly, Wednesday 19:20 UTC (O46: the source run ends
+with Bronze, the Sunday platform run builds Silver and Gold; until the first Bronze load the build declares the blocks
+waiting). Licence:
 re-use terms of the site (free, source and processing named; commercial reuse not addressed): `senat_psi_reuse`.
 Left out: individual senators' votes and attendance, per-club results, bills and their texts, committees, terms
 before XI.
