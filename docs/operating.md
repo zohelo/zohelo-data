@@ -79,8 +79,10 @@ another arrives, so the job `silver_gold.queue` (`warehouse/build_queue.py`) run
 of the Pipeline runs that have not ended:
 
 - **enter**: no build is waiting; the run's build runs now or waits for the running one.
-- **covered**: another run's changed-only build is waiting and has not started. It plans when it starts, after
-  this run's Bronze load, and rebuilds what this run changed. This run's build and `gold.publish` are skipped, the
+- **covered**: another run's changed-only build on the same commit is waiting and has not started. It plans when
+  it starts, after this run's Bronze load, and rebuilds what this run changed. A waiting build of another commit
+  covers nothing, because it builds the models, seeds and tests of its own checkout (#3217); next to it the queue job
+  waits until that build has started, then enters. This run's build and `gold.publish` are skipped, the
   run ends green, and the annotation `silver_gold.build covered by run <id>` names the covering run. The proof is in
   that run: the activity step of its build job started after `decided_at` (`steps[].started_at` in the jobs API;
   the job's own `started_at` is the time it was queued), and its `warehouse dbt build` annotation lists the models.

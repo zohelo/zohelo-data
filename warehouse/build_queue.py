@@ -6,10 +6,12 @@ together cancelled each other's builds and their runs ended ``cancelled`` (#2932
 build job and keeps every run out of the group unless the waiting place is free:
 
 - ``enter``: no build is waiting. The run's build job joins the group (it runs at once, or waits for the running one).
-- ``covered``: a changed-only build of another run is waiting and has not started. That build plans after this
-  run's Bronze load ended (``warehouse/changed.py`` is stateless and reads the tables when the build starts), so
-  it rebuilds what this run changed. This run's build and publish are skipped and the run ends green, naming
-  the covering run.
+- ``covered``: a changed-only build of another run on the same commit is waiting and has not started. That build
+  plans after this run's Bronze load ended (``warehouse/changed.py`` is stateless and reads the tables when the build
+  starts), so it rebuilds what this run changed. This run's build and publish are skipped and the run ends green,
+  naming the covering run. A waiting build of another commit covers nothing: it builds the models, seeds and tests
+  of its own checkout, so a fix merged after it was dispatched would not be built (#3217). Next to it this job
+  waits until that build has started, then enters.
 - a build with a model filter (a ``platform`` run with a ``filter``) is not changed-only: it covers no other run
   and no run covers it. When such a build is waiting, or this run is one and any build is waiting, this job
   waits until the waiting build has started and decides again.
@@ -98,13 +100,15 @@ def place(run: dict, jobs: list[dict]) -> dict | None:
         "forced": forced,
         "queue_job": int(queue["id"]) if queue else 0,
         "platform": platform,
+        "sha": str(run.get("head_sha") or ""),  # the commit the run checked out: its build uses that code
     }
 
 
-def decide(forced: bool, queue_job: int, others: list[dict]) -> tuple[str, int | None]:
-    """(``enter`` | ``covered`` | ``wait``, the run that covers or is waited for)."""
+def decide(forced: bool, queue_job: int, others: list[dict], sha: str = "") -> tuple[str, int | None]:
+    """(``enter`` | ``covered`` | ``wait``, the run that covers or is waited for). ``sha`` is this run's commit: only
+    a build of the same commit covers this run (#3217); an unknown commit on either side covers nothing."""
     waiting = [o for o in others if o["state"] == "waiting"]
-    covering = [o for o in waiting if not o["forced"]]
+    covering = [o for o in waiting if not o["forced"] and sha and o.get("sha") == sha]
     if not forced and covering:
         # Whatever earlier queue jobs still decide: this build has not started, so it covers this run (#2946).
         return "covered", covering[0]["run"]
@@ -147,12 +151,13 @@ def main() -> int:
     repo, token = os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_TOKEN"]
     run_id = int(os.environ["GITHUB_RUN_ID"])
     forced = os.environ.get("FORCED") == "true"
+    sha = os.environ.get("GITHUB_SHA", "")
     started = time.monotonic()
     waits, waited_for, others, problem = 0, [], [], None
     try:
         while True:
             queue_job, others = snapshot(repo, token, run_id)
-            decision, other = decide(forced, queue_job, others)
+            decision, other = decide(forced, queue_job, others, sha)
             if decision != "wait":
                 break
             if other not in waited_for:
@@ -170,10 +175,11 @@ def main() -> int:
     summary = {
         "decision": decision,
         "forced": forced,
+        "sha": sha[:8],
         "decided_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "waited_seconds": round(time.monotonic() - started),
         "waited_for_runs": waited_for,
-        "queue": others,
+        "queue": [{**o, "sha": o["sha"][:8]} for o in others],
     }
     if _calls_left:
         summary["api_calls_left"] = _calls_left[0]
@@ -183,7 +189,8 @@ def main() -> int:
             f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{repo}/actions/runs/{other}"
         )
         summary["why"] = (
-            f"the changed-only build of run {other} had not started at decided_at, after this run's Bronze load; "
+            f"the changed-only build of run {other} (same commit) had not started at decided_at, after this run's "
+            "Bronze load; "
             "it plans when it starts and rebuilds what this run changed. This run builds and publishes nothing."
         )
     if problem:
