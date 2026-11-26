@@ -209,7 +209,8 @@ def main() -> int:
             "tables_with_rows": metrics,
         })
         blocks = {}
-        for name in [t for t in gold_tables if t.endswith("_geography") and t not in ("map_geography", "dim_geography")]:
+        shared = ("map_geography", "dim_geography")
+        for name in [t for t in gold_tables if t.endswith("_geography") and t not in shared]:
             source = name.removesuffix("_geography")
             try:
                 blocks[source] = list(
