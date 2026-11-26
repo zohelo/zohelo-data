@@ -1,0 +1,4 @@
+source_system,unit_code,measure_key_pattern,unit_key
+mrirw_zsrir,PLN_T,,pln_per_tonne
+mrirw_zsrir,PLN_KG_LW,,pln_per_kg
+mrirw_zsrir,PLN_100KG,,pln_per_100kg

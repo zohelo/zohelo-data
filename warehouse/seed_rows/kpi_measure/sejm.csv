@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+sejm_sitting_days,sejm,sejm:sitting_days:days:monthly,"held sitting days per month, terms 9 and 10",1,days
+sejm_votings,sejm,sejm:votings:votings:monthly,"votings per month by the day of the voting, terms 9 and 10",1,votings
+sejm_prints,sejm,sejm:prints:prints:monthly,"prints per month by delivery date, terms 9 and 10",1,prints

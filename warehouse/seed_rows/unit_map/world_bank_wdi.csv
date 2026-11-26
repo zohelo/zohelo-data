@@ -1,0 +1,3 @@
+source_system,unit_code,measure_key_pattern,unit_key
+world_bank_wdi,current US$,,usd
+world_bank_wdi,current US$,world_bank_wdi:NY.GDP.PCAP.CD,usd_per_person

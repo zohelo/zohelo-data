@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: knf_pensions
+  description: KNF pension statistics (register PLG-018), the newest quarterly PPK workbook (.xlsx) on knf.gov.pl
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/knf_pensions/
+    loaded_by: ingestion/to_bronze/knf_pensions/
+    config: ingestion/sources/knf_pensions.yaml
+  tables:
+  - name: knf_pensions_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of the
+      workbook; partitioned by entity.
+  - name: knf_pensions_rejected_files
+    description: Files of knf_pensions the Bronze decoder rejected, with the reason.

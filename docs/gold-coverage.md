@@ -73,9 +73,10 @@ entities (DBW: the files of one block), or, for a source whose Silver is a dbt t
 itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
-UNdata and UNECE so far) declares them in the
+UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB and UNCTAD so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
-build stage, because two tables of one source rarely share a shape. The block's Silver files are the
+build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
+builds them all, so they share one stage). The block's Silver files are the
 table's current data files, taken from the table's file list, so the plan still reads metadata only.
 dbt writes new files whenever it rebuilds a table, so the block is rebuilt in Gold whenever the changed-only
 build rebuilt its Silver table, also when the rows came out the same (a rebuild after a change of shared
@@ -173,7 +174,7 @@ one. It is retried when its recipe changes.
   where a monthly figure is taken once a quarter or once a year. The territorial dimension is the
   dimension slot with the most positions named like Polish areas in the block's own dictionary; the
   other dimensions are breakdowns, DBW's dimension and position ids as published. Detail:
-  [sources.md](sources.md), GUS DBW.
+  [sources/gus_dbw.md](sources/gus_dbw.md).
 - **World Bank WDI.** `world_bank_wdi:wdi_observations:_Z:<indicator code>@A`: an indicator code is one
   measure whole (WDI's codes for a sex or an age band are its own indicators), so no series has a
   breakdown. The unit is not in the key (`_Z`): WDI states it in the indicator's name and in a metadata
@@ -199,6 +200,24 @@ one. It is retried when its recipe changes.
 - **UNECE.** `unece:unece_observations:_Z:<table id>[:<codes>]@<freq>`: the value codes of every variable other
   than the area define the measure; frequency from the period (`1990`, `2025Q2`, `2025M07`); unit `as named`
   (the value labels). The UNECE groupings (CIS, CWG, EAEU, ECE, NA, ST7) stay `_X`.
+- **FAOSTAT.** `faostat:faostat_observations:<unit>:<domain>:<item>.<element>.<FAO source>@A`: domain, item,
+  element and FAO's data source (`_Z` where the domain has none) define the measure, as in the curated stage.
+  Areas by FAO area code through the curated map (the EU27 members, 5707 European Union, 5000 World); every
+  other FAO area (other countries, FAO regions) stays `_X` with its code until a rule map by M49 exists.
+- **World Bank IDS.** `world_bank_ids:ids_observations:_Z:<series code>@A`, as WDI (unit `as named`); the
+  counterpart area (creditor) is the breakdown as published (`WLD` = all creditors, `is_total`).
+- **EEA.** `eea:eea_ghg_inventory:<unit>:<format>:<pollutant>:<sector code>@A`: reporting format, pollutant and
+  CRF sector as published define the measure. The aggregate EUA stays `_X`.
+- **ECB.** `ecb:ecb_observations:<UNIT>[*10^<UNIT_MULT>]:<dataflow>:<series codes>@<FREQ>`: the series key as
+  published without FREQ and REF_AREA, as for BIS; B (business days) is loaded as `D`; FM, EST and BSI without
+  REF_AREA are the euro area (U2) and EXR has no area (`_Z`), as in the curated stage.
+- **UNCTAD.** `unctad:<table>:<measure>[:<dimension codes>]@<freq>`, one block per Silver table: the measure
+  as UNCTAD names it is the unit (`US$ at current prices in millions`, a percentage, an index), and every
+  dimension other than the economy (flow, direction, category, commodity, port, vessel type) defines the
+  measure, codes joined by `.` in the table's column order; frequency from the period (`2025`, `2006Q01`,
+  `1995M01`). Economies through the curated map (EU27 members, 3412 European Union (2020 …), 0000 World);
+  the other UNCTAD economies and groups stay `_X` with their code; commodity prices and the port liner
+  shipping connectivity index have no economy (`_Z`; the port is a dimension of the measure).
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -228,9 +247,13 @@ rule-based build stages apply the rules the curated stages already apply:
   year after the year of the subgroup's version, and every row of a subgroup named a projection
   (`prognoza`), has status `forecast`.
 - GUS DBW: an empty value is not loaded; a 0 with a no-value sign (`id_brak_wartosci` other than 253
-  "Nie dotyczy") is not loaded, a non-zero number with such a sign is loaded as `flagged`; a value whose
-  `id_tajnosci` is not 43 "Dane jawne" is loaded with status `confidential`; `id_flaga` gives
-  `provisional`, `estimated`, `break`, `low_reliability` and `forecast` (30 "Prognoza").
+  "Nie dotyczy") or under confidentiality (`id_tajnosci` other than 43 "Dane jawne") is not loaded; a
+  non-zero number under confidentiality or with sign 38 (figure withheld) is loaded as `confidential`,
+  one with another no-value sign (42, 725) as `flagged`; `id_flaga` gives `provisional`, `estimated`,
+  `break`, `low_reliability` and `forecast` (30 "Prognoza"), none, 0 and the final, revised, full
+  population, not applicable and informative-note flags are `ok`. These ids are every id in DBW's Silver
+  (Dev run 45745873785); the run summary counts the rows left out by reason
+  (`gold_gus_dbw_not_loaded.sql`).
 - World Bank WDI: an empty cell is not loaded; a year after the year of the archive's version is a
   projection and is not loaded. OECD: a period without a number is not loaded; `OBS_STATUS` becomes the
   status (`A` or none ok, `P`, `E`, `B`, `D`, `U`, `N`; any other code `flagged`, never silently ok), and
@@ -242,7 +265,18 @@ rule-based build stages apply the rules the curated stages already apply:
   name no rate, growth, change, per cent or balance (an index, a level, an exchange rate) is a value below
   the printed precision or a cell without a value and is not loaded, as in the curated stage; a rate of 0 is
   kept. UNdata: a row footnoted as a projection is not loaded; footnotes give `definition_differs` or
-  `estimated` as in the curated stage. UNDP HDR: no flags, `ok`.
+  `estimated` as in the curated stage. UNDP HDR: no flags, `ok`. UNCTAD: a measure without a number, a value that carries
+  a missing-value reason and a value footnoted as a forecast or projection are not loaded; footnotes give
+  `estimated` (estimate, nowcast), `break` and `provisional` (provisional, preliminary), other footnotes are
+  notes and the value is `ok`, as in the curated stage.
+- FAOSTAT: a cell flagged `M` (missing value) is not loaded whatever number it carries; a projection (a year
+  after the year of the file's version) is not loaded; flags E and I `estimated`, B `break`, P `provisional`, A
+  and X `ok`, any other flag `flagged`. World Bank IDS: a year after the last actual year (the newest year of
+  total external debt stocks, as in the curated stage) is a projection of scheduled debt service and is not
+  loaded. EEA: a row with a notation key and no number is not loaded, nor a 0 published with a notation key; a
+  number published with a notation key is `flagged`. ECB: OBS_STATUS `F` (forecast) is not loaded; A/none ok, P,
+  E, B, D (`definition_differs`), any other code `flagged`; a period Silver cannot place (weekly,
+  half-yearly) is not loaded.
 
 **GUS BDL geography by code.** A BDL unit id carries the TERYT code of its area, so Poland, a
 voivodeship, a powiat and a gmina are mapped by that code through the map's rows of the 7-digit
@@ -344,10 +378,10 @@ Per source, one number the portal can show:
 ### 11. Running in production
 
 The Pipeline activity `gold.observations` (authorized per source in its `activities:`) runs the
-builder for the source; [operating.md](operating.md) has the run rules. It is the last data step of
-the source's full dataflow, after the model build and the publish, so a new block version reaches
-Gold in the run that loaded it, and it is its own run `gold: observations` for a first load or a
-catch-up.
+builder for the source; [operating.md](operating.md) has the run rules. It is the last step of the
+platform's weekly run (`silver/gold: build models, then gold observations`, Sunday 09:41 UTC, O46; one job per
+source, after the model build, the publish and the index), so a new block version reaches Gold by the next Sunday
+(#3133: source runs end with Bronze or Silver), and it is the source's own run `gold: observations` for a first load or a catch-up.
 
 - **Budget and resuming.** A run builds within its time budget (300 minutes of a 350-minute job),
   commits finished blocks every 200 blocks or 10 minutes, and ends green with a warning when blocks

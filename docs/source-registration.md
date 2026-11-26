@@ -62,11 +62,12 @@ example as (
   rule of `warehouse/changed.py` (tag `gold_block`) is unchanged.
 - `poc_geography__<source>()` is optional (a source without areas maps to `_Z` in its build stage). It
   holds CTE text: one CTE named `<source_system>` with `source_system, source_code, geography_key`, helper
-  CTEs named `<source_system>_<x>`. It is placed after `geo` and `nuts_pl`, so it may read those two and
-  any `ref()`, not the CTEs of older sources. Prefer static lists and `geo` (iso2, iso3, wb_code) over the
+  CTEs named `<source_system>_<x>`. It is placed right after `geo`, so it may read `geo` and any `ref()`,
+  not the CTEs of other sources. Prefer static lists and `geo` (iso2, iso3, wb_code) over the
   source's own Silver table, so the shared model never waits for a new source.
-- Registered sources come after the older ones, in name order: the compiled SQL depends on which sources
-  exist, never on the order pull requests were merged.
+- Registered sources are placed in name order (in the geography map before the CTEs still written in the model;
+  in the block lists after the older ones): the compiled SQL depends on which sources exist, never on the order
+  pull requests were merged.
 
 How the macros are found: dbt gives a macro every project macro by name in `context`;
 `poc_registered(prefix)` lists those starting with `poc_source__` or `poc_geography__`. `ref()` calls inside
@@ -89,7 +90,17 @@ it cannot follow macros found by name; a full parse takes about five seconds.
 - **Lines of sources registered before D34** moved to the sources' own files one kind at a time, each move
   proved not to change the resolved lists, the compiled SQL or a build fingerprint. Moved (16 November): the
   sources' Gold tables and row ceilings in `warehouse.yaml` (`gold.build_public_finance` stays, shared by
-  the MF family). Still shared: the Gold macros, the geography map and `docs/sources.md`. Moving the Gold
+  the MF family). Moved (25 November): their sections of `docs/sources.md`, one file each in `docs/sources/`
+  (the NBP section gave `nbp_interest_rates` and `nbp_bop` their own files; the text is unchanged, headings one
+  level up); `docs/sources.md` keeps the register status table and the route matrix of the first five sources.
+  Moved (26 November): the geography CTEs of 17 sources from `poc_map_geography.sql` to
+  `poc_geography__<source>()` in `macros/sources/<source>.sql` (gus_bdl, gus_dbw, mrpips_unemployment, oecd, gleif,
+  gus_teryt, gugik_prg, the five World Bank sources, zus_psz, ecb, un_wpp, unhcr, eea; the World Bank map is
+  `poc_world_bank_economies(source_system)` in `world_bank_wdi.sql`, one CTE per source instead of the shared `ids`
+  and `wb_family`). The map returns the same rows; the compiled SQL of no other model changed. Four sources stay in
+  the model: unctad, who, unesco_uis and faostat read their own Silver tables through `poc_optional_ref`, which
+  `repo_check` pairs with the model's config meta `optional_parents`, so they move only when that check reads the
+  macros too. Still shared: the Gold macros of `poc_blocks.sql`. Moving the Gold
   macros is mechanical (cut the block macros, the list line, the CTE and the branch into
   `macros/sources/<source>.sql`; a trial move of WHO changed only the position of its branches in the
   compiled SQL) but reorders the unions, so the compiled SQL of the facts changes once. Do it in one pull

@@ -1,0 +1,40 @@
+version: 2
+models:
+  - name: knf_banking_series
+    description: >-
+      KNF monthly banking-sector data (register PLG-017): every value of the current workbook "Dane miesięczne
+      sektora bankowego" (entity banking_monthly, newest Landing copy), January 2018 to the newest month (September
+      2026 in the workbook of 13 November 2026; capital adequacy and overdue receivables quarterly). Grain: entity x
+      sheet_name x group_label x item_path x period_end. Blocks found by their date header rows and the bank group
+      above them; items identified by their headings and labels (item_path), never by row position; values as stored
+      (zł, counts, fractions under '%' formats); empty cells absent, never 0. Layout and trial run: see the model
+      header and ingestion/sources/knf_banking.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', entity, sheet_name, group_label, item_path, period_end)"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [banking_monthly]}}}]
+      - name: sheet_name
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [Struktura, Bilans, Należności_1, Należności_2, Należności_3, Należności_4, Należności_5,
+                         Zobowiązania, Pozabilans, RZiS, Hipoteki, Płynność, Adekwatność]
+      - name: group_label
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [Sektor bankowy, Banki komercyjne, Oddziały, Banki spółdzielcze, Banki komercyjne bez zrzeszających]
+      - name: item_path
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: [M, Q]}}}]
+      - name: period_end
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok]}}}]
+      - name: raw_sha256
+        tests: [not_null]

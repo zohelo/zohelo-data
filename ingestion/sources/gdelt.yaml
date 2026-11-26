@@ -15,8 +15,8 @@ extraction:
   initial: api
   production: snapshot                  # each file is a complete window as served
   incremental_policy: changed_since_last  # SHA-256
-  schedule: # UTC; daily before the news run builds the topics
-    - {cron: "30 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; one run a week (O46, weekly until production use; was daily): each topic file covers the last 2 weeks, so nothing is lost
+    - {cron: "30 4 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gdelt/
 archive_policy:

@@ -1,7 +1,9 @@
 # Warehouse activities the Pipeline may run (source "platform"); owner authorization.
 #   silver_gold.build     dbt build of the SQL project (models/), optional --select from the run filter
 #   gold.publish          writes 06_published/v1/ from Gold (warehouse/publish.py)
-activities: [silver_gold.build, gold.publish]
+#   gold.observations     continues the per-block Gold load of every source that has one and authorizes it in its
+#                         own YAML (one job per source, warehouse/observations.py; a first load is the source's own run)
+activities: [silver_gold.build, gold.publish, gold.observations]
 
 # Published contract v2 for zohelo-bi (docs/published.md, "Published layer contract v2"): gold.publish writes
 # 06_published/v2/ (warehouse/publish_v2.py) after the v1 files; v1 is unchanged and zohelo.com reads v1 only.
@@ -11,10 +13,12 @@ published_v2: true
 # latest.json period is newer than in the previously published latest.json (same source and frequency); the brief
 # stays for window_days after it was first detected. extreme: highest/lowest for at least extreme_min_periods observed values back.
 briefs: {window_days: 45, extreme_min_periods: 12, geographies: [PL, EU27]}
-# Declared schedules (UTC), dispatched by run.py schedule: models daily after the source
-# loads. Eurostat and BDL observations are not dbt models: their loaders write Silver (#875).
+# Declared schedules (UTC), dispatched by run.py schedule. Source runs end with Bronze or Silver; Gold is built and
+# published once a week, Sunday, after the week's source runs (Monday to Saturday), for every source whose inputs
+# changed since the last build, then the per-block Gold loads continue (O46, weekly until production use; #3133: R2
+# Data Catalog operations, about 30 builds a day before).
 schedule:
-  - {cron: "30 7 * * *", run: "silver/gold: build models"}
+  - {cron: "41 9 * * 0", run: "silver/gold: build models, then gold observations"}
 
 # Transient catalog errors: a build whose failed models all failed on HTTP 429 from the R2 Data
 # Catalog or on Iceberg commit failures (#2574) is resumed with `dbt retry` (its failed and skipped
@@ -27,6 +31,12 @@ rate_limit_retry_threads: 2     # fewer parallel catalog calls than the build's 
 rate_limit_retry_max: 8
 rate_limit_retry_deadline_minutes: 140
 commit_retry_threads: 1         # after an Iceberg commit failure: no concurrent commits
+
+# Block-scoped metrics (#3204, warehouse/changed.py): a poc_metrics_<kpi> model is rebuilt when a Gold block of its
+# concept's sources changed, not when any block changed. false = the rule before #3204 (every metrics model is rebuilt
+# with the shared facts); switching it either way rebuilds nothing by itself, but turning it off rebuilds every metrics
+# model once whose facts were rebuilt after it.
+metrics_scoped: true
 
 # Topics layer (owner decision O32, docs/topics.md): heat score weights, windows and thresholds, passed to every
 # build as the dbt var `topics` (warehouse/macros/topics.sql). `publish: false` keeps topics.json unwritten
@@ -100,6 +110,7 @@ full_rebuild:   # model: {rows: ceiling}
   topic_rank: {rows: 1000}  # 5 periods × 35 topics
   topic_quality: {rows: 1000}
   # Gold v1 (warehouse/models/gold; model names keep the poc_ prefix): rebuilt in full
+  # The five facts and poc_dim_series are incremental per Gold block (#3204 PR B, D39): no ceiling here.
   poc_build_check: {rows: 1000}
   poc_grain_check: {rows: 10000}
   poc_build_public_finance: {rows: 8600}  # 5,727 (Dev trial 43099813876)
@@ -110,16 +121,10 @@ full_rebuild:   # model: {rows: ceiling}
   poc_dim_geography: {rows: 120000}
   poc_dim_measure: {rows: 40000}
   poc_dim_observation_status: {rows: 1000}
-  poc_dim_series: {rows: 150000}  # 54,336 (10 Nov)
   poc_dim_source: {rows: 1000}
   poc_dim_unit: {rows: 1000}
-  poc_fact_annual: {rows: 1500000, exception: "#2294"}  # 1,092,012 (10 Nov) + ~230,000 slice series (#2592); until the Gold v1 cut-over (D28)
-  poc_fact_daily: {rows: 800000}  # + ECB EXR (13 currencies) and EUR STR, ~95,000
-  poc_fact_semiannual: {rows: 5000}  # 3,125 (Dev trial 43292078190)
-  poc_fact_quarterly: {rows: 537000}  # 357,774 = 168,545 (Dev trial 43292078190) + BIS 95,479, ILOSTAT 37,642, UNECE 56,108 (Dev trial 43306220004, #2861); 1.5 x
-  poc_fact_monthly: {rows: 971000}  # 647,049 = 541,532 (Dev trial 43292078190) + BIS 75,423, UNECE 30,094 (Dev trial 43306220004, #2861); 1.5 x
   poc_map_geography: {rows: 150000}
-  poc_measure_dimensions: {rows: 5000}
+  poc_measure_dimensions: {rows: 11500}  # 7,692 (prod build 45735962376, 26 Nov); 1.5 x
   kpi_dimension: {rows: 10000}
   poc_metrics_fx_rate: {rows: 600000}
   poc_metrics_exports_goods: {rows: 3000}  # 1,880 build rows of the measure (Dev trial 43100532689)

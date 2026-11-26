@@ -84,7 +84,7 @@ const SortableTab = React.memo(function SortableTab({ tab, isActive }: SortableT
         value={tab.id}
         className={cn(
           "flex h-8 items-center rounded-sm px-3 relative w-full",
-          "data-[state=active]:bg-primary data-[state=active]:text-black",
+          "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
           "transition-colors duration-200",
           "hover:bg-primary/40",
           tab.id === "home" ? "cursor-default" : "cursor-pointer",

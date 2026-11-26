@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+air_temperature,imgw_archive,imgw_archive:synop_monthly:degC:STD,"monthly mean of the daily means, mean of IMGW synoptic stations with a complete month (IMGW archive)",1,
+precipitation,imgw_archive,imgw_archive:synop_monthly:mm:SMDB,"monthly total, mean of IMGW synoptic stations with a complete month (IMGW archive)",1,
