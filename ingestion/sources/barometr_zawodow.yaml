@@ -36,7 +36,7 @@ archive_policy:
   prune: report
 bronze: [bronze.barometr_zawodow_occupations, bronze.barometr_zawodow_rejected_files]
 silver: [silver.barometr_zawodow_forecasts]
-gold: [gold.build_barometr_zawodow]
+gold: [gold.build_barometr_zawodow, gold.metrics_occupations_deficit_forecast]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   barometr_zawodow_forecasts: {rows: 60000}  # measured in the Dev trial
   poc_build_barometr_zawodow: {rows: 1000}  # measured in the Dev trial

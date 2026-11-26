@@ -66,7 +66,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
             poster = posters.parse(page, reader)
         except ValueError as exc:
             raise ValueError(f"page {number}: {exc}") from exc
-        except Exception as exc:  # noqa: BLE001 - a page pypdf cannot interpret rejects the file, with the reason
+        except Exception as exc:  # a page pypdf cannot interpret rejects the file, with the reason
             raise ValueError(f"page {number}: {type(exc).__name__}: {exc}") from exc
         if poster is None:
             continue

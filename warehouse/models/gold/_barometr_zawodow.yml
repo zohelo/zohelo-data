@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_barometr_zawodow
+    description: >-
+      Build stage — Barometr Zawodów (register PLS-030), block forecast: the number of occupations an edition's
+      posters put in each forecast category (deficyt, rownowaga, nadwyzka), for Poland and the 16 voivodeships, per
+      forecast year; counts of published forecast classifications, not observations of the labour market (the
+      occupation-level forecasts stay in silver.barometr_zawodow_forecasts); licence unresolved (internal).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_occupations_deficit_forecast
+    description: KPI occupations_deficit_forecast (draft) from gold.build_barometr_zawodow (macros/poc_metrics.sql).

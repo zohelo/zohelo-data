@@ -3850,7 +3850,8 @@ sources:
   name: Barometr Zawodów
   short_name: Barometr Zawodów
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
-  status: approved
+  source_system: barometr_zawodow
+  status: built
   family: B
   kpi: true
   geography: powiat, voivodeship and Poland
