@@ -102,7 +102,7 @@ def patch_checkout() -> None:
         path.write_text(text)
     project = yaml.safe_load((WH / "dbt_project.yml").read_text())
     silver = project["models"]["zohelo"]["silver"]
-    silver.setdefault("gios_air_quality", {})["+schema"] = NS_S
+    silver.setdefault("gios_air_quality", {}).setdefault("gios_air_archive_stations", {})["+schema"] = NS_S
     (WH / "dbt_project.yml").write_text(yaml.safe_dump(project, sort_keys=False, allow_unicode=True))
 
 
@@ -173,8 +173,18 @@ def trial() -> int:
     from ingestion.to_bronze.gios_air_quality import archive_load, load
     from ingestion.to_landing.gios_air_quality import archive, receipts
 
+    import contextlib
+
+    from pyiceberg.exceptions import NamespaceAlreadyExistsError
+
+    from ingestion.common import entity_tables as et
+    from warehouse.entity import _remote
+
     client, cat = s3(), bf.retry(catalog, "catalog")
     landing, lake = req("STORAGE_LANDING_BUCKET_NAME"), req("STORAGE_LAKEHOUSE_BUCKET_NAME")
+    for ns in (NS_B, NS_S):  # production namespaces exist; scratch ones are made here
+        with contextlib.suppress(NamespaceAlreadyExistsError):
+            cat.create_namespace(ns)
 
     # Landing twice
     res_l: dict = {"runs": []}
@@ -211,35 +221,48 @@ def trial() -> int:
     note("gios archive trial bronze silver", res_b, "notice" if not res_b["runs"][0]["rejected"] else "warning")
 
     con = duckdb.connect()
-    con.register("bv", cat.load_table((NS_B, archive_load.VALUES)).scan().to_arrow())
-    con.register("bs", cat.load_table((NS_B, archive_load.STATIONS)).scan().to_arrow())
+    con.execute("set memory_limit = '10GB'; set temp_directory = '/tmp/duckdb_trial'")
+    _remote(con)
+
+    def files(table_id) -> str:
+        paths = [p for st in et.state(cat.load_table(table_id), "entity").values() for p in st["paths"]]
+        return "read_parquet([" + ", ".join(f"'{p}'" for p in sorted(paths)) + "])"
+
+    con.execute(f"create view bv as select * from {files((NS_B, archive_load.VALUES))}")
+    con.execute(f"create table bs as select * from {files((NS_B, archive_load.STATIONS))}")
     prof_b = {
         "rows_files_entities": q(con, "select count(*), count(distinct raw_sha256), count(distinct entity) from bv")[0],
         "rows_per_year": q(con, "select entity, count(*) from bv group by 1 order by 1"),
         "members": q(con, "select count(distinct member) from bv")[0][0],
-        "non_numeric_values": q(con, "select value, count(*) from bv where try_cast(value as double) is null group by 1 order by 2 desc limit 10"),
+        "non_numeric_values": q(con, "select value, count(*) from bv where try_cast(replace(value, ',', '.') as double) is null group by 1 order by 2 desc limit 10"),
+        "decimal_comma_cells": q(con, "select count(*) from bv where value like '%,%'")[0][0],
         "null_station_code": q(con, "select count(*) from bv where station_code is null")[0][0],
-        "header_variants": q(con, "select coalesce(averaging_time, '<null>'), count(*) from bv group by 1 order by 2 desc limit 12"),
-        "station_rows": q(con, "select count(*), count(distinct station_code), count(distinct voivodeship) from bs")[0],
+        "header_averaging_variants": q(con, "select coalesce(averaging_time, '<null>'), count(*) from bv group by 1 order by 2 desc limit 12"),
+        "station_rows_codes_voivodeships": q(con, "select count(*), count(distinct station_code), count(distinct voivodeship) from bs")[0],
     }
     note("gios archive trial bronze profile", prof_b)
-    con.register("sv", cat.load_table((NS_S, archive_load.VALUES)).scan(
-        selected_fields=("entity", "archive_year", "member", "station_code", "indicator", "averaging_time", "indicator_published",
-                         "unit", "measured_at", "measured_on", "value", "validation_status", "raw_sha256")).to_arrow())
+    con.execute(f"create view sv as select * from {files((NS_S, archive_load.VALUES))}")
+    per_year = []
+    for (entity,) in con.execute("select distinct entity from sv order by 1").fetchall():
+        w = f"from sv where entity = '{entity}'"
+        per_year.append(q(con, f"""select '{entity}', count(*),
+            (select count(*) from (select 1 {w} group by station_code, indicator, averaging_time, measured_at, member having count(*) > 1)),
+            (select count(*) from (select 1 {w} group by station_code, indicator, averaging_time, measured_at having count(*) > 1)),
+            count(*) filter (where station_code is null or indicator is null or measured_at is null or raw_sha256 is null),
+            count(*) filter (where value is null)
+            {w}""")[0])
     prof_s = {
-        "rows": q(con, "select count(*), count(distinct entity), min(measured_on), max(measured_on) from sv")[0],
-        "dup_keys": q(con, "select count(*) from (select 1 from sv group by station_code, indicator, averaging_time, measured_at having count(*) > 1)")[0][0],
-        "null_keys": q(con, "select count(*) filter (where station_code is null), count(*) filter (where indicator is null), count(*) filter (where measured_at is null), count(*) filter (where raw_sha256 is null) from sv")[0],
+        "per_year_rows_dupkey_dup_without_member_nullkeys_nonnumeric": per_year,
+        "rows_range": q(con, "select count(*), min(measured_on), max(measured_on) from sv")[0],
         "averaging_status": q(con, "select averaging_time, validation_status, count(*) from sv group by 1, 2"),
         "indicator_from_member_name": q(con, "select count(*) from sv where indicator_published is null")[0][0],
         "units": q(con, "select coalesce(unit, '<none>'), count(*) from sv group by 1 order by 2 desc"),
-        "five_hourly_per_year": q(con, "select archive_year, count(distinct station_code), count(*) from sv where averaging_time = '1g' and indicator in ('PM10', 'PM2.5', 'NO2', 'O3', 'SO2') group by 1 order by 1"),
-        "zeros_negatives_five": q(con, "select count(*) filter (where value = 0), count(*) filter (where value < 0), min(value), max(value) from sv where indicator in ('PM10', 'PM2.5', 'NO2', 'O3', 'SO2') and averaging_time = '1g'")[0],
+        "five_hourly_per_year_stations_rows": q(con, "select archive_year, count(distinct station_code), count(*) from sv where averaging_time = '1g' and indicator in ('PM10', 'PM2.5', 'NO2', 'O3', 'SO2') group by 1 order by 1"),
+        "five_hourly_zeros_negatives_min_max": q(con, "select count(*) filter (where value = 0), count(*) filter (where value < 0), min(value), max(value) from sv where indicator in ('PM10', 'PM2.5', 'NO2', 'O3', 'SO2') and averaging_time = '1g'")[0],
         "codes_unplaced_five_hourly": q(con, "with m as (select station_code as code from bs union select trim(unnest(string_split(regexp_replace(old_station_codes, '[;,\\s]+', ',', 'g'), ','))) from bs where old_station_codes is not null) select count(distinct station_code), list(distinct station_code)[1:10] from sv where averaging_time = '1g' and indicator in ('PM10', 'PM2.5', 'NO2', 'O3', 'SO2') and station_code not in (select code from m)")[0],
         "spot_station_pm10_2025_mean": q(con, "select station_code, round(avg(value), 1), count(*) from sv where archive_year = 2025 and indicator = 'PM10' and averaging_time = '1g' and station_code in ('MpKrakAlKras', 'DsWrocAlWisn', 'MzWarAlNiepo') group by 1"),
     }
     note("gios archive trial silver profile", prof_s)
-    con.unregister("sv")
 
     # dbt
     patch_checkout()
