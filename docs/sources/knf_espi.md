@@ -1,6 +1,6 @@
 # KNF ESPI issuer reports, OAM list (`knf_espi`)
 
-**Built (16 Nov 2026, register CD-006, #1486).** Route (decision D39): KNF's public OAM list of regulated information,
+**Built (16 Nov 2026, register CD-006, #1486).** Route (decision D40): KNF's public OAM list of regulated information,
 `https://moam.knf.gov.pl/moam.nsf`, its own view by day of receipt (`mOAM?readForm&RestrictToCategory=<day>`, pager
 of 20), list pages only, one request at a time 5 s apart, the platform's User-Agent, at most 3 tries; robots.txt is
 404; a 4xx stops the run. Never a report page or file. Entity: one day of receipt (`day_<YYYYMMDD>`), landed as one

@@ -6,7 +6,7 @@ landing.extract  the list with only "EBI" ticked, newest first, through the page
                  landed day or 8 days back, whichever is older; back to 1 January of the previous year on the
                  first run. One request at a time,
                  5 seconds apart, the platform's User-Agent; list rows only, never a report page or attachment, and
-                 never https://www.gpw.pl/ebi, which refuses automated clients (decision D39). ESPI rows are not
+                 never https://www.gpw.pl/ebi, which refuses automated clients (decision D40). ESPI rows are not
                  asked for (they are CD-006, knf_espi) and are dropped if one is answered. Each day with reports
                  lands as one reduced JSON document (time, category, number, issuer, ISIN, id and link; never the
                  title, which can name persons; the prices shown beside each row are not read), written only when

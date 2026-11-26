@@ -53,8 +53,10 @@ Metrics models are block-scoped (#3204, D38; kill switch `metrics_scoped` in `wa
 Gold blocks of the KPI's sources (`seed_rows/kpi_measure`; source → block from `poc_legacy_block_models()`,
 each `poc_source__<source>()` and a block's config meta `source_systems`). It is rebuilt when one of those
 blocks was rebuilt in this run or after its last build, or when a parent that does not derive from a block
-(`kpi`, `kpi_measure`, `unit`, `unit_map`, `poc_dim_geography`, `poc_dim_calendar`, and `gold_coverage.coverage`
-through `poc_dim_measure`) changed; a rebuilt fact or dimension alone no longer rebuilds all of them. Its
+(`kpi`, `kpi_measure`, `unit`, `unit_map`, `poc_dim_geography`, `poc_dim_calendar`) changed; a rebuilt fact or
+dimension alone no longer rebuilds all of them. `gold_coverage.coverage` is not an input (`OUTSIDE_METRICS` in
+`changed.py`): it adds only non-activated rows to `poc_dim_measure`, which no metrics model reads; the data test
+`tests/gold_coverage_outside_metrics.sql` fails the build if that stops being true. Its
 fingerprint includes the code of the facts and dimensions above it (not the block list or the per-source macro
 files), so an edit to `poc_fact_annual.sql` still rebuilds every metrics model and a new source none of the
 others. A KPI with a source that maps to no block stays unscoped. The plan lists the metrics models the old rule

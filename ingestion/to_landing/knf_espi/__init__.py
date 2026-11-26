@@ -6,7 +6,7 @@ landing.extract  the list's view by day of receipt (``mOAM?readForm&RestrictToCa
                  without a copy (a day a past run failed on, weekends included), and on the first runs every
                  day back to 1 January of the previous year, newest first, within the time budget. One request
                  at a time, 5 seconds apart, the platform's User-Agent; list pages only, never a report page or
-                 file (decision D39). Each day with reports lands as one reduced JSON document (issuer, date, the
+                 file (decision D40). Each day with reports lands as one reduced JSON document (issuer, date, the
                  form code of the title, document id and link; never the title, which can name persons), written
                  only when it changed.
 landing.verify   every receipt has its file (Landing or Archive)
