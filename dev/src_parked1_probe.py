@@ -376,5 +376,78 @@ def main():
         emit(f"parked1 {k}", res[k])
 
 
+
+
+# Second pass: pages whose terms text sat behind long navigation, and links found by their anchor text.
+DEEP = [
+    ("EX-004", "https://www.epo.org/en/service-support/ordering/terms-and-conditions/ops-terms-and-conditions", r"(?i)linked open|bulk data|fair use", r"(?i)as such|fair use|4 GB|free|registr|charge|redistribut|own products|commercial|licen"),
+    ("EX-004", "https://www.epo.org/en/searching-for-patents/data/bulk-data-sets", r"(?i)EP bibliographic data|linked open|terms", r"(?i)free of charge|charge|licen|CC BY|Creative Commons|terms|subscription|price|fee"),
+    ("EX-004", "https://www.epo.org/en/searching-for-patents/data/linked-open-ep-data", r"(?i)sparql|licen|terms|download", r"(?i)CC BY|Creative Commons|licen|free|sparql|download|update|weekly"),
+    ("CD-005", "https://www.gpw.pl/pub/GPW/files/PDF/dane_rynkowe/WSE_Market_Data_Policy.pdf", None, r"(?i)end of (trading|day)|historical|delayed|website|internet|private use|free of charge|non-display|statistic"),
+    ("CD-005", "https://www.gpw.pl/market-data", r"(?i)^GPW statistics$|^Price archive$|legal|disclaimer", r"(?i)licen|free|statistic"),
+    ("CD-011", "https://gpwbenchmark.pl/dane_historyczne", r"(?i)korzystanie z danych|stosowanie lub korzystanie|zastrzeżenia prawne|dane opóźnione", r"(?i)licencj|umow|opłat|nieodpłat|korzystan|rozpowszechn|komercyj|zgod"),
+    ("CD-001", "https://www.ideracorp.com/legal/APILayer", r"(?i)master software as a service|general website terms|marketplace terms", r"(?i)redistribut|resell|sublicens|display|commercial|personal|non-commercial|data"),
+]
+
+
+def deep(entry, url, anchor, kw):
+    r = get(url, 8000000, 60, robots_timeout=40)
+    if "err" in r:
+        fail(url, r)
+        return {"err": r["err"][:80]}
+    b = r.pop("body")
+    if b[:5] == b"%PDF-":
+        p, n = pdf_text(b)
+        ll = []
+        kind = f"pdf pages={n}"
+    else:
+        t = b.decode("utf-8", "replace")
+        p = plain(t)
+        ll = links(t, r.get("final") or url)
+        kind = "html"
+    print(f"=== DEEP {entry} {url}\nMETA {json.dumps({k: v for k, v in r.items() if v}, ensure_ascii=False)} {kind} chars={len(p)}", flush=True)
+    for s in around(p, kw, 300, 1500, 14):
+        print(f"  KW {s}", flush=True)
+    if kind.startswith("pdf"):
+        print(f"FULL {p[:40000]}", flush=True)
+    end()
+    out = {"st": r.get("st"), "chars": len(p), "kind": kind}
+    if anchor:
+        fol = [(a, u) for a, u in ll if re.search(anchor, a)][:4]
+        out["follow"] = {}
+        for a, u in fol:
+            g = get(u, 8000000, 60)
+            if "err" in g:
+                fail(u, g)
+                out["follow"][a[:30]] = g["err"][:60]
+                continue
+            gb = g.pop("body")
+            if gb[:5] == b"%PDF-":
+                q, n = pdf_text(gb)
+            else:
+                gt = gb.decode("utf-8", "replace")
+                q = plain(gt)
+                for a2, u2 in links(gt, g.get("final") or u):
+                    if re.search(r"(?i)\.(pdf|xlsx?|csv|zip|xml|json)(\?|$)|sparql|download|pobierz|licen|terms", a2 + " " + u2):
+                        print(f"  L2 {a2} | {u2}", flush=True)
+            print(f"=== DEEP2 {entry} {a} | {u}\nMETA {json.dumps({k: v for k, v in g.items() if v}, ensure_ascii=False)} chars={len(q)}", flush=True)
+            for s in around(q, kw, 300, 1500, 12):
+                print(f"  KW {s}", flush=True)
+            end()
+            out["follow"][a[:30]] = {"u": u[-70:], "st": g.get("st"), "chars": len(q)}
+    return out
+
+
+def two():
+    res = {}
+    for entry, url, anchor, kw in DEEP:
+        res.setdefault(entry, {})[tag(url)[:55]] = deep(entry, url, anchor, kw)
+    res["errors"] = {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:12]}
+    for k in res:
+        emit(f"parked1b {k}", res[k])
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+
+    two() if sys.argv[1:] == ["two"] else main()
