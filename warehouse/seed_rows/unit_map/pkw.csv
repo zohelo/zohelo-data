@@ -1,0 +1,4 @@
+source_system,unit_code,measure_key_pattern,unit_key
+pkw,pct,,pct
+pkw,persons,,persons
+pkw,votes,,votes_cast

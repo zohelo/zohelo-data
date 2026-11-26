@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """RPWDL bronze.load: newest Landing copy of each register ZIP → five Bronze tables, allowlisted columns only.
 
-Healthcare-provider ZIPs (healthcare_provider_active / _inactive) feed bronze.rpwdl_providers (podmioty.csv),
-rpwdl_establishments (zaklady.csv), rpwdl_units (jednostki.csv) and rpwdl_cells (komorki.csv); the 16 practice ZIPs
-feed bronze.rpwdl_practices (praktyki.csv). One Bronze row per CSV row, values as source text (the text NULL
-included), provenance columns and the CSV row number. Privacy allowlist (register PLS-020, aggregate counts only):
-only the columns in the maps below are kept. Never read: names, NIP, REGON, book numbers and ledger ids (a provider
-or practice can be one natural person; the grain of those two tables is the file row), the practices' register
-ids, decision numbers, street addresses, postcodes, phone, e-mail and web addresses; the seat TERYT of a provider
-and the correspondence TERYT of a practice are cut to the voivodeship (first two digits). The members wspolnicy.csv
-(practitioners' names, licence numbers) and adresy_swiadczen.csv (places of practice) are not read at all;
-swiadczenia, kontrole and akredyt_* are left out.
+One entity per register type, ledger state and year (``<register>_<active|inactive>_<year>``, #3139; the years are
+expanded from ingestion/sources/rpwdl.yaml): the newest copy of each year is loaded, so every year keeps its last
+state. A Landing file is done per entity (bulk_bronze ``per_entity``): bytes unchanged across 1 January are loaded
+again for the new year. Healthcare-provider ZIPs (healthcare_provider_active / _inactive) feed
+bronze.rpwdl_providers (podmioty.csv), rpwdl_establishments (zaklady.csv), rpwdl_units (jednostki.csv) and
+rpwdl_cells (komorki.csv); the 16 practice ZIPs feed bronze.rpwdl_practices (praktyki.csv). One Bronze row per CSV
+row, values as source text (the text NULL included), provenance columns and the CSV row number. Privacy allowlist
+(register PLS-020, aggregate counts only): only the columns in the maps below are kept. Never read: names, NIP,
+REGON, book numbers and ledger ids (a provider or practice can be one natural person; the grain of those two tables
+is the file row), the practices' register ids, decision numbers, street addresses, postcodes, phone, e-mail and web
+addresses; the seat TERYT of a provider and the correspondence TERYT of a practice are cut to the voivodeship (first
+two digits). The members wspolnicy.csv (practitioners' names, licence numbers) and adresy_swiadczen.csv (places of
+practice) are not read at all; swiadczenia, kontrole and akredyt_* are left out.
 Every needed member's header must equal the expected header exactly, else the ZIP is rejected
 (bronze.rpwdl_rejected_files) for all its tables. DuckDB reads the CSVs (no per-cell Python). Code shared with
 other bulk sources: ingestion/common/bulk_bronze.py.
@@ -18,8 +21,10 @@ other bulk sources: ingestion/common/bulk_bronze.py.
 
 from __future__ import annotations
 
+from datetime import datetime
 import io
 from pathlib import Path
+import re
 import tempfile
 from typing import Any
 import zipfile
@@ -28,6 +33,7 @@ import duckdb
 import pyarrow as pa
 
 from ingestion.common import bulk_bronze
+from ingestion.to_landing import rpwdl as rpwdl_landing
 
 SOURCE = "rpwdl"
 REJECTED = "rpwdl_rejected_files"
@@ -43,6 +49,21 @@ PRACTICE_TYPES = [
 ]
 PROVIDER_ENTITIES = ["healthcare_provider_active", "healthcare_provider_inactive"]
 PRACTICE_ENTITIES = [f"{t}_{state}" for t in PRACTICE_TYPES for state in ("active", "inactive")]
+YEAR_RE = re.compile(r"^(?P<base>[a-z_]+_(?:active|inactive))_(?P<year>[0-9]{4})$")
+
+
+def base_entity(entity: str) -> str:
+    """The register entity without its year (healthcare_provider_active_2026 → healthcare_provider_active)."""
+    match = YEAR_RE.fullmatch(entity)
+    if not match:
+        raise ValueError(f"{entity}: not <register>_<active|inactive>_<year>")
+    return match["base"]
+
+
+def year_entities(bases: list[str], today: datetime | None = None) -> list[str]:
+    """Every declared year entity (closed years included) whose register entity is one of ``bases``."""
+    return [s["entity"] for s in rpwdl_landing.specs(today) if base_entity(s["entity"]) in bases]
+
 
 _DATES_SUSPENSION = ["Początek okresu zawieszenia", "Koniec okresu zawieszenia"]
 _ADDRESS = [
@@ -291,7 +312,7 @@ def header_of(archive: zipfile.ZipFile, member: str) -> list[str]:
 
 def check_layout(archive: zipfile.ZipFile, entity: str) -> None:
     """Every member a table reads from this ZIP exists with exactly the expected header (ValueError otherwise)."""
-    kind = "provider" if entity in PROVIDER_ENTITIES else "practice"
+    kind = "provider" if base_entity(entity) in PROVIDER_ENTITIES else "practice"
     names = set(archive.namelist())
     for member in NEEDED[kind]:
         if member not in names:
@@ -354,8 +375,11 @@ def decoder(table: str):
     return decode
 
 
-def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze") -> int:
-    """budget_minutes is unused: 18 ZIPs, about 104 MB, decoded one member at a time."""
+def load(
+    budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze", today: datetime | None = None
+) -> int:
+    """budget_minutes is unused: 18 ZIPs a year, about 104 MB, decoded one member at a time. ``today`` exists for
+    Dev trials of a year boundary (which years are declared)."""
     status = 0
     for table, (_, entities, _) in TABLES.items():
         status |= bulk_bronze.load(
@@ -367,6 +391,7 @@ def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str
             table.removeprefix("rpwdl_"),
             landing_root=landing_root,
             lake_root="02_bronze" if namespace == "bronze" else namespace,
-            specs=[{"entity": e} for e in entities],
+            specs=[{"entity": e} for e in year_entities(entities, today)],
+            per_entity=True,
         )
     return status
