@@ -5097,7 +5097,8 @@ sources:
   name: e-Zamówienia / BZP read API
   short_name: e-Zamówienia BZP
   provider: Public Procurement Office (UZP)
-  status: approved
+  source_system: uzp_bzp
+  status: built
   family: D
   kpi: true
   geography: Poland
@@ -5113,7 +5114,8 @@ sources:
     auth: 'BZP notice reading needs no access application and is free (API regulations): "Usługa Webservice jest bezpłatna
       i dostępna jest pod adresem https://ezamowienia.gov.pl/mo-client-board/api/notices/".'
     cost: free
-    limits: Unknown.
+    limits: '30 requests a minute (the stated limit, #2981; not found in the instruction ZIP); the instruction (Załącznik
+      3): at most 500 notices a page (PageSize), one notice type per request, SearchAfter paging.'
   licence:
     status: unresolved
     notes: 'Terms: API regulations https://media.ezamowienia.gov.pl/pod/2023/01/Regulamin-korzystania-z-API.pdf (version of
