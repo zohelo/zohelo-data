@@ -100,7 +100,8 @@ def landing() -> dict:
         n_files, size, receipts = landing_objects()
         out["runs"].append({"run": n, "exit": code, "outcomes": outcomes,
                             "not_landed": [f for f in files if f.get("outcome") not in ("landed_new", "unchanged",
-                                                                                      "closed year, held")],
+                                                                                      "closed year, held",
+                                                                                      "not published yet")],
                             "landing_files_after": n_files, "landing_bytes_after": size, "receipts_after": receipts})
     for mode in ("inspect", "verify"):
         CAPTURED.clear()
