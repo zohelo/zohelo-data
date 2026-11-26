@@ -67,8 +67,16 @@ def csv_rows(con, path: Path, member: str, column: str, prov: dict[str, Any]) ->
         from read_csv(?, header = true, all_varchar = true, delim = ',', quote = '"', escape = '"',
                       strict_mode = true, null_padding = false, encoding = 'utf-8')
         """,
-        params=[prov["entity"], member, member.removeprefix("dc_indicator_").removesuffix(".csv"), column,
-                prov["raw_sha256"], prov["source_version"], prov["ingested_at"], str(path)],
+        params=[
+            prov["entity"],
+            member,
+            member.removeprefix("dc_indicator_").removesuffix(".csv"),
+            column,
+            prov["raw_sha256"],
+            prov["source_version"],
+            prov["ingested_at"],
+            str(path),
+        ],
     ).to_arrow_table()
     if not table.num_rows:
         raise ValueError(f"{member}: no rows")
@@ -88,8 +96,17 @@ def label_rows(body: bytes, member: str, prov: dict[str, Any]) -> pa.Table:
         if not code or not label or code in seen:
             raise ValueError(f"{member}: row {number} without class_id and field_en, or a repeated class_id {code!r}")
         seen.add(code)
-        rows.append({**prov, "member": member, "indicator": "technology_field_names", "class_column": "class_id",
-                     "class_id": code, "class_label": label, "source_row_number": number})
+        rows.append(
+            {
+                **prov,
+                "member": member,
+                "indicator": "technology_field_names",
+                "class_column": "class_id",
+                "class_id": code,
+                "class_label": label,
+                "source_row_number": number,
+            }
+        )
     return pa.Table.from_pylist(rows, schema=ARROW)
 
 
