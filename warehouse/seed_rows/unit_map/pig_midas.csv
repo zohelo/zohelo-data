@@ -1,0 +1,4 @@
+source_system,unit_code,measure_key_pattern,unit_key
+pig_midas,deposits,,deposits
+pig_midas,mining_areas,,mining_areas
+pig_midas,m2,,m2
