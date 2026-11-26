@@ -42,7 +42,11 @@ id and version stamp), TERC of the gmina (`TERYT_GMI`), SIMC (`ID_SIMC`), ULIC (
 locality and street names, house number, postal code (only `NN-NNN`, the printed text kept), date assigned, x and y in
 EPSG:2180 as published (not reprojected). Row policy: #822 ceilings apply to full-rebuild dbt models; a table of
 ~8.6 M rows is an entity table replaced per package (design #875, as GLEIF and the VAT white list), so Silver keeps
-every point. No persons: the layer holds addresses, not residents.
+every point. No persons: the layer holds addresses, not residents. Dev trial 45827301180 (package of 26 Nov 2026):
+8,647,096 points in Bronze (376 MB Parquet) and Silver (361 MB), 0 repeated ids, 0 null keys; the load (unpack, read,
+Silver, upload) took about 3 minutes at 3.3 GB peak memory plus 1.4 GB for 7z, the download about 8 minutes. No-value
+markers: the postal code prints the text `null` 751 times (26 more are not `NN-NNN`), one ULIC code prints `null`;
+both stay as published, `postal_code` is null there.
 
 **Gold** `gold.prg_address_counts` (dbt): address points per gmina (the point's TERC code), powiat, voivodeship and
 Poland; the build stage `build_prg` carries them as block `punkty_adresowe`, measure
