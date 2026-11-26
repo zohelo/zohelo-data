@@ -4,13 +4,16 @@
 The Landing file holds one JSON line per dataset record of the data.europa.eu catalogue `dane-gov-pl`, already
 reduced to the allowlist of ingestion/to_landing/dane_gov_pl/extract.py. Datasets: one Bronze row per line, every
 value as source text, the categories as JSON text. Distributions: one Bronze row per item of a line's
-``distributions`` list, with the dataset id. DuckDB reads the lines (no per-cell Python). A file with a line or a
-distribution whose keys differ from the allowlist, a line without its id or an id on two lines is rejected
-(bronze.dane_gov_pl_rejected_files). Shared code: ingestion/common/bulk_bronze.py.
+``distributions`` list, with the dataset id. DuckDB reads the lines with a declared schema (typed read_json, no
+per-cell Python; the untyped JSON functions needed more than 12 GB for the 672,460 distributions, Dev trial
+45822510638). The layout is checked first, line by line: a line or a distribution whose keys differ from the
+allowlist, a line without its id or an id on two lines rejects the file (bronze.dane_gov_pl_rejected_files). Shared
+code: ingestion/common/bulk_bronze.py.
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -41,7 +44,7 @@ DATASET = {
     "catalog_record_modified": "catalog_record_modified",
     "country": "country",
 }
-DATASET_KEYS = sorted([*DATASET.values(), "distributions"])
+DATASET_KEYS = {*DATASET.values(), "distributions"}
 # Bronze column -> key of a reduced distribution (extract.reduce_distribution)
 DISTRIBUTION = {
     "distribution_id": "id",
@@ -55,7 +58,7 @@ DISTRIBUTION = {
     "status": "status",
     "title_pl": "title_pl",
 }
-DISTRIBUTION_KEYS = sorted(DISTRIBUTION.values())
+DISTRIBUTION_KEYS = set(DISTRIBUTION.values())
 TABLES = {"dane_gov_pl_datasets": "datasets", "dane_gov_pl_distributions": "distributions"}
 
 
@@ -67,70 +70,78 @@ def columns(table: str) -> list[tuple[str, str]]:
     return [("entity", "VARCHAR"), *[(n, "VARCHAR") for n in names], *bulk_bronze.PROVENANCE, *tail]
 
 
-def _value(obj: str, key: str) -> str:
-    """A JSON value as source text: strings as they are, null as NULL, numbers, booleans and lists as JSON text."""
-    path = f"{obj} -> '$.{key}'"
-    return (
-        f"case json_type({path}) when 'VARCHAR' then {obj} ->> '$.{key}' when 'NULL' then null "
-        f"else cast({path} as varchar) end"
-    )
-
-
-def _lines(con: duckdb.DuckDBPyConnection, path: Path) -> None:
-    """Load and check the JSON lines into table ``lines`` (ValueError: an unknown layout rejects the file)."""
-    con.execute(
-        "create table lines as select j, row_number() over () as n "
-        "from read_json_objects(?, format = 'newline_delimited', maximum_object_size = 268435456) as t(j)",
-        [str(path)],
-    )
-    total, odd, keyless, repeated, odd_dist, dist_keyless = con.execute(
-        """
-        with d as (select unnest(cast(j -> '$.distributions' as json[])) as x from lines)
-        select
-            (select count(*) from lines),
-            (select count(*) from lines where list_sort(json_keys(j)) <> ?::varchar[]),
-            (select count(*) from lines where coalesce(j ->> '$.id', '') = ''),
-            (select count(*) - count(distinct j ->> '$.id') from lines),
-            (select count(*) from d where list_sort(json_keys(x)) <> ?::varchar[]),
-            (select count(*) from d where coalesce(x ->> '$.id', '') = '')
-        """,
-        [DATASET_KEYS, DISTRIBUTION_KEYS],
-    ).fetchall()[0]
-    if not total:
+def check_layout(body: bytes) -> int:
+    """Lines whose keys are exactly the allowlist, each with its own id (ValueError: an unknown layout rejects the
+    file). Only the keys are looked at; the values are read by DuckDB. Returns the number of lines."""
+    seen: set[str] = set()
+    for n, line in enumerate(body.splitlines(), 1):
+        record = json.loads(line)
+        if not isinstance(record, dict) or set(record) != DATASET_KEYS:
+            raise ValueError(f"line {n}: keys {sorted(record) if isinstance(record, dict) else type(record)}")
+        if not isinstance(record["id"], str) or not record["id"] or record["id"] in seen:
+            raise ValueError(f"line {n}: missing or repeated id")
+        seen.add(record["id"])
+        items = record["distributions"]
+        if not isinstance(items, list):
+            raise ValueError(f"line {n}: distributions is not a list")
+        for item in items:
+            if not isinstance(item, dict) or set(item) != DISTRIBUTION_KEYS or not item.get("id"):
+                keys = sorted(item) if isinstance(item, dict) else type(item).__name__
+                raise ValueError(f"line {n}: a distribution with keys {keys} or without an id")
+    if not seen:
         raise ValueError("no records")
-    if odd or keyless or repeated or odd_dist or dist_keyless:
-        raise ValueError(
-            f"unknown layout: {odd} lines with other keys, {keyless} without id, {repeated} repeated id, "
-            f"{odd_dist} distributions with other keys, {dist_keyless} distributions without id"
-        )
+    return len(seen)
+
+
+def _schema() -> str:
+    """The declared read_json schema: every value as text (numbers and booleans as printed), categories as JSON."""
+    distribution = ", ".join(f'"{key}" VARCHAR' for key in sorted(DISTRIBUTION_KEYS))
+    fields = {key: "VARCHAR" for key in DATASET.values()} | {
+        "categories": "JSON",
+        "distributions": f"STRUCT({distribution})[]",
+    }
+    return "{" + ", ".join(f"'{key}': '{kind}'" for key, kind in fields.items()) + "}"
 
 
 def decoder(table: str):
     def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         body.decode("utf-8")  # UnicodeDecodeError rejects the file
+        lines = check_layout(body)
         prov = bulk_bronze.provenance(receipt)
         params = [prov["entity"], prov["raw_sha256"], prov["source_version"], prov["ingested_at"]]
         with tempfile.TemporaryDirectory(prefix="zohelo-dane-gov-pl-") as temporary:
             path = Path(temporary) / "catalogue.jsonl"
             path.write_bytes(body)
             con = duckdb.connect()
+            con.execute("set threads = 2")
+            con.execute(f"set temp_directory = '{temporary}'")
             try:
-                _lines(con, path)
+                con.execute(
+                    f"""
+                    create table lines as
+                    select *, row_number() over () as n
+                    from read_json(?, format = 'newline_delimited', records = true, columns = {_schema()},
+                                   maximum_object_size = 268435456)
+                    """,
+                    [str(path)],
+                )
+                if con.execute("select count(*) from lines").fetchall()[0][0] != lines:
+                    raise ValueError("DuckDB read another number of lines than the file holds")
                 if table == "dane_gov_pl_datasets":
-                    values = ", ".join(f'{_value("j", key)} as "{name}"' for name, key in DATASET.items())
+                    values = ", ".join(f'cast("{key}" as varchar) as "{name}"' for name, key in DATASET.items())
                     sql = f"""
                         select ? as entity, {values}, ? as raw_sha256, ? as source_version,
                             cast(? as timestamptz) as ingested_at, cast(n as bigint) as source_row_number
                         from lines order by n
                     """
                 else:
-                    values = ", ".join(f'{_value("x", key)} as "{name}"' for name, key in DISTRIBUTION.items())
+                    values = ", ".join(f'x."{key}" as "{name}"' for name, key in DISTRIBUTION.items())
                     sql = f"""
-                        select ? as entity, j ->> '$.id' as dataset_id, {values}, ? as raw_sha256,
+                        select ? as entity, l.id as dataset_id, {values}, ? as raw_sha256,
                             ? as source_version, cast(? as timestamptz) as ingested_at,
-                            cast(n as bigint) as source_row_number, cast(k as bigint) as distribution_number
-                        from lines, unnest(cast(j -> '$.distributions' as json[])) with ordinality as u(x, k)
-                        order by n, k
+                            cast(l.n as bigint) as source_row_number, cast(u.k as bigint) as distribution_number
+                        from lines as l, unnest(l.distributions) with ordinality as u(x, k)
+                        order by l.n, u.k
                     """
                 out = con.sql(sql, params=params).to_arrow_table()
             except duckdb.Error as exc:
@@ -143,7 +154,7 @@ def decoder(table: str):
 
 
 def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze") -> int:
-    """budget_minutes is unused: one JSON-lines file of some hundred MB."""
+    """budget_minutes is unused: one JSON-lines file of about 340 MB."""
     status = 0
     for table, folder in TABLES.items():
         status |= bulk_bronze.load(
