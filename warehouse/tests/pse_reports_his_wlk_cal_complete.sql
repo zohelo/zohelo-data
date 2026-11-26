@@ -1,6 +1,7 @@
 -- pse_reports his-wlk-cal: every business day from 2024-06-14 (the API's first day) to the newest day in Silver is
 -- there, from one file (entity his_wlk_cal_<YYYYMMDD> of that day), with every 15-minute period of the local day (96;
--- 92 or 100 on DST days) at distinct UTC times. A Bronze file the model stops reading, a day Landing did not complete
+-- 92 or 100 on DST days) at distinct UTC times, each with the published local end time (dtime without the 'a' of the
+-- repeated autumn hour) equal to dtime_local. A Bronze file the model stops reading, a day Landing did not complete
 -- or a period lost in a cast shows up as a missing or short day here. Reads only its own model (a test reading another
 -- table would fail the source's first runs). Returns the failing days.
 with days as (
@@ -10,7 +11,8 @@ with days as (
         count(distinct dtime_utc) as distinct_periods,
         min(periods_expected) as expected,
         count(distinct entity) as entities,
-        min(entity) as entity
+        min(entity) as entity,
+        count(*) filter (where try_cast(replace(dtime, 'a', '') as timestamp) is distinct from dtime_local) as local_time_mismatches
     from {{ ref('pse_reports_his_wlk_cal') }}
     group by all
 ),
@@ -25,7 +27,8 @@ select
     coalesce(d.periods, 0) as periods_found,
     d.expected as periods_expected,
     d.entities,
-    d.entity
+    d.entity,
+    d.local_time_mismatches
 from calendar as c
 left join days as d on c.business_date = d.business_date
 where
@@ -33,4 +36,5 @@ where
     or d.periods <> d.expected
     or d.distinct_periods <> d.expected
     or d.entities <> 1
+    or d.local_time_mismatches > 0
     or d.entity <> 'his_wlk_cal_' || strftime(c.business_date, '%Y%m%d')

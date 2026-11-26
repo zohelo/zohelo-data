@@ -35,8 +35,8 @@ gold: [gold.build_pse_reports, gold.metrics_electricity_price_rce, gold.metrics_
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   # Dev trial of #2870 (26 Nov 2026), 2024-06-14 to 2026-11-25 = 895 days; each report grows by about 35,000 rows a
   # year, so the Silver ceilings are reached in about 2027-12: then raise them (still far below 1 M) or go incremental.
-  pse_reports_rce_pln: {rows: 130000}  # 85,920 measured (895 days x 96 periods; the DST days net to 0)
-  pse_reports_his_wlk_cal: {rows: 130000}  # 85,920 measured
+  pse_reports_rce_pln: {rows: 130000}  # 85,924 measured (890 days x 96, 2 DST days x 92, 3 DST days x 100)
+  pse_reports_his_wlk_cal: {rows: 130000}  # 85,924 measured
   poc_build_pse_reports: {rows: 5500}  # 3,580 measured (4 measures x 895 complete days)
   poc_metrics_electricity_price_rce: {rows: 1400}  # 895 measured (build rows of the KPI's measure, Poland)
   poc_metrics_electricity_demand: {rows: 1400}  # 895 measured
