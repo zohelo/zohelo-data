@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gis_sanitary,PLS-018,GIS: Stan sanitarny kraju / Raport z działań PIS,GIS sanitary state of the country report,Główny Inspektorat Sanitarny,cube,file,national-public,gov_pl_terms_gis,https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
