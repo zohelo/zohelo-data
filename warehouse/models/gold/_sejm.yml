@@ -1,0 +1,75 @@
+version: 2
+models:
+  - name: parliament_sejm_sitting_days
+    description: >-
+      Entity table (events): one row per sitting day of the Sejm of the Republic of Poland, terms 9 and 10 (register
+      PLG-024), keyed by term, sitting number and day; date_key = the day; is_held false for days after the build
+      date.
+    tests:
+      - unique:
+          column_name: "term || '|' || sitting_number || '|' || date_key"
+    columns:
+      - name: term
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+  - name: parliament_sejm_votings
+    description: >-
+      Entity table (events): one row per voting of the Sejm, terms 9 and 10, keyed by term, sitting number and voting
+      number; date_key = the day of the voting; title, topic and totals as published (empty yes, no and abstain for
+      list and traditional votes; a traditional vote's total_voted, present, not_participating and against_all sent
+      as 0, not counted, are empty too, and so is a present or total_voted of 0 of any kind). Individual MPs' votes
+      are not kept.
+    tests:
+      - unique:
+          column_name: "term || '|' || sitting_number || '|' || voting_number"
+    columns:
+      - name: term
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+  - name: parliament_sejm_prints
+    description: >-
+      Entity table (documents): one row per print (druk) of the Sejm, terms 9 and 10, keyed by term and print number;
+      date_key = the delivery date; title as published (metadata only).
+    tests:
+      - unique:
+          column_name: "term || '|' || print_number"
+    columns:
+      - name: term
+        tests: [not_null]
+      - name: print_number
+        tests: [not_null]
+  - name: parliament_sejm_mps
+    description: >-
+      Entity table (register): one row per MP of term 10, keyed by the API's MP id; allowlisted fields only (club,
+      constituency, voivodeship, active flag; no names or other personal data).
+    tests:
+      - unique:
+          column_name: "term || '|' || mp_id"
+    columns:
+      - name: mp_id
+        tests: [not_null]
+  - name: poc_build_sejm
+    description: >-
+      Build stage - Sejm of the Republic of Poland, terms 9 and 10 (from November 2019), Poland: distinct held
+      sitting days (block sitting_days), votings (block votings) and prints by delivery date (block prints) per month
+      (M). Only months in which something happened have a row (no zero filling); the month of the build date is
+      provisional.
+    columns:
+      - name: measure_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['sejm:sitting_days:days:monthly', 'sejm:votings:votings:monthly', 'sejm:prints:prints:monthly']}}}]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_sejm_sitting_days
+    description: Draft KPI sejm_sitting_days - held sitting days of the Sejm per month, Poland.
+  - name: poc_metrics_sejm_votings
+    description: Draft KPI sejm_votings - votings held in the Sejm per month, Poland.
+  - name: poc_metrics_sejm_prints
+    description: Draft KPI sejm_prints - prints delivered to the Sejm per month, Poland.
