@@ -27,8 +27,8 @@ bronze: [bronze.pig_boreholes_features, bronze.pig_boreholes_rejected_files]
 silver: [silver.pig_boreholes_boreholes]
 gold: [gold.build_pig_boreholes]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the Dev trial of the final code
-  pig_boreholes_boreholes: {rows: 505000}  # TRIAL_SILVER
-  poc_build_pig_boreholes: {rows: 6000}  # TRIAL_GOLD
+  pig_boreholes_boreholes: {rows: 505000}  # 336,758 boreholes (Dev trial 45899934080)
+  poc_build_pig_boreholes: {rows: 4500}  # 2,947: PL 12, voivodeships 165, powiats 2,770 (trial 45899934080)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one layer of about 337,000 points (about 330 MB of GEOJSON, 14 pages), no
