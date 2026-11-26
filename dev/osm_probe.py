@@ -94,7 +94,32 @@ KEYS = ["amenity", "building", "craft", "emergency", "healthcare", "highway", "l
         "public_transport", "railway", "shop", "tourism"]
 
 
+def diagnose() -> None:
+    import subprocess
+
+    tries = {}
+    for url in ["https://download.geofabrik.de/", "http://download.geofabrik.de/", f"{BASE}.html",
+                "https://download.openstreetmap.fr/extracts/europe/poland/",
+                "https://planet.openstreetmap.org/", "https://osm-internal.download.geofabrik.de/"]:
+        code, body = text_of(url)
+        tries[url] = [code, body[:300] if code != 200 else len(body)]
+        time.sleep(1)
+    curl = subprocess.run(["curl", "-sSv", "-m", "30", "-A", UA, "-o", "/dev/null", "https://download.geofabrik.de/"],
+                          capture_output=True, text=True)
+    tries["curl"] = (curl.stderr or "")[-1500:]
+    dig = subprocess.run(["getent", "hosts", "download.geofabrik.de"], capture_output=True, text=True)
+    tries["dns"] = dig.stdout.strip()
+    print(json.dumps(tries, ensure_ascii=False), flush=True)
+    annotate("notice", "osm probe reachability", tries)
+    code, fr = text_of("https://download.openstreetmap.fr/extracts/europe/poland/")
+    if code == 200:
+        rows = re.findall(r'href="([^"]+\.osm\.pbf)".*?(\d{2}-\w{3}-\d{4} \d{2}:\d{2})\s+(\S+)', fr)
+        annotate("notice", "osm probe openstreetmap.fr poland", {"files": rows[:40]})
+        print(json.dumps(rows, ensure_ascii=False), flush=True)
+
+
 def main(argv) -> int:
+    diagnose()
     out: dict = {}
     code, page = text_of(f"{BASE}.html")
     txt = strip(page)
@@ -117,8 +142,18 @@ def main(argv) -> int:
         heads[name] = [r.status_code, int(r.headers.get("Content-Length") or 0), r.headers.get("Last-Modified"), r.headers.get("ETag")]
         time.sleep(1)
     annotate("notice", "osm probe heads", {"files": len(heads), "bytes": sum(v[1] for v in heads.values()), "heads": heads})
+    base = BASE
     if not heads:
-        return 1
+        base = "https://download.openstreetmap.fr/extracts/europe/poland"
+        code, fr = text_of(f"{base}/")
+        names = sorted(set(re.findall(r'href="([a-z_\-]+)\.osm\.pbf"', fr)))
+        for name in names:
+            r = requests.head(f"{base}/{name}.osm.pbf", headers={"User-Agent": UA}, timeout=60, allow_redirects=True)
+            heads[name] = [r.status_code, int(r.headers.get("Content-Length") or 0), r.headers.get("Last-Modified"), r.headers.get("ETag")]
+            time.sleep(1)
+        annotate("notice", "osm probe heads openstreetmap.fr", {"files": len(heads), "bytes": sum(v[1] for v in heads.values()), "heads": heads})
+        if not heads:
+            return 1
     picks = argv or [min(heads, key=lambda k: heads[k][1]), max(heads, key=lambda k: heads[k][1])]
     con = duckdb.connect()
     t = time.monotonic()
@@ -130,7 +165,8 @@ def main(argv) -> int:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / f"{name}.osm.pbf"
             t = time.monotonic()
-            with requests.get(f"{BASE}/{name}-latest.osm.pbf", headers={"User-Agent": UA}, stream=True, timeout=(30, 300)) as r:
+            file_url = f"{base}/{name}-latest.osm.pbf" if base == BASE else f"{base}/{name}.osm.pbf"
+            with requests.get(file_url, headers={"User-Agent": UA}, stream=True, timeout=(30, 300)) as r:
                 r.raise_for_status()
                 with path.open("wb") as f:
                     for block in r.iter_content(8 << 20):
