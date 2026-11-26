@@ -1,0 +1,41 @@
+source_system: openalex
+description: "OpenAlex — works with an author affiliated with an institution in Poland (counts by publication year, open access and OpenAlex field) and the Polish institutions (entity table keyed by OpenAlex id)"
+
+# Extraction strategy (docs/landing.md). Register CD-028. OpenAlex's bulk feature, the snapshot (about 750 GB per
+# format), is far beyond this selection and the free storage tier, so the documented REST API is the route, with
+# aggregate requests only (ingestion/to_landing/openalex/): group_by publication_year of the works filtered by
+# institutions.country_code:PL (all, open access, and one request per OpenAlex field), the field list, and the
+# institutions with country_code PL (cursor pages of 200, selected root fields). About 45 requests a read, one at a
+# time, 1 s apart, no key (keyless budget shared per IP address). No update time: version = time the read started;
+# a read whose content equals the newest copy writes nothing. Not read: works, authors (no person's name), sources,
+# publishers, funders, other countries, the institution-to-voivodeship split (docs/sources/openalex.md).
+extraction:
+  initial: api
+  production: snapshot                    # each read is the complete current selection
+  incremental_policy: changed_since_last  # content digest of the answers against the newest copy
+  schedule: # UTC; the index changes daily and past years keep moving; weekly (O46), Friday early (keyless budget per day)
+    - {cron: "50 0 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/openalex/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.openalex_works_counts, bronze.openalex_institutions, bronze.openalex_rejected_files]
+silver: [silver.openalex_works_pl_counts, silver.openalex_institutions_pl, silver.openalex_institution_works_by_year]
+gold: [gold.build_openalex, gold.institution_openalex, gold.metrics_scholarly_works_pl_institution]  # draft KPI
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial of #2996
+  openalex_works_pl_counts: {rows: 9000}  # TRIAL
+  openalex_institutions_pl: {rows: 6000}  # TRIAL
+  openalex_institution_works_by_year: {rows: 45000}  # TRIAL
+  poc_build_openalex: {rows: 50000}  # TRIAL
+  institution_openalex: {rows: 6000}  # TRIAL
+  poc_metrics_scholarly_works_pl_institution: {rows: 300}  # TRIAL
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): two files of well under 1 MB a week (some 6,000 counts and a few thousand
+# institutions), read whole (aggregates have no changed-since filter, and every past year can be revised); small,
+# rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2996"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

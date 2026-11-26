@@ -1,0 +1,57 @@
+version: 2
+models:
+  - name: openalex_works_pl_counts
+    description: >-
+      OpenAlex REST API (register CD-028; licence cc0_openalex): works with at least one authorship affiliated with
+      an institution in Poland (filter institutions.country_code:PL, each work once), by publication year, as
+      published: selection all, open_access, or field (primary topic's OpenAlex field, field_id with field and
+      domain names). Every publication year OpenAlex holds; the year of the copy is still filling. Grain: selection
+      x field_id x publication_year (field_id '_T' outside selection field). History: TRIAL.
+    tests:
+      - unique:
+          column_name: "selection || '|' || field_id || '|' || publication_year"
+    columns:
+      - name: selection
+        tests: [not_null, {accepted_values: {arguments: {values: [all, open_access, field]}}}]
+      - name: field_id
+        tests: [not_null]
+      - name: publication_year
+        tests: [not_null]
+      - name: works
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: openalex_institutions_pl
+    description: >-
+      The institutions OpenAlex places in Poland (register CD-028): OpenAlex id, URI, ROR as published, name, type,
+      city and region text, coordinates, all-time works and citation counts at the read, parent ids, updated date.
+      Organisations only. Grain: institution_id.
+    columns:
+      - name: institution_id
+        tests: [not_null, unique]
+      - name: display_name
+        tests: [not_null]
+      - name: institution_type
+        tests: [not_null]
+      - name: country_code
+        tests: [not_null, {accepted_values: {arguments: {values: [PL]}}}]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: openalex_institution_works_by_year
+    description: >-
+      Works and citations per year of each institution OpenAlex places in Poland (counts_by_year: the recent years
+      OpenAlex lists; a year not listed has no row). Not additive over institutions. Grain: institution_id x year.
+    tests:
+      - unique:
+          column_name: "institution_id || '|' || year"
+    columns:
+      - name: institution_id
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: works_count
+        tests: [not_null]
+      - name: cited_by_count
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

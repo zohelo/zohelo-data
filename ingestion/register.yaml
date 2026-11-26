@@ -9456,7 +9456,8 @@ sources:
   name: OpenAlex
   short_name: OpenAlex
   provider: OurResearch
-  status: approved
+  source_system: openalex
+  status: built
   family: J
   kpi: false
   geography: worldwide
