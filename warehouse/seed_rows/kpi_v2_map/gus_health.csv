@@ -1,0 +1,4 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+doctors_working,society,A,doctors_working,gus_health,health_care_resources,gus_health:health_care_resources:persons:doctors,A,PL;VOIV,,sum,up,ready,"31 December, GUS Zdrowie i ochrona zdrowia, 2021- (earlier editions not comparable)"
+nurses_working,society,A,nurses_working,gus_health,health_care_resources,gus_health:health_care_resources:persons:nurses,A,PL;VOIV,,sum,up,ready,"31 December, GUS Zdrowie i ochrona zdrowia, 2021- (earlier editions not comparable)"
+hospital_beds,society,A,hospital_beds,gus_health,health_care_resources,gus_health:health_care_resources:beds:beds,A,PL;VOIV,,sum,neutral,ready,"general hospitals, 31 December, GUS Zdrowie i ochrona zdrowia, 2012-"

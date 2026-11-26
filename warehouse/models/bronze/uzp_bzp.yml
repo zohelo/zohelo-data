@@ -18,6 +18,7 @@ sources:
       organization_id, organization_national_id, organization_name, organization_city, organization_province,
       organization_country), contractors (JSON: province and country of each contractor only), form_values (JSON:
       the value lines of the notice form with their part number), stats_count (notice/stats count of the type and
-      day); source_row_number = position in the file; partitioned by entity.
+      day); source_row_number = position in the file; a file without notices gives one marker row (every notice
+      field null, source_row_number 0, stats_count 0); partitioned by entity.
   - name: uzp_bzp_rejected_files
     description: BZP Landing files the Bronze decoder rejected, with the reason.

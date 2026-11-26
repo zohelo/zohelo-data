@@ -1,13 +1,14 @@
 {{ config(alias='build_uzp_bzp', tags=['gold_block']) }}
 {# Gold build stage (#2981): BZP contract and result notices (silver.uzp_bzp_notices) by publication month (UTC day
-   of publication; complete months only: the month of the newest publication day is left out until a later day is
-   published). Two measures:
+   of publication; complete months only: every day of the month has both notice types landed, silver.uzp_bzp_days,
+   so the current month and a month with a day that failed Landing stay out). Notices as first published:
+   corrections (change notices) are not loaded. Two measures:
    - uzp_bzp:notices:notices — notices published in the month (a count), breakdown notice_type (ContractNotice,
      TenderResultNotice, _T both);
    - uzp_bzp:notices:<currency>:contract_value — the sum of the contract values (8.2 lines, one per part with a
      concluded contract) that the result notices published in the month report, as published in their currency
-     (PLN; another currency is its own measure, never converted); a notice whose value is absent, unparsed or in
-     several currencies adds nothing (Silver keeps its line counts), so no month is filled with 0.
+     (PLN; another currency is its own measure, never converted, and only with a unit_map row); a notice whose
+     value is absent, unparsed or in several currencies adds nothing (Silver keeps its line counts), so no month is filled with 0.
    Areas: Poland (every notice) and the voivodeship of the contracting authority (each notice counts once, in
    one voivodeship, so voivodeships add up to Poland except notices without a voivodeship); a code that maps to no
    voivodeship meets in '_X' with the code kept. #}
@@ -24,16 +25,33 @@ with notices as (
     from {{ ref('uzp_bzp_notices') }}
 ),
 
-open_month as (
-    select max(month_start) as month_start
-    from notices
+landed_days as (
+    -- days of which both types were landed (silver.uzp_bzp_days, also days without notices)
+    select publication_date
+    from {{ ref('uzp_bzp_days') }}
+    group by publication_date
+    having count(distinct notice_type) = 2
+),
+
+complete_months as (
+    select cast(date_trunc('month', publication_date) as date) as month_start
+    from landed_days
+    group by cast(date_trunc('month', publication_date) as date)
+    having count(*) = day(last_day(min(publication_date)))
 ),
 
 complete as (
     select n.*
     from notices as n
-    cross join open_month as o
-    where n.month_start < o.month_start
+    inner join complete_months as m on n.month_start = m.month_start
+),
+
+mapped_currencies as (
+    -- a contract value enters Gold only in a currency with a unit_map row of this source (each its own measure);
+    -- tests/uzp_bzp_currency_unmapped.sql lists the notices of any other currency
+    select unit_code as currency
+    from {{ ref('unit_map') }}
+    where source_system = 'uzp_bzp'
 ),
 
 geo_map as (
@@ -89,7 +107,10 @@ valued as (
         max(source_version) as source_version,
         sha256(string_agg(distinct raw_sha256, ',' order by raw_sha256)) as files_sha256
     from located
-    where notice_type = 'TenderResultNotice' and contract_value is not null
+    where
+        notice_type = 'TenderResultNotice'
+        and contract_value is not null
+        and contract_value_currency in (select m.currency from mapped_currencies as m)
     group by month_start, geography_key, contract_value_currency
 )
 
