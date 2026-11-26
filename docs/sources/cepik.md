@@ -12,8 +12,12 @@ Bronze `bronze.cepik_cells` (every cell, shared workbook shape, `ingestion/commo
 `silver.cepik_vehicle_registrations`: vehicles registered per month by voivodeship (with the national total row) and
 by vehicle type (Poland), 2016-01 to the newest month; blocks found by header label and Polish month names, never
 by cell position; placeholder zeros of unpublished months are dropped; the voivodeship rows of a month printed out
-of order (September 2026 in the workbook of 22 Oct 2026) are marked `order_suspect` and left out of Gold. Gold block
+of order (September 2026 in the workbook of 22 Oct 2026, corrected by 26 Nov) are marked `order_suspect` and left out
+of Gold; numbers printed right of a block's month columns belong to no month (`cell_status = 'outside_table'`, the
+workbook of 26 Nov repeats September in an unheaded column 13), are kept out of Gold and listed by the warning test
+`cepik_outside_table_cells`. Every Bronze workbook must yield Silver rows (`cepik_entities_in_silver`). Gold block
 `vehicle_registrations` (monthly), registered in `warehouse/macros/sources/cepik.sql`; KPI `vehicle_registrations`
-(draft). Monthly schedule (26th, the month's workbook appears about three weeks after the month). Not landed: driving
+(draft). Monthly schedule (26th, the month's workbook appears about three weeks after the month; within O46's once a
+week). Not landed: driving
 licences issued, inspection stations and technical inspections (same pages; next step). Licence: CEPiK terms on the
 API page (commercial and non-commercial use with the source named; `cepik_terms`, open-conditional).

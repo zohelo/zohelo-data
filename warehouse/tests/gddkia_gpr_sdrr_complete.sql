@@ -2,7 +2,8 @@
 -- that is not read or a vehicle class put in the wrong column fails here. Rows returned = problems:
 --   (1) each of the four tables (2020/21 and 2025, dk and dw) holds at least 2,000 sections (measured: see the YAML);
 --   (2) each section has every vehicle class of its edition (2025: total + 8 classes; 2020/21: total + 7, cars and
---       minibuses together) and one status for all of them;
+--       minibuses together) and one status for all of them, except agricultural tractors, which the 2020/21
+--       national-roads file prints as '-' on 611 measured sections (Dev trial in the PR);
 --   (3) on a measured section the classes add up to the published total (at most 1 vehicle per class of rounding).
 with per_section as (
     select
@@ -10,7 +11,9 @@ with per_section as (
         road_class,
         section_code,
         count(*) as classes,
-        count(distinct value_status) as statuses,
+        count(distinct value_status) filter (where vehicle_class <> 'agricultural_tractors') as statuses,
+        count(*) filter (where vehicle_class = 'agricultural_tractors' and value_status <> 'ok') as tractors_dash,
+        max(value_status) filter (where vehicle_class = 'motor_vehicles') as total_status,
         max(value) filter (where vehicle_class = 'motor_vehicles') as total,
         sum(value) filter (where vehicle_class <> 'motor_vehicles') as parts,
         count(*) filter (where vehicle_class <> 'motor_vehicles') as part_classes
@@ -40,7 +43,10 @@ select
     section_code,
     'classes: ' || classes || ', statuses: ' || statuses as problem
 from per_section
-where classes <> case edition_code when '2025' then 9 else 8 end or statuses <> 1
+where
+    classes <> case edition_code when '2025' then 9 else 8 end
+    or statuses <> 1
+    or (tractors_dash > 0 and total_status = 'ok' and not (edition_code = '2020' and road_class = 'dk'))
 
 union all
 

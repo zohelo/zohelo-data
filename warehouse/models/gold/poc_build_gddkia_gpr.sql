@@ -2,11 +2,15 @@
 {# Gold build stage: GDDKiA traffic census GPR (register PL-ENV-022), block 'sdrr', one observation per census edition
    (frequency A, date_key = 1 January of the edition year: 2020 for GPR 2020/21, 2025) for Poland and each voivodeship,
    per road class (dk national roads, dw voivodeship roads; the class is part of measure_key). From
-   silver.gddkia_gpr_sdrr, sections with a measured SDRR only (value_status 'ok'; '-' sections are left out, never 0):
+   silver.gddkia_gpr_sdrr, sections with a measured SDRR of motor vehicles only (value_status 'ok'; '-' sections are
+   left out, never 0):
      motor_vehicles  length-weighted mean SDRR of motor vehicles = sum(SDRR x length) / sum(length), vehicles/day,
                      GDDKiA's own network average (Ruch drogowy publications), rounded to whole vehicles as published;
-     trucks          the same for trucks without and with trailer (Sam. ciężarowe bez / z przyczepą);
-     length_km       length of those sections (km).
+     trucks          the same for trucks without and with trailer (Sam. ciężarowe bez / z przyczepą), over the sections
+                     where both truck classes are measured (weighted by those sections' length only);
+     length_km       length of the sections with a measured SDRR of motor vehicles (km).
+   A '-' in one class of a measured section (2020/21 national roads: agricultural tractors on 611 sections) leaves
+   that class out; it never counts as 0.
    The voivodeship is the file's "Nr woj." of the section. #}
 with sections as (
     select
@@ -17,13 +21,19 @@ with sections as (
         section_code,
         voivodeship_code,
         length_km,
-        max(value) filter (where vehicle_class = 'motor_vehicles') as motor_vehicles,
-        sum(value) filter (where vehicle_class in ('trucks_without_trailer', 'trucks_with_trailer')) as trucks,
+        max(value) filter (where vehicle_class = 'motor_vehicles' and value_status = 'ok') as motor_vehicles,
+        case
+            when
+                count(*) filter (
+                    where vehicle_class in ('trucks_without_trailer', 'trucks_with_trailer') and value_status = 'ok'
+                ) = 2
+                then sum(value) filter (where vehicle_class in ('trucks_without_trailer', 'trucks_with_trailer'))
+        end as trucks,
         max(source_version) as source_version,
         max(raw_sha256) filter (where not from_erratum) as raw_sha256_main,
         max(raw_sha256) as raw_sha256_any
     from {{ ref('gddkia_gpr_sdrr') }}
-    where value_status = 'ok' and length_km > 0
+    where length_km > 0
     group by all
 ),
 
@@ -35,7 +45,7 @@ areas as (
         road_class,
         area_code,
         sum(motor_vehicles * length_km) / sum(length_km) as motor_vehicles,
-        sum(trucks * length_km) / sum(length_km) as trucks,
+        sum(trucks * length_km) / sum(length_km) filter (where trucks is not null) as trucks,
         sum(length_km) as length_km,
         max(source_version) as source_version,
         coalesce(max(raw_sha256_main), max(raw_sha256_any)) as raw_sha256

@@ -8,7 +8,7 @@ description: "CEPiK — vehicles registered per month by voivodeship and by vehi
 # workbook is replaced monthly under a new attachment URL and downloaded on every run (unchanged bytes are not
 # written), closed years only when a new attachment URL appears (ingestion/to_landing/cepik/). Restart unit: one
 # file. api.cepik.gov.pl does not answer GitHub runners and is not used. Dev probe 43340837086 (test/2966-cepik-trial).
-# History: 2016-01 to the newest published month (2026-09 on 13 Nov 2026).
+# History: 2016-01 to the newest published month (2026-10 on 26 Nov 2026).
 extraction:
   initial: bulk
   production: snapshot                  # each workbook as published; a new month replaces the current year's file
@@ -25,9 +25,9 @@ bronze: [bronze.cepik_cells, bronze.cepik_rejected_files]
 silver: [silver.cepik_vehicle_registrations]
 gold: [gold.build_cepik, gold.metrics_vehicle_registrations]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  cepik_vehicle_registrations: {rows: 7000}  # about 4,300: 2016-01 to 2026-09, 17 areas + up to 17 types a month (count: PR #2966 trial)
-  poc_build_cepik: {rows: 7000}  # Silver rows less the months left out (as Silver)
-  poc_metrics_vehicle_registrations: {rows: 3500}  # about 2,200: 17 areas x 129 months
+  cepik_vehicle_registrations: {rows: 6500}  # 4,242 measured (Dev trial of the PR, 26 Nov 2026): 2016-01 to 2026-10
+  poc_build_cepik: {rows: 6500}  # 4,226 measured (Silver rows less the 16 outside_table cells)
+  poc_metrics_vehicle_registrations: {rows: 3500}  # 2,210 measured: 17 areas x 130 months
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): 22 workbooks of about 17 KB, one changed a month, a few thousand Silver rows;
