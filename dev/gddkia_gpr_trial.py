@@ -98,7 +98,7 @@ def main(argv) -> int:
         stats["bronze"] = {
             "rows_run1": rows_after[0],
             "rows_run2": rows_after[1],
-            "files": con.sql("select count(distinct raw_sha256) from cells").fetchone()[0],
+            "files": con.execute("select count(distinct raw_sha256) from cells").fetchone()[0],
             "per_entity": dict(con.sql("select entity || ' ' || string_agg(distinct sheet_name, '/'), count(*) from cells group by entity order by 1").fetchall()),
             "rejected": [(r.get("entity"), (r.get("error") or "")[:160]) for r in rejected],
         }
@@ -108,7 +108,7 @@ def main(argv) -> int:
 
         # Silver in memory + its tests
         con.sql("create table gddkia_gpr_sdrr as " + render(ROOT / "warehouse/models/silver/gddkia_gpr/gddkia_gpr_sdrr.sql", {"gddkia_gpr_cells": "cells"}))
-        n = lambda q: con.sql(q).fetchone()[0]  # noqa: E731
+        n = lambda q: con.execute(q).fetchone()[0]  # noqa: E731
         s = "gddkia_gpr_sdrr"
         complete = con.sql(render(ROOT / "warehouse/tests/gddkia_gpr_sdrr_complete.sql", {"gddkia_gpr_sdrr": s})).fetchall()
         woj = ["02", "04", "06", "08", "10", "12", "14", "16", "18", "20", "22", "24", "26", "28", "30", "32"]
