@@ -20,9 +20,17 @@ every model of every source. A model is rebuilt when
   Eurostat and BDL observations, written per entity by their loaders, #875).
 
 An incremental model (materialized='incremental') is rebuilt
-incrementally, except when its own code changed or it has no build properties: then it is
+incrementally, except when its own code changed, it has no build properties or no table: then it is
 listed in ``full_refresh`` and the build passes it as the dbt var ``full_refresh_models``
 (the model's config turns that into a full refresh of that model only).
+
+Per-block incremental models (#3204 PR B, D39; incremental_strategy ``gold_blocks``, macros/poc_incremental.sql): the
+five facts and poc_dim_series replace only the Gold blocks listed in ``changed_blocks`` (the blocks rebuilt in this
+run, and those changed after the model's last build) and delete the rows of blocks no longer registered. Their
+fingerprint leaves out the block list and the per-source macro files (the "core"), so a new source is a block
+change, not "code changed"; the block list they were built with is the property ``zohelo.build_blocks``, and a
+different list ("blocks changed") rebuilds them incrementally. Once more than half of a table's counted rows are
+position deletes ("position deletes"), it is rebuilt in full.
 
 A model whose source table does not exist yet (a new source before its first Bronze load), directly or
 through other models, is left out and listed under ``waiting``. A Gold block (a model tagged ``gold_block``,
@@ -93,8 +101,17 @@ EXTERNAL_MODELS: frozenset[str] = frozenset()  # models built outside the schedu
 # A Bronze commit stamped just before a build started may become visible only after dbt
 # read that table; the recorded start is moved back by this margin (an extra rebuild at worst).
 START_MARGIN_MS = 10 * 60 * 1000
-# Rebuild reasons after which an incremental model's rows cannot be trusted to follow its code.
-FULL_REFRESH_REASONS = ("no build properties", "code changed")
+# Rebuild reasons after which an incremental model's rows cannot be trusted to follow its code, or (position deletes)
+# its table should be rewritten.
+FULL_REFRESH_REASONS = ("no build properties", "code changed", "table missing", "position deletes")
+# Per-block incremental models (#3204 PR B, D39, macros/poc_incremental.sql): the facts and poc_dim_series replace
+# only the Gold blocks the plan lists in ``changed_blocks``.
+BLOCK_STRATEGY = "gold_blocks"  # their incremental_strategy
+BUILD_BLOCKS = "zohelo.build_blocks"  # property: digest of the block models such a model was built with
+# Position deletes pile up when blocks are replaced wholesale. In the snapshot summary total-records still counts
+# the deleted rows, so the table is rewritten in full once more than half of its counted rows are deleted
+# (total-position-deletes > total-records / 2; the spec's "deletes > records" can never fire, Dev 45750296222).
+POSITION_DELETE_SHARE = 0.5
 # Block-scoped metrics (#3204): the models, the one macro call each must be, and where a block names its sources.
 METRICS_PREFIX = "poc_metrics_"
 CONCEPT_CALL = re.compile(r"\bpoc_concept_metrics\(\s*'([a-z0-9_]+)'\s*\)")
@@ -209,6 +226,16 @@ def files_digest(files: list[str]) -> str:
     return digest.hexdigest()
 
 
+def block_set(meta: dict[str, Any]) -> str:
+    """Digest of the project's Gold block model names (tag gold_block): what a per-block model was built with."""
+    names = sorted(
+        node["name"]
+        for node in meta["nodes"].values()
+        if node.get("resource_type") == "model" and BLOCK_TAG in node.get("tags", [])
+    )
+    return hashlib.sha256("\n".join(names).encode()).hexdigest()[:32]
+
+
 def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """unique_id → name, namespace, table, parents (unique ids of models, seeds and sources), fingerprint, core
     (the fingerprint without per-source macro files and block parents), scope (metric_scopes(); None for others).
@@ -256,14 +283,20 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
             sort_keys=True,
             default=str,
         )
+        config = node.get("config", {})
+        incremental = config.get("materialized") == "incremental"
+        per_block = incremental and config.get("incremental_strategy") == BLOCK_STRATEGY
         out[uid] = {
             "name": node["name"],
             "namespace": relation(node)[0],
             "table": relation(node)[1],
             "parents": [p for p in upstream if p.startswith(("model.", "source.", "seed."))],
-            "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
+            # A per-block model's code is its core: a block added or removed is not "code changed" (a full refresh)
+            # but a block change, replaced incrementally (block_set()).
+            "fingerprint": hashlib.sha256((core if per_block else code).encode()).hexdigest()[:32],
             "core": hashlib.sha256(core.encode()).hexdigest()[:32],
-            "incremental": node.get("config", {}).get("materialized") == "incremental",
+            "incremental": incremental,
+            "per_block": per_block,
             "block": uid in blocks,
             "optional": set(node.get("config", {}).get("meta", {}).get(OPTIONAL_PARENTS) or []),
             "scope": None,
@@ -402,16 +435,21 @@ def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
         return None
     snapshot = loaded.current_snapshot()
     props = loaded.properties
+    summary = snapshot.summary if snapshot and snapshot.summary else None
     return {
         "snapshot_ms": snapshot.timestamp_ms if snapshot else 0,
         "built_from_ms": int(props[BUILT_FROM]) if BUILT_FROM in props else None,
         "fingerprint": props.get(FINGERPRINT),
+        "build_blocks": props.get(BUILD_BLOCKS),
+        "records": int(summary["total-records"] or 0) if summary else 0,
+        "position_deletes": int(summary["total-position-deletes"] or 0) if summary else 0,
     }
 
 
 def plan(cat, meta: dict[str, Any], scoped: bool | None = None) -> dict[str, Any]:
     """{"select": model names to build, "reasons": name → why, "unchanged": count,
-    "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
+    "full_refresh": incremental models among them to rebuild in full, "changed_blocks": the Gold blocks the
+    per-block incremental models replace (the dbt var changed_blocks), "waiting": models left out because a
     source table they read does not exist yet, "empty_blocks": the Gold blocks among them that have no table
     either, read as zero rows, "stalled": waiting model → the missing source tables, for every waiting model
     that has a table (the build must stop on any), "waiting_tests": the data tests that read a waiting model
@@ -480,12 +518,16 @@ def plan(cat, meta: dict[str, Any], scoped: bool | None = None) -> dict[str, Any
                 reason = "no build properties"
             elif own["fingerprint"] != model["fingerprint"]:
                 reason = "code changed"
+            elif model["per_block"] and own.get("position_deletes", 0) > POSITION_DELETE_SHARE * own.get("records", 0):
+                reason = "position deletes"
             elif upstream:
                 reason = "upstream rebuilt: " + ", ".join(graph[p]["name"] for p in upstream[:3])
             else:
                 newer = [p for p in inputs if updated(p) > own["built_from_ms"]]
                 if newer:
                     reason = "input changed: " + ", ".join(".".join(relations[p]) for p in newer[:3])
+                elif model["per_block"] and own.get("build_blocks") != blocks_now:
+                    reason = "blocks changed"  # a block removed (an added one is rebuilt itself: upstream rebuilt)
             if reason:
                 reasons[model["name"]] = reason
             done[uid] = reason is not None
@@ -495,18 +537,34 @@ def plan(cat, meta: dict[str, Any], scoped: bool | None = None) -> dict[str, Any
             stale(uid)
         return reasons
 
+    blocks_now = block_set(meta)
     use_scope = metrics_scoped() if scoped is None else scoped
     reasons = rebuild(use_scope)
     skipped = sorted(set(rebuild(False)) - set(reasons)) if use_scope else []
     waits = sorted(graph[u]["name"] for u, b in blocked.items() if b)
     full = sorted(
-        m["name"] for m in graph.values() if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
+        m["name"]
+        for m in graph.values()
+        if m["incremental"] and reasons.get(m["name"], "").partition(":")[0] in FULL_REFRESH_REASONS
+    )
+    # The blocks the per-block models replace: each block rebuilt in this run, and each block whose table changed
+    # after the last build of a per-block model rebuilt incrementally (its rows there may be older). Replacing a
+    # block that did not change rewrites the same rows, so one list serves every such model.
+    incremental_now = [u for u, m in graph.items() if m["per_block"] and m["name"] in reasons and m["name"] not in full]
+    since = min((state[u]["built_from_ms"] for u in incremental_now), default=None)
+    changed_blocks = sorted(
+        m["name"]
+        for u, m in graph.items()
+        if m["block"]
+        and not blocked.get(u)
+        and (m["name"] in reasons or (since is not None and state[u] is not None and updated(u) > since))
     )
     return {
         "select": sorted(reasons),
         "reasons": reasons,
         "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
+        "changed_blocks": changed_blocks,
         "scoped": use_scope,
         "scoped_skipped": skipped,
         "waiting": waits,
@@ -551,6 +609,7 @@ def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started
     make a model untrusted."""
     results = list(results)
     graph = {m["name"]: m for m in models(meta).values()}
+    blocks_now = block_set(meta)
     failed_tests = {
         r["unique_id"] for r in results if r["unique_id"].startswith("test.") and r["status"] not in TEST_OK
     }
@@ -569,8 +628,11 @@ def record(cat, meta: dict[str, Any], results: Iterable[dict[str, Any]], started
             continue
         try:
             table = cat.load_table((model["namespace"], model["table"]))
+            props = {BUILT_FROM: str(started_ms - START_MARGIN_MS), FINGERPRINT: model["fingerprint"]}
+            if model["per_block"]:
+                props[BUILD_BLOCKS] = blocks_now
             with table.transaction() as tx:
-                tx.set_properties({BUILT_FROM: str(started_ms - START_MARGIN_MS), FINGERPRINT: model["fingerprint"]})
+                tx.set_properties(props)
             recorded += 1
         except Exception as exc:  # any failure only means a rebuild next run
             failed.append(f"{name}: {type(exc).__name__}: {str(exc)[:200]}")
