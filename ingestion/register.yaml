@@ -5199,7 +5199,8 @@ sources:
   name: Sejm API
   short_name: Sejm API
   provider: Chancellery of the Sejm
-  status: approved
+  source_system: sejm
+  status: built
   family: F
   kpi: false
   geography: Poland
@@ -5237,7 +5238,8 @@ sources:
     connection: tested
     blockers:
     - 'Licence unresolved: no terms on the API page'
-    - Define allowlist (photos, personal data)
+    - 'Allowlist defined (#481): the MP list is reduced before Landing to id, active, club, districtNum, districtName and
+      voivodeship; names, birth data, e-mails, professions and photos never land'
     references:
     - https://api.sejm.gov.pl/sejm.html
     - https://api.sejm.gov.pl/
