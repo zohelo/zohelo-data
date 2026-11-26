@@ -32,6 +32,12 @@ rate_limit_retry_max: 8
 rate_limit_retry_deadline_minutes: 140
 commit_retry_threads: 1         # after an Iceberg commit failure: no concurrent commits
 
+# Block-scoped metrics (#3204, warehouse/changed.py): a poc_metrics_<kpi> model is rebuilt when a Gold block of its
+# concept's sources changed, not when any block changed. false = the rule before #3204 (every metrics model is rebuilt
+# with the shared facts); switching it either way rebuilds nothing by itself, but turning it off rebuilds every metrics
+# model once whose facts were rebuilt after it.
+metrics_scoped: true
+
 # Topics layer (owner decision O32, docs/topics.md): heat score weights, windows and thresholds, passed to every
 # build as the dbt var `topics` (warehouse/macros/topics.sql). `publish: false` keeps topics.json unwritten
 # until the owner switches the portals on after the internal review period (>= two weeks).

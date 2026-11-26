@@ -2,8 +2,8 @@
 {# Gold build stage (register PLS-020, #2958): RPWDL register counts, one state per snapshot year (#3139). Block
    'register', frequency A: date_key = 1 January of the snapshot year (the year of the register files' entity, Silver
    snapshot_year; period_label = that year). The current year's value is the state of its newest files and moves with
-   each weekly load; a past year keeps the state of its last load (the last Tuesday run of that year), so every year
-   keeps a value. Measures (active entries only, Silver is_active on the file's download day): healthcare providers
+   each weekly load (observation status provisional); a past year keeps the state of its last load (the last Tuesday
+   run of that year, status ok), so every year keeps a value. Measures (active entries only, Silver is_active on the file's download day): healthcare providers
    (entities), establishments (facilities), organisational units, beds in organisational cells (sum of the published
    counts; a cell without a count adds nothing) and professional practices, the practices also by register
    (breakdown practice_register, _T = all 8). Areas: voivodeship of the TERYT code of the seat (providers), the
@@ -172,7 +172,10 @@ select
     cast(null as varchar) as sex_code,
     c.practice_register = '_T' as is_total,
     cast(c.value as double) as value,
-    'ok' as observation_status_key,
+    case  -- the newest year moves with each weekly load until the year closes (as poc_build_crossref's current year)
+        when c.snapshot_year = max(c.snapshot_year) over () then 'provisional'
+        else 'ok'
+    end as observation_status_key,
     c.source_version,
     c.raw_sha256
 from counted as c
