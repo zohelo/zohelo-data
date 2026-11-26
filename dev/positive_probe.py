@@ -41,59 +41,33 @@ def _show(title: str, sql: str, limit: int = 500) -> list[dict] | None:
 
 
 def main() -> int:
-    # The positive KPIs are read straight from their metrics tables (some metrics models of other KPIs are not
-    # built on production yet, so the compiled test as a whole cannot run there).
+    """Run the compiled test of this branch with its metrics CTE limited to the positive KPIs' tables."""
+    import re
+
+    done = _dbt(["compile", "--select", "metrics_value_range"])
+    files = list((PROJECT / "target" / "compiled").rglob("metrics_value_range.sql"))
+    if done.returncode or not files:
+        annotate("error", "compile failed", {"rc": done.returncode, "out": (done.stdout + done.stderr)[-1500:]})
+        return 1
+    sql = files[0].read_text()
     union = " union all ".join(
         f"select concept_key, source_system, measure_key, geography_key, date_key, value from r2.gold.metrics_{c}"
         for c in POSITIVE
     )
-    grouped = (
-        "select concept_key, source_system, measure_key, count(*) filter (where value <= 0) as n, "
-        "count(*) filter (where value = 0) as zeros, count(*) as rows_total, min(value) as min_value, "
-        "min(date_key) filter (where value <= 0) as first_date, max(date_key) filter (where value <= 0) as last_date, "
-        "string_agg(distinct cast(geography_key as varchar), ' ') filter (where value <= 0) as geo "
-        f"from ({union}) as t group by all order by n desc, 1, 2, 3"
-    )
-    rows = _show("1 values <= 0", grouped)
+    limited, count = re.subn(r"metrics as \(.*?\n\)\n", f"metrics as ({union})\n", sql, count=1, flags=re.S)
+    if count != 1:
+        annotate("error", "metrics CTE not found", sql[-1500:])
+        return 1
+    rows = _show("test on positive KPIs", limited)
     if rows is None:
         return 1
-    bad = [r for r in rows if r["n"]]
-    for r in bad:
-        r["geo"] = (r.get("geo") or "")[:200]
     annotate(
-        "warning" if bad else "notice",
-        "1 values <= 0 of positive KPIs on production Gold",
-        {"groups": len(rows), "rows": sum(r["rows_total"] for r in rows), "bad_groups": len(bad),
-         "bad_rows": sum(r["n"] for r in bad), "bad": bad[:15]},
+        "warning" if rows else "notice",
+        "compiled metrics_value_range (this branch), metrics CTE = the 5 positive KPIs' tables",
+        {"failing_rows": len(rows), "first": rows[:20], "where": sql[sql.rindex("where") :][:900]},
     )
-    annotate("notice", "1a groups read", [[r["concept_key"], r["source_system"], r["measure_key"], r["rows_total"]]
-                                           for r in rows][:60])
-    if bad:
-        examples = _show(
-            "1b examples",
-            f"select * from ({union}) as t where value <= 0 order by 1, 2, 3, 5",
-            40,
-        )
-        if examples is not None:
-            annotate("notice", "1b examples", examples[:40])
-    wdi = _show(
-        "2 WDI Silver text",
-        "select economy_code, indicator_code, year, value, value_text, source_version from r2.silver.wdi_observations "
-        "where economy_code in ('SRB', 'RS') and indicator_code in ('NY.GDP.MKTP.CN', 'NY.GDP.MKTP.KN', "
-        "'NY.GDP.MKTP.CD', 'PA.NUS.FCRF') and year between 1988 and 1996 order by 2, 3",
-        60,
-    )
-    if wdi is not None:
-        annotate("notice", "2 WDI Silver, Serbia 1988-1996 (value_text as in the bulk CSV)", wdi)
-    try:
-        import requests
-
-        url = "https://api.worldbank.org/v2/country/SRB/indicator/NY.GDP.MKTP.CN?format=json&date=1988:1996"
-        got = requests.get(url, timeout=60)
-        annotate("notice", "3 World Bank API, SRB NY.GDP.MKTP.CN 1988-1996", {"status": got.status_code,
-                                                                               "body": got.text[:3000]})
-    except Exception as exc:
-        annotate("warning", "3 World Bank API failed", f"{type(exc).__name__}: {str(exc)[:500]}")
+    total = _show("rows read", f"select count(*) as n from ({union}) as t", 1)
+    annotate("notice", "rows read", total)
     return 0
 
 
