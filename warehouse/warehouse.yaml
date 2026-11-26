@@ -124,7 +124,7 @@ full_rebuild:   # model: {rows: ceiling}
   poc_dim_source: {rows: 1000}
   poc_dim_unit: {rows: 1000}
   poc_map_geography: {rows: 150000}
-  poc_measure_dimensions: {rows: 5000}
+  poc_measure_dimensions: {rows: 11500}  # 7,692 (prod build 45735962376, 26 Nov); 1.5 x
   kpi_dimension: {rows: 10000}
   poc_metrics_fx_rate: {rows: 600000}
   poc_metrics_exports_goods: {rows: 3000}  # 1,880 build rows of the measure (Dev trial 43100532689)
