@@ -3,7 +3,8 @@
 
 Each Landing file is one GetFeature response in application/json (a GeoJSON FeatureCollection, ``crs``
 urn:ogc:def:crs:EPSG::2180, coordinates easting, northing in metres) of one BDL feature type
-(ingestion/sources/lasy_bdl.yaml): districts = BDL:Nadleśnictwa, regions = BDL:RDLP. DuckDB's JSON functions read it:
+(ingestion/sources/lasy_bdl.yaml): districts = BDL:Nadleśnictwa, regions = BDL:RDLP; the request time stamp
+is removed before Landing (ingestion/to_landing/lasy_bdl/). DuckDB's JSON functions read it:
 one row per feature, every property as the text of its JSON value (JSON null as NULL), the GeoServer feature id, the
 feature's position in the response and provenance. The geometry is not stored (it stays in Landing and the Archive):
 DuckDB spatial computes from it, per feature, its planar area in EPSG:2180 in m² (the layers carry no area
