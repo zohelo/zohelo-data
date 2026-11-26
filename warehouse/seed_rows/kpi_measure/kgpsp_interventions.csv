@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+fire_service_fires,kgpsp_interventions,kgpsp_interventions:incidents:incidents:P,"KG PSP table 1, fires (P), Poland and voivodeships; from 2023 sums of the published gmina rows",1,
+fire_service_local_hazards,kgpsp_interventions,kgpsp_interventions:incidents:incidents:MZ,"KG PSP table 1, local hazards (MZ), Poland and voivodeships; from 2023 sums of the published gmina rows",1,
+fire_service_false_alarms,kgpsp_interventions,kgpsp_interventions:incidents:incidents:AF,"KG PSP table 1, false alarms (AF), Poland and voivodeships; from 2023 sums of the published gmina rows",1,

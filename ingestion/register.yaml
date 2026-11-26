@@ -10113,7 +10113,8 @@ sources:
   name: Fire-service intervention statistics and current casualty summaries
   short_name: PSP fire-service statistics
   provider: Headquarters of the State Fire Service (KG PSP)
-  status: approved
+  source_system: kgpsp_interventions
+  status: built
   family: F
   kpi: true
   geography: Poland
@@ -10143,8 +10144,9 @@ sources:
   ingestion:
     history: 'Bulk files linked from the stable page https://www.gov.pl/web/kgpsp/interwencje-psp: 20 attachments, per year
       2016-2025 one "zestawienie danych z informacji ze zdarzeń" ZIP (about 37-45 MB as labelled on the page) and one "tabele
-      stałych zestawień" ZIP (about 8-11 MB). Attachment UUIDs change per release, so the page is the entry. The content of
-      the ZIPs (file types, layout) was not captured by the probe.'
+      stałych zestawień" ZIP (about 8-11 MB). Attachment UUIDs change per release, so the page is the entry. Content
+      (Dev probes 45745935044, 45746735646): .xlsx workbooks, 2016-2022 a voivodeship, powiat and gmina copy of each
+      table, from 2023 one gmina-level workbook per table; tables 1 and 10 are loaded (docs/sources/kgpsp_interventions.md).'
     incremental: Snapshot per year file; version = Last-Modified; a closed year does not change, the newest year is re-checked
       monthly.
     identifiers: Year, table name, voivodeship (names), incident type.
