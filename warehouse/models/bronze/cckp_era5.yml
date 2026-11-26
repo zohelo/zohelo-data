@@ -11,8 +11,7 @@ sources:
   tables:
   - name: cckp_era5_records
     description: >-
-      Rows of the newest copy of entity era5, values as published text: record_kind 'unit' (one per country and
-      first-level unit of CCKP's geonames.json: code, name, parent country code) and 'value' (one per variable x
-      aggregation x geocode x period of a data answer, with the period of the dataset id); partitioned by entity.
+      Rows of the newest copy of entity era5, values as published text: one per variable x aggregation x geocode x
+      period of a data answer, with the period of the dataset id; partitioned by entity.
   - name: cckp_era5_rejected_files
     description: Files of cckp_era5 the Bronze decoder rejected, with the reason.

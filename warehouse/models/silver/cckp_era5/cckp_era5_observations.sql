@@ -1,6 +1,6 @@
 {# CCKP ERA5 (register GL-036): ERA5 0.25-degree reanalysis aggregated by the World Bank over the land of each country
    (all_countries answers, ISO3 codes) and of Poland's 16 first-level units (CCKP codes POL.1982370-POL.1982385), from
-   the newest copy of entity era5 (bronze.cckp_era5_records, record_kind 'value'). Variables: tas, mean air
+   the newest copy of entity era5 (bronze.cckp_era5_records). Variables: tas, mean air
    temperature in degC (monthly: the month's mean; annual: the year's mean as CCKP computes it, within 0.15 degC of the
    plain average of the twelve months, Dev trial 45826698285), and pr, precipitation in mm (monthly: the
    month's total; annual: the year's total, the sum of the twelve months: Poland 2024 749.89 = sum of its monthly
@@ -15,7 +15,6 @@
 with records as (
     select *
     from {{ source('cckp_era5', 'cckp_era5_records') }}
-    where record_kind = 'value'
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
 )
 

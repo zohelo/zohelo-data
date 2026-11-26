@@ -11,15 +11,17 @@ robots.txt answers 404, no rules). The dataset id carries variable, aggregation 
 ``{"metadata": {"status": "success", ...}, "data": {<geocode>: {<period>: <value>}}}``; an unknown id or code
 answers HTTP 200 with an empty ``data``.
 
-One read (about 12 requests, one at a time, PAUSE_SECONDS apart):
+One read (about 11 requests, one at a time, PAUSE_SECONDS apart):
 
-1. ``geonames.json``, CCKP's list of spatial unit names and codes (download page, "Spatial Unit's Names and Codes"):
-   the ISO3 country codes and their first-level units (Poland: 16 codes POL.1982370-POL.1982385);
-2. the period: the newest last year from the current year down to FIRST_KNOWN_LAST for which the annual tas and pr
+1. the period: the newest last year from the current year down to FIRST_KNOWN_LAST for which the annual tas and pr
    answers for POL are not empty (the World Bank publishes a new id per extension, 1950-2024 then 1950-2025; the
    old id kept answering on 26 Nov 2026, so the newest one that answers wins);
-3. per variable and aggregation: ``all_countries`` and Poland's first-level units in one request (codes joined
-   by commas, taken from geonames.json).
+2. per variable and aggregation: ``all_countries`` and Poland's 16 first-level units in one request (codes joined by
+   commas). The codes are stated in POL_ADM1 (and, with their TERC codes, in warehouse/macros/sources/cckp_era5.sql):
+   they come from CCKP's geonames.json (download page, "Spatial Unit's Names and Codes"; names checked in Dev probe
+   45810479823 and trial 45826698285). That file is on climateknowledgeportal.worldbank.org, whose robots.txt answered
+   HTTP 403 to two of three Dev runners (a refusal, not worked around), so it is not read at run time; an answer
+   without one of the 16 codes fails the read.
 
 Entity = the whole selection, ``era5``: one Landing file, a ZIP of the exact answer bodies with fixed member
 dates, so the same answers give the same bytes. Version = ``<period>_<read started>`` (the API gives no update time;
@@ -27,7 +29,7 @@ the period sorts first, so a newer period is a newer version). A read whose byte
 writes nothing; a read that fails part-way lands nothing. Only reanalysis (historical ERA5) ids are read; CMIP6
 projections are not observations and are never requested.
 
-Polite access: robots.txt of both hosts read first (404 = no rules; any other failure stops the read), one request
+Polite access: robots.txt of the API host read first (404 = no rules; any other failure stops the read), one request
 at a time, an identifying User-Agent, timeouts, bounded retries with backoff on 429, 5xx and network errors, a
 Retry-After honoured (the World Bank catalogue API answered 429 once in the research probe).
 
@@ -59,12 +61,13 @@ from ingestion.to_landing.world_bank_icp.extract import USER_AGENT, put_new
 SOURCE = "cckp_era5"
 ENTITY = "era5"
 API = "https://datacatalogapi.worldbank.org/ddhxext/v3/cckp/"
-GEONAMES = "https://climateknowledgeportal.worldbank.org/themes/custom/cckpmodern/data/geonames.json"
 VARIABLES = ("tas", "pr")  # mean air temperature (degC), precipitation total (mm)
 AGGREGATIONS = ("monthly", "annual")
 FIRST_YEAR = 1950
 FIRST_KNOWN_LAST = 2024  # the oldest period id seen (1950-2024); 1950-2025 answered on 26 Nov 2026
 COUNTRY = "POL"  # first-level units read for this country
+# Poland's first-level units in CCKP (geonames.json, Dev probe 45810479823): Dolnoslaskie ... Zachodnio-Pomorskie
+POL_ADM1 = tuple(f"POL.{n}" for n in range(1982370, 1982386))
 PAUSE_SECONDS = 5.0
 TIMEOUT = (30, 180)
 RETRY_DELAYS = (30, 60, 120)
@@ -132,17 +135,6 @@ def data_of(answer: Any, url: str) -> dict[str, Any]:
     return data
 
 
-def subnational_codes(geonames: Any) -> list[str]:
-    """Poland's first-level unit codes in geonames.json (country → {N: name, S: {code: name}})."""
-    try:
-        codes = sorted(geonames["country"][COUNTRY]["S"])
-    except (KeyError, TypeError) as exc:
-        raise RuntimeError(f"geonames.json has no first-level units of {COUNTRY}") from exc
-    if not codes or any(not c.startswith(f"{COUNTRY}.") for c in codes):
-        raise RuntimeError(f"geonames.json: unexpected first-level codes of {COUNTRY}: {codes[:5]}")
-    return codes
-
-
 def newest_period(session: requests.Session, deadline: float, year: int) -> tuple[str, list[int]]:
     """The newest ``<FIRST_YEAR>-<last>`` whose annual tas and pr answers for POL are not empty, and the last years
     tried (newest first)."""
@@ -163,21 +155,20 @@ def newest_period(session: requests.Session, deadline: float, year: int) -> tupl
 
 def read(session: requests.Session, deadline: float) -> tuple[list[tuple[str, bytes]], dict[str, Any]]:
     """Every answer of the selection: (member name, exact body) in read order, and counts."""
-    robots_allow(session, GEONAMES)
     robots_allow(session, API)
-    body, geonames = fetch(session, GEONAMES, deadline)
-    members: list[tuple[str, bytes]] = [("geonames.json", body)]
-    codes = subnational_codes(geonames)
+    members: list[tuple[str, bytes]] = []
     period, tried = newest_period(session, deadline, datetime.now(UTC).year)
-    counts: dict[str, Any] = {"period": period, "last_years_tried": tried, "subnational_codes": len(codes)}
+    counts: dict[str, Any] = {"period": period, "last_years_tried": tried}
     for variable in VARIABLES:
         for aggregation in AGGREGATIONS:
-            for area, geocodes in (("all_countries", "all_countries"), (f"{COUNTRY}_adm1", ",".join(codes))):
+            for area, geocodes in (("all_countries", "all_countries"), (f"{COUNTRY}_adm1", ",".join(POL_ADM1))):
                 url = f"{API}{dataset_id(variable, aggregation, period)}/{geocodes}?_format=json"
                 body, answer = fetch(session, url, deadline)
                 data = data_of(answer, url)
                 if not data:
                     raise RuntimeError(f"empty answer for {variable} {aggregation} {area} {period}")
+                if area != "all_countries" and set(data) != set(POL_ADM1):
+                    raise RuntimeError(f"{variable} {aggregation}: first-level codes answered {sorted(data)[:5]}")
                 members.append((member_name(variable, aggregation, area), body))
                 counts[f"{variable}_{aggregation}_{area}"] = len(data)
     counts["answers"] = len(members)

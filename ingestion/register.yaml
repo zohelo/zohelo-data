@@ -1862,7 +1862,9 @@ sources:
       500 (RFC 9309: full disallow), so the extractor reads the same ids from the documented host
       datacatalogapi.worldbank.org/ddhxext/v3/cckp/ (robots.txt 404 = no rules; same values, numbers instead of strings).
       The voivodeship codes are POL.1982370-POL.1982385 in CCKP''s geonames.json (download page, "Spatial Unit''s Names and
-      Codes"), mapped to TERC by a stated code list with a name guard; several codes go in one request, comma-separated.
+      Codes"), mapped to TERC by a stated code list; several codes go in one request, comma-separated. geonames.json is
+      not read at run time: its host''s robots.txt answered HTTP 403 to two of three Dev runners (not worked around); each
+      read checks that the answers hold exactly the stated codes.
       The newer period id 1950-2025 answers (1950-2026 is empty); the extractor uses the newest one that answers.'
     - 'Does not block this route: native ERA5-Land monthly fields from the CDS would need a free ECMWF account and personal
       token that only the owner can create (the former owner question); not needed for country and voivodeship series.'

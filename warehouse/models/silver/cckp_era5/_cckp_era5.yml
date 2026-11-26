@@ -1,26 +1,9 @@
 version: 2
 models:
-  - name: cckp_era5_units
-    description: >-
-      World Bank Climate Change Knowledge Portal (register GL-036; licence cc_by_4_0_cckp_era5): CCKP's spatial units
-      from geonames.json, countries and territories by ISO3 code and their first-level units by CCKP code, names as
-      published (no diacritics, CCKP's own spellings). A few first-level codes are listed under two countries in
-      geonames.json and keep one row per parent. Grain: geocode x parent_geocode.
-    tests:
-      - unique:
-          column_name: "geocode || '|' || coalesce(parent_geocode, '')"
-    columns:
-      - name: geocode
-        tests: [not_null]
-      - name: name
-        tests: [not_null]
-      - name: unit_level
-        tests: [not_null, {accepted_values: {arguments: {values: [country, adm1]}}}]
-      - name: raw_sha256
-        tests: [not_null]
   - name: cckp_era5_observations
     description: >-
-      ERA5 0.25-degree reanalysis aggregated by the World Bank Climate Change Knowledge Portal (register GL-036) over
+      ERA5 0.25-degree reanalysis aggregated by the World Bank Climate Change Knowledge Portal (register GL-036; licence
+      cc_by_4_0_cckp_era5) over
       the land of each country and territory and of Poland's 16 first-level units (voivodeships): tas, mean air
       temperature in degC, and pr, precipitation total in mm, monthly and annual (annual pr = the year's total), as
       published; reanalysis estimates, not station observations or projections. A value that is not a number keeps
