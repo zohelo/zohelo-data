@@ -1,6 +1,6 @@
 -- GUGiK elevation sheet indexes (silver.gugik_nmt_sheets, written per service's year by the loader): all six services
--- are present with their years and none is cut short. On 26 Nov 2026 each service listed 8 to 17 years and 63,600 to
--- 448,000 index features (resultType=hits, Dev probe 45814802349); a service with fewer than 8 years or 50,000
+-- are present with their years and none is cut short. On 26 Nov 2026 each service listed 8 to 17 years and 81,265 to
+-- 447,892 index features (Dev trial 45873287115); a service with fewer than 8 years or 50,000
 -- features (a lost or truncated service) fails here.
 with expected (service) as (
     values ('nmt_evrf2007'), ('nmt_kron86'), ('nmpt_evrf2007'), ('nmpt_kron86'), ('lidar_evrf2007'), ('lidar_kron86')

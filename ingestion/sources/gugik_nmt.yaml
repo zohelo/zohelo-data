@@ -6,7 +6,7 @@ description: "GUGiK NMT, NMPT and LIDAR — elevation sheet indexes (WFS Skorowi
 # 2.0.0 services linked from the producer's pages (GML 3.2 only, paging; no robots.txt: HTTP 404; Dev probe
 # 45813550746): NumerycznyModelTerenu (NMT), NumerycznyModelPokryciaTerenu (NMPT) and DanePomiaroweLidar (LIDAR), each
 # EVRF2007 and KRON86, under https://mapy.geoportal.gov.pl/wss/service/PZGIK/<service>/WFS/Skorowidze, one feature type
-# per data year: 63 years with about 1.64 M features on 26 Nov 2026 (resultType=hits, Dev probe 45814802349). Entity
+# per data year: 63 service years with 1,653,102 features on 26 Nov 2026 (resultType=hits, Dev probe 45814802349). Entity
 # = one service's year (<product>_<datum>_<YYYY>), version = download time, landed whole as pages of 5,000 features
 # sorted by the download link (unsorted pages are not stable), restart unit one service's year; a year equal to its
 # newest copy writes nothing (ingestion/to_landing/gugik_nmt/).
@@ -28,10 +28,10 @@ bronze: [bronze.gugik_nmt_sheets, bronze.gugik_nmt_rejected_files]
 silver: [silver.gugik_nmt_sheets]
 gold: [gold.build_gugik_nmt]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  poc_build_gugik_nmt: {rows: 30000}  # ROWS_MEASURED
+  poc_build_gugik_nmt: {rows: 5500}  # 3,658: 1,724 edition rows + 1,934 shares, 6 services, 17 areas, 2000-2026 (Dev trial 45873287115)
 
 bronze_latest_only: true   # policy #822/#845: a new version replaces the service year's file
-# Refresh policy for all layers (D32): about 1.64 M index features, over the 1 M rows of a full rebuild; years change
+# Refresh policy for all layers (D32): 1.65 M index features, over the 1 M rows of a full rebuild; years change
 # independently (new deliveries go to recent years), so a new version replaces that service year's file in Bronze and
 # Silver and nothing else is rewritten (unit = one service's year feature type).
 refresh: {mode: incremental, unit: "service year feature type (<product>_<datum>_<YYYY>)", decided: "D32 + #3103"}
