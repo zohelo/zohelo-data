@@ -48,3 +48,22 @@ models:
                          'nbutan', 'nheksan', 'nheptan', 'noktan', 'npentan', 'propan', 'propen', 'trans2buten']
       - name: raw_sha256
         tests: [not_null]
+  - name: gios_air_archive_stations
+    description: >-
+      GIOŚ air-quality stations of the yearly archive's metadata workbook (register PL-ENV-010, #3119), sheet STACJE:
+      every station since 2000, closed ones too. Grain: station_code (current code). old_station_codes as published
+      (codes used by older year files), opening and closing dates, type, voivodeship (upper case), WGS84. The
+      verified values are silver.gios_air_archive_values (entity table). Trial run: docs/sources/gios_air_quality.md.
+    columns:
+      - name: station_code
+        tests: [not_null, unique]
+      - name: voivodeship
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [DOLNOŚLĄSKIE, KUJAWSKO-POMORSKIE, LUBELSKIE, LUBUSKIE, MAZOWIECKIE, MAŁOPOLSKIE, OPOLSKIE,
+                         PODKARPACKIE, PODLASKIE, POMORSKIE, WARMIŃSKO-MAZURSKIE, WIELKOPOLSKIE, ZACHODNIOPOMORSKIE,
+                         ŁÓDZKIE, ŚLĄSKIE, ŚWIĘTOKRZYSKIE]
+      - name: raw_sha256
+        tests: [not_null]

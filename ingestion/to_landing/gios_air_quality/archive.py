@@ -8,9 +8,10 @@ file under a new id (2016 and 2018 have ids 602 and 603, their neighbours 262 an
 an entity is landed when the page lists an id that its newest receipt does not name (``detail.file_id``).
 
 Entities: ``archive_<year>`` (.zip) and ``archive_stations`` (.xlsx); version = download time (the server sends no
-Last-Modified or ETag, only Content-Length; Dev probe 45747293591). One request at a time, PAUSE_SECONDS apart, bounded retries; the station file first, then missing
-years newest first, then replaced ones, until the time budget ends (the next run continues). Unchanged bytes under a
-new id write nothing (the next run downloads that file again).
+Last-Modified or ETag, only Content-Length; Dev probe 45747293591). One request at a time, PAUSE_SECONDS apart,
+bounded retries (a body shorter than its Content-Length is retried); the station file first, then missing years
+newest first, then replaced ones, until the time budget ends (the next run continues). Unchanged bytes under a new
+id write nothing (the next run downloads that file again).
 """
 
 from __future__ import annotations
@@ -97,6 +98,7 @@ def states(listed: dict[str, dict[str, Any]], held: dict[str, list]) -> dict[str
 
 def order(state: dict[str, str]) -> list[str]:
     """Station file first, then missing years newest first, then stale ones newest first."""
+
     def key(entity: str) -> tuple[bool, bool, int]:
         year = 0 if entity == STATIONS else int(entity.rsplit("_", 1)[1])
         return entity != STATIONS, state[entity] != "missing", -year
@@ -125,7 +127,9 @@ def run(client, bucket: str, root: str, held: dict[str, list], deadline: float) 
         except zipfile.BadZipFile as exc:
             raise ValueError(f"{entity}: {item['url']} is not a ZIP file: {exc}") from exc
         detail = {"file_id": item["id"], "title": item["title"], "pattern": "gios_air_archive", "format": item["ext"]}
-        result = land(client, bucket, root, entity, body, held.get(entity) or [], detail, ext=item["ext"], url=item["url"])
+        result = land(
+            client, bucket, root, entity, body, held.get(entity) or [], detail, ext=item["ext"], url=item["url"]
+        )
         summary["unchanged" if result == "unchanged" else "landed"].append(entity)
         summary.setdefault("bytes", 0)
         summary["bytes"] += len(body) if result != "unchanged" else 0

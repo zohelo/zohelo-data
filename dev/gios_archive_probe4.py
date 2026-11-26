@@ -1,4 +1,4 @@
-"""Read-only probe 4 (#3119): the decoder and the Silver SQL of this branch over every yearly ZIP and the station
+"""Read-only probe 4/5 (#3119): the decoder and the Silver SQL of this branch over every yearly ZIP and the station
 workbook, on the runner's disk only (no R2): rows per year, layouts, header quirks, Silver checks, station codes
 resolved through the station workbook. One download at a time, 5 s apart (landing archive.get)."""
 
@@ -35,6 +35,7 @@ def main() -> int:
     print("STATIONS", rows, q(f"select count(distinct station_code), count(*) filter (where old_station_codes is not null) from {S}"))
     print("STATIONS_VOIV", q(f"select voivodeship, count(*) from {S} group by 1 order by 1"))
     print("STATIONS_OLD_SAMPLE", q(f"select station_code, old_station_codes from {S} where old_station_codes like '%,%' or old_station_codes like '%;%' or old_station_codes like '% %' limit 8"))
+    print("STATIONS_DUP", q(f"select * from {S} where station_code in (select station_code from {S} group by 1 having count(*) > 1)"))
     print("STATIONS_DATES", q(f"select min(opened_on), max(opened_on), min(closed_on), max(closed_on), min(latitude), max(longitude) from {S}"))
     years = sorted((e for e in listed if e != "archive_stations"), reverse=True)
     if len(sys.argv) > 1:

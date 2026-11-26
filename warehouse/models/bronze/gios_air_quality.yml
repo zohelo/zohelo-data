@@ -44,4 +44,16 @@ sources:
     description: >-
       Verified values of the yearly archive (#3119), grain station_code × indicator × averaging_time × measured_at,
       validation_status 'verified'; entity = archive_<year>; written per year by
-      ingestion/to_bronze/gios_air_quality/archive_load.py from warehouse/entity/gios_air_archive_values.sql.
+      ingestion/to_bronze/gios_air_quality/archive_load.py from warehouse/entity/gios_air_archive_values.sql, which
+      checks per year that the keys are not null and the grain is unique (a year that fails is rejected).
+    columns:
+      - name: averaging_time
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['1g', '24g']
+      - name: validation_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['verified']

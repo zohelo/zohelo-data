@@ -245,7 +245,6 @@ def run_verify(client, bucket: str, root: str, held: dict) -> tuple[dict[str, An
 def main(mode: str, budget_minutes: float = 120, landing_root: str = "01_landing") -> int:
     from ingestion.common.r2 import req, s3
     from ingestion.common.report import annotate, step_summary
-
     from ingestion.to_landing.gios_air_quality import archive
 
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
@@ -265,7 +264,9 @@ def main(mode: str, budget_minutes: float = 120, landing_root: str = "01_landing
         listed = pages(session, f"{API}/station/findAll", LISTS["stations"], LIST_PAUSE_SECONDS)
         summary = {"stations_listed": sum(len(i) for _, _, i in listed), "today": today()}
         summary["state"] = "current" if held.get(today()) else "missing"
-        state = archive.states(archive.listing(archive.session()), receipts(client, bucket, landing_root, archive.is_archive))
+        state = archive.states(
+            archive.listing(archive.session()), receipts(client, bucket, landing_root, archive.is_archive)
+        )
         summary["archive"] = {s: sorted(e for e, v in state.items() if v == s) for s in ("missing", "stale")}
         summary["archive"]["current"] = sum(v == "current" for v in state.values())
         status = 0

@@ -11,7 +11,7 @@ file per entity, replaced whole (entity_tables), so a rerun writes nothing and a
 
 The Silver stations are a dbt model (models/silver/gios_air_quality/gios_air_archive_stations.sql). A year whose
 file is not of a declared layout, or whose Silver breaks a check (a null key, a repeated station × indicator ×
-averaging time × stamp, a value cell that is not a number), is rejected into bronze.gios_air_quality_rejected_files
+averaging time × stamp × member, a value cell that is not a number), is rejected into bronze.gios_air_quality_rejected_files
 with the reason and the tables keep the previous version. Years are committed one by one, newest first; a run that
 reaches its time budget stops and the next run continues.
 """
@@ -46,9 +46,8 @@ YEAR = re.compile(r"archive_\d{4}")
 STATIONS_ENTITY = "archive_stations"  # ingestion/to_landing/gios_air_quality/archive.py STATIONS
 RECEIPT = re.compile(r"(archive_[a-z0-9]+)/([0-9TZ]+)__([0-9TZ]+)\.receipt\.json")
 NOT_NULL = ("station_code", "indicator", "averaging_time", "measured_at", "measured_on", "raw_sha256")
-KEY = ("station_code", "indicator", "averaging_time", "measured_at")
-# A value cell that is not a number; an hourly stamp off the full hour.
-REJECT_IF = "value is null or (averaging_time = '1g' and minute(measured_at) <> 0)"
+KEY = ("station_code", "indicator", "averaging_time", "measured_at", "member")
+REJECT_IF = "value is null"  # a value cell that is not a number
 STATS = ["entity", "raw_sha256"]
 # Header row of the station sheet STACJE (Dev probe 45747293591, whitespace collapsed) → Bronze column, in order.
 STATION_FIELDS = {
@@ -115,7 +114,8 @@ def stations(body: bytes, receipt: dict[str, Any], output: Path) -> int:
             rng = f", range = '{used}'" if used else ""
             con.execute(
                 "create temp table raw as select cast(row_number() over () as bigint) as sheet_row, * from "
-                f"read_xlsx('{path}', sheet = '{STATION_SHEET}', header = false, all_varchar = true, stop_at_empty = false{rng})"
+                f"read_xlsx('{path}', sheet = '{STATION_SHEET}', header = false, all_varchar = true, "
+                f"stop_at_empty = false{rng})"
             )
             cols = [r[0] for r in con.execute("describe raw").fetchall()][1:]
             head = con.execute(f"select {', '.join(f'"{c}"' for c in cols)} from raw where sheet_row = 1").fetchone()
@@ -125,14 +125,18 @@ def stations(body: bytes, receipt: dict[str, Any], output: Path) -> int:
                 raise archive.ArchiveDecodeError(f"station sheet header {found} is not the declared layout")
             extra = " or ".join(f'"{c}" is not null' for c in cols[n:]) or "false"
             any_cell = " or ".join(f'"{c}" is not null' for c in cols[:n])
-            bad = con.execute(
-                f'select count(*) from raw where sheet_row > 1 and (({extra}) or ("{cols[1]}" is null and ({any_cell})))'
-            ).fetchone()[0]
+            orphans = f'("{cols[1]}" is null and ({any_cell}))'
+            bad = con.execute(f"select count(*) from raw where sheet_row > 1 and (({extra}) or {orphans})").fetchone()[
+                0
+            ]
             if bad:
-                raise archive.ArchiveDecodeError(f"station sheet: {bad} rows without a station code or beyond the header")
+                raise archive.ArchiveDecodeError(
+                    f"station sheet: {bad} rows without a station code or beyond the header"
+                )
             prov = bulk_bronze.provenance(receipt)
+            named = ", ".join(f'"{c}" as {f}' for c, f in zip(cols[:n], STATION_FIELDS.values(), strict=True))
             con.execute(
-                f"""copy (select ? as entity, {", ".join(f'"{c}" as {f}' for c, f in zip(cols, STATION_FIELDS.values()))},
+                f"""copy (select ? as entity, {named},
                     ? as raw_sha256, ? as source_version, cast(? as timestamptz) as ingested_at, sheet_row
                 from raw where sheet_row > 1 and "{cols[1]}" is not null order by sheet_row)
                 to '{output}' (format parquet, compression zstd)""",
@@ -210,8 +214,9 @@ def replace(cat, table_id, columns, entity: str, uri: str) -> None:
     et.replace(cat, table_id, "entity", {entity: [uri]}, STATS, f"{SOURCE}-archive")
 
 
-def run(client, cat, landing: str, lake: str, landing_root: str, namespace: str, silver_namespace: str,
-        minutes: float) -> dict[str, Any]:
+def run(
+    client, cat, landing: str, lake: str, landing_root: str, namespace: str, silver_namespace: str, minutes: float
+) -> dict[str, Any]:
     from warehouse import entity as entity_model
 
     started = time.monotonic()
@@ -231,8 +236,12 @@ def run(client, cat, landing: str, lake: str, landing_root: str, namespace: str,
             receipt, sha = receipts[name], receipts[name]["sha256"]
             if sha in refused or f"{sha}.{digest}" in refused:
                 continue
-            reject = {"entity": name, "raw_sha256": sha, "landing_key": receipt["object"]["key"],
-                      "code_sha": os.environ.get("GITHUB_SHA", "")}
+            reject = {
+                "entity": name,
+                "raw_sha256": sha,
+                "landing_key": receipt["object"]["key"],
+                "code_sha": os.environ.get("GITHUB_SHA", ""),
+            }
             if name == STATIONS_ENTITY:
                 if held_st.get(name, {}).get("recipes") == {sha}:
                     continue
@@ -268,8 +277,17 @@ def run(client, cat, landing: str, lake: str, landing_root: str, namespace: str,
             else:
                 source = held_b[name]["paths"][0]
             try:
-                result = entity_model.apply(MODEL, source, silver, not_null=NOT_NULL, unique_key=KEY, same_rows=True,
-                                            reject_if=REJECT_IF, memory_limit="8GB", temp_directory=str(work))
+                result = entity_model.apply(
+                    MODEL,
+                    source,
+                    silver,
+                    not_null=NOT_NULL,
+                    unique_key=KEY,
+                    same_rows=True,
+                    reject_if=REJECT_IF,
+                    memory_limit="8GB",
+                    temp_directory=str(work),
+                )
             except entity_model.EntityModelError as exc:
                 rejected.append({**reject, "raw_sha256": f"{sha}.{digest}", "error": f"silver: {exc}"[:1000]})
                 local.unlink(missing_ok=True)
@@ -293,4 +311,3 @@ def run(client, cat, landing: str, lake: str, landing_root: str, namespace: str,
     out["minutes"] = round((time.monotonic() - started) / 60, 1)
     annotate("warning" if rejected else "notice", f"{SOURCE} archive Bronze and Silver", out)
     return out
-

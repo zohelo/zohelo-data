@@ -214,5 +214,7 @@ def load(
     step_summary(f"## {SOURCE} · bronze load\n\n```json\n{json.dumps(totals, indent=2)}\n```\n")
     built = entities.build(cat, client, lake, namespace, silver_namespace, today=datetime.now(UTC).date())
     spent = (datetime.now(UTC) - started).total_seconds() / 60
-    archive_load.run(client, cat, landing_bucket, lake, landing_root, namespace, silver_namespace, budget_minutes - spent - 20)
+    archive_load.run(
+        client, cat, landing_bucket, lake, landing_root, namespace, silver_namespace, budget_minutes - spent - 20
+    )
     return 1 if built.get("failed") else 0
