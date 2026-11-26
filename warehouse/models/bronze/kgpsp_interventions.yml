@@ -11,7 +11,7 @@ sources:
   tables:
   - name: kgpsp_interventions_cells
     description: >-
-      One row per non-empty cell (value as stored, ZIP member, sheet, row, column, number format) of every .xlsx or
-      .xls workbook of the newest copy of each landed year's standard-tables ZIP; partitioned by entity.
+      One row per non-empty cell (value as stored, ZIP member, sheet, row, column, number format) of the table 1 and
+      table 10 workbooks of the newest copy of each landed year's standard-tables ZIP; partitioned by entity.
   - name: kgpsp_interventions_rejected_files
     description: Files of kgpsp_interventions the Bronze decoder rejected, with the reason.
