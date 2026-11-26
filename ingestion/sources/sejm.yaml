@@ -13,7 +13,8 @@ description: "Sejm API (api.sejm.gov.pl): terms 9 and 10 sittings, sitting days,
 # Size (Dev probe 43797117724, 16 Nov 2026): term 10 has 89 proceedings entries (planned sittings with number 0),
 # 171 voting days in 68 sittings, 3,592 prints; votings of sitting 1: 147 in 88 KB; MP list 499 MPs (260 KB raw);
 # term 9: 177 voting days, 4,142 prints. First load about 160 requests, later runs about 8.
-# History: HISTORY_TRIAL
+# History: term 9 from its first sitting (12 Nov 2019) to the newest download; Dev trial 45755790301, 26 Nov 2026: votings to 2026-11-19,
+# prints delivered to 2026-11-24, sitting days listed to 2026-12-04 (planned days of the running sitting not held yet).
 extraction:
   initial: api
   production: snapshot                    # each answer is the complete current list
@@ -38,18 +39,18 @@ bronze:
 silver: [silver.sejm_sitting_days, silver.sejm_votings, silver.sejm_prints, silver.sejm_mps]
 gold: [gold.parliament_sejm_sitting_days, gold.parliament_sejm_votings, gold.parliament_sejm_prints, gold.parliament_sejm_mps, gold.build_sejm, gold.metrics_sejm_sitting_days, gold.metrics_sejm_votings, gold.metrics_sejm_prints]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  sejm_sitting_days: {rows: 600}  # TRIAL
-  sejm_votings: {rows: 30000}  # TRIAL
-  sejm_prints: {rows: 12000}  # TRIAL
-  sejm_mps: {rows: 750}  # TRIAL
-  parliament_sejm_sitting_days: {rows: 600}  # TRIAL
-  parliament_sejm_votings: {rows: 30000}  # TRIAL
-  parliament_sejm_prints: {rows: 12000}  # TRIAL
-  parliament_sejm_mps: {rows: 750}  # TRIAL
-  poc_build_sejm: {rows: 500}  # TRIAL
-  poc_metrics_sejm_sitting_days: {rows: 150}  # TRIAL
-  poc_metrics_sejm_votings: {rows: 150}  # TRIAL
-  poc_metrics_sejm_prints: {rows: 150}  # TRIAL
+  sejm_sitting_days: {rows: 620}  # 412 measured (Dev trial 45755790301, 26 Nov 2026)
+  sejm_votings: {rows: 22300}  # 14,856 measured (same trial)
+  sejm_prints: {rows: 11700}  # 7,792 measured
+  sejm_mps: {rows: 750}  # 499 measured
+  parliament_sejm_sitting_days: {rows: 620}  # 412 measured
+  parliament_sejm_votings: {rows: 22300}  # 14,856 measured
+  parliament_sejm_prints: {rows: 11700}  # 7,792 measured
+  parliament_sejm_mps: {rows: 750}  # 499 measured
+  poc_build_sejm: {rows: 370}  # 247 measured (85 + 81 + 81 months)
+  poc_metrics_sejm_sitting_days: {rows: 130}  # 81 months in Gold
+  poc_metrics_sejm_votings: {rows: 130}  # 81 months in Gold
+  poc_metrics_sejm_prints: {rows: 130}  # 85 months in Gold
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about 160 small answers for two terms, a few changed answers per week, no
