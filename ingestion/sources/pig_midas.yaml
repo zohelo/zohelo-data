@@ -37,11 +37,11 @@ archive_policy:
 bronze: [bronze.pig_midas_features, bronze.pig_midas_rejected_files]
 silver: [silver.pig_midas_deposits, silver.pig_midas_mining_areas, silver.pig_midas_mining_terrains]
 gold: [gold.build_pig_midas]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial (PR body)
-  pig_midas_deposits: {rows: 34000}  # 22,188 = 18,186 documented + 4,002 removed contours (probe 45818533713)
-  pig_midas_mining_areas: {rows: 17000}  # 11,238 = 6,176 current + 5,062 archival
-  pig_midas_mining_terrains: {rows: 16500}  # 10,801 = 6,001 current + 4,800 archival
-  poc_build_pig_midas: {rows: 2000}  # placeholder, set from the Dev trial
+full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the Dev trial of the final code (PR body)
+  pig_midas_deposits: {rows: 34000}  # 22,188 = 18,186 documented + 4,002 removed contours
+  pig_midas_mining_areas: {rows: 17000}  # 11,239 = 6,176 current + 5,063 archival
+  pig_midas_mining_terrains: {rows: 16500}  # 10,801 = 6,000 current + 4,801 archival
+  poc_build_pig_midas: {rows: 650}  # 410: deposits 378 (total and 60 minerals by area), mining areas 32
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): six responses of 5-30 MB, about 44,000 features in all, no changed-since filter

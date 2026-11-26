@@ -49,9 +49,10 @@ models:
       - name: contour_id
         tests: [not_null]
       - name: status
-        tests: [not_null, {accepted_values: {arguments: {values: ['aktualny', 'zniesiony']}}}]
+        description: As published; NULL on a record the producer has not completed (1 current contour on 26 Nov 2026).
+        tests: [{accepted_values: {arguments: {values: ['aktualny', 'zniesiony']}}}]
       - name: register_number
-        tests: [not_null]
+        description: Numer w rejestrze (register of mining areas) as published; NULL on an uncompleted record.
       - name: point_lon
         tests: [not_null]
       - name: point_lat
@@ -75,9 +76,10 @@ models:
       - name: contour_id
         tests: [not_null]
       - name: status
-        tests: [not_null, {accepted_values: {arguments: {values: ['aktualny', 'zniesiony']}}}]
+        description: As published; NULL on a record the producer has not completed (1 current contour on 26 Nov 2026).
+        tests: [{accepted_values: {arguments: {values: ['aktualny', 'zniesiony']}}}]
       - name: register_number
-        tests: [not_null]
+        description: Numer w rejestrze (register of mining areas) as published; NULL on an uncompleted record.
       - name: point_lon
         tests: [not_null]
       - name: point_lat
