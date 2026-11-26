@@ -458,7 +458,55 @@ def gold_blocks(files: list[Path]) -> list[str]:
         for m, source in legacy.items()
         if not activated or f"'{source}'" not in activated.group(0)
     ]
+    problems += scoped_metrics(files, entries)
     return sorted(problems)
+
+
+METRICS_MODEL = re.compile(
+    r"\{\{\s*config\(alias='metrics_([a-z0-9_]+)'\)\s*\}\}\s*(?:\{#.*?#\}\s*)?"
+    r"\{\{\s*poc_concept_metrics\('([a-z0-9_]+)'\)\s*\}\}\s*",
+    re.S,
+)
+BLOCK_SOURCE_SYSTEMS = re.compile(r"['\"]source_systems['\"]\s*:\s*\[([^\]]*)\]")
+SOURCE_LITERAL = re.compile(r"'([a-z0-9_]+)'\s+as\s+source_system\b")
+
+
+def scoped_metrics(files: list[Path], entries: dict[str, str]) -> list[str]:
+    """What block-scoped metrics (warehouse/changed.py, #3204) relies on. Every poc_metrics_<kpi>.sql is exactly
+    `config(alias='metrics_<kpi>')`, an optional comment and `poc_concept_metrics('<kpi>')`: the planner takes the
+    concept from that call. A source_system maps to one Gold block: its declaration (`entries`: block → source)
+    or the block's config meta `source_systems`, never two blocks. A block writes only the source_systems it is
+    declared for (each `'<x>' as source_system` literal in its SQL): an undeclared one would be missed by the
+    metrics of that source's KPIs."""
+    problems = []
+    owner: dict[str, str] = {}
+    for model, source in sorted(entries.items()):
+        path = ROOT / "warehouse/models/gold" / f"{model}.sql"
+        text = path.read_text() if path.exists() else ""
+        meta = BLOCK_SOURCE_SYSTEMS.search(text)
+        declared_sources = {source} | (set(re.findall(r"['\"](\w+)['\"]", meta.group(1))) if meta else set())
+        for name in sorted(declared_sources):
+            if name in owner and owner[name] != model:
+                problems.append(f"source_system {name} is declared under two Gold blocks: {owner[name]} and {model}")
+            owner.setdefault(name, model)
+        for literal in sorted(set(SOURCE_LITERAL.findall(text)) - declared_sources):
+            problems.append(
+                f"{model}: writes source_system '{literal}' but is declared for {sorted(declared_sources)}; add it to "
+                "config meta source_systems (warehouse/changed.py block_sources)"
+            )
+    for f in files:
+        if f.parts[:3] != ("warehouse", "models", "gold") or not f.stem.startswith("poc_metrics_"):
+            continue
+        if f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        found = METRICS_MODEL.fullmatch((ROOT / f).read_text())
+        if not found or found.group(1) != f.stem[len("poc_metrics_") :] or found.group(2) != found.group(1):
+            kpi = f.stem[len("poc_metrics_") :]
+            problems.append(
+                f"{f}: a metrics model is exactly {{{{ config(alias='metrics_{kpi}') }}}}, an optional comment and "
+                f"{{{{ poc_concept_metrics('{kpi}') }}}} (warehouse/changed.py scopes it by that concept)"
+            )
+    return problems
 
 
 SILVER_ALIAS = GOLD_ALIAS
