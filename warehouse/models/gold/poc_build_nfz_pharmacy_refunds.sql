@@ -4,9 +4,25 @@
    (macro poc_nfz_pharmacy_refunds_measures): measure_key nfz_pharmacy_refunds:monthly_provisions:<unit>:<field>;
    the ATC main group is the breakdown ({"atc": "<code>"}); the selection without ATC filter is the total
    (breakdown {}, is_total), which includes refunds outside the 14 groups (the API's group "-"), so the groups
-   do not sum to it. Values, units and scale as published (D33); a NULL value is not loaded. Frequency M only. #}
+   do not sum to it. Values, units and scale as published (D33); a NULL value is not loaded, nor a row whose
+   value_status is not 'ok' (an all-zero gap, or a Poland total that lacks a province; Silver keeps both as published
+   with the status). Frequency M only. #}
 with obs as (
-    select * from {{ ref('nfz_ra_monthly_provisions') }}
+    select
+        entity,
+        area_code,
+        atc_code,
+        atc_name,
+        period_start,
+        quantity,
+        refund,
+        donation,
+        contribution_of_patient,
+        value,
+        raw_sha256,
+        source_version
+    from {{ ref('nfz_ra_monthly_provisions') }}
+    where value_status = 'ok'
 ),
 
 long as (
