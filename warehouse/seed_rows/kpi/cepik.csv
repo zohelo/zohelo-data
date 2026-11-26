@@ -1,0 +1,2 @@
+kpi_key,name_en,name_pl,unit_key,subgroup_key,frequency_default,status,definition_en,definition_pl
+vehicle_registrations,Vehicle registrations,Rejestracje pojazdów,vehicles,transport.vehicles,M,draft,"Vehicles registered in the month in the Central Register of Vehicles and Drivers (CEPiK), all vehicle types, by the voivodeship of registration; Ministry of Digital Affairs statistics.","Pojazdy zarejestrowane w miesiącu w Centralnej Ewidencji Pojazdów i Kierowców (CEPiK), wszystkie rodzaje pojazdów, według województwa rejestracji; statystyki Ministerstwa Cyfryzacji."

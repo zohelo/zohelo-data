@@ -12,7 +12,8 @@ framework")::
             format: zip              # zip | gzip | 7z | json (must parse) | pdf (must start %PDF-) | raw
             version: last_modified   # last_modified (fallback: download time) | ingested
             url_date: Europe/Warsaw  # optional: {date} in url = today (YYYYMMDD) in this zone
-            reduce: news_feed        # optional: land only the allowed part of the file (news: headline items)
+            reduce: news_feed        # optional: land only the allowed part of the file (news: headline items;
+                                     # another kind: ingestion/to_landing/<kind>/ reduce_landing)
           - entity: treasury_debt_series   # a file whose URL changes per release
             url_from:                # instead of url: find the link on a stable page
               page: https://www.gov.pl/web/finanse/szeregiczasowe
@@ -39,6 +40,7 @@ from email.utils import parsedate_to_datetime
 import gzip
 from hashlib import sha256
 from html.parser import HTMLParser
+import importlib
 import json
 import os
 from pathlib import Path
@@ -52,7 +54,7 @@ import zipfile
 import requests
 import yaml
 
-from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3
+from ingestion.common.r2 import archive_key, archived, get_with_backoff, remember_receipt, req, s3
 from ingestion.common.report import annotate, step_summary
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -359,11 +361,23 @@ def probe(url: str, method: str = "head") -> tuple[requests.Response | None, str
 
 
 def reducer(kind: str) -> Any:
-    """The function that keeps only the allowed part of a downloaded file (``reduce:`` in a file declaration)."""
+    """The function that keeps only the allowed part of a downloaded file (``reduce:`` in a file declaration):
+    ``news_feed``, or the name of a source's own Landing module ``ingestion/to_landing/<kind>/`` that exposes
+    ``reduce_landing(body: bytes) -> bytes`` (so a source adds no line here, D34)."""
     if kind == "news_feed":
         from ingestion.to_bronze.news_feeds.load import reduce_feed
 
         return reduce_feed
+    if re.fullmatch(r"[a-z0-9_]+", kind or ""):
+        name = f"ingestion.to_landing.{kind}"
+        try:
+            module = importlib.import_module(name)
+        except ModuleNotFoundError as exc:
+            if exc.name != name:  # the module exists and lacks a dependency: say so, not "unknown"
+                raise
+            module = None
+        if callable(getattr(module, "reduce_landing", None)):
+            return module.reduce_landing
     raise ValueError(f"unknown reduce: {kind!r}")
 
 
@@ -398,12 +412,9 @@ def reduce_held(client: Any, bucket: str, source: str, spec: dict[str, Any], lan
             "reduced": spec["reduce"],
             "reduced_at": stamp(datetime.now(UTC)),
         }
-        client.put_object(
-            Bucket=bucket,
-            Key=receipt_key,
-            ContentType="application/json",
-            Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
-        )
+        rewritten = json.dumps(receipt, indent=2, sort_keys=True).encode()
+        client.put_object(Bucket=bucket, Key=receipt_key, ContentType="application/json", Body=rewritten)
+        remember_receipt(bucket, receipt_key, rewritten)  # the receipt cache must not serve the replaced bytes
         done += 1
     return done
 

@@ -18,8 +18,9 @@ extraction:
   initial: api
   production: snapshot                    # each file is one complete answer page of a closed publication day
   incremental_policy: changed_since_last  # missing days, then the newest three days again; unchanged bytes skipped
-  schedule: # UTC; TED publishes Monday to Friday; daily on weekdays after the morning publication
-    - {cron: "35 11 * * 1-5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; TED publishes Monday to Friday; one run a week, Saturday, after the week's last publication (O46, weekly until production use;
+    # was every weekday); a run fetches every missing day, then the newest three days again
+    - {cron: "35 11 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/ted_notices/
 archive_policy:

@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+milk_purchase_price,mrirw_zsrir,mrirw_zsrir:purchase_prices:PLN_100KG:milk.raw_milk,"raw cow's milk, all qualities, monthly average of reporting buyers, Poland (ZSRIR milk bulletin)",1,
+pig_purchase_price,mrirw_zsrir,mrirw_zsrir:purchase_prices:PLN_KG_LW:pork.live_pigs,"pigs for slaughter, live weight, monthly average, Poland (ZSRIR pork bulletin)",1,
+wheat_purchase_price,mrirw_zsrir,mrirw_zsrir:purchase_prices:PLN_T:cereals.wheat_consumption,"consumption wheat, monthly average purchase price, Poland (ZSRIR cereals bulletin)",1,

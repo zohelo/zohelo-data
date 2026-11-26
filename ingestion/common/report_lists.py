@@ -1,6 +1,6 @@
 """Issuer report lists (KNF OAM: ESPI reports, CD-006; GPW report list: EBI reports, CD-007), shared code.
 
-Both sources are public HTML lists of issuer reports, read politely (decision D37): list pages only, one request
+Both sources are public HTML lists of issuer reports, read politely (decision D38): list pages only, one request
 at a time, PAUSE_SECONDS apart, the platform's identified User-Agent, bounded retries, never a report document or
 an attachment. A refusal (4xx, robots.txt, bot protection) stops the day; it is never tried another way.
 
@@ -45,7 +45,7 @@ from ingestion.to_landing.patterns import bulk_file
 WARSAW = ZoneInfo("Europe/Warsaw")
 PAUSE_SECONDS = 5  # between any two requests to one host
 RETRIES = 3
-REREAD_DAYS = 3  # the days before today that every run reads again (late reports, a missed run)
+REREAD_DAYS = 8  # days before today every run reads again: a weekly run (O46) plus one day of margin
 MAX_PAGES = 60  # pages of one KNF day or of one GPW pass: beyond this is an error or a stop, never an endless loop
 FIELDS = {  # the reduced row of each source: every value is text, as listed; never the title (persons)
     "knf_espi": ["report_id", "issuer_name", "received_date", "report_type", "link"],

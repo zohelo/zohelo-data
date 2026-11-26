@@ -2,7 +2,7 @@ source_system: gpw_ebi
 description: "GPW report list, EBI rows (reports of NewConnect and Catalyst issuers): one row per report — time, category, number, issuer with ISIN, report id, link"
 
 # Extraction strategy (docs/landing.md). No bulk feature, API or feed for EBI reports (https://www.gpw.pl/ebi answers
-# 403 to automated clients and is not used). Route (decision D37): the public list https://www.gpw.pl/espi-ebi-reports
+# 403 to automated clients and is not used). Route (decision D38): the public list https://www.gpw.pl/espi-ebi-reports
 # through the page's own "Show more" request (the form posted to https://www.gpw.pl/ajaxindex.php, only "EBI"
 # ticked, 15 rows a request, newest first; robots.txt allows it), one request at a time 5 s apart, the platform's
 # User-Agent, bounded retries; a 4xx stops the run. Never a report page or attachment. ESPI rows of the same list
@@ -14,9 +14,10 @@ description: "GPW report list, EBI rows (reports of NewConnect and Catalyst issu
 extraction:
   initial: web
   production: delta                       # one document per day of publication; days accumulate
-  incremental_policy: changed_since_last  # each run reads from the newest held day (or 3 days back); SHA-256
-  schedule: # UTC; EBI reports arrive on working days until late evening (Warsaw); daily at 04:55
-    - {cron: "55 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  incremental_policy: changed_since_last  # each weekly run reads from the newest held day (or 8 days back); SHA-256
+  schedule: # UTC; EBI reports arrive on working days until late evening (Warsaw). Weekly until production use (O46):
+    # Friday 05:50; each run reads from the newest held day, so nothing between runs is missed
+    - {cron: "50 5 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gpw_ebi/
 archive_policy:

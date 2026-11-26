@@ -170,6 +170,12 @@ def main(argv=None) -> int:
     body = (
         f"Run {link} ({event}) failed or was cancelled. The job annotations on the run page say which activity and why."
     )
+    if source == "platform":  # O46: the platform builds Gold once a week
+        body += (
+            " Gold, the published files and the per-block loads stay as they were until the next weekly platform"
+            " run (Sunday) or a manual dispatch of source platform, run"
+            " `silver/gold: build models, then gold observations`."
+        )
 
     previous = newest_alert(session, repo, title)
     again = f"Failed or cancelled again: {link}"
