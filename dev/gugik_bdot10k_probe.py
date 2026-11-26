@@ -205,40 +205,27 @@ def service(base: str) -> None:
 
 
 def main() -> None:
-    idx = SERVICES[0]
-    q = "ms:BDOT10k_powiaty"
-    pn = "&PROPERTYNAME=TERYT,NAZWA_POWIATU,Data_aktualizacji,URL_GML"
-    body, info = get_retry(f"{idx}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES={q}{pn}")
-    text = (body or b"").decode("utf-8", "replace")
-    members = re.findall(r"<ms:BDOT10k_powiaty\b.*?</ms:BDOT10k_powiaty>", text, re.S)
-    dates = re.findall(r"<ms:Data_aktualizacji>([^<]*)<", text)
-    teryt = re.findall(r"<ms:TERYT>([^<]*)<", text)
-    urls = re.findall(r"<ms:URL_GML>([^<]*)<", text)
-    note("index.full", {**info, "members": len(members), "head": text[:1500], "first": members[:3], "last": members[-2:]})
-    note("index.dates", {"distinct_formats": sorted({re.sub(r"[0-9]", "9", d) for d in dates}),
-                         "min": min(dates) if dates else None, "max": max(dates) if dates else None,
-                         "years": sorted({d[:4] for d in dates}), "empty": sum(1 for d in dates if not d.strip()),
-                         "teryt_distinct": len(set(teryt)), "teryt_len": sorted({len(t) for t in teryt}),
-                         "url_patterns": sorted({re.sub(r"[0-9]{2,4}_", "N_", re.sub(r"/[0-9]{2}/", "/NN/", u)) for u in urls})})
-    by_year = {}
-    for d in dates:
-        by_year[d[:4]] = by_year.get(d[:4], 0) + 1
-    note("index.by_year", by_year)
-    body2, info2 = fetch(f"{idx}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES={q}&COUNT=1")
-    note("index.with_geometry_one", {**info2, "bytes": len(body2 or b"")})
-    for base, layer in ((SERVICES[1], "ms:budynki_woj"), (SERVICES[4], "ms:obiekty_inne_woj"),
-                        (SERVICES[2], "ms:drogi_woj"), (SERVICES[1], "ms:budynki_pow")):
-        els = describe(base, layer)
-        props = [n for n, t in els[1:] if "gml:" not in t]
-        pn = "&PROPERTYNAME=" + ",".join(props)
-        sb, si = fetch(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES={layer}{pn}")
-        t = (sb or b"").decode("utf-8", "replace")
-        n = len(re.findall(r"<ms:TERYT>", t))
-        note("stats.full", {"layer": layer, **si, "features": n, "head": t[:300],
-                            "first": re.sub(r"\s+", " ", t[t.find("<ms:JEDNOSTKA"):][:3500])})
-        mb, mi = fetch(f"{base}?REQUEST=GetMetadata&layer={layer.split(':')[1]}")
-        note("stats.meta", {"layer": layer, "status": mi.get("status"),
-                            "body": re.sub(r"\s+", " ", (mb or b"").decode("utf-8", "replace"))[:2500]})
+    base = SERVICES[1]
+    tries = [
+        f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ms:budynki_woj&COUNT=1"
+        "&PROPERTYNAME=JEDNOSTKA,TERYT,NAZWA,OT_BUBD_A_ALL"
+        "&BBOX=100000,100000,900000,900000,urn:ogc:def:crs:EPSG::2180",
+        f"{base}?SERVICE=WFS&VERSION=1.1.0&REQUEST=GetFeature&TYPENAME=ms:budynki_woj&MAXFEATURES=1"
+        "&PROPERTYNAME=JEDNOSTKA,TERYT,NAZWA,OT_BUBD_A_ALL",
+        f"{base}?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=budynki_woj&MAXFEATURES=1",
+    ]
+    for url in tries:
+        body, info = fetch(url)
+        t = (body or b"").decode("utf-8", "replace")
+        note("stats.try", {**info, "bytes": len(t), "tail": re.sub(r"\s+", " ", t[-1500:])})
+    wms = "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT10k/WMS/StatystykiBudynkow"
+    body, info = fetch(f"{wms}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities")
+    t = (body or b"").decode("utf-8", "replace")
+    names = re.findall(r"<Name>([^<]+)</Name>", t)
+    note("stats.wms", {**info, "names": names[:20], "dates": re.findall(r"20[0-9]{2}-[0-9]{2}-[0-9]{2}", t)[:10],
+                       "abstract": re.findall(r"<Abstract>([^<]*)<", t)[:5]})
+    for name in [n for n in names if n != "WMS"][:2]:
+        wms_info(wms, name)
     note("budget", BUDGET)
 
 
