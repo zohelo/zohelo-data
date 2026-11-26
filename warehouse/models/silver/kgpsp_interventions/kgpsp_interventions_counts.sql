@@ -2,7 +2,8 @@
    false alarms AF, their size classes and the total), and table 10, casualties of fires and local hazards (counts of
    deaths and injured by group: rescuers, of which firefighters, other persons, of which children; no persons), per
    year 2016 on, from the newest copy of each landed year (bronze.kgpsp_interventions_cells).
-   Grain: report_year x table_code x area_code x measure_code.
+   Grain: report_year x table_code x area_code x area_name x measure_code (the 2024 tables print three TERYT codes
+   twice, each for two different gminas: 060303, 100102, 200209; Dev trial 45753330990).
 
    Two layouts, both read by header text, never by position:
      2016-2022  one voivodeship workbook per table: the area column is headed 'Podział administracyjny'; area rows are

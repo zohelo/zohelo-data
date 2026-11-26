@@ -4,13 +4,15 @@ models:
     description: >-
       KG PSP standard summary tables (register EX-003), tables 1 (incidents by type and size) and 10 (deaths and
       injured in fires and local hazards, counts only), per year from 2016. Grain: report_year x table_code x area_code
-      x measure_code. 2016-2022: Poland (PL) and the 16 voivodeships as published; 2023 on: one row per gmina (TERYT
-      WWPPGG), the only level published. Columns found by header text (kgpsp_interventions_counts.sql); values as
+      x area_name x measure_code. 2016-2022: Poland (PL) and the 16 voivodeships as published; 2023 on: one row per
+      gmina (TERYT WWPPGG), the only level published; the 2024 tables print three codes twice for two different
+      gminas (060303 Chełm and Sawin, 100102 Bełchatów and Kleszczów, 200209 Supraśl and Grabówka), so the name is
+      part of the grain (the voivodeship, the code's first two digits, is right for both). Columns found by header text (kgpsp_interventions_counts.sql); values as
       published, a non-number is value_status not_numeric without a value. Trial run: see
       ingestion/sources/kgpsp_interventions.yaml.
     tests:
       - unique:
-          column_name: "concat_ws('|', report_year, table_code, area_code, measure_code)"
+          column_name: "concat_ws('|', report_year, table_code, area_code, area_name, measure_code)"
     columns:
       - name: report_year
         tests: [not_null]
@@ -21,6 +23,8 @@ models:
       - name: area_level
         tests: [not_null, {accepted_values: {arguments: {values: [country, voivodeship, gmina]}}}]
       - name: area_code
+        tests: [not_null]
+      - name: area_name
         tests: [not_null]
       - name: voivodeship_code
         tests:
