@@ -169,22 +169,24 @@ def loaded_pairs(table) -> set[tuple[str, str]]:
 
     For sources whose identical bytes can sit under several entities, each to be loaded (a register file that is
     unchanged across a year boundary lands under the new year's entity, #3139): a hash already loaded for one
-    entity does not make the same bytes of another entity done. The entity is the file's partition value; a file
-    not named after a SHA-256 (compacted) is read for its raw_sha256 values, as in loaded_hashes."""
+    entity does not make the same bytes of another entity done. A file named after a SHA-256 lies in its entity's
+    folder (``.../<entity>/<sha256>.parquet``, bulk_bronze): the folder names the entity, also for a file with no rows,
+    whose partition value is empty (a register file without entries). A file not named after a SHA-256 (compacted)
+    is read for its entity and raw_sha256 values."""
     if table.current_snapshot() is None:
         return set()
     pairs: set[tuple[str, str]] = set()
-    files = table.inspect.data_files()
-    for path, partition in zip(
-        files.column("file_path").to_pylist(), files.column("partition").to_pylist(), strict=True
-    ):
-        entity = next(iter((partition or {}).values()), None)
+    for path in table.inspect.data_files().column("file_path").to_pylist():
         stem = Path(path).stem.split(".", 1)[0]
         if SHA_RE.fullmatch(stem):
-            pairs.add((entity, stem))
+            pairs.add((Path(path).parent.name, stem))
             continue
-        column = read_columns(table, path, ["raw_sha256"]).column("raw_sha256")
-        pairs.update((entity, h) for h in pc.unique(column).to_pylist() if h)
+        data = read_columns(table, path, ["entity", "raw_sha256"])
+        pairs.update(
+            (e, h)
+            for e, h in zip(data.column("entity").to_pylist(), data.column("raw_sha256").to_pylist(), strict=True)
+            if h
+        )
     return pairs
 
 
