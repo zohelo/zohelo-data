@@ -2,8 +2,10 @@
 {# Gold build stage: PIG-PIB MIDAS (register PL-ENV-015), snapshot counts of the newest WFS download, an entity
    snapshot as other registers (nid_monuments, GLEIF): one date per layer = the download date (snapshot_date), frequency
    D. Areas: Poland (every contour, also those at sea outside every voivodeship) and the 16 voivodeships; a contour
-   counts in the voivodeship whose PRG boundary (silver.prg_units, EPSG:4258) holds the point on its surface
-   (point_lon/point_lat, always inside the contour); a point in two voivodeships fails the build (no silent pick).
+   counts in the voivodeship of the PRG gmina (silver.prg_units, EPSG:4258; the first two digits of its TERYT code)
+   whose boundary holds the point on its surface (point_lon/point_lat, always inside the contour); gminas, not the
+   voivodeship outlines, because a full-resolution voivodeship polygon parsed per point exhausts memory. A point on
+   a gmina border lies in two gminas: of one voivodeship it is kept once; of two voivodeships it fails the build.
    - block deposits, pig_midas:deposits:deposits:documented - documented mineral deposits: distinct deposit numbers of
      the layer deposits; breakdown mineral = MIDAS mineral code (Kod) of the contour, so a deposit with two minerals
      counts under each; the total (is_total, breakdown {}) counts each deposit once; a deposit with contours in two
@@ -20,7 +22,7 @@ with geo as (
     where source_system = 'pig_midas'
 ),
 
-voivodeships as materialized (  -- parsed once; the bounding box narrows each point to one to three candidates
+gminas as materialized (  -- small polygons parsed once; the bounding box narrows each point to a few candidates
     select
         teryt_code,
         geom,
@@ -33,7 +35,7 @@ voivodeships as materialized (  -- parsed once; the bounding box narrows each po
             teryt_code,
             st_geomfromwkb(geometry_wkb) as geom
         from {{ ref('prg_units') }}
-        where unit_level = 'wojewodztwo'
+        where unit_level = 'gmina'
     ) as parsed
 ),
 
@@ -74,22 +76,24 @@ candidates as (
         c.contour_key,
         c.point_lon,
         c.point_lat,
-        v.teryt_code
+        g.teryt_code
     from contours as c
-    inner join voivodeships as v
+    inner join gminas as g
         on
-            c.point_lon between v.xmin and v.xmax
-            and c.point_lat between v.ymin and v.ymax
+            c.point_lon between g.xmin and g.xmax
+            and c.point_lat between g.ymin and g.ymax
 ),
 
 placed as (
     select
         k.contour_key,
-        k.teryt_code,
-        count(*) over (partition by k.contour_key) as voivodeships_found
+        substr(k.teryt_code, 1, 2) as teryt_code,
+        min(substr(k.teryt_code, 1, 2)) over (partition by k.contour_key)
+        <> max(substr(k.teryt_code, 1, 2)) over (partition by k.contour_key) as in_two_voivodeships
     from candidates as k
-    inner join voivodeships as v on k.teryt_code = v.teryt_code
-    where st_contains(v.geom, st_point(k.point_lon, k.point_lat))
+    inner join gminas as g on k.teryt_code = g.teryt_code
+    where st_contains(g.geom, st_point(k.point_lon, k.point_lat))
+    qualify row_number() over (partition by k.contour_key order by k.teryt_code) = 1
 ),
 
 areas as (
@@ -101,7 +105,7 @@ areas as (
     select
         c.*,
         case
-            when p.voivodeships_found > 1
+            when p.in_two_voivodeships
                 then error('build_pig_midas: contour ' || p.contour_key || ' in two voivodeships')
             else p.teryt_code
         end as area_code
