@@ -631,7 +631,74 @@ def two():
     emit("fix3268b errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
 
 
+def gios3():
+    out = {}
+    b = bundle("https://wody.gios.gov.pl/pjwp/bundle-505ffd16142c797f5674.min.js")
+    contexts(b, "gios3", ["root:", ".root=", "API_CONTEXT+", "getRequestWithProxy", "downloadFile=function", "/geo-files-export/download/",
+                          "/terms_and_conditions", "/publications/publication/"], 400, 700, 3)
+    api = "https://wody.gios.gov.pl/pjwp/api"
+    tried = {}
+    for p in ["/terms_and_conditions", "/publications/publication/367", "/publications?page=0&size=10", "/publications/?page=0&size=10",
+              "/dictionaries/data-set-accessible", "/dictionaries/matrixes-accessible", "/dictionaries/water-area-categories-accessible",
+              "/dictionaries/voivodeships", "/methodologies?page=0&size=10", "/methodologies/water-categories", "/site_map"]:
+        r = rawget(api + p, 2000000, 3000)
+        tried[p] = {k: r.get(k) for k in ("st", "ct", "len", "err") if r.get(k)}
+    out["api"] = tried
+    m = jget(api + "/methodologies?page=0&size=10")
+    uu = re.findall(r'"uuid"\s*:\s*"([0-9a-f-]{20,})"', json.dumps(m)) if m else []
+    if uu:
+        h = get(api + "/files/download/" + uu[0], method="HEAD", timeout=60)
+        out["file_head"] = {k: h.get(k) for k in ("st", "ct", "len", "cd", "err") if h.get(k)}
+    for f in ("PJWP", "PJP2_ExtractDataTasks"):
+        d = jget(f"https://wody.gios.gov.pl/arcgis/rest/services/{f}?f=json")
+        names = [f"{s.get('name')}:{s.get('type')}" for s in (d or {}).get("services", [])]
+        print(f"=== ARCGIS folder {f} {names}\n=== END", flush=True)
+        out[f] = names[:30]
+    lay = "https://wody.gios.gov.pl/arcgis/rest/services/PJWP/PWW_M_PPK_KLASYFIKACJA_WSK/MapServer/0"
+    meta = jget(lay + "?f=json")
+    if meta:
+        out["ppk_layer"] = {"name": meta.get("name"), "fields": [x.get("name") for x in meta.get("fields", [])][:40], "max": meta.get("maxRecordCount")}
+        out["ppk_count"] = jget(lay + "/query?where=1%3D1&returnCountOnly=true&f=json")
+        rawget(lay + "/query?where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=2&f=json", 300000, 3000)
+    return out
+
+
+def ela3():
+    out = {}
+    base = "https://ela.nauka.gov.pl/"
+    got = page(base + "pl", text=200)
+    if not got:
+        return {"err": "failed"}
+    print(f"=== ELA html\n{got[2][:5000]}\n=== END", flush=True)
+    srcs = [urllib.parse.urljoin(base, s) for s in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', got[2])]
+    rt = [s for s in srcs if "runtime-es2015" in s]
+    texts = [bundle(u) for u in chunks_classic(base, bundle(rt[0]))[:40]] if rt else []
+    texts.append(bundle([s for s in srcs if "main-es2015" in s][0]))
+    allt = "\n".join(texts)
+    contexts(allt, "ela3", ['"8ggo"', "8ggo:", "APP_INITIALIZER", "appConfig.apiUrl", "generatePdf", "TransferState", "makeStateKey", "window.__"], 500, 900, 4)
+    for u in [base + ".cdn/ngrc.json", base + "sla-server/", base + "assets/config.json", base + "config.json"]:
+        rawget(u, 200000, 2000)
+    ub = "https://ela-uczen.nauka.gov.pl/"
+    got = page(ub, text=200)
+    if got:
+        print(f"=== UCZEN html\n{got[2][:4000]}\n=== END", flush=True)
+        srcs = [urllib.parse.urljoin(ub, s) for s in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', got[2])]
+        main = bundle([s for s in srcs if "main-" in s][0])
+        names = sorted(set(re.findall(r'(chunk-[A-Z0-9]{6,}\.js)', main)))
+        texts = [main] + [bundle(ub + n) for n in names[:40]]
+        allt = "\n".join(texts)
+        contexts(allt, "uczen3", ['"/filter', '"/details', "boardUrl", "apiUrl", "baseUrl", "rodzaj_rankingu"], 500, 900, 4)
+    return out
+
+
+def three():
+    res = {"gios": gios3()}
+    emit("fix3268c PL-ENV-011 gios", res["gios"])
+    res["ela"] = ela3()
+    emit("fix3268c errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
+
+
 if __name__ == "__main__":
     import sys
 
-    {"one": one, "two": two}.get((sys.argv[1:] or ["one"])[0], one)()
+    {"one": one, "two": two, "three": three}.get((sys.argv[1:] or ["one"])[0], one)()
