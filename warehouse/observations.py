@@ -344,6 +344,23 @@ SOURCES.update(
         )
     }
 )
+# FAOSTAT, World Bank IDS, EEA and ECB: one Silver dbt table each, every series by rule; the curated
+# build_<source> models stay the KPI layer.
+SOURCES.update(
+    {
+        source: {
+            "tables": {table: (("silver", table), f"gold_{source}_build")},
+            "lookups": _area_map(source),
+            "keyed_by": ("geo_map",),
+        }
+        for source, table in (
+            ("faostat", "faostat_observations"),
+            ("world_bank_ids", "ids_observations"),
+            ("eea", "eea_ghg_inventory"),
+            ("ecb", "ecb_observations"),
+        )
+    }
+)
 SOURCES["undata"] = {
     "tables": {"undata_syb_values": (("silver", "undata_syb_values"), "gold_undata_build")},
     "lookups": {

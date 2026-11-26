@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """NBP Landing: exchange-rate tables A, B, C and gold prices from the NBP Web API.
 
-Route (docs/sources.md, NBP): the Web API (https://api.nbp.pl) is the documented machine
+Route (docs/sources/nbp.md): the Web API (https://api.nbp.pl) is the documented machine
 interface; one request may cover at most 93 days, so the entity is one table and one
 calendar quarter (``A_2024Q1``, ``GOLD_2024Q1``). The yearly CSV/XLS archives on nbp.pl
 are human exports and add only pre-2002 history (backlog).

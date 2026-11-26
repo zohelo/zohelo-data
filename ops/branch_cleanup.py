@@ -3,8 +3,10 @@
 
 Candidates: branches named ``test/*`` or ``dev/*`` (Dev trials and probes), plus any branch
 named with ``--also`` (a one-off list the owner approved). A candidate is deleted only when
-it has no open pull request and its last commit is older than ``--min-age-hours``. ``main``
-and branches with open pull requests are never touched. Without ``--apply`` the script only
+it has no open pull request, is not named with ``--keep`` (a branch that still serves live work
+without a pull request, e.g. a Dev trial branch of an open source pull request) and its last
+commit is older than ``--min-age-hours``. ``main`` and branches with open pull requests are
+never touched. Without ``--apply`` the script only
 reports what it would delete. Needs GITHUB_TOKEN with ``contents: write`` (the Ops workflow's
 branch_cleanup job) and GITHUB_REPOSITORY.
 """
@@ -30,6 +32,7 @@ def main(argv=None) -> int:
     parser.add_argument("--apply", action="store_true", help="delete; without it, only report")
     parser.add_argument("--min-age-hours", type=float, default=48)
     parser.add_argument("--also", nargs="*", action="extend", default=[], help="other branch names the owner approved")
+    parser.add_argument("--keep", nargs="*", action="extend", default=[], help="candidates that still serve live work")
     args = parser.parse_args(argv)
     repo, token = os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_TOKEN"]
     session = requests.Session()
@@ -59,6 +62,9 @@ def main(argv=None) -> int:
             continue
         if name in in_use:
             report["kept"].append([name, "open pull request"])
+            continue
+        if name in args.keep:
+            report["kept"].append([name, "--keep"])
             continue
         if branch.get("protected"):
             report["kept"].append([name, "protected"])
