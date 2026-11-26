@@ -25,7 +25,7 @@ UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics
 WFS = "https://cbdgmapa.pgi.gov.pl/arcgis/services/cbdg_otwory/MapServer/WFSServer"
 TYPE = "cbdg_otwory:Otwory_wiertnicze_CBDG"
 OUT = Path(os.environ.get("DEV_OUTPUT_DIR", tempfile.gettempdir()))
-LEFT = {"n": 10, "req": 14}
+LEFT = {"n": 10, "req": 8}
 
 
 def note(title: str, data) -> None:
@@ -35,7 +35,7 @@ def note(title: str, data) -> None:
         annotate("notice", title, data)
 
 
-def get(params: dict, name: str) -> tuple[int, bytes, float]:
+def get(params: dict, name: str) -> tuple[int, bytes, float]:  # noqa: D103
     if LEFT["req"] <= 0:
         raise RuntimeError("request budget spent")
     LEFT["req"] -= 1
@@ -67,35 +67,21 @@ def feature_page(count: int, start: int, sort: str | None, name: str) -> dict:
 
 
 def main() -> int:
-    status, caps, _ = get({"REQUEST": "GetCapabilities"}, "caps.xml")
-    text = caps.decode("utf-8", "replace")
-    constraints = re.findall(r'<ows:Constraint name="([^"]+)">\s*(?:<ows:NoValues/>)?\s*<ows:DefaultValue>([^<]*)<',
-                             text)
-    formats = sorted(set(re.findall(r"<ows:Value>([^<]*(?:json|JSON|gml|GML|shape|csv)[^<]*)</ows:Value>", text)))
-    note("boreholes capabilities", {"http": status, "bytes": len(caps), "constraints": constraints,
-                                    "formats": formats[:20],
-                                    "types": re.findall(r"<(?:wfs:)?Name>([^<]+)</(?:wfs:)?Name>", text)[:5],
-                                    "sort_ops": re.findall(r"(Sort[A-Za-z]*)", text)[:10]})
-    status, desc, _ = get({"REQUEST": "DescribeFeatureType", "TYPENAMES": TYPE}, "describe.xml")
-    elements = re.findall(r'<xsd:element name="([^"]+)"[^>]*type="([^"]+)"', desc.decode("utf-8", "replace"))
-    note("boreholes describe", {"http": status, "elements": elements})
-    status, hits, _ = get({"REQUEST": "GetFeature", "TYPENAMES": TYPE, "RESULTTYPE": "hits"}, "hits.xml")
-    note("boreholes hits", {"http": status, "body": hits[:600].decode("utf-8", "replace")})
-    status, sample, _ = get({"REQUEST": "GetFeature", "TYPENAMES": TYPE, "OUTPUTFORMAT": "GEOJSON", "COUNT": 3,
-                             "SORTBY": "OBJECTID ASC"}, "sample.json")
+    status, sample, _ = get({"REQUEST": "GetFeature", "TYPENAMES": TYPE, "OUTPUTFORMAT": "GEOJSON", "COUNT": 2},
+                            "sample.json")
     note("boreholes sample", {"http": status, "body": sample[:3500].decode("utf-8", "replace")})
     pages = {
-        "sorted_a": feature_page(5000, 150000, "OBJECTID ASC", "p_sorted_a.json"),
-        "sorted_b": feature_page(5000, 150000, "OBJECTID ASC", "p_sorted_b.json"),
-        "unsorted": feature_page(5000, 150000, None, "p_unsorted.json"),
-        "last": feature_page(5000, 335000, "OBJECTID ASC", "p_last.json"),
+        "a": feature_page(5000, 150000, None, "p_a.json"),
+        "b": feature_page(5000, 150000, None, "p_b.json"),
+        "first": feature_page(5000, 0, None, "p_first.json"),
+        "last": feature_page(5000, 335000, None, "p_last.json"),
     }
     note("boreholes pages", pages)
-    big = feature_page(50000, 0, "OBJECTID ASC", "p_big.json")
+    big = feature_page(25000, 60000, None, "p_big.json")
     note("boreholes big page", big)
 
     con = duckdb.connect()
-    files = [str(OUT / n) for n in ("p_big.json", "p_sorted_a.json", "p_last.json") if (OUT / n).exists()]
+    files = [str(OUT / n) for n in ("p_big.json", "p_a.json", "p_first.json", "p_last.json") if (OUT / n).exists()]
     con.execute(
         "create table f as select unnest(from_json(j->'features', '[\"JSON\"]')) as f from "
         f"(select content::JSON as j from read_text({files!r}))"
