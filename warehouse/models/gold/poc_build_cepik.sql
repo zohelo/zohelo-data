@@ -19,7 +19,7 @@ rows_in as (
         *,
         case when table_code = 'voivodeship' then group_code else 'polska' end as area_code
     from {{ ref('cepik_vehicle_registrations') }}
-    where value is not null and check_status = 'ok'
+    where value is not null and cell_status = 'ok' and check_status = 'ok'
 )
 
 select

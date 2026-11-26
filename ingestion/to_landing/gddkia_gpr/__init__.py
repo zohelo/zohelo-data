@@ -19,6 +19,7 @@ landing.verify   every receipt has its file (bulk_file pattern)
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import re
 import time
 from typing import Any
@@ -48,9 +49,10 @@ def _links(url: str) -> list[tuple[str, str]]:
     return [(href, text.replace("​", "")) for href, text in links(url)]
 
 
-def file_name(headers: dict[str, str]) -> str | None:
-    """The file name of a Content-Disposition header (RFC 5987 filename* first)."""
-    value = headers.get("Content-Disposition") or ""
+def file_name(headers: Mapping[str, str]) -> str | None:
+    """The file name of a Content-Disposition header (RFC 5987 filename* first). ``headers`` is the response's own
+    case-insensitive mapping: gov.pl sends the header name in lower case since November 2026."""
+    value = next((v for k, v in headers.items() if k.lower() == "content-disposition"), "")
     match = re.search(r"filename\*\s*=\s*[^']*''([^;]+)", value)
     if match:
         return unquote(match.group(1).strip().strip('"'))
@@ -72,7 +74,7 @@ def named_links(page: str) -> dict[str, str]:
         response, http = bulk_file.probe(url, "get")
         if response is None or http != "200":
             raise RuntimeError(f"{SOURCE}: attachment {url} answered {http}")
-        out[url] = file_name(dict(response.headers)) or ""
+        out[url] = file_name(response.headers) or ""
     return out
 
 
