@@ -1,0 +1,22 @@
+version: 2
+models:
+  - name: poc_build_gugik_bdot10k
+    description: >-
+      Build stage — GUGiK BDOT10k, topographic objects database (register PL-ENV-003): powiat download packages in
+      Poland and in each voivodeship by the year of their current edition (count, '_T' all years, and share in %), at
+      the date the package index was read (entity snapshot, frequency D). Each package counts once in Poland and once
+      in its voivodeship (first 2 TERYT digits).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_bdot10k_powiat_packages
+    description: >-
+      Gold PoC metrics view of concept bdot10k_powiat_packages (draft): powiat download packages of the topographic
+      objects database (GUGiK BDOT10k, all edition years), Poland and voivodeships, at the date the index was read
+      (macros/poc_metrics.sql).

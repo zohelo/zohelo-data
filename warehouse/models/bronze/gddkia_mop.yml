@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: gddkia_mop
+  description: GDDKiA existing rest areas (MOP) and parkings on national roads (register PL-ENV-023), monthly table
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gddkia_mop/
+    loaded_by: ingestion/to_bronze/gddkia_mop/
+    config: ingestion/sources/gddkia_mop.yaml
+  tables:
+  - name: gddkia_mop_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest copy of each
+      landed edition of "Tabela MOP istniejące" (entity mop_<yyyy>_<mm>); partitioned by entity.
+  - name: gddkia_mop_rejected_files
+    description: Files of gddkia_mop the Bronze decoder rejected, with the reason.

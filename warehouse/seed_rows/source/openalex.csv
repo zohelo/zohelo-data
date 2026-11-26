@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+openalex,CD-028,OpenAlex: publikacje z afiliacją instytucji w Polsce i polskie instytucje,OpenAlex: works with an institution in Poland and Polish institutions,OurResearch,signal,api,community-academic,cc0_openalex,https://openalex.org/
