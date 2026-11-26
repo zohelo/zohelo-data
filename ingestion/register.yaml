@@ -1839,8 +1839,9 @@ sources:
 - id: GL-036
   name: Climate Data Store (CDS)
   short_name: Copernicus Climate Data Store
+  source_system: cckp_era5
   provider: Copernicus Climate Change Service / ECMWF
-  status: approved
+  status: built
   family: G
   kpi: true
   geography: worldwide
@@ -1853,7 +1854,7 @@ sources:
   coverage: 'CCKP ERA5 country series: monthly 1950-01 to 2024-12 (900 values for Poland, Dev probe run 43831903004); 246
     countries and territories in one all-countries answer. CDS ERA5-Land monthly: 1950 to 2026-10 (catalogue, 12 Nov 2026).'
   access:
-    endpoint: https://cckpapi.worldbank.org/cckp/v1/era5-x0.25_timeseries_tas_timeseries_monthly_1950-2024_mean_historical_era5_x0.25_mean/POL?_format=json
+    endpoint: https://datacatalogapi.worldbank.org/ddhxext/v3/cckp/era5-x0.25_timeseries_tas_timeseries_monthly_1950-2025_mean_historical_era5_x0.25_mean/all_countries?_format=json
     kind: api
     interfaces: [REST API, JSON, XLS, NetCDF on S3]
     auth: none
@@ -1864,13 +1865,17 @@ sources:
       request + 1 sub-national request for Poland) = 8 requests.'
   licence:
     status: open-conditional
-    notes: 'Terms: World Bank Data Catalog page of the dataset "Climate Change Knowledge Portal: Observed Climate Data, ERA5
-      0.25 degree", https://datacatalog.worldbank.org/search/dataset/0065626/climate-change-knowledge-portal-observed-climate-data-era5-0-25-degree
-      (desk fetch 16 Nov 2026): "License: Creative Commons Attribution 4.0" and "This dataset is licensed under Creative
-      Commons Attribution 4.0". Commercial reuse and modification: allowed with attribution (CC BY 4.0). No attribution
-      sentence is given on the page; used: "Source: World Bank Climate Change Knowledge Portal, ERA5 0.25-degree (derived
-      from Copernicus Climate Change Service ERA5), CC BY 4.0". The CCKP site''s own "Terms of Use" page linked from https://climateknowledgeportal.worldbank.org/download-data
-      was not read. Upstream ERA5 is CC BY 4.0 in the CDS since 2 July 2025 (ECMWF announcement, https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464),
+    notes: 'Terms: CCKP download page https://climateknowledgeportal.worldbank.org/download-data, section "Terms of Use"
+      (Dev probe 45810479823, 26 Nov 2026), linking the World Bank Dataset Terms https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
+      (now redirected to https://www.worldbank.org/ext/en/legal/terms-conditions): "CCKP data is disseminated by the World
+      Bank under its Open Data policy." ... "Unless specifically labeled otherwise, these Datasets are provided to you under
+      a Creative Commons Attribution 4.0 International License (CC BY 4.0), with the additional terms below." The addition
+      is a mandatory dispute procedure (non-binding mediation, then UNCITRAL arbitration). Attribution format stated: "The
+      World Bank: Dataset name: Data source (if known)"; used: "The World Bank: Climate Change Knowledge Portal, Observed
+      Climate Data ERA5 0.25 degree: Copernicus Climate Change Service (C3S) ERA5". Commercial reuse and modification:
+      allowed with attribution (CC BY 4.0). The World Bank Data Catalog page of the dataset (0065626, desk fetch 16 Nov 2026)
+      says the same: "License: Creative Commons Attribution 4.0". Upstream ERA5 is CC BY 4.0 in the CDS since 2 July 2025
+      (ECMWF announcement, https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464),
       attribution "Generated using Copernicus Climate Change Service information <year>" and the disclaimer that neither
       the European Commission nor ECMWF is responsible for any use made of the information.'
   updates: 'CCKP: not stated; the ERA5 country series ended at 2024-12 on 16 Nov 2026 (README of the AWS collection still
@@ -1908,12 +1913,14 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'robots.txt of cckpapi.worldbank.org answered HTTP 500 in the probe (a server error, not a rule); RFC 9309 treats an
-      unreachable robots.txt as a full disallow, so the Landing trial re-reads it first and, if it still fails, reads the
-      same ids from the documented datacatalogapi.worldbank.org/ddhxext/v3/cckp/ host (its robots.txt answered 404 = no
-      rules).'
-    - Voivodeship codes of CCKP's sub-national units are unknown; find them in the CCKP metadata or the all-sub-nationals
-      answer during the Landing trial.
+    - 'Resolved (Dev probes 45809457989, 45810479823, 26 Nov 2026): robots.txt of cckpapi.worldbank.org still answers HTTP
+      500 (RFC 9309: full disallow), so the extractor reads the same ids from the documented host
+      datacatalogapi.worldbank.org/ddhxext/v3/cckp/ (robots.txt 404 = no rules; same values, numbers instead of strings).
+      The voivodeship codes are POL.1982370-POL.1982385 in CCKP''s geonames.json (download page, "Spatial Unit''s Names and
+      Codes"), mapped to TERC by a stated code list; several codes go in one request, comma-separated. geonames.json is
+      not read at run time: its host''s robots.txt answered HTTP 403 to two of three Dev runners (not worked around); each
+      read checks that the answers hold exactly the stated codes.
+      The newer period id 1950-2025 answers (1950-2026 is empty); the extractor uses the newest one that answers.'
     - 'Does not block this route: native ERA5-Land monthly fields from the CDS would need a free ECMWF account and personal
       token that only the owner can create (the former owner question); not needed for country and voivodeship series.'
     references:
