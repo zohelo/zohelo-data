@@ -1,5 +1,5 @@
 source_system: kgpsp_interventions
-description: "KG PSP — fire-service intervention statistics, annual standard summary tables (tabele stałych zestawień ST SWD PSP)"
+description: "KG PSP — fire-service intervention statistics, annual standard summary tables (tabele stałych zestawień ST SWD PSP): incidents by type and size, casualties"
 
 # Extraction strategy (docs/landing.md). Register EX-003. Bulk feature: https://www.gov.pl/web/kgpsp/interwencje-psp
 # links, per year since 2016, a ZIP of standard summary tables ("2025 2025_.zip 7.96MB", under "Tabele stałych
@@ -8,13 +8,16 @@ description: "KG PSP — fire-service intervention statistics, annual standard s
 # out (size; record-level location fields to be checked first). Attachment uuids change when a file is replaced, so
 # the page is the entry (ingestion/to_landing/kgpsp_interventions/). Entity = one year (tabele_<year>), version =
 # Last-Modified (gov.pl sends it for attachments), a new attachment URL lands only when its bytes differ. Restart
-# unit: one file. Dev probes 43339247470 (13 Nov: page and incident ZIP answered 200), 43798369369, 43798868238,
-# 43799659840 (16 Nov: www.gov.pl and dane.gov.pl time out at TCP connect from GitHub runners, IPv4 and IPv6).
+# unit: one file. Dev probes 43339247470 (13 Nov: page and incident ZIP), 43799659840 (16 Nov: www.gov.pl and
+# dane.gov.pl timed out from GitHub runners), 45745935044 and 45746735646 (26 Nov: reachable again; 86 workbooks a year
+# 2016-2022, a voivodeship, powiat and gmina copy of each table; 42-43 a year from 2023, one gmina-level workbook per
+# table). Bronze and Silver read tables 1 (incidents by type and size) and 10 (casualties, counts only); the other 31
+# tables and tables A-C, the powiat and gmina copies of 2016-2022 are not read yet.
 extraction:
   initial: bulk
   production: snapshot                  # each year's ZIP as published; a replaced file lands as a new version
   incremental_policy: changed_since_last  # new attachment URL with different bytes
-  schedule: # UTC; the year's tables appear in the first months of the next year; monthly check (12th)
+  schedule: # UTC; a year's tables appear in the first months of the next year (2025: 13 Mar 2026) and are sometimes replaced later (2024: Aug 2025); a monthly check (12th), at most one run a week (O46)
     - {cron: "50 6 12 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/kgpsp_interventions/
@@ -23,11 +26,21 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.kgpsp_interventions_cells, bronze.kgpsp_interventions_rejected_files]
-silver: []
-gold: []
+silver: [silver.kgpsp_interventions_counts]
+gold:
+  - gold.build_kgpsp_interventions
+  - gold.metrics_fire_service_fires
+  - gold.metrics_fire_service_local_hazards
+  - gold.metrics_fire_service_false_alarms
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial of the PR
+  kgpsp_interventions_counts: {rows: 400000}
+  poc_build_kgpsp_interventions: {rows: 9000}
+  poc_metrics_fire_service_fires: {rows: 300}
+  poc_metrics_fire_service_local_hazards: {rows: 300}
+  poc_metrics_fire_service_false_alarms: {rows: 300}
 
 bronze_latest_only: true   # policy #822/#845
-# Refresh policy for all layers (D32): ten yearly ZIPs of about 8-11 MB, one new a year; small, rebuilt in full.
+# Refresh policy for all layers (D32): ten yearly ZIPs of about 8-12 MB, one new a year; small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2970"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

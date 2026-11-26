@@ -1,0 +1,46 @@
+version: 2
+models:
+  - name: kgpsp_interventions_counts
+    description: >-
+      KG PSP standard summary tables (register EX-003), tables 1 (incidents by type and size) and 10 (deaths and
+      injured in fires and local hazards, counts only), per year from 2016. Grain: report_year x table_code x area_code
+      x measure_code. 2016-2022: Poland (PL) and the 16 voivodeships as published; 2023 on: one row per gmina (TERYT
+      WWPPGG), the only level published. Columns found by header text (kgpsp_interventions_counts.sql); values as
+      published, a non-number is value_status not_numeric without a value. Trial run: see
+      ingestion/sources/kgpsp_interventions.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', report_year, table_code, area_code, measure_code)"
+    columns:
+      - name: report_year
+        tests: [not_null]
+      - name: table_code
+        tests: [not_null, {accepted_values: {arguments: {values: ['1', '10']}}}]
+      - name: layout
+        tests: [not_null, {accepted_values: {arguments: {values: [voivodeship, gmina]}}}]
+      - name: area_level
+        tests: [not_null, {accepted_values: {arguments: {values: [country, voivodeship, gmina]}}}]
+      - name: area_code
+        tests: [not_null]
+      - name: voivodeship_code
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']
+      - name: measure_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['P', 'P/M', 'P/Ś', 'P/D', 'P/BD', 'MZ', 'MZ/M', 'MZ/L', 'MZ/Ś', 'MZ/D', 'MZ/K', 'AF', 'A/Z',
+                         'A/DW', 'A/IW', 'OGÓŁEM',
+                         'OGÓŁEM:ogolem:smiertelne', 'OGÓŁEM:ogolem:ranni',
+                         'P:ratownicy:smiertelne', 'P:ratownicy:ranni', 'P:strazacy:smiertelne', 'P:strazacy:ranni',
+                         'P:inne_osoby:smiertelne', 'P:inne_osoby:ranni', 'P:dzieci:smiertelne', 'P:dzieci:ranni',
+                         'MZ:ratownicy:smiertelne', 'MZ:ratownicy:ranni', 'MZ:strazacy:smiertelne',
+                         'MZ:strazacy:ranni', 'MZ:inne_osoby:smiertelne', 'MZ:inne_osoby:ranni',
+                         'MZ:dzieci:smiertelne', 'MZ:dzieci:ranni']
+      - name: value_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, not_numeric]}}}]
+      - name: raw_sha256
+        tests: [not_null]
