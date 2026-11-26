@@ -4,7 +4,7 @@ models:
   - name: poc_build_openalex
     description: >-
       Gold build stage of OpenAlex (CD-028): annual works with an author affiliated with an institution in Poland,
-      all, open access and by OpenAlex field (block works_pl), and works and citations per Polish institution for the
+      all, open access and by OpenAlex field (block works_pl), and works and open-access works per Polish institution for the
       recent years OpenAlex lists (block institutions_pl); values and units as published, the current year
       provisional. Grain: measure_key × breakdown × date_key.
     tests:

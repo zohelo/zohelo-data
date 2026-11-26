@@ -5,7 +5,7 @@
 {% macro poc_source__openalex() %}
     {{ return({'block_model': 'poc_build_openalex', 'blocks': [
         ['works_pl', 'OpenAlex: works with an author affiliated with an institution in Poland, annual'],
-        ['institutions_pl', 'OpenAlex: works and citations per institution in Poland, annual'],
+        ['institutions_pl', 'OpenAlex: works and open-access works per institution in Poland, annual'],
     ]}) }}
 {% endmacro %}
 

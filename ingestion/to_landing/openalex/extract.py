@@ -10,22 +10,29 @@ free storage tier, so the documented REST API ``https://api.openalex.org`` is re
   ``open_access.is_oa:true``, the list of fields (``/fields``, the 26 fields of the OpenAlex topic classification)
   and, per field, ``...,primary_topic.field.id:<id>&group_by=publication_year``. Counts only: no work, title or
   author name is requested.
-- entity ``institutions_pl``: ``/institutions?filter=country_code:PL`` with the root fields ``select``ed (id, ROR,
-  name, type, geo, works and citation counts, counts by year, lineage, updated date); organisations, no persons.
+- entity ``institutions_pl``: ``/institutions?filter=country_code:PL&sort=id:asc`` with the root fields
+  ``select``ed (id, ROR, name, type, geo, works and citation counts, counts by year, lineage, updated date);
+  organisations, no persons. 1,352 institutions on 26 Nov 2026 (Dev probe 45816100460).
 
-Every request pages by cursor (``cursor=*``, ``per_page=200``) until the answer gives no ``next_cursor``; one
-member per page. A ZIP of the exact answer bodies with fixed member dates is the Landing file of each entity.
+Paging without a key (Dev probes 45813299261, 45816100460): cursor paging past the first page answers HTTP 401 "API
+key required for cursor paging", so the institutions are read with ``page=1, 2, ...`` (``per_page=200``, a stable
+sort by id; the API allows this up to 10,000 results) until a page holds fewer than 200 or all ``meta.count`` are
+read. A group_by answer holds at most 200 groups and cannot be paged without a key: one page each (175 years, 26
+fields today); a full page of 200 groups fails the read instead of cutting the list. One member per page; a ZIP of
+the exact answer bodies with fixed member dates is the Landing file of each entity.
 
-Version = the time the read started (the API gives no update time for an aggregate). The answers carry timing
-fields (``meta.db_response_time_ms``) and cursors that differ on every read, so whether a read changed is decided
-on its content: the members' items, sorted, and the counts of ``meta`` (``content_sha256`` in the receipt). A read
-whose content equals the newest landed copy's writes nothing. A read that fails part-way lands nothing.
+Version = the time the read started (the API gives no update time for an aggregate). The answers carry fields that
+differ on every read (``meta.db_response_time_ms``), so whether a read changed is decided on its content: per
+request, its items sorted and the counts of ``meta`` (``content_sha256`` in the receipt). A read whose content
+equals the newest landed copy's writes nothing. A read that fails part-way lands nothing.
 
-Polite access (help.openalex.org/access/pricing/, register CD-028): no key; the keyless budget is shared per IP
-address, a few tens of requests a week is a small part of it. One request at a time, PAUSE_SECONDS apart, an
-identifying User-Agent, timeouts, bounded retries with backoff on 429, 5xx, timeouts and refused connections
-(Retry-After honoured, at most RETRY_AFTER_MAX). A refusal that persists fails the read; the next step is then a
-free OpenAlex key (an owner question), never a retry pattern.
+Polite access (https://help.openalex.org/access/pricing/; the answers' ``meta.notice`` and ``X-RateLimit-*``
+headers): no key; a list or group_by request costs $0.0001 (one credit) of a keyless budget of $0.10 a day (1,000
+requests) shared per IP address, at most 10 requests a second. A read is about 37 requests (about 4% of that
+budget), one at a time, PAUSE_SECONDS apart, with an identifying User-Agent (no ``mailto``: OpenAlex says it does
+not raise the limit), timeouts and bounded retries with backoff on 429, 5xx, timeouts and refused connections
+(Retry-After honoured, at most RETRY_AFTER_MAX). A refusal that persists (``daily_budget``) fails the read; the next
+step is then a free OpenAlex key (an owner question), never a retry pattern.
 
 Layout (docs/landing.md): ``<root>/openalex/snapshot/data/<entity>/<version>__<ingested>.zip`` + receipt.
 Modes: inspect (newest copy held, no requests), load (read and land when changed), verify (every receipt has its
@@ -61,8 +68,8 @@ INSTITUTION_FIELDS = (
     "id,ror,display_name,type,country_code,geo,works_count,cited_by_count,counts_by_year,lineage,updated_date"
 )
 FIELD_ID = re.compile(r"https://openalex\.org/fields/(\d+)")
-PER_PAGE = 200
-MAX_PAGES = 50  # per request; the institutions of Poland fit in about 15
+PER_PAGE = 200  # the API's largest page, for results and for groups
+MAX_PAGES = 50  # page= paging reaches 10,000 results; the institutions of Poland fit in 7 pages
 PAUSE_SECONDS = 1.0
 TIMEOUT = (30, 120)
 RETRY_DELAYS = (10, 30, 90, 180)
@@ -103,15 +110,22 @@ def fetch(session: requests.Session, path: str, params: dict[str, Any], deadline
 def pages(
     session: requests.Session, name: str, path: str, params: dict[str, Any], deadline: float
 ) -> list[tuple[str, bytes, Any]]:
-    """Every page of one request by cursor: [(member name, exact body, parsed)]."""
+    """Every page of one request: [(member name, exact body, parsed)]. A group_by request is one page (it cannot
+    be paged without a key) and fails when the page is full; a list request pages with page= until a page holds
+    fewer than PER_PAGE results or meta.count results are read."""
+    if "group_by" in params:
+        body, parsed = fetch(session, path, {**params, "per_page": PER_PAGE}, deadline)
+        if len(parsed.get("group_by") or []) >= PER_PAGE:
+            raise RuntimeError(f"{name}: {PER_PAGE} groups, a second page would need an API key")
+        return [(f"{name}__p001.json", body, parsed)]
     out: list[tuple[str, bytes, Any]] = []
-    cursor = "*"
-    items_key = "group_by" if "group_by" in params else "results"
+    read_ = 0
     for n in range(1, MAX_PAGES + 1):
-        body, parsed = fetch(session, path, {**params, "per_page": PER_PAGE, "cursor": cursor}, deadline)
+        body, parsed = fetch(session, path, {**params, "per_page": PER_PAGE, "page": n}, deadline)
         out.append((f"{name}__p{n:03d}.json", body, parsed))
-        cursor = parsed["meta"].get("next_cursor")
-        if not cursor or not parsed.get(items_key):
+        results = parsed.get("results") or []
+        read_ += len(results)
+        if len(results) < PER_PAGE or read_ >= int(parsed["meta"].get("count") or 0):
             return out
     raise RuntimeError(f"{name}: more than {MAX_PAGES} pages")
 
@@ -137,7 +151,7 @@ def read(session: requests.Session, entity: str, deadline: float) -> list[tuple[
             session,
             "institutions",
             "/institutions",
-            {"filter": f"country_code:{COUNTRY}", "select": INSTITUTION_FIELDS},
+            {"filter": f"country_code:{COUNTRY}", "sort": "id:asc", "select": INSTITUTION_FIELDS},
             deadline,
         )
     members = pages(
@@ -164,7 +178,7 @@ def read(session: requests.Session, entity: str, deadline: float) -> list[tuple[
 
 
 def content_sha256(members: list[tuple[str, bytes, Any]]) -> str:
-    """Digest of what a read says, without what changes on every read (response times, cursors, page cuts): per
+    """Digest of what a read says, without what changes on every read (response times, notices, page cuts): per
     request, its items sorted by key or id, and the counts of its first page's meta."""
     requests_: dict[str, dict[str, Any]] = {}
     for name, _, parsed in members:

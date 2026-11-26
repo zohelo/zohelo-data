@@ -2,8 +2,8 @@
 {# Gold entity table (reference source, playbook section 7): the institutions OpenAlex places in Poland (register
    CD-028, #2996), one row per OpenAlex institution id ('I' + digits), from silver.openalex_institutions_pl. The ROR
    id is OpenAlex's own link to the Research Organization Registry, kept as published; no join to other registers by
-   name. Area: Poland (OpenAlex country_code PL); OpenAlex's region text is mostly empty, so no voivodeship is
-   assigned. Works and citation counts are all-time at the read (per year: gold.build_openalex, block
+   name. Area: Poland (OpenAlex country_code PL); OpenAlex's region is an English name without a code, so no
+   voivodeship is assigned. Works and citation counts are all-time at the read (per year: gold.build_openalex, block
    institutions_pl). Organisations only. #}
 select
     institution_id,

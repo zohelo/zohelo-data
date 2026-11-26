@@ -1,8 +1,8 @@
 {# OpenAlex (register CD-028, #2996): the institutions OpenAlex places in Poland (filter country_code:PL), from the
    newest copy of entity institutions_pl (bronze.openalex_institutions). Entity table keyed by the OpenAlex id
    ('I' + digits, the URI's last part; institution_uri keeps the URI as published), with the ROR id as published,
-   name, OpenAlex institution type, geo as published (city, region: free text, mostly empty, so no voivodeship is
-   derived), coordinates, the all-time works and citation counts at the read, parent institutions (lineage without
+   name, OpenAlex institution type, geo as published (city; region: an English region name such as 'Mazovia', no
+   code, so no voivodeship is derived), coordinates, the all-time works and citation counts at the read, parent institutions (lineage without
    the institution itself, JSON list of ids) and OpenAlex's updated date. Organisations only; no person is named.
    Grain: institution_id. #}
 with records as (
