@@ -31,23 +31,26 @@ import duckdb
 
 from ingestion.common import bulk_bronze
 
-# Header label (column A) → Bronze column.
+# Header label (column A) → Bronze column. "Numer" (2012) is "Nr"; "Czas pomiaru" (2016) labels the period column.
 LABELS = {
     "Nr": "column_number",
+    "Numer": "column_number",
     "Kod stacji": "station_code",
     "Wskaźnik": "indicator",
     "Czas uśredniania": "averaging_time",
     "Jednostka": "unit",
     "Kod stanowiska": "sensor_code",
+    "Czas pomiaru": "period_label",
 }
-REQUIRED = ("Kod stacji", "Wskaźnik", "Czas uśredniania")
-SKIPPED = {re.compile(r"\d{4}_Depozycja_1m\.xlsx"): "monthly deposition: two date columns, another layout"}
+FIELDS = list(dict.fromkeys(LABELS.values()))
+REQUIRED = ("Kod stacji",)
+SKIPPED = {re.compile(r"(?i)\d{4}_depozycja(_1m)?\.xlsx"): "deposition: monthly, two date columns, another layout"}
 MEMBER = re.compile(r"\d{4}_.+\.xlsx")
 COLUMNS = [
     ("entity", "VARCHAR"),
     ("member", "VARCHAR"),
     ("sheet", "VARCHAR"),
-    *[(c, "VARCHAR") for c in LABELS.values()],
+    *[(c, "VARCHAR") for c in FIELDS],
     ("period", "VARCHAR"),
     ("value", "VARCHAR"),
     *bulk_bronze.PROVENANCE,
@@ -60,28 +63,28 @@ class ArchiveDecodeError(ValueError):
     """The yearly file is not of a declared layout (the year is rejected)."""
 
 
-def _dimension_rows(workbook: zipfile.ZipFile, part: str) -> int | None:
-    """Last row of the sheet's <dimension ref="A1:GC8766"> (read from the first bytes of the sheet part)."""
+def _dimension(workbook: zipfile.ZipFile, part: str) -> str | None:
+    """The sheet's used range from <dimension ref="A1:GC8766"> (first bytes of the sheet part), or None."""
     with workbook.open(part) as handle:
         head = handle.read(4096).decode("utf-8", "replace")
-    match = re.search(r'<dimension ref="[A-Z]+\d+:[A-Z]+(\d+)"', head)
-    return int(match.group(1)) if match else None
+    match = re.search(r'<dimension ref="(A1:[A-Z]+\d+)"', head)
+    return match.group(1) if match else None
 
 
-def _sheet(data: bytes, name: str) -> tuple[str, list[str], int | None]:
+def _sheet(data: bytes, name: str) -> tuple[str, list[str], str | None]:
     from ingestion.common import xlsx_cells
 
     with zipfile.ZipFile(io.BytesIO(data)) as workbook:
         sheets = xlsx_cells.sheets(workbook)
         if not sheets:
             raise ArchiveDecodeError(f"{name}: no sheet")
-        return sheets[0][0], [s for s, _ in sheets[1:]], _dimension_rows(workbook, sheets[0][1])
+        return sheets[0][0], [s for s, _ in sheets[1:]], _dimension(workbook, sheets[0][1])
 
 
 def member(con, data: bytes, name: str, prov: dict[str, Any], work: Path, output: Path) -> dict[str, Any]:
     """One workbook → one Parquet file of value cells; returns {rows, layout, sheet, other_sheets}."""
     try:
-        sheet, others, declared = _sheet(data, name)
+        sheet, others, used = _sheet(data, name)
     except (zipfile.BadZipFile, KeyError) as exc:
         raise ArchiveDecodeError(f"{name}: not a workbook: {exc}") from exc
     path = work / "member.xlsx"
@@ -91,15 +94,13 @@ def member(con, data: bytes, name: str, prov: dict[str, Any], work: Path, output
         con.execute("drop table if exists raw")
         con.execute(
             "create temp table raw as select cast(row_number() over () as bigint) as sheet_row, * from "
-            f"read_xlsx('{path}', sheet = '{quoted}', header = false, all_varchar = true)"
+            f"read_xlsx('{path}', sheet = '{quoted}', header = false, all_varchar = true, stop_at_empty = false"
+            + (f", range = '{used}')" if used else ")")
         )
     except duckdb.Error as exc:
         raise ArchiveDecodeError(f"{name}: read_xlsx failed: {str(exc)[:300]}") from exc
     columns = [r[0] for r in con.execute("describe raw").fetchall()][1:]
     first, rest = columns[0], columns[1:]
-    read = con.execute("select count(*) from raw").fetchone()[0]
-    if declared is not None and read != declared:
-        raise ArchiveDecodeError(f"{name}: read {read} rows, the sheet declares {declared}")
     labels = []
     for (label,) in con.execute(f'select "{first}" from raw order by sheet_row limit 10').fetchall():
         if label is None or re.fullmatch(r"-?\d+(\.\d+)?([eE][-+]?\d+)?", label.strip()):
@@ -114,12 +115,12 @@ def member(con, data: bytes, name: str, prov: dict[str, Any], work: Path, output
     ).fetchall()
     attrs = []
     for i, col in enumerate(rest):
-        values = {LABELS[labels[r]]: (header[r][i].strip() if header[r][i] is not None else None) for r in range(k)}
-        attrs.append((col, *[values.get(c) for c in LABELS.values()]))
+        values = {LABELS[labels[r]]: (header[r][i].strip() or None if header[r][i] is not None else None) for r in range(k)}
+        attrs.append((col, *[values.get(c) for c in FIELDS]))
     con.execute("drop table if exists head")
-    con.execute(f"create temp table head (sheet_column varchar, {', '.join(f'{c} varchar' for c in LABELS.values())})")
+    con.execute(f"create temp table head (sheet_column varchar, {', '.join(f'{c} varchar' for c in FIELDS)})")
     if attrs:
-        con.executemany(f"insert into head values ({', '.join(['?'] * (len(LABELS) + 1))})", attrs)
+        con.executemany(f"insert into head values ({', '.join(['?'] * (len(FIELDS) + 1))})", attrs)
     con.execute("drop table if exists cells")
     if rest:
         con.execute(
@@ -143,7 +144,7 @@ def member(con, data: bytes, name: str, prov: dict[str, Any], work: Path, output
     con.execute(
         f"""copy (
             select ? as entity, ? as member, ? as sheet,
-                {", ".join(f"h.{c}" for c in LABELS.values())},
+                {", ".join(f"h.{c}" for c in FIELDS)},
                 c.period, c.value,
                 ? as raw_sha256, ? as source_version, cast(? as timestamptz) as ingested_at,
                 c.sheet_row, c.sheet_column

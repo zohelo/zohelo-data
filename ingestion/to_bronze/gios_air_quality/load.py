@@ -9,6 +9,7 @@ Every Landing file is one daily pass ``pass_<YYYYMMDD>``, a ZIP of exact API v1 
   sensors/<station>/page-<n>.json           bronze.gios_air_sensors        one row per sensor of a station
   data/<station>/<sensor>/page-<n>.json     bronze.gios_air_measurements   one row per sensor × hour
 
+Only the pass entities are read here; the yearly archive entities (``archive_*``) are archive_load.py's (#3119).
 Values stay text exactly as the JSON prints them (numbers are not re-formatted, a null value stays null). An unknown
 member name or field, a value that is not a JSON number, string or null, a measurement value that is not a number,
 a sensor list naming another station, or a measurement time more than WINDOW_DAYS before the pass day rejects the
@@ -142,7 +143,7 @@ def candidates(client, bucket: str, landing_root: str, cat, namespace: str) -> l
         Bucket=bucket, Prefix=f"{landing_root}/{SOURCE}/snapshot/data/"
     ):
         for o in page.get("Contents", []):
-            if o["Key"].endswith(".receipt.json"):
+            if o["Key"].endswith(".receipt.json") and o["Key"].rsplit("/", 2)[-2].startswith("pass_"):
                 keys.setdefault(o["Key"].rsplit("/", 2)[-2], []).append(o["Key"])
     held: set[str] | None = None
     for table in TABLES:
@@ -166,8 +167,10 @@ def candidates(client, bucket: str, landing_root: str, cat, namespace: str) -> l
 def load(
     budget_minutes: float, landing_root: str = "01_landing", namespace: str = "bronze", silver_namespace: str = "silver"
 ) -> int:
-    """budget_minutes is unused: one pass a day."""
-    from ingestion.to_bronze.gios_air_quality import entities
+    """Daily passes first (one a day), then the yearly archive (archive_load.py) within the budget left."""
+    from ingestion.to_bronze.gios_air_quality import archive_load, entities
+
+    started = datetime.now(UTC)
 
     client, cat = s3(), bf.retry(catalog, "catalog")
     lake, landing_bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME"), req("STORAGE_LANDING_BUCKET_NAME")
@@ -210,4 +213,6 @@ def load(
     annotate("warning" if rejected else "notice", f"{SOURCE} Bronze from Landing", totals)
     step_summary(f"## {SOURCE} · bronze load\n\n```json\n{json.dumps(totals, indent=2)}\n```\n")
     built = entities.build(cat, client, lake, namespace, silver_namespace, today=datetime.now(UTC).date())
+    spent = (datetime.now(UTC) - started).total_seconds() / 60
+    archive_load.run(client, cat, landing_bucket, lake, landing_root, namespace, silver_namespace, budget_minutes - spent - 20)
     return 1 if built.get("failed") else 0

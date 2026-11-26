@@ -25,8 +25,9 @@ answers another 4xx is recorded in the receipt as failed and left out of the pas
 failing, or the time budget running out, lands nothing (the next run starts again). An empty answer with status 200
 (seen once in probe 43322192937 on a quick repeat) is retried like a 5xx.
 
-Modes: inspect (today's pass missing or current; one station-list request), load, verify (every receipt has its
-file in Landing or the Archive).
+Modes: inspect (today's pass missing or current; one station-list request; the archive files missing, stale or
+current), load (the pass, then the yearly archive of verified values with the time left: archive.py, #3119), verify
+(every receipt has its file in Landing or the Archive).
 """
 
 from __future__ import annotations
@@ -136,7 +137,9 @@ def today() -> str:
     return f"pass_{datetime.now(UTC):%Y%m%d}"
 
 
-def land(client, bucket: str, root: str, entity: str, body: bytes, held: list, detail: dict) -> str:
+def land(
+    client, bucket: str, root: str, entity: str, body: bytes, held: list, detail: dict, ext: str = "zip", url: str = API
+) -> str:
     """Write one file and its receipt (after the file), unless its bytes equal the newest landed copy."""
     from ingestion.to_landing.patterns import bulk_file
     from ingestion.to_landing.world_bank_icp.extract import put_new
@@ -145,8 +148,8 @@ def land(client, bucket: str, root: str, entity: str, body: bytes, held: list, d
     if held and held[-1]["sha256"] == digest:
         return "unchanged"
     ingested = bulk_file.stamp(datetime.now(UTC))
-    key = f"{bulk_file.prefix(SOURCE, entity, root)}{ingested}__{ingested}.zip"
-    put_new(client, bucket, key, body, "application/zip")
+    key = f"{bulk_file.prefix(SOURCE, entity, root)}{ingested}__{ingested}.{ext}"
+    put_new(client, bucket, key, body, "application/zip" if ext == "zip" else "application/octet-stream")
     receipt = {
         "schema_version": 3,
         "kind": f"{SOURCE}_landing",
@@ -157,19 +160,19 @@ def land(client, bucket: str, root: str, entity: str, body: bytes, held: list, d
         "version_token": ingested,
         "version_basis": "download time",
         "ingested_at": ingested,
-        "source_url": API,
-        "final_url": API,
+        "source_url": url,
+        "final_url": url,
         "sha256": digest,
         "size_bytes": len(body),
         "object": {"bucket": bucket, "key": key},
         "replaces_sha256": held[-1]["sha256"] if held else None,
         "code_sha": os.environ.get("GITHUB_SHA", ""),
-        "detail": {"pattern": "gios_air_quality", "format": "zip", **detail},
+        "detail": {"pattern": "gios_air_quality", "format": ext, **detail},
     }
     put_new(
         client,
         bucket,
-        key[: -len(".zip")] + ".receipt.json",
+        key[: -len(ext) - 1] + ".receipt.json",
         json.dumps(receipt, indent=2, sort_keys=True).encode(),
         "application/json",
     )
@@ -243,11 +246,17 @@ def main(mode: str, budget_minutes: float = 120, landing_root: str = "01_landing
     from ingestion.common.r2 import req, s3
     from ingestion.common.report import annotate, step_summary
 
+    from ingestion.to_landing.gios_air_quality import archive
+
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
+    deadline = time.monotonic() + budget_minutes * 60
     held = receipts(client, bucket, landing_root, None if mode == "verify" else {today()}.__contains__)
     base = {"mode": mode, "entities_read": len(held)}
     if mode == "load":
         summary, status = run_load(client, bucket, landing_root, held, budget_minutes)
+        if status != 2:  # the yearly archive of verified values (#3119) with the time left
+            years = receipts(client, bucket, landing_root, archive.is_archive)
+            summary["archive"], _ = archive.run(client, bucket, landing_root, years, deadline - 10 * 60)
     elif mode == "verify":
         summary, status = run_verify(client, bucket, landing_root, held)
     else:  # inspect: is today's pass missing, and does the station list answer
@@ -256,6 +265,9 @@ def main(mode: str, budget_minutes: float = 120, landing_root: str = "01_landing
         listed = pages(session, f"{API}/station/findAll", LISTS["stations"], LIST_PAUSE_SECONDS)
         summary = {"stations_listed": sum(len(i) for _, _, i in listed), "today": today()}
         summary["state"] = "current" if held.get(today()) else "missing"
+        state = archive.states(archive.listing(archive.session()), receipts(client, bucket, landing_root, archive.is_archive))
+        summary["archive"] = {s: sorted(e for e, v in state.items() if v == s) for s in ("missing", "stale")}
+        summary["archive"]["current"] = sum(v == "current" for v in state.values())
         status = 0
     summary = {**base, **summary}
     print(json.dumps(summary, sort_keys=True, default=str))
