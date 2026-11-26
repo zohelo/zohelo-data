@@ -3,7 +3,8 @@ models:
   - name: gpw_ebi_reports
     description: >-
       EBI issuer reports in GPW's public report list (register CD-007), from bronze.gpw_ebi_reports (newest landed
-      copy of each day of publication), 1 January of the previous year onwards. Grain: report_id (GPW geru_id), one
+      copy of each day of publication), from the first run's floor (1 January 2025) on; held days are kept, so it
+      accumulates. Grain: report_id (GPW geru_id), one
       row per report. Publication time (Warsaw, as listed), category, report number, issuer name and ISIN, link to
       the report's page. No titles (persons), no report texts or attachments; KRS, NIP, REGON and LEI are not in
       the list. Completeness: tests/gpw_ebi_reports_complete.sql. Dev trial 43831909084: 407 reports on 234 days,

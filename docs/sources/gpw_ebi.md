@@ -8,7 +8,7 @@ apart, the platform's User-Agent, at most 3 tries; robots.txt allows it; a 4xx s
 (`knf_espi`). Entity: one day of publication (`day_<YYYYMMDD>`), landed as one reduced JSON document (code:
 `ingestion/to_landing/gpw_ebi/` on `ingestion/common/report_lists.py`). Version: download time; a day is written
 again only when its SHA-256 changed. Each run reads from the top down to the newest held day (or 8 days back); the
-first run reads back to 1 January of the previous year. Restart unit: one run's pass (nothing lands if it fails).
+first run reads back to 1 January of the previous year; held days are kept, so the history accumulates. Restart unit: one run's pass (nothing lands if it fails).
 
 Stored per report: geru_id, publication time (Warsaw, as listed), category, report number, issuer name and ISIN
 (where listed), link to the report's page. **Left out:** titles (they can name natural persons), report texts and
@@ -19,6 +19,7 @@ whose link still holds the title is rejected as an unknown layout.
 Bronze `bronze.gpw_ebi_reports` (one row per report, text). Silver `silver.gpw_ebi_reports` (grain `report_id`;
 `tests/gpw_ebi_reports_complete.sql`: every held day and report reaches Silver, none misfiled). Gold
 `gold.filing_gpw_ebi` (one row per report, ISIN as the security key) and `gold.build_gpw_ebi` (block `reports`:
-reports per month of publication, Poland, total and by category, complete months only, no row (never a 0) for a
+reports per month of publication, Poland, total and by category, complete months only (a month counts once a report published after it is held),
+no row (never a 0) for a
 month without a report held; measure `gpw_ebi:reports:reports`, unit `reports`). Terms: none stated for the list;
 licence `unresolved`, internal only. Refresh full (D32), weekly on Friday 05:50 UTC (O46).

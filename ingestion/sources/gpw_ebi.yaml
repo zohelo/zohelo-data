@@ -10,7 +10,8 @@ description: "GPW report list, EBI rows (reports of NewConnect and Catalyst issu
 # category, number, issuer, ISIN, report id, link; no title: titles can name natural persons; no prices); written
 # only when its SHA-256 changed. Code: ingestion/to_landing/gpw_ebi/ on ingestion/common/report_lists.py. Proven
 # from Actions by the Dev probes 43321077523 and 43326025983 (list back to 2011 and earlier, about 10 EBI reports a
-# month in 2026) and the Dev trial cited in the PR. History kept: 1 January of the previous year onwards.
+# month in 2026) and the Dev trial cited in the PR. History: the first run reads back to 1 January of the previous
+# year; held days are kept, so it accumulates.
 extraction:
   initial: web
   production: delta                       # one document per day of publication; days accumulate
@@ -27,13 +28,14 @@ archive_policy:
 bronze: [bronze.gpw_ebi_reports, bronze.gpw_ebi_rejected_files]
 silver: [silver.gpw_ebi_reports]
 gold: [gold.build_gpw_ebi, gold.filing_gpw_ebi]
-# Row ceilings (owner policy #822; above: a warning, above twice: the build fails), 1.5 × Dev trial 43831909084, which
-# read the production history (1 January 2025 to 10 November 2026): 407 reports, 51 build rows (21 complete months).
-# Growth about 250 reports and 30 build rows a year: raise the ceilings when the build warns.
+# Row ceilings (owner policy #822; above: a warning, above twice: the build fails). Dev trials 43831909084 and
+# 45746949198 read the production history (1 January 2025 to 10 November 2026): 407 reports, 51 build rows (21 complete
+# months). Held days are kept, so the tables accumulate (about 220 reports and 30 build rows a year): 1.5 × the
+# measured rate over the 36 months to the end of 2027 (about 660 reports, 90 build rows). Raise them in 2027.
 full_rebuild:
-  gpw_ebi_reports: {rows: 620}
-  filing_gpw_ebi: {rows: 620}     # one row per Silver report
-  poc_build_gpw_ebi: {rows: 80}
+  gpw_ebi_reports: {rows: 1000}
+  filing_gpw_ebi: {rows: 1000}    # one row per Silver report
+  poc_build_gpw_ebi: {rows: 135}
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a day
 # Refresh policy for all layers (D32): small (a few hundred reports a year); Landing reads only the newest days,
