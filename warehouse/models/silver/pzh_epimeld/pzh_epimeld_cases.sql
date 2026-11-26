@@ -35,7 +35,9 @@ printed as (
         *,
         trim(
             regexp_replace(
-                lower(strip_accents(regexp_replace(replace(replace(disease_label, 'ł', 'l'), 'Ł', 'L'), '\s+', '', 'g'))),
+                lower(strip_accents(
+                    regexp_replace(replace(replace(disease_label, 'ł', 'l'), 'Ł', 'L'), '\s+', '', 'g')
+                )),
                 '[^a-z0-9]+', '_', 'g'
             ),
             '_'

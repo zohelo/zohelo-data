@@ -37,8 +37,16 @@ from ingestion.common import bulk_bronze
 SOURCE = "pzh_epimeld"
 TABLE_ID = ("bronze", "pzh_epimeld_rows")
 REJECTED_ID = ("bronze", "pzh_epimeld_rejected_files")
-VALUES = ["value_q1", "value_q2", "value_q3", "value_q4", "value_cases", "value_incidence", "value_hospitalised",
-          "value_hospitalised_pct"]
+VALUES = [
+    "value_q1",
+    "value_q2",
+    "value_q3",
+    "value_q4",
+    "value_cases",
+    "value_incidence",
+    "value_hospitalised",
+    "value_hospitalised_pct",
+]
 COLUMNS = [
     ("entity", "VARCHAR"),  # the bulletin, ch_<year>
     ("edition_year", "BIGINT"),  # the bulletin's year (file name and page header agree)
@@ -46,7 +54,7 @@ COLUMNS = [
     ("table_number", "BIGINT"),  # disease blocks in file order, from 1
     ("page_number", "BIGINT"),  # page of the table title
     ("table_title", "VARCHAR"),  # the table title as printed, diacritics recombined
-    ("table_note", "VARCHAR"),  # footnote lines ("* ...") printed under the block, other than the omitted-voivodeships note
+    ("table_note", "VARCHAR"),  # footnotes ("* ...") under the block, except the omitted-voivodeships note
     ("disease_label", "VARCHAR"),  # disease line as printed, diacritics recombined
     ("disease_codes", "VARCHAR"),  # the ICD-10 codes in its last brackets, as printed
     ("incidence_header", "VARCHAR"),  # the incidence denominator: "na 100 tys." or "na 100 tys. urodzeń żywych"
@@ -74,8 +82,13 @@ TABLE = re.compile(
 )
 # the column headers as one key, "*" removed and a leading "(Dane Zakładu ...)" line dropped: (pattern, values per row)
 HEADERS = [
-    (re.compile(r"^wojewodztwoliczbazachorowanwkwartałachliczbazachorowanwrokuzapadalnoscna100tys\.?"
-                r"(hospitalizacja|skierowanidoszpitala)iiiiiiivliczba%$"), 8),
+    (
+        re.compile(
+            r"^wojewodztwoliczbazachorowanwkwartałachliczbazachorowanwrokuzapadalnoscna100tys\.?"
+            r"(hospitalizacja|skierowanidoszpitala)iiiiiiivliczba%$"
+        ),
+        8,
+    ),
     (re.compile(r"^wojewodztwoliczbawkwartałachliczbawrokuczestoscna100tys\.?hospitalizacjaiiiiiiivliczba%$"), 8),
     (re.compile(r"^wojewodztwoliczbazachorowanwkwartałachliczbazachorowanwrokuzapadalnoscna100tys\.?iiiiiiiv$"), 6),
 ]
@@ -143,8 +156,11 @@ def tables(lines: list[tuple[int, str]], edition: int) -> list[dict[str, Any]]:
         current = disease(above[-1], capitals=True) if above else None
         if current is not None and current[1] is None and len(above) > 1 and disease(above[-2] + " " + above[-1]):
             current = disease(above[-2] + " " + above[-1])  # a disease title printed on two lines
-        if current is None and found and found[-1]["basis"] != title_match.group(1) and text[i - 1].strip() == (
-            found[-1]["last_line"]
+        if (
+            current is None
+            and found
+            and found[-1]["basis"] != title_match.group(1)
+            and text[i - 1].strip() == (found[-1]["last_line"])
         ):
             # a second table of the same disease right under the first (AIDS: reported, then diagnosed cases)
             current = (found[-1]["label"], found[-1]["codes"])
@@ -166,8 +182,17 @@ def tables(lines: list[tuple[int, str]], edition: int) -> list[dict[str, Any]]:
                 break
             if current is None:
                 raise ValueError(f"table {title[:60]!r} (page {page}): POLSKA block without a disease and ICD codes")
-            block = {"page": page, "title": title, "label": current[0], "codes": current[1], "incidence": incidence,
-                     "rows": [], "note": [], "width": width, "basis": title_match.group(1)}
+            block = {
+                "page": page,
+                "title": title,
+                "label": current[0],
+                "codes": current[1],
+                "incidence": incidence,
+                "rows": [],
+                "note": [],
+                "width": width,
+                "basis": title_match.group(1),
+            }
             i = read_block(text, i + 1, edition, block)
             block["last_line"] = text[i - 1]
             while i < len(text) and text[i].startswith("*"):
@@ -186,8 +211,18 @@ def read_block(text: list[str], i: int, edition: int, block: dict[str, Any]) -> 
         row, marks, note = values((rest or "").split(), block["width"])
         if note is None and int(year) not in (edition - 1, edition):
             note = f"year {year} is neither {edition - 1} nor {edition}"
-        block["rows"].append(("poland", int(year), None, "POLSKA", row, " ".join(filter(None, [star, marks])),
-                              text[i] if note else None, note))
+        block["rows"].append(
+            (
+                "poland",
+                int(year),
+                None,
+                "POLSKA",
+                row,
+                " ".join(filter(None, [star, marks])),
+                text[i] if note else None,
+                note,
+            )
+        )
         i += 1
     if not block["rows"]:
         raise ValueError(f"block {label}: no year row under POLSKA")
@@ -211,19 +246,23 @@ def read_block(text: list[str], i: int, edition: int, block: dict[str, Any]) -> 
             n, width = len(block_numbers), block["width"]
             if any(VALUE.match(x) for x in names) or len(cells) != width * n:
                 note = f"voivodeship block of {n} rows with {len(cells)} values"
-                block["rows"].append(("voivodeship_block", edition, None, " | ".join(names), None, "",
-                                      " ".join(cells)[:500], note))
+                block["rows"].append(
+                    ("voivodeship_block", edition, None, " | ".join(names), None, "", " ".join(cells)[:500], note)
+                )
                 numbers += block_numbers
                 continue
-            rows = [(nr, names[k], [cells[c * n + k] for c in range(width)], None) for k, nr in enumerate(block_numbers)]
+            rows = [
+                (nr, names[k], [cells[c * n + k] for c in range(width)], None) for k, nr in enumerate(block_numbers)
+            ]
         for number, name, tokens, printed in rows:
             if not 1 <= number <= 16 or (numbers and number <= numbers[-1]):
                 raise ValueError(f"block {label}: voivodeship number {number} out of order")
             numbers.append(number)
             row, marks, note = values(tokens, block["width"])
             printed = printed or " ".join([name, *tokens])
-            block["rows"].append(("voivodeship", edition, number, clean(name), row, marks,
-                                  printed if note else None, note))
+            block["rows"].append(
+                ("voivodeship", edition, number, clean(name), row, marks, printed if note else None, note)
+            )
     return i
 
 
