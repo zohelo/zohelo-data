@@ -43,7 +43,7 @@ SILVER = [f"{SOURCE}_food_samples"]
 SEED_ROWS = ["source", "licence", "kpi", "kpi_measure", "kpi_v2_map", "unit", "unit_map", "unit_decimals"]
 SELECT = [*SILVER, *SEED_ROWS, "poc_map_geography", f"poc_build_{SOURCE}"]
 SKIP: list[str] = []  # tests of other sources whose own tables are not in production yet
-NUMBER = r"^[0-9][0-9   ]*$|^[0-9]{1,3},[0-9]{2}%$|^100%$"
+NUMBER = r"^[0-9][0-9 ]*$|^[0-9]{1,2}(,[0-9]{1,2})?$"  # counts (space groups) and shares (decimal comma)
 
 
 def note(title: str, data, level: str = "warning") -> None:
