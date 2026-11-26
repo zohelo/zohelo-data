@@ -10,11 +10,19 @@
    result notice (one per part with a concluded contract) when all are parsed and share one currency, else null with
    the counts kept; estimated_value = the one "Wartość zamówienia" / "Łączna wartość poszczególnych części" line of
    the notice (4.1.5 or 4.3), null when there is none or more than one. Values as published (the form does not say
-   gross or net), never converted. A notice found in two files fails the unique test. #}
-with newest as (
+   gross or net), never converted. A notice found in two files fails the unique test. Notices as first published:
+   corrections (notice and contract change types) are not loaded. #}
+with newest_file as (
     select *
     from {{ source('uzp_bzp', 'uzp_bzp_notices') }}
     qualify rank() over (partition by entity order by ingested_at desc) = 1
+),
+
+newest as (
+    -- the day marker of a file without notices (object_id null) is silver.uzp_bzp_days' row, not a notice
+    select *
+    from newest_file
+    where object_id is not null
 ),
 
 unnested as (

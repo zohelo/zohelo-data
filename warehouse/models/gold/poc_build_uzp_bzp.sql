@@ -1,13 +1,15 @@
 {{ config(alias='build_uzp_bzp', tags=['gold_block']) }}
 {# Gold build stage (#2981): BZP contract and result notices (silver.uzp_bzp_notices) by publication month (UTC day
-   of publication; complete months only: the month of the newest publication day is left out until a later day is
-   published). Two measures:
+   of publication; complete months only: every day of the month has both notice types landed, silver.uzp_bzp_days,
+   so the current month and a month with a day that failed Landing stay out). Notices as first published:
+   corrections (change notices) are not loaded. Two measures:
    - uzp_bzp:notices:notices — notices published in the month (a count), breakdown notice_type (ContractNotice,
      TenderResultNotice, _T both);
    - uzp_bzp:notices:<currency>:contract_value — the sum of the contract values (8.2 lines, one per part with a
      concluded contract) that the result notices published in the month report, as published in their currency
-     (PLN; another currency is its own measure, never converted); a notice whose value is absent, unparsed or in
-     several currencies adds nothing (Silver keeps its line counts), so no month is filled with 0.
+     (PLN; another currency is its own measure, never converted; every code needs a unit_map row, D33: a new one
+     stays as published and tests/uzp_bzp_unit_unmapped.sql reports it); a notice whose value is absent, unparsed
+     or in several currencies adds nothing (Silver keeps its line counts), so no month is filled with 0.
    Areas: Poland (every notice) and the voivodeship of the contracting authority (each notice counts once, in
    one voivodeship, so voivodeships add up to Poland except notices without a voivodeship); a code that maps to no
    voivodeship meets in '_X' with the code kept. #}
@@ -24,16 +26,25 @@ with notices as (
     from {{ ref('uzp_bzp_notices') }}
 ),
 
-open_month as (
-    select max(month_start) as month_start
-    from notices
+landed_days as (
+    -- days of which both types were landed (silver.uzp_bzp_days, also days without notices)
+    select publication_date
+    from {{ ref('uzp_bzp_days') }}
+    group by publication_date
+    having count(distinct notice_type) = 2
+),
+
+complete_months as (
+    select cast(date_trunc('month', publication_date) as date) as month_start
+    from landed_days
+    group by cast(date_trunc('month', publication_date) as date)
+    having count(*) = day(last_day(min(publication_date)))
 ),
 
 complete as (
     select n.*
     from notices as n
-    cross join open_month as o
-    where n.month_start < o.month_start
+    inner join complete_months as m on n.month_start = m.month_start
 ),
 
 geo_map as (

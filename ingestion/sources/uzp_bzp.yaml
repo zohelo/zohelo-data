@@ -29,13 +29,14 @@ archive_policy:
   retention: {keep_latest: 1, keep_days: 90}
   prune: report
 bronze: [bronze.uzp_bzp_notices, bronze.uzp_bzp_rejected_files]
-silver: [silver.uzp_bzp_notices]
+silver: [silver.uzp_bzp_notices, silver.uzp_bzp_days]
 gold: [gold.build_uzp_bzp, gold.uzp_bzp_notice]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   # Dev trial 45748222888 (26 Nov 2026), 2026-01-01 to 2026-11-25; Silver grows by about 23,000 notices a month, so
   # these ceilings are reached about May 2027: then the models become incremental by publication month (D32).
   uzp_bzp_notices: {rows: 360000}  # 238,341 measured
   uzp_bzp_notice: {rows: 360000}  # 238,341 measured
+  uzp_bzp_days: {rows: 1000}  # 658 measured (two a day)
   poc_build_uzp_bzp: {rows: 1300}  # 839 measured (complete months 2026-01 to 2026-10, about 84 rows a month)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a day's file

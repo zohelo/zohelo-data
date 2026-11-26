@@ -5128,8 +5128,10 @@ sources:
   ingestion:
     history: 'PROPOSAL: backfill only the BZP notice/statistics read API, which requires no integration procedure; exclude
       submission/integration APIs.'
-    incremental: 'PROPOSAL: use documented publication/update filters and reconcile notice versions; a notice update is not
-      contract-award CDC.'
+    incremental: 'Built (#2981): one file per notice type and UTC publication day, missing days and the newest three days
+      asked again. Notice versions are not reconciled: notice and contract change types are not loaded, so a notice and
+      its contract value stay as first published (a correction by a change notice is not applied). A notice update is
+      not contract-award CDC.'
     identifiers: notice ID + OCID/procedure ID + version + authority identifiers
   modelling:
     notes: Separate plans, notices, results, changes and lots.

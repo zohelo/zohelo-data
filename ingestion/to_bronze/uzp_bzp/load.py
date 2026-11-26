@@ -8,7 +8,8 @@ notice: every kept API field as text (a string as published, a boolean or number
 ``contractors`` (province and country of each contractor) and the form's ``values`` lines as JSON text, the day's
 ``notice/stats`` count, the notice's position in the file and the provenance columns. A file whose wrapper or a
 notice whose field set differs from the reduced shape is rejected (bronze.uzp_bzp_rejected_files), never guessed.
-A day without notices gives an empty file.
+A day without notices gives one marker row (every notice field null, source_row_number 0, stats_count 0), so the
+landed days are known downstream (silver.uzp_bzp_days) and a month with a day missing stays out of Gold.
 
 Candidates are found from Landing key names in one listing: the newest file of each entity whose data file is
 still in Landing (a file already moved to the Archive was proven in Bronze first), so a scheduled run reads only
@@ -83,6 +84,15 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         columns["source_row_number"].append(number)
         for name in ("entity", "raw_sha256", "source_version", "ingested_at"):
             columns[name].append(base[name])
+    if not document["notices"]:
+        if document["stats_count"] != 0:
+            raise ValueError(f"no notices but notice/stats says {document['stats_count']}")
+        for _, column in FIELD_COLUMNS:  # the day marker: the day was landed and had no notices of the type
+            columns[column].append(None)
+        columns["stats_count"].append(0)
+        columns["source_row_number"].append(0)
+        for name in ("entity", "raw_sha256", "source_version", "ingested_at"):
+            columns[name].append(base[name])
     return pa.Table.from_pydict(columns, schema=ARROW)
 
 
@@ -143,8 +153,9 @@ def load(budget_minutes: float, landing_root: str = "01_landing", namespace: str
             key = f"{lake_root}/{SOURCE}/notices/{receipt['entity']}/{receipt['sha256']}.parquet"
             pending.append(bf.upload(client, lake, key, path, receipt["sha256"]))
             path.unlink()
+            empty = rows.column("object_id").null_count == rows.num_rows
             totals["rows_added"] += rows.num_rows
-            totals["empty_files"] += rows.num_rows == 0
+            totals["empty_files"] += empty
             if len(pending) >= COMMIT_EVERY:
                 flush()
         flush()
