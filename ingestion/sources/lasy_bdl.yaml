@@ -11,13 +11,15 @@ description: "Lasy Państwowe Bank Danych o Lasach (BDL) — forest districts (n
 # the stand layers (36,000-244,000 features each) are left out (docs/sources/lasy_bdl.md). The server answers HEAD by
 # building the whole response, so landing.inspect asks with a streamed GET (probe: get), as pig_midas does.
 # Entity = one feature type; the WFS gives no version (a_year is the data year), so version = download time, and a copy
-# lands only when its SHA-256 changed. Restart unit: one layer.
+# lands only when its SHA-256 changed. GeoServer stamps each answer with the request time ("timeStamp"), so two reads of
+# an unchanged layer differ (trial 45898596886): reduce: lasy_bdl (ingestion/to_landing/lasy_bdl/) removes that one
+# member before Landing; the rest lands byte for byte. Restart unit: one layer.
 extraction:
   kind: bulk_file
   bulk_file:
     files:
-      - {entity: districts, url: "https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=BDL:Nadleśnictwa&outputFormat=application/json", format: json, version: ingested, read_timeout: 600, probe: get}
-      - {entity: regions, url: "https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=BDL:RDLP&outputFormat=application/json", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: districts, url: "https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=BDL:Nadleśnictwa&outputFormat=application/json", format: json, version: ingested, read_timeout: 600, probe: get, reduce: lasy_bdl}
+      - {entity: regions, url: "https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=BDL:RDLP&outputFormat=application/json", format: json, version: ingested, read_timeout: 600, probe: get, reduce: lasy_bdl}
   initial: bulk
   production: snapshot                    # each response is the whole current layer
   incremental_policy: changed_since_last  # SHA-256 of the response (the WFS sends no Last-Modified)
@@ -35,8 +37,8 @@ silver: [silver.lasy_bdl_districts, silver.lasy_bdl_regions]
 gold: [gold.build_lasy_bdl]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the Dev trial of the final code
   lasy_bdl_districts: {rows: 650}  # 429
-  lasy_bdl_regions: {rows: 30}  # 17
-  poc_build_lasy_bdl: {rows: 1500}  # 968
+  lasy_bdl_regions: {rows: 26}  # 17
+  poc_build_lasy_bdl: {rows: 750}  # 497 = count and area for Poland, 16 voivodeships and 17 RDLP (68) + 429 districts
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy (D32): two responses of 11-50 MB, 446 features, no changed-since filter in the WFS; each response is
