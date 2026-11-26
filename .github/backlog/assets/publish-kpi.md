@@ -16,8 +16,8 @@ fixture values; everything else is this recipe.
    `ref('poc_metrics_<k>')` (description: the KPI's name_en and `(gold.metrics_<k>)`; entity `<k>_row`), whose one
    measure is named and aggregated as the Task says; then a metric `poc_<k>` (type simple, label name_en,
    one-sentence description) at the end of `metrics:`.
-4. `warehouse/tests/metrics_value_range.sql`: the Task's bounds rows at the end of `bounds`; the model in the
-   `metrics` union, shaped like the other members.
+4. `warehouse/macros/value_range/<source_system>.sql` of each source of the KPI: the Task's bounds in `bounds`
+   and the model in `models` (docs/source-registration.md; `tests/metrics_value_range.sql` takes no new rows).
 5. `warehouse/seeds/kpi.csv` and the status table of `.github/backlog/assets/catalogue-seeds.md`: `published`.
 6. `warehouse/published/fixtures/catalog/catalog.json`: a `kpis[]` entry shaped like `population`, with the KPI's
    kpi.csv fields, `source_keys` and `geo_levels` as the Task says, periods `1990`–`2024`, status `published`.

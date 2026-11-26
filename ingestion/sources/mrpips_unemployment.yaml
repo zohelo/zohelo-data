@@ -28,6 +28,9 @@ archive_policy:
 bronze: [bronze.mrpips_unemployment_cells, bronze.mrpips_unemployment_rejected_files]
 silver: [silver.mrpips_registered_unemployment]
 gold: [gold.build_mrpips_unemployment]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  mrpips_registered_unemployment: {rows: 85000}  # 828 rows a month; 56,202 for 68 months (Dev trial 43100663615)
+  poc_build_mrpips_unemployment: {rows: 85000}  # = Silver mrpips_registered_unemployment (56,202 rows)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a month
 # Refresh policy for all layers (D32): one ZIP per month, about 3,350 Bronze cells and 828 Silver rows per month

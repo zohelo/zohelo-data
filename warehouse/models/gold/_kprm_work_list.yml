@@ -31,3 +31,7 @@ models:
         tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
       - name: value
         tests: [not_null]
+  - name: poc_metrics_government_drafts_published
+    description: >-
+      KPI government_drafts_published (draft) from gold.build_kprm_work_list: drafts published per month on the work
+      list of the Council of Ministers, Poland (macros/poc_metrics.sql).

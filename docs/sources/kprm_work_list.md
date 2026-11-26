@@ -15,7 +15,8 @@ long text columns (aims, substance) and without the responsible official's name.
 the planned adoption as published free text (a plan: never a date or a value). Gold: entity table
 `gold.government_drafts`; build stage `build_kprm_work_list`, block `drafts_published`: drafts published on the list
 per month and per year, in total, by kind, by current status and by responsible body (Poland; periods without a
-draft have no row; the current period is provisional). No KPI (register: `kpi: false`). Weekly, Wednesday 04:35 UTC.
+draft have no row; the current period is provisional). Draft KPI `government_drafts_published` (drafts published on
+the list per month, Poland; `gold.metrics_government_drafts_published`). Weekly, Friday 19:20 UTC (O46).
 Licence: CC BY-SA 4.0 (`kprm_cc_by_sa_4_0`), the stricter of KPRM's two statements (the re-use page names
 CC BY 3.0 PL, the page footer CC BY-SA 4.0).
 
