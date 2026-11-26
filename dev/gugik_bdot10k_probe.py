@@ -17,7 +17,7 @@ import urllib.robotparser
 import requests
 
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-BUDGET = {"requests": 70}
+BUDGET = {"requests": 110}
 ROBOTS: dict[str, urllib.robotparser.RobotFileParser | None] = {}
 PAGE = "https://www.geoportal.gov.pl/pl/dane/baza-danych-obiektow-topograficznych-bdot10k/"
 CANDIDATES = [
@@ -149,40 +149,64 @@ def wms_info(base: str, name: str) -> None:
             return
 
 
-def links_of(url: str, pat: str) -> None:
-    body, info = fetch(url)
-    html = (body or b"").decode("utf-8", "replace")
-    urls = sorted(set(re.findall(r"https?://[^\s\"'<>)]+", html)))
-    note("links", {"page": url, **info, "found": [u for u in urls if re.search(pat, u, re.I)][:60]})
-    text = plain(html)
-    note("links.text", {"page": url, "snippets": snippets(text, r"BDOT10k", 200, 10)})
+SERVICES = [
+    "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT/WFS/PobieranieBDOT10k",
+    "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT10k/WFS/StatystykiBudynkow",
+    "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT10k/WFS/StatystykiSieciKomunikacyjnej",
+    "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT10k/WFS/StatystykiSieciWodnej",
+    "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT10k/WFS/StatystykiObiektowInnych",
+]
+
+
+def get_retry(url: str, tries: int = 3):
+    for attempt in range(tries):
+        body, info = fetch(url)
+        if info.get("status") == 200 and body:
+            return body, info
+        time.sleep(10 * (attempt + 1))
+    return body, info
+
+
+def describe(base: str, name: str) -> list[tuple[str, str]]:
+    q = urllib.parse.quote(name)
+    body, info = get_retry(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=DescribeFeatureType&TYPENAMES={q}", 2)
+    text = (body or b"").decode("utf-8", "replace")
+    els = re.findall(r'<(?:xsd?:)?element[^>]*name="([^"]+)"[^>]*type="([^"]+)"', text)
+    note("wfs.describe", {"layer": name, "status": info.get("status"), "elements": els[:80],
+                          "head": text[:400] if not els else ""})
+    return els
+
+
+def service(base: str) -> None:
+    body, info = get_retry(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities")
+    text = (body or b"").decode("utf-8", "replace")
+    names = re.findall(r"<(?:wfs:)?FeatureType[^>]*>\s*<(?:wfs:)?Name>([^<]+)</", text)
+    titles = re.findall(r"<(?:wfs:)?FeatureType[^>]*>\s*<(?:wfs:)?Name>[^<]+</(?:wfs:)?Name>\s*<(?:wfs:)?Title>([^<]*)<", text)
+    fmts = sorted(set(re.findall(r"<(?:ows:)?Value>([^<]*(?:json|JSON|csv|CSV|gml|GML)[^<]*)</", text)))[:25]
+    note("wfs.caps", {"base": base, "status": info.get("status"), "types": names, "titles": titles,
+                      "formats": fmts, "head": text[:300] if not names else ""})
+    for name in names[:6]:
+        q = urllib.parse.quote(name)
+        hb, hi = fetch(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES={q}&RESULTTYPE=hits")
+        hits = re.findall(r'numberMatched="([^"]+)"', (hb or b"").decode("utf-8", "replace"))
+        note("wfs.hits", {"layer": name, "status": hi.get("status"), "numberMatched": hits,
+                          "body": "" if hits else (hb or b"")[:300].decode("utf-8", "replace")})
+        els = describe(base, name)
+        props = [n for n, t in els if "gml:" not in t]
+        pn = "&PROPERTYNAME=" + urllib.parse.quote(",".join(props)) if props else ""
+        sb, si = fetch(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES={q}&COUNT=3{pn}")
+        note("wfs.sample", {"layer": name, **si, "body": (sb or b"")[:7000].decode("utf-8", "replace")})
+        if "Pobieranie" in base:
+            for fmt in ("application/json", "geojson", "csv"):
+                jb, ji = fetch(f"{base}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES={q}&COUNT=2"
+                               f"&OUTPUTFORMAT={urllib.parse.quote(fmt)}{pn}")
+                note("wfs.format", {"layer": name, "format": fmt, **ji,
+                                    "body": (jb or b"")[:1500].decode("utf-8", "replace")})
 
 
 def main() -> None:
-    base = "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT/WMS/PobieranieBDOT10k"
-    body, info = fetch(f"{base}?SERVICE=WFS&REQUEST=GetCapabilities")
-    note("wfs.exception", {**info, "body": (body or b"").decode("utf-8", "replace")})
-    text = ""
-    for v in ("1.3.0", "1.1.1", "1.3.0"):
-        body, info = fetch(f"{base}?SERVICE=WMS&VERSION={v}&REQUEST=GetCapabilities")
-        text = (body or b"").decode("utf-8", "replace")
-        note("wms.caps", {"version": v, **info, "head": text[:200]})
-        if info.get("status") == 200 and "Capabilities" in text[:3000]:
-            break
-        time.sleep(5)
-    if "Capabilities" in text[:3000]:
-        note("wms.caps.body", text[:12000])
-        names = re.findall(r"<Name>([^<]+)</Name>", text)
-        for name in [n for n in names if n not in ("WMS",)][:4]:
-            wms_info(base, name)
-    links_of("https://www.geoportal.gov.pl/pl/usluga/uslugi-pobierania-wfs/", r"BDOT|skorowid|Pobieranie")
-    links_of("https://www.geoportal.gov.pl/pl/usluga/uslugi-przegladania-wms-i-wmts/", r"BDOT|skorowid|Pobieranie")
-    for u in ("https://opendata.geoportal.gov.pl/bdot10k/schemat2021/SHP/14/1465_SHP.zip",
-              "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/GML/14/1465_GML.zip",
-              "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/14/1465_GML.zip",
-              "https://opendata.geoportal.gov.pl/bdot10k/schemat2021/14/1465_SHP.zip"):
-        _, h = fetch(u, "HEAD")
-        note("guess.head", {"url": u, **h})
+    for base in SERVICES:
+        service(base)
     note("budget", BUDGET)
 
 
