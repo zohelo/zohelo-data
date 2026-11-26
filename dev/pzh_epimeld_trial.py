@@ -49,7 +49,7 @@ CONTRACT = ["source_system", "block_id", "block_name", "measure_key", "measure_n
 SILVER = ("pzh_epimeld_cases",)
 SEED_ROWS = ["source", "licence", "kpi", "kpi_measure", "kpi_v2_map", "unit", "unit_map", "unit_decimals"]
 SELECT = [*SILVER, *SEED_ROWS, "poc_map_geography", "poc_build_pzh_epimeld"]
-SPOT = ("A01.0", "A02", "A37", "A69.2", "B01", "A39")
+SPOT = ("durbrzuszny_a01_0", "salmonelozy_ogolem_a02", "krztusiec_a37", "odra_b05", "ospawietrzna_b01", "boreliozazlyme_ogolem_a69_2")
 
 
 def _capture(level: str, title: str, data) -> None:
@@ -155,32 +155,38 @@ def bronze_profile(con) -> dict:
     values = ["value_q1", "value_q2", "value_q3", "value_q4", "value_cases", "value_incidence", "value_hospitalised",
               "value_hospitalised_pct"]
     nonnum = " union all ".join(
-        f"select '{c}' as col, {c} as v from {v} where not regexp_full_match({c}, '\\d+(,\\d+)?')" for c in values)
+        f"select '{c}' as col, {c} as v from {v} where {c} is not null and not regexp_full_match({c}, '\\d+(,\\d+)?')" for c in values)
     return {
         "rows": one(con, f"select count(*) from {v}"),
         "by_edition(entity,tables,poland,voiv,prelim)": rows(con, f"select entity, count(distinct table_number), count(*) filter (where row_kind='poland'), "
                                                                  f"count(*) filter (where row_kind='voivodeship'), any_value(preliminary) from {v} group by 1 order by 1"),
         "distinct_disease_codes": one(con, f"select count(distinct upper(replace(disease_codes, ' ', ''))) from {v}"),
-        "dup_keys_in_edition": rows(con, f"select entity, disease_codes, row_kind, period_year, area_number, count(*) from {v} "
-                                         f"group by all having count(*) > 1 order by all", 20),
-        "null_keys": one(con, f"select count(*) from {v} where disease_codes is null or row_kind is null or period_year is null "
+        "distinct_disease_lines": one(con, f"select count(distinct disease_label) from {v}"),
+        "dup_keys_in_edition": rows(con, f"select entity, disease_label, table_title, row_kind, period_year, area_number, count(*) from {v} "
+                                         f"where row_kind <> 'voivodeship_block' group by all having count(*) > 1 order by all", 20),
+        "parse_notes(entity,kind,note,text)": rows(con, f"select entity, row_kind, parse_note, left(row_text, 70) from {v} where parse_note is not null order by all", 60),
+        "row_marks": rows(con, f"select row_marks, count(*) from {v} where row_marks is not null group by 1 order by 2 desc"),
+        "table_notes": rows(con, f"select table_note, count(*) from {v} where table_note is not null group by 1 order by 2 desc limit 12"),
+        "disease_lines_without_codes": rows(con, f"select distinct disease_label from {v} where disease_codes is null order by 1"),
+        "six_value_tables": one(con, f"select count(distinct entity || table_number) from {v} where value_hospitalised is null and parse_note is null and row_kind <> 'voivodeship_block'"),
+        "null_keys": one(con, f"select count(*) from {v} where disease_label is null or row_kind is null or period_year is null "
                               f"or (row_kind = 'voivodeship' and area_number is null)"),
         "non_numeric(col,value,n)": rows(con, f"select col, v, count(*) from ({nonnum}) group by all order by all", 40),
         "incidence_headers": rows(con, f"select incidence_header, count(distinct entity || table_number) from {v} group by 1"),
         "voiv_sum_vs_poland(mismatching tables)": rows(con, f"""
-            with t as (select entity, table_number, disease_codes,
+            with t as (select entity, table_number, disease_label,
                          max(case when row_kind='poland' and period_year=edition_year then value_cases end) pl,
                          sum(try_cast(value_cases as bigint)) filter (where row_kind='voivodeship') vs
                        from {v} group by all)
-            select entity, disease_codes, pl, vs from t
+            select entity, left(disease_label, 50), pl, vs from t
             where coalesce(try_cast(pl as bigint), 0) <> coalesce(vs, 0) order by all""", 30),
         "revisions(prev-year value differs between editions)": rows(con, f"""
-            with p as (select upper(replace(disease_codes,' ','')) d, period_year, edition_year, value_cases c from {v} where row_kind='poland')
+            with p as (select disease_label || table_title d, period_year, edition_year, value_cases c from {v} where row_kind='poland' and parse_note is null)
             select count(*), count(*) filter (where a.c <> b.c) from p a join p b
             on a.d = b.d and a.period_year = b.period_year and a.edition_year = a.period_year and b.edition_year = a.period_year + 1"""),
         "revision_examples(codes,year,edition_Y,edition_Y+1)": rows(con, f"""
-            with p as (select upper(replace(disease_codes,' ','')) d, period_year, edition_year, value_cases c from {v} where row_kind='poland')
-            select a.d, a.period_year, a.c, b.c from p a join p b
+            with p as (select disease_label || table_title d, period_year, edition_year, value_cases c from {v} where row_kind='poland' and parse_note is null)
+            select left(a.d, 40), a.period_year, a.c, b.c from p a join p b
             on a.d = b.d and a.period_year = b.period_year and a.edition_year = a.period_year and b.edition_year = a.period_year + 1
             where a.c <> b.c order by abs(try_cast(a.c as bigint) - try_cast(b.c as bigint)) desc nulls last limit 8"""),
         "codes_in_every_edition": one(con, f"select count(*) from (select upper(replace(disease_codes,' ','')) d from {v} "
@@ -311,16 +317,19 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
     s = {
         "rows": one(con, f"select count(*) from {ob}"),
         "years(min,max)": rows(con, f"select min(period_year), max(period_year) from {ob}"),
-        "by_area_kind(kind,rows,diseases,first,last)": rows(con, f"select area_code = 'PL', count(*), count(distinct disease_codes), min(period_year), max(period_year) from {ob} group by 1 order by 1"),
+        "by_area_kind(kind,rows,diseases,first,last)": rows(con, f"select area_code = 'PL', count(*), count(distinct disease_key), min(period_year), max(period_year) from {ob} group by 1 order by 1"),
         "rows_by_source_edition_for_PL(edition,rows)": rows(con, f"select source_edition, count(*) from {ob} where area_code='PL' group by 1 order by 1"),
         "PL_year_from_edition(same,next)": rows(con, f"select count(*) filter (where source_edition = period_year), count(*) filter (where source_edition = period_year + 1) from {ob} where area_code='PL'"),
-        "dup_grain": one(con, f"select count(*) from (select period_year, disease_codes, area_code from {ob} group by all having count(*) > 1)"),
-        "null_keys": one(con, f"select count(*) from {ob} where period_year is null or disease_codes is null or area_code is null"),
+        "dup_grain": one(con, f"select count(*) from (select period_year, disease_key, area_code from {ob} group by all having count(*) > 1)"),
+        "null_keys": one(con, f"select count(*) from {ob} where period_year is null or disease_key is null or area_code is null"),
         "null_incidence": one(con, f"select count(*) from {ob} where incidence is null"),
         "zeros(cases,incidence)": rows(con, f"select count(*) filter (where cases = 0), count(*) filter (where incidence = 0) from {ob}"),
+        "quarters_match(false,true)": rows(con, f"select count(*) filter (where not quarters_match), count(*) filter (where quarters_match) from {ob}"),
+        "units(incidence_unit,rows)": rows(con, f"select incidence_unit_code, count(*) from {ob} group by 1 order by 1"),
+        "disease_keys": one(con, f"select count(distinct disease_key) from {ob}"),
         "preliminary(rows)": rows(con, f"select preliminary, count(*) from {ob} group by 1"),
-        "max_cases(codes,year,area,cases)": rows(con, f"select disease_codes, period_year, area_code, cases from {ob} order by cases desc limit 3"),
-        "max_incidence(codes,year,area,inc)": rows(con, f"select disease_codes, period_year, area_code, incidence from {ob} where incidence is not null order by incidence desc limit 3"),
+        "max_cases(key,year,area,cases)": rows(con, f"select disease_key, period_year, area_code, cases from {ob} order by cases desc limit 3"),
+        "max_incidence(key,year,area,inc)": rows(con, f"select disease_key, period_year, area_code, incidence from {ob} where incidence is not null order by incidence desc limit 3"),
         "diseases_PL_2024": one(con, f"select count(*) from {ob} where area_code='PL' and period_year=2024"),
     }
     g: dict = {"rows": one(con, f"select count(*) from {b}")}
@@ -336,14 +345,20 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
     g["status"] = rows(con, f"select observation_status_key, count(*) from {b} group by 1")
     g["units"] = rows(con, f"select unit_code, count(*) from {b} group by 1 order by 1")
     g["silver_values_not_in_gold"] = one(con, f"select count(*) + count(incidence) from {ob}") - g["rows"]
+    g["kpi(pattern,rows,max_per_area_year,max)"] = [
+        [p, one(con, f"select count(*) from {b} where measure_key like '{p}'"),
+         one(con, f"select coalesce(max(n), 0) from (select count(*) n from {b} where measure_key like '{p}' group by geography_key, date_key)"),
+         one(con, f"select max(value) from {b} where measure_key like '{p}'")]
+        for p in ("pzh_epimeld:annual:per_100k:krztusiec_a37", "pzh_epimeld:annual:per_100k:odra_b05",
+                  "pzh_epimeld:annual:per_100k:ospawietrzna_b01")]
     g["map_rows"] = one(con, f"select count(*) from {rel['poc_map_geography']} where source_system = '{SOURCE}'")
     spots = {}
     for code in SPOT:
-        spots[code] = rows(con, f"select period_label, unit_code, value from {b} where geography_key = 'PL' and measure_codes = '{code}' "
-                                f"and period_label in ('2006', '2015', '2023', '2024', '2025') order by 1, 2")
-    spots["silver_PL_2023_2025(codes,year,cases,inc,edition)"] = rows(con, f"select disease_codes, period_year, cases, incidence, source_edition from {ob} "
-                                                                          f"where area_code='PL' and disease_codes in ('A01.0','A02','A37','A69.2') and period_year >= 2023 order by 1, 2")
-    spots["silver_voiv_A02_2024(area,cases,inc)"] = rows(con, f"select area_code, cases, incidence from {ob} where disease_codes='A02' and period_year=2024 order by 1")
+        spots[code] = rows(con, f"select period_label, unit_code, value from {b} where geography_key = 'PL' and measure_key like '%:{code}' "
+                                f"and period_label in ('2005', '2015', '2023', '2024', '2025') order by 1, 2")
+    spots["silver_PL_2023_2025(key,year,cases,inc,edition)"] = rows(con, f"select disease_key, period_year, cases, incidence, source_edition from {ob} "
+                                                                          f"where area_code='PL' and disease_key in ('salmonelozy_ogolem_a02','krztusiec_a37','odra_b05','ospawietrzna_b01') and period_year >= 2023 order by 1, 2")
+    spots["silver_voiv_A02_2024(area,cases,inc)"] = rows(con, f"select area_code, cases, incidence from {ob} where disease_key='salmonelozy_ogolem_a02' and period_year=2024 order by 1")
     con.close()
     if g["dup_series_date"] or g["null_values"] or not g["rows"] or not g["columns_in_contract_order"]:
         failures.append("gold checks")
@@ -405,7 +420,6 @@ def main(argv: list[str]) -> int:
         landing_failed = (runs[0]["exit"] or runs[1]["exit"] or set(runs[1]["outcomes"]) - {"closed year, held", "unchanged"}
                           or runs[1]["landing_files_after"] != runs[0]["landing_files_after"] or land["verify_exit"])
         note(f"{SOURCE} landing (twice), verify", land)
-        note(f"{SOURCE} pages per bulletin", dump_texts())
         b, arrow = bronze()
         note(f"{SOURCE} bronze (twice)", b)
         con = duckdb.connect()
