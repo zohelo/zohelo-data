@@ -18,7 +18,8 @@ taken by its position alone; a table is accepted only when
 - its header names as many columns as every row has values: campaign years, each once and in increasing order, then
   at most that one total column;
 - it has each of the 16 voivodeships and "Razem" exactly once, and no other row;
-- every value is a number as printed (digits grouped by spaces, decimal comma);
+- every value is a number as printed (digits grouped by spaces, or a few cells ungrouped as "126042" in the
+  31.12.2024 report; decimal comma);
 - in every column "Razem" equals the sum of the voivodeships (counts exactly; amounts, printed rounded to the
   złoty in some reports, within 9 zł);
 - every table of the file has the same "Dane na dzień" date.
@@ -56,16 +57,18 @@ VOIVODESHIPS = {
 }  # fmt: skip
 TOTAL = "razem"
 TITLE = re.compile(
-    r"^\s*(Liczba złożonych wniosków o przyzna|Liczba wydanych decyzji o przyzna|Kwota zrealizowanych płatności)"
+    r"^\s*(Liczba złożonych wniosków o przyzna|Liczba\s*wydanych decyzji o przyzna|Kwota zrealizowanych płatności)"
 )
-AS_OF = re.compile(r"Dane na dzień\s+(\d{2}\.\d{2}\.\d{4})")
+# "Dane na dzień 30.09.2026 r."; the year-end reports 2017 to 2019 print "31-12-2018"
+AS_OF = re.compile(r"Dane na dzień\s+(\d{2}[.-]\d{2}[.-]\d{4})")
 YEAR = re.compile(r"(?:[Kk]ampani[ia]|wniosków)\s+((?:19|20)\d{2})(\**)(?![\d,-])")
 # a last header "Razem" over "Kampanie 2004-2025": the row's total over the campaigns (amounts table of the newest
 # reports; it sums 2004 to the newest campaign whatever its label says, report of 30.09.2026)
-TOTAL_HEADER = re.compile(r"\s{2,}Razem\s*$")
+# ("Razem Kampanie 2004-2024" on one line in the 31.12.2024 report)
+TOTAL_HEADER = re.compile(r"\s{2,}Razem(?:\s+(Kampanie\s+\d{4}\s*-\s*\d{4}))?\s*$")
 TOTAL_SPAN = re.compile(r"^\s*(Kampanie\s+\d{4}\s*-\s*\d{4})\s*$")
 ROW = re.compile(r"^\s*([A-ZŁŚŻŹĆŃÓĘĄ][a-ząćęłńóśźż]+(?:\s*-\s*[a-ząćęłńóśźż]+)?)\s{2,}(\S.*?)\s*$")
-NUMBER = re.compile(r"\d{1,3}(?: \d{3})*(?:,\d{1,2})?")
+NUMBER = re.compile(r"(?:\d{1,3}(?: \d{3})*|\d+)(?:,\d{1,2})?")
 AMOUNT_TOLERANCE = Decimal(9)  # 17 values rounded to the złoty: at most 8.5 zł apart
 
 
@@ -149,9 +152,9 @@ def parse(pages: list[str]) -> list[dict[str, Any]]:
             elif table["as_of"]:
                 # header lines follow the date; the title's own lines ("w ramach kampanii 2021-2026") do not count
                 table["columns"] += [(y, y + marks) for y, marks in YEAR.findall(line)]
-                span = TOTAL_SPAN.match(line)
-                if TOTAL_HEADER.search(line):
-                    table["columns"].append((None, "Razem"))
+                span, total = TOTAL_SPAN.match(line), TOTAL_HEADER.search(line)
+                if total:
+                    table["columns"].append((None, " ".join(("Razem " + (total.group(1) or "")).split())))
                 elif span and table["columns"] and table["columns"][-1] == (None, "Razem"):
                     table["columns"][-1] = (None, "Razem " + " ".join(span.group(1).split()))
     if table is not None:

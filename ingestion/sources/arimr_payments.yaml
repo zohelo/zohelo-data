@@ -29,8 +29,10 @@ bronze: [bronze.arimr_payments_cells, bronze.arimr_payments_rejected_files]
 silver: [silver.arimr_payments_direct_payments]
 gold: [gold.build_arimr_payments]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  arimr_payments_direct_payments: {rows: 2000}  # measured in the Dev trial
-  poc_build_arimr_payments: {rows: 2000}  # measured in the Dev trial
+  # 1,156 measured each (Dev trial of 26 Nov 2026, run in PR #3143): 17 areas x (23 campaigns of amounts and of
+  # applications, 22 of decisions); one campaign a year adds 51 rows
+  arimr_payments_direct_payments: {rows: 1750}
+  poc_build_arimr_payments: {rows: 1750}
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): two PDF reports of a few thousand cells a month; small, rebuilt in full.
