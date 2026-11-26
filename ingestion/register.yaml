@@ -3593,7 +3593,8 @@ sources:
   name: National examination results and reports
   short_name: CKE exam results
   provider: Centralna Komisja Egzaminacyjna (CKE)
-  status: approved
+  source_system: gus_exam_results
+  status: built
   family: B
   kpi: true
   geography: Poland; school-location categories and regions, release-dependent
