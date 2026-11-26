@@ -1,7 +1,7 @@
 -- KG PSP standard tables (models/silver/kgpsp_interventions/kgpsp_interventions_counts.sql): a header the model no
 -- longer reads, a year left out or a column put under the wrong code fails here. Rows returned = problems:
 --   (1) every year from 2016 to the newest has both tables;
---   (2) every area of a table has all its measures (table 1: 16, table 10: 18) and nothing else;
+--   (2) every area (code and name) of a table has all its measures (table 1: 16, table 10: 18) and nothing else;
 --   (3) the voivodeship layout has Poland and the 16 voivodeships, the gmina layout at least 2,400 gminas in all 16
 --       voivodeships, and each gmina's printed voivodeship is the one its TERYT code names;
 --   (4) table 1 adds up where every part is a number: the sizes to their type, P + MZ + AF to OGÓŁEM.
@@ -23,6 +23,7 @@ per_area as (
         table_code,
         layout,
         area_code,
+        area_name,
         count(distinct measure_code) as measures,
         count(*) as cells
     from t
@@ -57,6 +58,7 @@ sums as (
     select
         report_year,
         area_code,
+        area_name,
         max(value) filter (where measure_code = 'P') as p,
         sum(value) filter (where measure_code in ('P/M', 'P/Ś', 'P/D', 'P/BD')) as p_parts,
         max(value) filter (where measure_code = 'MZ') as mz,
@@ -76,7 +78,7 @@ left join (select distinct report_year, table_code from t) as h
     on y.report_year = h.report_year and y.table_code = h.table_code
 where h.report_year is null
 union all
-select report_year, table_code, 'area ' || area_code || ': ' || measures || ' measures in ' || cells || ' cells'
+select report_year, table_code, 'area ' || area_code || ' ' || area_name || ': ' || measures || ' measures in ' || cells || ' cells'
 from per_area
 where measures <> (case table_code when '1' then 16 else 18 end) or cells <> measures
 union all
@@ -91,6 +93,6 @@ from t
 left join names as n on t.voivodeship_code = n.voivodeship_code
 where t.layout = 'gmina' and t.voivodeship_name is distinct from n.voivodeship_name
 union all
-select report_year, '1', 'area ' || area_code || ' does not add up: ' || concat_ws(' ', p, p_parts, mz, mz_parts, af, af_parts, total)
+select report_year, '1', 'area ' || area_code || ' ' || area_name || ' does not add up: ' || concat_ws(' ', p, p_parts, mz, mz_parts, af, af_parts, total)
 from sums
 where not_numbers = 0 and (p <> p_parts or mz <> mz_parts or af <> af_parts or total <> p + mz + af)
