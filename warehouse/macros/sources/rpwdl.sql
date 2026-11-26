@@ -34,15 +34,46 @@
     end
 {%- endmacro %}
 
-{# The register snapshot of a row: the download time of its file (version = ingested, no server validator). #}
+{# The register snapshot day of a row (#3139): the download day (UTC) of its file, version = ingested (no server
+   validator). A copy is written only when the bytes change, so an unchanged file keeps the day it was first read:
+   the endpoint caches a generated ZIP, so the same bytes on a later day show the same register state, not a newer
+   one, and end dates are compared with the day that state was read. #}
 {% macro poc_rpwdl_snapshot() -%}
     cast(strptime(source_version, '%Y%m%dT%H%M%SZ') as date)
 {%- endmacro %}
 
-{# Newest Landing copy of every entity (a Bronze table may briefly hold two before the latest-only prune). #}
+{# The snapshot year of a row: the year of its entity (<register>_<active|inactive>_<year>, the run's year in
+   Europe/Warsaw; ingestion/to_landing/rpwdl/). Each year keeps its newest copy, so a past year holds its last state. #}
+{% macro poc_rpwdl_year() -%}
+    cast(regexp_extract(entity, '_([0-9]{4})$', 1) as integer)
+{%- endmacro %}
+
+{# active or inactive: the ledger file the row came from. #}
+{% macro poc_rpwdl_ledger_state() -%}
+    regexp_extract(entity, '_(active|inactive)_[0-9]{4}$', 1)
+{%- endmacro %}
+
+{# Newest Landing copy of every entity (a Bronze table may hold two copies of one year: before the latest-only prune,
+   or when an older copy's bytes are also another year's newest). Entities without a year are the copies landed
+   before #3139 (one rolling state). They are left out once the table holds any year entity; until then (production
+   Bronze between the merge of #3139 and the first rpwdl run on that code) they stand in for the year of their
+   download (UTC), so a platform build in that window keeps the counts instead of emptying Silver. #}
 {% macro poc_rpwdl_newest(table) -%}
     select *
-    from {{ source('rpwdl', table) }}
+    from (
+        select
+            * replace (
+                case
+                    when regexp_matches(entity, '_(active|inactive)_[0-9]{4}$') then entity
+                    else entity || '_' || left(source_version, 4)
+                end as entity
+            ),
+            regexp_matches(entity, '_(active|inactive)_[0-9]{4}$') as has_year
+        from {{ source('rpwdl', table) }}
+    ) as tagged
+    where has_year or not exists (
+        select 1 from {{ source('rpwdl', table) }} as y where regexp_matches(y.entity, '_(active|inactive)_[0-9]{4}$')
+    )
     qualify rank() over (partition by entity order by source_version desc, ingested_at desc) = 1
 {%- endmacro %}
 
