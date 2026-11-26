@@ -1,0 +1,6 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+air_pm10_daily,gios_air_quality,gios_air_quality:air_daily:ug_m3:PM10,"daily mean of station-days with at least 18 hourly values, Poland and voivodeships (provisional)",1,
+air_pm25_daily,gios_air_quality,gios_air_quality:air_daily:ug_m3:PM2.5,"daily mean of station-days with at least 18 hourly values, Poland and voivodeships (provisional)",1,
+air_no2_daily,gios_air_quality,gios_air_quality:air_daily:ug_m3:NO2,"daily mean of station-days with at least 18 hourly values, Poland and voivodeships (provisional)",1,
+air_o3_daily,gios_air_quality,gios_air_quality:air_daily:ug_m3:O3,"daily mean of station-days with at least 18 hourly values, Poland and voivodeships (provisional)",1,
+air_so2_daily,gios_air_quality,gios_air_quality:air_daily:ug_m3:SO2,"daily mean of station-days with at least 18 hourly values, Poland and voivodeships (provisional)",1,

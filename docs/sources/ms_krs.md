@@ -40,7 +40,10 @@ current state of its part, one JSON line per number, sorted, so unchanged data g
 written only when its bytes changed. One request at a time, 1 s apart, user agent of the project, three attempts
 with back-off on 408/5xx and network errors, any other status (403 and 429 included) stops the run at once
 (never worked around; the next scheduled run continues from Landing), and so
-do 50 numbers in a row without an extract (a moved endpoint would look like that; they are not kept); at most
+do 50 numbers in a row without an extract when the number that last answered with an extract has none either
+(a moved endpoint would look like that; they are not kept). When that number still answers, the 50 are kept as
+numbers without a current extract and the run goes on: GLEIF lists KRS ids that are not KRS numbers (from
+`0140330387` on, above the register's range), and before this check every run stopped on them (#3178); at most
 120 minutes a run (about 4,300 requests), so the first load takes about ten daily runs, each continuing from
 Landing (numbers not held yet, ascending). Restart unit: one KRS number; a part is saved every 500 new records.
 Incremental: each run first reads the bulletins after a part's `bulletin_through` (receipt detail) up to

@@ -19,6 +19,7 @@ code lists every source adds rows to followed on 13 November (D36, below).
 | `poc_blocks.sql`: block macros, `poc_block_models()`, `poc_activated_blocks()`, the union in `poc_observations()` | `warehouse/macros/sources/<source>.sql`: the block macros and `poc_source__<source>()` | `macros/source_registration.sql` finds the macros by name |
 | `poc_map_geography.sql`: a CTE and a union branch | `poc_geography__<source>()` in the same `warehouse/macros/sources/<source>.sql` | the same |
 | `docs/sources.md` | `docs/sources/<source>.md` (the same section, as its own file) | – |
+| `warehouse/tests/metrics_value_range.sql`: a row of `bounds`, a branch of the `metrics` union | `warehouse/macros/value_range/<source>.sql`: `poc_value_range__<source>()` with the bounds and the metrics models | the test finds the macros by name (below, "Value ranges") |
 | `warehouse/seeds/source.csv`, `licence.csv`, `kpi.csv`, `kpi_measure.csv`, `kpi_v2_map.csv`, `unit.csv`, `unit_map.csv`, `unit_decimals.csv` | `warehouse/seed_rows/<list>/<source>.csv` (the list's header, then the source's rows; D36, below) | the model `warehouse/models/gold/seed_rows/<list>.sql` reads every CSV file of the folder; Python reads `warehouse/seed_rows.py` `rows()` |
 
 `warehouse.yaml` keeps what belongs to no single source: conformed dimensions, facts, seeds, KPI metrics
@@ -88,11 +89,51 @@ it cannot follow macros found by name; a full parse takes about five seconds.
 - **Lines of sources registered before D34** moved to the sources' own files one kind at a time, each move
   proved not to change the resolved lists, the compiled SQL or a build fingerprint. Moved (16 November): the
   sources' Gold tables and row ceilings in `warehouse.yaml` (`gold.build_public_finance` stays, shared by
-  the MF family). Still shared: the Gold macros, the geography map and `docs/sources.md`. Moving the Gold
+  the MF family). Moved (25 November): their sections of `docs/sources.md`, one file each in `docs/sources/`
+  (the NBP section gave `nbp_interest_rates` and `nbp_bop` their own files; the text is unchanged, headings one
+  level up); `docs/sources.md` keeps the register status table and the route matrix of the first five sources.
+  Still shared: the Gold macros and the geography map. Moving the Gold
   macros is mechanical (cut the block macros, the list line, the CTE and the branch into
   `macros/sources/<source>.sql`; a trial move of WHO changed only the position of its branches in the
   compiled SQL) but reorders the unions, so the compiled SQL of the facts changes once. Do it in one pull
   request when no source pull request is open.
+
+## Value ranges
+
+`warehouse/tests/metrics_value_range.sql` fails every metrics row outside its KPI × source bound, and every row
+without one. Each source added a row to its `bounds` and a branch to its `metrics` union at the same two places, so
+after D36 it was the main cause of conflicts between source pull requests (#3002, #3136). Since 16 November a
+source declares both in its own file, `warehouse/macros/value_range/<source_system>.sql`:
+
+```sql
+{# Example (#123): highest value and where it was measured (Dev trial 1234567890). #}
+{% macro poc_value_range__example() %}
+    {{ return({
+        'bounds': [
+            ['example_rate', '%', '0', '100'],
+            ['example_count', 'example:table_1:%', '0', '5e6'],
+        ],
+        'models': ['poc_metrics_example_rate', 'poc_metrics_example_count'],
+    }) }}
+{% endmacro %}
+```
+
+- A bound is `[concept_key, measure_key_pattern, value_min, value_max]`; the source is the file's. The numbers are
+  text, written as SQL reads them (`'5e7'`, `'-0.5'`), so the compiled test shows them as written. The evidence for
+  each bound goes into the comment, as before.
+- `models` lists the `poc_metrics_*` models of the source's KPIs. A model that several sources feed is listed by
+  each of them; the union reads it once. `'models': []` until the KPI's metrics model exists (the bound then waits,
+  as the documentation-only rows of the test file do).
+- The test reads the rows and models written in it first (the sources from before the split; edited in place, no
+  new rows or models), then each source's file in name order. It fails the parse on a malformed bound, a bound
+  declared twice by one source, or a model that is not `poc_metrics_*`.
+- Moved on 16 November: the bounds and the single-source models of cie_sio, crossref, gugik_prng, gus_culture,
+  gus_culture_participation, gus_nsp2021, gus_psr2020, gus_tourism, mrpips_social_assistance, ms_isws, owid,
+  policja_statistics, radon, rpwdl, ted_notices and ulc_airports (the compiled test reads the same 116 bounds and 57 models, and returns the
+  same rows on the same data). The other sources' rows stay in the test file.
+- No model calls these macros (`repo_check` `configuration`), and `warehouse/changed.py` keeps
+  `macros/value_range/` out of every build fingerprint: a new or changed bound rebuilds nothing. The test runs when
+  one of the models it reads is built, as before.
 
 ## Code lists kept as rows per source (D36)
 
@@ -143,7 +184,9 @@ could not follow). `python -m ops.repo_check` (`seed files`) names each such fil
 another: a `bronze:` table that is no dbt source table; a Silver model in no source's `silver:` list; a
 Gold model in no `gold` list or a listed table that no model builds; a full-rebuild model without a
 ceiling, or with two; a `poc_build_*` model that is not tagged, or neither registered nor in the old list,
-or both; a source with a block in the old list and a registration; a registration that names no model or no
+or both; a source with a block in the old list and a registration; a value-range file not named after a declared source,
+defining another macro than `poc_value_range__<source>`, or such a macro outside `macros/value_range/` or called by
+a model; a registration that names no model or no
 blocks, sits in the wrong file or names an unknown source; a geography CTE that is not named after its
 source or whose name already exists (in `poc_map_geography.sql` or in another source's macro);
 a `source.csv` or `licence.csv` row missing for a source (`register`); a choice list put back on the
@@ -160,7 +203,8 @@ folder or does not name it in its config meta; a seed CSV put back next to its f
 ## Rebuilds
 
 `warehouse/changed.py` fingerprints every model with one digest of the code all models share: everything
-under `warehouse/macros/` except `macros/sources/`, `dimensions/`, `dbt_project.yml` and `requirements.txt`.
+under `warehouse/macros/` except `macros/sources/` and `macros/value_range/`, `dimensions/`, `dbt_project.yml`
+and `requirements.txt`.
 A change there makes the next scheduled build rebuild every dbt model and seed once ("code changed"); so does
 a Gold pull request of a source that still adds lines to `macros/poc_blocks.sql`.
 

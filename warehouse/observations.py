@@ -321,6 +321,77 @@ SOURCES.update(
 )
 
 
+def _area_map(source: str) -> dict[str, tuple]:
+    """The lookup of a source's rows of gold.map_geography (source_code -> geography_key)."""
+    return {"geo_map": ("gold", "map_geography", ("source_system", "source_code", "geography_key"), source)}
+
+
+# BIS, ILOSTAT, UNDP HDR, UNdata and UNECE (#2943): one Silver dbt table each, every series by rule; the
+# curated build_<source> models stay the KPI layer. UNdata maps its UN M49 codes by rule (gold_undata_map.sql:
+# the curated map holds the EU27 members and the World only).
+SOURCES.update(
+    {
+        source: {
+            "tables": {table: (("silver", table), f"gold_{source}_build")},
+            "lookups": _area_map(source),
+            "keyed_by": ("geo_map",),
+        }
+        for source, table in (
+            ("bis", "bis_observations"),
+            ("ilostat", "ilostat_observations"),
+            ("undp_hdr", "undp_hdr_indices"),
+            ("unece", "unece_observations"),
+        )
+    }
+)
+# FAOSTAT, World Bank IDS, EEA and ECB: one Silver dbt table each, every series by rule; the curated
+# build_<source> models stay the KPI layer.
+SOURCES.update(
+    {
+        source: {
+            "tables": {table: (("silver", table), f"gold_{source}_build")},
+            "lookups": _area_map(source),
+            "keyed_by": ("geo_map",),
+        }
+        for source, table in (
+            ("faostat", "faostat_observations"),
+            ("world_bank_ids", "ids_observations"),
+            ("eea", "eea_ghg_inventory"),
+            ("ecb", "ecb_observations"),
+        )
+    }
+)
+SOURCES["undata"] = {
+    "tables": {"undata_syb_values": (("silver", "undata_syb_values"), "gold_undata_build")},
+    "lookups": {
+        **_area_map("undata"),
+        "areas": ("gold", "dim_geography", ("geography_key", "iso3", "level_name"), None),
+    },
+    "keyed_by": ("geo_map",),
+    "map_model": "gold_undata_map",  # M49 country codes through ISO 3166-1 (numeric -> alpha-3 -> country)
+}
+# UNCTAD Data Hub: nine Silver dbt tables of one shape (macros/unctad.sql), each one block, all through one build
+# stage; every measure by rule. The curated build_unctad stays the KPI layer.
+SOURCES["unctad"] = {
+    "tables": {
+        table: (("silver", table), "gold_unctad_build")
+        for table in (
+            "unctad_fdi_flows_stock",
+            "unctad_merchandise_trade",
+            "unctad_services_trade",
+            "unctad_digital_services_trade",
+            "unctad_commodity_prices",
+            "unctad_liner_shipping_connectivity",
+            "unctad_merchant_fleet",
+            "unctad_seaborne_trade",
+            "unctad_port_calls",
+        )
+    },
+    "lookups": _area_map("unctad"),
+    "keyed_by": ("geo_map",),
+}
+
+
 def table_ids(source: str, namespace: str = "gold") -> dict[str, tuple[str, str]]:
     return {name: (namespace, f"{source}_{name}") for name in TABLES}
 

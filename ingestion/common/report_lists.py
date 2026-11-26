@@ -1,6 +1,6 @@
 """Issuer report lists (KNF OAM: ESPI reports, CD-006; GPW report list: EBI reports, CD-007), shared code.
 
-Both sources are public HTML lists of issuer reports, read politely (decision D37): list pages only, one request
+Both sources are public HTML lists of issuer reports, read politely (decision D38): list pages only, one request
 at a time, PAUSE_SECONDS apart, the platform's identified User-Agent, bounded retries, never a report document or
 an attachment. A refusal (4xx, robots.txt, bot protection) stops the day; it is never tried another way.
 
