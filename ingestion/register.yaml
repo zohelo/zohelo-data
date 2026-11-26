@@ -6425,7 +6425,8 @@ sources:
   name: Krajowa Integracja Ewidencji Gruntów i Budynków (KI EGiB) aggregate WFS
   short_name: GUGiK KI EGiB
   provider: GUGiK with county cadastral authorities
-  status: approved
+  source_system: gugik_egib
+  status: built
   family: G
   kpi: false
   geography: Poland
