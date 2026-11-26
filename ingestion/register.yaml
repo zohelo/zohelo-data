@@ -2892,12 +2892,18 @@ sources:
     blockers:
     - 'Owner question: Centrum e-Zdrowia publishes "e-zdrowie w liczbach" (e-prescriptions by voivodeship, sex, age and payment
       since 2020, and the infectious-disease report) only as public Power BI reports, with no file, API or dane.gov.pl dataset,
-      and its portal reads "© 2026 Centrum e-Zdrowia. Wszystkie prawa zastrzeżone." Do you want to send CeZ a re-use request
-      (Open Data Act) for the monthly tables behind the reports with their reuse terms, or leave the source out?'
+      and its portal reads "© 2026 Centrum e-Zdrowia. Wszystkie prawa zastrzeżone." The data reach the public page only through
+      the requests the published report itself makes to the Power BI service (the same kind of "page''s own request" route
+      as D40 and D41, which needs a D row per source). Which do you want: (a) a web-route D row for PLS-016 that reads those
+      report requests politely (one report at a time, monthly, aggregates only, internal while the licence is unresolved),
+      (b) a re-use request to CeZ under the Open Data Act for the monthly tables behind the reports with their reuse terms,
+      or (c) leave the source out?'
     - 'Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026):
       both ezdrowie.gov.pl pages answered (text 9,137 and 4,749 characters); the e-recepty page links the report https://app.powerbi.com/view?r=…
-      and no download; dane.gov.pl institution search "e-Zdrowia" gave no CeZ dataset. Reading a Power BI report''s internal
-      query service is not a published route, so it is not used.'
+      and no download; dane.gov.pl institution search "e-Zdrowia" gave no CeZ dataset. The report''s own query requests were
+      not read or probed: a web route needs a D row per source (playbook stage 1), so it is offered to the owner as option
+      (a). The "all rights reserved" footer alone is not why the entry waits (it also stands on approved internal entries,
+      e.g. PLS-030); the missing decided route is.'
     references:
     - https://ezdrowie.gov.pl/portal/home/badania-i-dane
     - https://ezdrowie.gov.pl/portal/artykul/e-zdrowie-w-liczbach-e-recepty
@@ -3052,6 +3058,13 @@ sources:
       (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the index answered HTTP
       200 (95,278 bytes, Last-Modified 31 Oct 2026) with 104 PDF links, among them Ch_2006.pdf to Ch_2025.pdf and corrections
       (Ch_<year>a.pdf). INF_24_04B.pdf has a text layer (session read, 26 Nov 2026).'
+    - 'Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026): the index
+      links the annual bulletins Ch_1999 to Ch_2025 and corrections Ch_1999a to Ch_2013a (no corrections listed after 2013).
+      Text layer confirmed with pypdf: Ch_2024.pdf (1,364,130 bytes, 196 pages, Last-Modified 31 Oct 2025) and Ch_2005.pdf
+      (1,282,959 bytes, 179 pages) gave text on all of the first 60 pages; the Ch_2024 contents list tables "Liczba zachorowań
+      ..., zapadalność oraz liczba i procent hospitalizowanych wg województw" per disease, so voivodeship tables exist. The
+      extracted text splits Polish diacritics ("zachorowan´"): the builder normalises them before matching labels. Scope:
+      start with 2006-2025 (the KPI years); 1999-2005 and the corrections (a correction replaces its year) follow.'
     - 'Licence unresolved: internal until NIZP PZH states reuse terms; the GUS republication (dataset 1776) is the licensed
       alternative for the annual counts if the builder finds the same breakdowns there.'
     references:
@@ -3335,9 +3348,9 @@ sources:
   granularity: Graduate cohort/programme outcome indicator, with reports and rankings; privacy-protected aggregates only.
   coverage: Tracks outcomes shortly after graduation and up to five years after diploma; editions/cohorts vary.
   access:
-    endpoint: https://ela.nauka.gov.pl/pl
-    kind: bulk_file
-    interfaces: [HTML, interactive reports, downloadable reports]
+    endpoint: https://ela.nauka.gov.pl/sla-server/v6.0/
+    kind: web
+    interfaces: [HTML, interactive reports, 'application JSON service (GET, no key)', PDF reports per major]
     auth: Public aggregate results.
     cost: free
     limits: Unknown.
@@ -3361,15 +3374,26 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Owner question: ELA (OPI PIB for the Ministry of Science) publishes graduate outcomes only in its interactive applications
-      (ela.nauka.gov.pl, ela-uczen.nauka.gov.pl) and in PDF reports; there is no file, API or dane.gov.pl dataset, the script
-      bundles hold no data address, and no reuse terms are stated. Do you want to send the Ministry (or OPI PIB) a re-use
-      request for the ELA aggregate tables per field of study, institution and cohort with their reuse terms, or leave ELA
-      out?'
-    - 'Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026)
-      and Dev probe run 45815140983 (job 139892828435, same branch, argument `two`, 26 Nov 2026): ela.nauka.gov.pl (robots.txt
-      allows all) and ela-uczen.nauka.gov.pl answered; their bundles name only gov.pl, opi.org.pl and a test host; dane.gov.pl
-      searches "absolwentów" and "Ekonomiczne Losy" found no ELA dataset. Not parked: a re-use request is a legitimate route.'
+    - 'Owner question: ELA (OPI PIB for the Ministry of Science) publishes no file, bulk download or documented API and states
+      no reuse terms ("Copyrights © 2026 Ministerstwo Nauki i Szkolnictwa Wyższego"). Its public application ela.nauka.gov.pl
+      reads the data from its own JSON service by plain GET requests without a key (https://ela.nauka.gov.pl/sla-server/v6.0/,
+      for example major/filter for the lists of institutions and majors and major/value for one major''s outcomes: salary,
+      salary relative to the local benchmark, time to first job, unemployment risk, graduates per year); robots.txt allows
+      all. That is a "page''s own request" route (as D40 and D41), which needs a D row per source; a full read is one request
+      per major, institution, level, form and graduation year (thousands of requests, spread over days). Which do you want:
+      (a) a web-route D row for PLS-024 that reads the ELA service politely (one request at a time, aggregates only, internal
+      while the licence is unresolved), (b) a re-use request to the Ministry (or OPI PIB) for the ELA aggregate tables per
+      field of study, institution and cohort with their reuse terms, or (c) leave ELA out?'
+    - 'Dev probe runs on branch test/src-parked-probe, script dev/src_parked3fix_probe.py, 26 Nov 2026 (fix of the review of
+      #3268; the earlier "no data address in the bundles" was wrong, the extractor had looked for absolute addresses only):
+      45852736337 (job 140023061088, argument `two`) found apiUrl "/sla-server/v6.0/" in the main bundle and read the 35
+      lazy chunks; 45854625135 (job 140029691360, argument `four`) answered infographic/value and report-dropOut/filterList
+      with HTTP 200 JSON; 45855480360 (job 140032605492, argument `five`) answered major/filter (201,378 bytes), report/filter
+      (188,518 bytes), ranking/filter (78,360 bytes), infographic/filter and major/value (2,127 bytes, one major with graduationYear
+      2020, graduatesNumber 17 and five outcome values, plus PDF report links /sla-server/v6.0/report/pdfR?...) with HTTP
+      200; major/filterList 500 and ranking/value and report/filterList 400 without parameters. The pupil application ela-uczen.nauka.gov.pl
+      uses https://ela-uczen.nauka.gov.pl/api/filter and /details by POST (not used: probes are GET only). Earlier runs 45813307617
+      and 45815140983: dane.gov.pl searches found no ELA dataset. Not parked: route (a) or (b) is legitimate.'
     references:
     - https://ela.nauka.gov.pl/pl
 - id: PLS-025
@@ -6238,8 +6262,15 @@ sources:
       test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): GetCapabilities HTTP 200 (17,245 bytes, "Zbiorcza
       usługa EGiB"); GetFeature resultType=hits gives numberMatched 38,924,231 for ms:dzialki and 17,657,662 for ms:budynki
       for the whole service.'
-    - 'Builder: find the attribute that carries the county TERYT (DescribeFeatureType) and filter by it; one request at a
-      time, about 2 x 380 requests per snapshot.'
+    - 'County attribute (Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)): DescribeFeatureType
+      lists no county field. ms:dzialki has ID_DZIALKI, NUMER_DZIALKI, NUMER_OBREBU, NUMER_JEDNOSTKI, NAZWA_OBREBU, NAZWA_GMINY,
+      POLE_EWIDENYJNE, KLASOUZYTKI_EGIB, GRUPA_REJESTROWA, DATA; ms:budynki has ID_BUDYNKU, RODZAJ, KONDYGNACJE_NADZIEMNE,
+      KONDYGNACJE_PODZIEMNE. NUMER_JEDNOSTKI carries the cadastral unit (gmina TERYT with type, e.g. "301908_4"), whose first
+      four digits are the powiat; ID_BUDYNKU starts with the same unit code. Builder, route (1): resultType=hits with a
+      fes:PropertyIsLike filter NUMER_JEDNOSTKI = "<powiat TERYT>%" (ID_BUDYNKU for buildings), one powiat at a time; test
+      on one powiat first that the filtered hits finish and match. Fallback (2) if the aggregate service does not answer filtered
+      hits: the county EGiB WFS services that the aggregate reads (list at https://integracja.gugik.gov.pl/cgi-bin/KrajowaIntegracjaEwidencjiGruntow),
+      resultType=hits per county service. Either way about 2 x 380 requests per snapshot, one at a time.'
     - 'Licence unresolved: internal only until GUGiK states reuse terms for the aggregate service.'
     references:
     - https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/
@@ -6481,62 +6512,92 @@ sources:
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
   short_name: GIOŚ surface water
   provider: GIOŚ
-  status: reviewing
+  status: approved
   family: G
   kpi: true
   geography: Poland
   provider_type: national-public
   domains: [water quality, environment]
   entities: [surface-water monitoring point, water body, sample, result]
-  granularity: Monitoring-point/sample parameter results and water-body assessments; downloadable format varies by publication.
-  coverage: Annual/current publications; 2026 data are provisional and verified results follow after the next-year deadline
-    stated by GIOŚ.
+  granularity: Monitoring-point (PPK) sample results per indicator and date; water-body (JCWP) status classification per
+    six-year assessment.
+  coverage: Current year (provisional, refreshed monthly) plus yearly archive workbooks; status assessments 2019-2024 for
+    rivers, lakes, transitional and coastal water bodies.
   access:
-    endpoint: https://wody.gios.gov.pl/pjwp/
-    kind: web
-    interfaces: [HTML, JavaScript application]
-    auth: Public pages.
-    cost: Free public access.
-    limits: None published.
+    endpoint: https://wody.gios.gov.pl/pjwp/api/publications/publication/367
+    kind: bulk_file
+    interfaces: ['XLSX workbooks linked from the portal''s publication 367 "Dane archiwalne i bieżące z monitoringu wód powierzchniowych"
+        (JSON record, files at /pjwp/api/publications/media/<id>)', 'ArcGIS REST MapServer services with Query (https://wody.gios.gov.pl/arcgis/rest/services/PJWP)']
+    auth: None; public GET requests.
+    cost: free
+    limits: None published; ArcGIS maxRecordCount 1,000 per query. The export tool of the portal (POST /geo-files-export/task)
+      is not used.
   licence:
-    status: unresolved
-    notes: 'Terms: dane.gov.pl lists GIOŚ''s dataset 608 "Państwowy Monitoring Środowiska - monitoring jakości wód powierzchniowych"
-      with licence "CC BY 4.0" (API record read by the runner 26 Nov 2026, modified 2026-10-26), but its only resource is
-      the JavaScript portal https://wody.gios.gov.pl/pjwp/, which offers no file or documented API; GIOŚ re-use page https://www.gov.pl/web/gios/ponowne-wykorzystywanie
-      gives only the general frame (free of charge, conditions possible). No file is read today, so the status stays unresolved
-      until a route exists; with a route through dane.gov.pl the CC BY 4.0 record would apply (attribution: "Źródło: GIOŚ,
-      Państwowy Monitoring Środowiska").'
-  updates: Provisional current-year values followed by verified publication; corrections possible. Dates could not be read
-    from the portal.
+    status: open-conditional
+    notes: 'Terms: the portal''s own regulations, read from https://wody.gios.gov.pl/pjwp/api/terms_and_conditions (Dev probe
+      run 45853517179, 26 Nov 2026): "Measurement data presented on the website may be used in order to read the content
+      as well as to reuse data in part or as a whole."; the re-user must give the source "in a clear and legible way", the
+      time the information was created and whether it is used in whole or in part, "Data source should be provided as follows:
+      „Data source: GIOŚ – The State Environmental Monitoring”", and must state any processing; GIOŚ is "not responsible for
+      the content of public sector information after its processing". Polish: „Źródło danych: GIOŚ – Państwowy Monitoring
+      Środowiska”. Publication 367 adds: "Uprzejmie prosimy, aby przy każdorazowym przywołaniu danych wskazywano państwowy
+      monitoring środowiska jako źródło ich pochodzenia." The dane.gov.pl record of this portal (dataset 608, GIOŚ) carries
+      "CC BY 4.0" (API record read by the runner 26 Nov 2026). Commercial reuse: allowed (no limit in the regulations; CC
+      BY 4.0 record); modification: allowed when stated. Third-party documents on the site (studies, methodologies) are excluded;
+      only measurement data and classifications are used.'
+  updates: 'Current-year workbooks are replaced about monthly ("Dane RW 2026, stan na 02.11.2026"; the regulations: results
+    "updated monthly"); provisional values are verified after the year. Yearly archive workbooks do not change. The ArcGIS
+    result layer has one service per year (2024, 2025, 2026).'
   ingestion:
-    history: No machine route found. https://wody.gios.gov.pl/pjwp/ and its publication pages (for example /pjwp/publication/367)
-      return the same 1,149-byte JavaScript shell with no content and no links (Dev probe run 43203166665 (job 131131537831,
-      branch test/src-cg-probe, 12 Nov 2026)); JavaScript-only pages are not supported by the pipeline. dane.gov.pl could
-      not be searched from the session (robots refusal, not worked around).
-    incremental: None until a file or API route is found.
-    identifiers: Monitoring point code, water-body code, parameter, sample date/year and status.
+    history: 'Bulk: publication 367 links 84 workbooks (Dev probe run 45855480360, job 140032605492, argument `five`): the
+      current-year results "Dane RW" (rivers, 48,164,001 bytes), "Dane LW" (lakes, 8,936,557 bytes) and "Dane CW, TW" (transitional
+      and coastal, 993,697 bytes), all "stan na 02.11.2026" and XLSX (magic 504b0304), plus yearly archive workbooks (for
+      example "dane fizykochemiczne_CW_TW_2021.xlsx", 1,294,676 bytes) and biological data sets; the four water-category
+      publications (RIVERS/88, LAKES/87, TRANSITIONAL_WATERS/107, COAST_WATERS/108) link the classification files. Status
+      assessment through ArcGIS (Dev probe run 45854625135, job 140029691360, argument `four`): PJWP/Ocena_stanu_JCWP_rzeczne_2019_2024
+      (capabilities Map,Query,Data; five layers: ecological status, ecological potential, chemical status, overall status;
+      2,340 river water bodies; fields KOD_JCWP, NAZWA_JCWP, S_P_EKO, STATUS), the lake, transitional, coastal and reservoir
+      services of the same period, PJWP/Wyniki_pomiarow_chemicznych_i_fizykochemicznych_2025 (574,512 results; fields KOD_JCWP,
+      KOD_PPK, NAZWA_PPK, DATA_POMIA, WSKAZNIK, WYNIK, JEDNOSTKA, GRANICA_OZ, X, Y) and PJWP/Siec_PPK (3,984 monitoring points,
+      2022-2027).'
+    incremental: 'Snapshot: the file list is read from the publication record each run; a workbook is downloaded when its
+      media id, Content-Disposition name ("stan na <date>") or bytes changed; archive years are loaded once. The status services
+      change once per six-year assessment.'
+    identifiers: Monitoring point code (KOD_PPK), water-body code (KOD_JCWP), indicator (WSKAZNIK), sample date (DATA_POMIA),
+      assessment period.
   modelling:
-    notes: 'Distinguish raw results from classification/assessment. If a route appears: share of surface water bodies by status
-      class per year for environment.condition. Stand-in with a route today: EEA Waterbase and WFD status data through GL-037
-      (Poland plus EU comparison).'
-    overlap: Complements groundwater monitoring (PL-ENV-012) and Wody Polskie planning data; overlaps EEA WISE reporting.
+    notes: 'Smallest Gold selection: (1) share and count of surface water bodies by status class (good / below good, ecological
+      and chemical) per water category and voivodeship, assessment 2019-2024, from the ArcGIS status layers (2,340 river bodies
+      plus lakes, transitional, coastal); (2) yearly mean of selected physico-chemical indicators (for example total nitrogen,
+      total phosphorus, BOD5) per voivodeship from the result workbooks. Raw results stay in Silver. Values below the limit
+      of quantification are flagged by GRANICA_OZ (or "<" in the workbooks) and never become the limit value or zero; provisional
+      current-year values are marked as such. Frequencies: results by sample date (aggregated yearly in Gold); status per
+      six-year assessment. Voivodeship by point-in-polygon of the PPK coordinates with PRG (or the JCWP-to-gmina mapping).'
+    overlap: Complements groundwater monitoring (PL-ENV-012) and Wody Polskie planning data (PL-ENV-013 holds the same JCWP
+      codes); the EEA WISE/Waterbase reporting (GL-037) carries the same status per water body for Poland, at a later date.
   research:
     priority: review-first
     evidence: tested
     connection: tested
     blockers:
-    - 'Owner question: GIOŚ publishes the surface-water monitoring results only in its JavaScript portal wody.gios.gov.pl/pjwp
-      (dane.gov.pl dataset 608 links nothing else; the portal''s own addresses /pjwp/api/publications answer 404 and 400),
-      and the EEA Waterbase and WFD status data (GL-037) cover Poland per water body. Do you want to send GIOŚ a free re-use
-      request for the yearly result files (XLSX or CSV, per monitoring point and year) under the Open Data Act, or do you
-      accept the EEA data as the surface-water KPI source and leave the GIOŚ portal out?'
-    - 'Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026):
-      the portal pages are a 1,149-byte shell with one script bundle; dane.gov.pl API answered (datasets 608 and 170). Dev
-      probe run 45815892766 (job 139895407895, same branch, argument `three`, 26 Nov 2026): https://wody.gios.gov.pl/pjwp/api/publications
-      HTTP 404, https://wody.gios.gov.pl/pjwp/api/publications/367 HTTP 400. Not parked: a re-use request is a legitimate
-      route.'
+    - 'Re-review 26 Nov 2026 (Task #2915, fix of the review of #3268): approved. The earlier "JavaScript only" finding was
+      wrong: the portal''s script (bundle-505ffd16142c797f5674.min.js) calls its own JSON API under https://wody.gios.gov.pl/pjwp/api
+      (API_CONTEXT "/pjwp" plus "/api"; the earlier guesses /pjwp/api/publications 404 and /publications/367 400 were wrong
+      paths). Dev probe runs on branch test/src-parked-probe, script dev/src_parked3fix_probe.py, 26 Nov 2026: 45851940348
+      (job 140020286051, argument `one`: bundle read, download functions /files/download/, /geo-files-export/task (POST),
+      /publications/); 45852736337 (job 140023061088, argument `two`: API paths and ArcGIS folders); 45853517179 (job 140025787216,
+      argument `three`: /pjwp/api/terms_and_conditions, /publications/publication/367, /publications/?page=0&size=10, /dictionaries/*
+      all HTTP 200 JSON; ArcGIS folder PJWP lists the status and result services); 45854625135 (job 140029691360, argument
+      `four`: ArcGIS layers, fields and counts); 45855480360 (job 140032605492, argument `five`: the 84 workbook links of
+      publication 367 and five workbook downloads, HTTP 200 XLSX). robots.txt: none on wody.gios.gov.pl (the host answers
+      the gov.pl portal page), nothing refused.'
+    - 'Route note: the workbooks are published files at stable addresses that the publication links (a bulk workaround in
+      the playbook''s order, polite GETs, terms allow reuse); the ArcGIS services are the provider''s public map services
+      with Query. The portal''s export tool (POST /geo-files-export/task, then polling) is a browser export and is not used.'
     references:
-    - https://wody.gios.gov.pl/pjwp/
+    - https://wody.gios.gov.pl/pjwp/publication/367
+    - https://wody.gios.gov.pl/pjwp/api/terms_and_conditions
+    - https://wody.gios.gov.pl/arcgis/rest/services/PJWP
     - https://dane.gov.pl/pl/dataset/608
     - https://www.gov.pl/web/gios/monitoring-jakosci-wod
     - https://www.gov.pl/web/gios/ponowne-wykorzystywanie
@@ -6637,13 +6698,14 @@ sources:
       danych przestrzennych aPGW (2023), dane.gov.pl" with the date produced and the date obtained.'
   updates: Theme and plan-cycle specific (flood hazard and risk maps and water-management plans in six-year cycles).
   ingestion:
-    history: No machine route for the vector data was found. The Hydroportal is a map application (19 KB page, Dev probe run
-      43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)); its INSPIRE page https://isok.gov.pl/inspire.html
-      lists view services only (WMS, for example https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WMS for flood hazard
-      and https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_PGWWP_WMS for water bodies), which return images, not data; the download
-      service works inside the viewer; other data are sent on a written request to the regional water board, possibly for
-      a fee. One dataset is on dane.gov.pl (unit boundaries, https://dane.gov.pl/pl/dataset/2170).
-    incremental: None until a download route is found.
+    history: 'Bulk file: the aPGW 2023 File Geodatabase on dane.gov.pl (dataset 599), one ZIP of 307,606,332 bytes, Last-Modified
+      20 Dec 2023, ETag "6582d525-1255b33c" (HEAD, Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)).
+      It holds the planning units of the 2nd update of the river basin plans; the previous plan cycle is not on dane.gov.pl,
+      so history starts with the 2023 edition. The Hydroportal map application and the ISOK WMS services (view only) are
+      not used; flood hazard vectors are sent only on a written request (not part of this approval). Unit boundaries are
+      also on dane.gov.pl dataset 2170.'
+    incremental: 'Snapshot per plan cycle: the version is the resource date and ETag of the dataset 599 ZIP; a new plan update
+      (six-year cycle) arrives as a new resource. A weekly HEAD is enough; the ZIP is downloaded only when the ETag changes.'
     identifiers: Water-body codes, flood-map scenario identifiers and administrative/planning unit codes.
   modelling:
     notes: 'Smallest Gold selection: the water-management planning units of the 2nd update of the river basin plans (aPGW
@@ -6667,7 +6729,8 @@ sources:
     - 'Not part of this approval: flood hazard and risk zones (vectors only by written request, possibly charged). Owner option,
       not blocking: a written request to Wody Polskie for the 1 percent flood hazard zones as SHP, if the gmina flood-zone
       share is wanted.'
-    - 'Builder: the ZIP size was not measured (HEAD it first); DuckDB spatial reads File Geodatabase (OpenFileGDB).'
+    - 'Builder: the ZIP is 307,606,332 bytes (Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)); DuckDB
+      spatial reads File Geodatabase (OpenFileGDB); store the entity tables and measures, not the geometry.'
     references:
     - https://dane.gov.pl/pl/dataset/599
     - https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami
@@ -6702,8 +6765,10 @@ sources:
       as a resource (API record read by the runner 26 Nov 2026, resource dated 2026-11-25). PIG-PIB rules for re-use https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
       (read 12 Nov 2026; the page now answers runners with bot protection): information is provided for re-use "co do zasady,
       bezpłatnie"; the user must give the source, the time it was produced and obtained, and whether it was processed. Commercial
-      reuse and modification allowed (CC BY 4.0). Attribution: "Źródło: Państwowy Instytut Geologiczny - PIB, Centralna Baza
-      Danych Geologicznych" with the download date.'
+      reuse and modification allowed (CC BY 4.0). Limit named on the borehole page (read 12 Nov 2026): "Dostęp do niektórych
+      informacji, takich jak np. pomiary geofizczne wymaga uzyskania zgody." Only what the public WFS serves is used; the
+      consent-bound information (e.g. geophysical measurements) stays out. Attribution: "Źródło: Państwowy Instytut Geologiczny
+      - PIB, Centralna Baza Danych Geologicznych" with the download date.'
   updates: The download manager lists a dated package cbdg_otwory_2026_11_12.zip, so the borehole package is rebuilt about
     daily.
   ingestion:
@@ -6729,8 +6794,14 @@ sources:
       WFSServer HTTP 200 (13,751 bytes, GetFeature offered). Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe,
       script dev/src_parked_probe.py, 26 Nov 2026): dm.pgi.gov.pl and baza.pgi.gov.pl answered an Incapsula page (212 bytes),
       not used.'
-    - 'Builder: read the feature type and the maximum count per request from the capabilities and page through with startIndex,
-      one request at a time; count the full load before scheduling.'
+    - 'Builder (Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)): the only
+      feature type is cbdg_otwory:Otwory_wiertnicze_CBDG with 336,758 features (resultType=hits); page through with startIndex,
+      one request at a time. Its fields are OBJECTID, Nazwa (borehole name), Głębokość__m_, Stratygrafia/Stratigraphy, Cel_wiercenia/Drilling_purpose,
+      Rok_wiercenia, Rzędna__m_n.p.m._, coordinates (geographic and PL-1992), Podstawa_lokalizacji, Miejscowość, Gmina, Powiat,
+      Województwo, Archiwum, Nr_inwentarzowy, ID_CBDG, and flags Rdzeń, Geofizyka, Analizy, Badania. No investor, owner or
+      other personal field is served, so no natural person is stored; borehole names of private wells are kept only as
+      the producer publishes them and are not needed for the Gold counts (keep them out of Gold). Consent-bound information
+      (geophysical measurements) is not in the WFS and stays out.'
     references:
     - https://dane.gov.pl/pl/dataset/677
     - https://cbdgmapa.pgi.gov.pl/arcgis/services/cbdg_otwory/MapServer/WFSServer?service=wfs&request=GetCapabilities&version=2.0.0
@@ -6908,20 +6979,29 @@ sources:
     connection: tested
     blockers:
     - 'Owner question: GDOŚ publishes the CRFOP layers (reserves, national and landscape parks, protected landscape areas,
-      Natura 2000, monuments of nature) as shapefile downloads only on sdi.gdos.gov.pl, which refuses GitHub runners with
-      HTTP 403 (not worked around), and states no reuse terms for them. Natura 2000 and nationally designated areas reach
+      Natura 2000, monuments of nature) as shapefile downloads on sdi.gdos.gov.pl, which refuses GitHub runners with HTTP
+      403 (not worked around), and states no reuse terms for them; the two GDOŚ datasets on dane.gov.pl (175 Natura 2000
+      and 485 Geoserwis, both CC0 1.0) only link natura2000.gdos.gov.pl/datafiles, a host name that no longer resolves, and
+      geoserwis.gdos.gov.pl/mapy, which also answers 403. Natura 2000 and nationally designated areas reach
       us through the EEA (GL-037) and protected area per gmina through GUS BDL. Do you want to write to GDOŚ asking for access
       from GitHub-runner addresses (or a copy of the shapefiles on dane.gov.pl) and for the reuse terms, or do you accept
       the EEA and GUS BDL data and leave CRFOP out?'
     - 'Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026):
       sdi.gdos.gov.pl robots.txt HTTP 403 again; the GDOŚ page https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych
       lists the WFS shape-zip links (e.g. TYPENAME=GDOS:Rezerwaty) on that host only. dane.gov.pl dataset 175 ("Baza danych
-      obszarów Natura 2000", CC0 1.0, link http://natura2000.gdos.gov.pl/datafiles) was not probed: an untested lead for the
-      Natura 2000 part only.'
+      obszarów Natura 2000", CC0 1.0, link http://natura2000.gdos.gov.pl/datafiles) was not probed then.'
+    - 'Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026): dane.gov.pl
+      dataset 175 "Baza danych obszarów Natura 2000" (CC0 1.0, yearly, modified 2019-09-30) has one resource, the HTML link
+      http://natura2000.gdos.gov.pl/datafiles (dated 2016-07-01), and that host does not resolve (DNS "Name or service not
+      known", http and https); dataset 485 "Geoserwis Generalnej Dyrekcji Ochrony Środowiska" (CC0 1.0, daily, modified 2026-02-04)
+      has one resource, http://geoserwis.gdos.gov.pl/mapy/, whose robots.txt answers HTTP 403 (not worked around). Neither
+      gives a reachable file; the CC0 records would apply if GDOŚ restores a reachable copy.'
     references:
     - https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych
     - https://sdi.gdos.gov.pl/wfs
     - https://bankdanych.gdos.gov.pl/backend/wfs
+    - https://dane.gov.pl/pl/dataset/175
+    - https://dane.gov.pl/pl/dataset/485
 - id: PL-ENV-018
   name: Bank Danych o Lasach (BDL) OGC services
   short_name: Lasy Państwowe forest data
