@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+ppk_net_assets,knf_pensions,knf_pensions:ppk_net_assets:thousand_pln,"KNF quarterly PPK information, Tabela 2, total and managing institutions",1,

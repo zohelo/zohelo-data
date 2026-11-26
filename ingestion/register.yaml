@@ -4774,7 +4774,8 @@ sources:
   name: Banking-sector data and sector information
   short_name: KNF banking sector data
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_banking
+  status: built
   family: C
   kpi: true
   geography: Poland
@@ -4822,6 +4823,12 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Built (#2871): source knf_banking, the current workbook "Dane miesięczne sektora bankowego" found on the
+      stable page (bulk_file url_from), every value in Silver (silver.knf_banking_series: 13 sheets, blocks by bank
+      group, items by heading and label path, January 2018 on), seven items in Gold (total assets, net profit year to
+      date, non-financial receivables without and with impairment, non-financial deposits, employees; total capital
+      ratio quarterly). Dev probe 45758367857: robots.txt of www.knf.gov.pl allows every agent. Not built: the archive
+      workbook to December 2017 (another layout, before the IFRS 9 changes).'
     - Quarterly and annual KNF banking tables were not found on the statistics listing (only the monthly page is listed there);
       search again when building.
     references:
@@ -4833,7 +4840,8 @@ sources:
   name: Insurance, pension and other financial-sector information
   short_name: KNF insurance and pensions data
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_pensions
+  status: built
   family: C
   kpi: true
   geography: Poland
@@ -4886,6 +4894,10 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Built (#2871), smallest selection: source knf_pensions, the newest quarterly PPK release found on the listing
+      (ingestion/to_landing/knf_pensions), Tabela 2 in Silver and Gold (net asset value of PPK target-date funds by
+      managing institution and the total, thousand PLN, 2020 Q1 on). Not built yet: monthly OFE data, the OFE and
+      insurance quarterly bulletins, IKE and IKZE (one file per period each; an accumulating entity per series).'
     - Listing paging parameters and the first year of each series are not established; inventory them in the Landing trial.
     - Workbook layouts were not opened; confirm sheets and item codes before Silver.
     references:

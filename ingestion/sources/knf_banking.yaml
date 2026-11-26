@@ -1,0 +1,50 @@
+source_system: knf_banking
+description: "KNF — monthly banking-sector data (Dane miesięczne sektora bankowego), XLSX workbook since January 2018"
+
+# Extraction strategy (docs/landing.md). Register PLG-017, Task #2871. Bulk feature: KNF replaces one workbook in place
+# about six weeks after each month on the stable page "Dane miesięczne sektora bankowego" (articleId=56224); the
+# file URL changes with every release (2026_09-Dane_statystyczne_PL_100679.xlsx, 2,220,535 bytes, page updated 13
+# November 2026), so the link is found on the page (url_from). robots.txt of www.knf.gov.pl allows every agent (Dev
+# probe 45758367857, test/2871-knf-probe). Entity = the current workbook (banking_monthly): 13 sheets (structure,
+# balance sheet, receivables 1-5, liabilities, off-balance sheet, profit and loss, mortgage exposures, liquidity,
+# capital adequacy), each in blocks by bank group (banking sector, commercial banks, branches of credit institutions,
+# cooperative banks), months from January 2018 in columns (capital adequacy and overdue receivables quarterly). Each
+# release is the whole series to date (snapshot). The server sends no Last-Modified, so the version is the download
+# time and a file is written only when its SHA-256 changed. Restart unit: the file.
+# Not declared: the archive workbook to December 2017 on the same page (2017 12 - SEKTOR BANKOWY - DANE_55663.xlsx,
+# another layout before the IFRS 9 changes, December 2009 to December 2017), left for a follow-up.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: banking_monthly
+        url_from:
+          page: https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=56224&p_id=18
+          pattern: /komponenty/img/[0-9]{4}_[0-9]{2}-Dane_statystyczne[^/]*\.xlsx$
+          pick: first
+        format: raw                # XLSX, kept as exact bytes
+        version: last_modified     # no Last-Modified from the server: the download time
+  initial: bulk
+  production: snapshot                  # each release is the whole series since January 2018
+  incremental_policy: changed_since_last  # SHA-256 (no Last-Modified from the server)
+  schedule: # UTC; release: monthly, about six weeks after the month (September 2026 data on 13 November 2026); weekly check (O46)
+    - {cron: "15 9 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/knf_banking/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report   # each version is the whole series; a revision of past months replaces them
+bronze: [bronze.knf_banking_cells, bronze.knf_banking_rejected_files]
+silver: [silver.knf_banking_series]
+gold: [gold.build_knf_banking]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  knf_banking_series: {rows: 300000}  # MEASURED
+  poc_build_knf_banking: {rows: 6000}  # MEASURED
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one workbook of about 2 MB (about 200,000 cells), replaced monthly as a whole;
+# small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2871"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
