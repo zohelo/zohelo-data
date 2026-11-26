@@ -15,7 +15,7 @@ Bronze (`ingestion/to_bronze/sejm/`, an unknown item key rejects the file into `
 published; yes, no and abstain empty for list and traditional votes), `sejm_prints`, `sejm_mps`. Gold: entity tables
 `parliament_sejm_sitting_days`, `parliament_sejm_votings`, `parliament_sejm_prints`, `parliament_sejm_mps`; build
 stage `build_sejm` (blocks `sitting_days`, `votings`, `prints`: counts per month, Poland, only months with an event);
-draft KPIs `sejm_sitting_days`, `sejm_votings`, `sejm_prints` (no v2 map row). Weekly, Saturday 04:20 UTC. Licence:
+draft KPIs `sejm_sitting_days`, `sejm_votings`, `sejm_prints` (no v2 map row). Weekly, Monday 19:20 UTC (O46). Licence:
 `unresolved` (the API page states no terms), internal only.
 
 Left out: individual MPs' votes (one request per voting, about 9,000 per term), per-option results of list votes,

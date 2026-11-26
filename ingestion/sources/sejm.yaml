@@ -18,8 +18,9 @@ extraction:
   initial: api
   production: snapshot                    # each answer is the complete current list
   incremental_policy: changed_since_last  # SHA-256; ended term and finished sittings read once
-  schedule: # UTC; the Sejm sits every two to three weeks, votes mostly on Wednesday to Friday; weekly, Saturday off-peak
-    - {cron: "20 4 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; the Sejm sits every two to three weeks and votes mostly on Wednesday to Friday; weekly (O46), Monday
+    # evening, so the votes of the week before are in Silver for the Sunday platform build
+    - {cron: "20 19 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/sejm/
 archive_policy:
