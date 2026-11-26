@@ -27,8 +27,8 @@ bronze: [bronze.pzh_epimeld_rows, bronze.pzh_epimeld_rejected_files]
 silver: [silver.pzh_epimeld_cases]
 gold: [gold.build_pzh_epimeld]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  pzh_epimeld_cases: {rows: 60000}  # placeholder until the Dev trial measures it
-  poc_build_pzh_epimeld: {rows: 120000}  # placeholder until the Dev trial measures it
+  pzh_epimeld_cases: {rows: 52000}  # 34,269 rows: 266 diseases, Poland 2005-2025 and voivodeships 2006-2025 (Dev trial)
+  poc_build_pzh_epimeld: {rows: 103000}  # 68,538 rows: cases and incidence of every Silver row (Dev trial)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a bulletin
 # Refresh policy for all layers (D32): about 20 PDFs of 1-2.5 MB, one new a year, a few tens of thousands of rows;
