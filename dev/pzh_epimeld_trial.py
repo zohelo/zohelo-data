@@ -326,7 +326,11 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
         "zeros(cases,incidence)": rows(con, f"select count(*) filter (where cases = 0), count(*) filter (where incidence = 0) from {ob}"),
         "quarters_match(false,true)": rows(con, f"select count(*) filter (where not quarters_match), count(*) filter (where quarters_match) from {ob}"),
         "units(incidence_unit,rows)": rows(con, f"select incidence_unit_code, count(*) from {ob} group by 1 order by 1"),
+        "implied_denominator_PL(unit,n,min,max)": rows(con, f"select incidence_unit_code, count(*), round(min(cases * 100000 / incidence)), "
+                                                         f"round(max(cases * 100000 / incidence)) from {ob} where area_code = 'PL' and incidence > 0 "
+                                                         f"and cases >= 50 group by 1 order by 1"),
         "disease_keys": one(con, f"select count(distinct disease_key) from {ob}"),
+        "incidence_dropped(key,editions,rows)": rows(con, f"select disease_key, count(distinct source_entity), count(*) from {ob} where incidence_dropped group by 1 order by 1"),
         "preliminary(rows)": rows(con, f"select preliminary, count(*) from {ob} group by 1"),
         "max_cases(key,year,area,cases)": rows(con, f"select disease_key, period_year, area_code, cases from {ob} order by cases desc limit 3"),
         "max_incidence(key,year,area,inc)": rows(con, f"select disease_key, period_year, area_code, incidence from {ob} where incidence is not null order by incidence desc limit 3"),
