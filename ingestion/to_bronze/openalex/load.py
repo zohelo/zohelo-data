@@ -11,9 +11,9 @@ The Landing files (ingestion/to_landing/openalex/) are ZIPs of exact API answers
   published text (geo flattened to city, region, country, coordinates; counts_by_year and lineage as JSON text).
 
 Values stay text. A member outside these names, an answer whose groups or results do not add up to its ``meta``
-(a page lost), a key twice in one request, a field of the list without its request (or a request of a field the
-list does not name), or an institution with an attribute outside the selection rejects the file into
-bronze.openalex_rejected_files (never guessed).
+(a page lost) or a full page of groups (the list may go on), a key twice in one request, a field of the list
+without its request (or a request of a field the list does not name), or an institution with an attribute outside
+the selection rejects the file into bronze.openalex_rejected_files (never guessed).
 """
 
 from __future__ import annotations
@@ -115,12 +115,20 @@ def requests_of(body: bytes, expected: set[str]) -> dict[str, list[Any]]:
 
 
 def items(request: str, answers: list[Any], key: str) -> tuple[list[Any], Any]:
-    """All items of one request's pages and its first page's meta; the items must add up to the meta."""
+    """All items of one request's pages and its first page's meta. Results must add up to meta.count over the pages;
+    a group_by answer is one page whose groups equal its meta.groups_count (the groups of that page) and is not
+    full (200 groups would mean a second page, which the extractor cannot read without a key)."""
     found = [i for a in answers for i in (a.get(key) or [])]
     meta = answers[0]["meta"]
-    want = meta.get("groups_count") if key == "group_by" else meta.get("count")
-    if want is not None and int(want) != len(found):
-        raise ValueError(f"{request}: {len(found)} {key} items, meta says {want}")
+    if key == "group_by":
+        if len(answers) != 1 or meta.get("groups_count") is None or int(meta["groups_count"]) != len(found):
+            raise ValueError(
+                f"{request}: {len(answers)} pages, {len(found)} groups, groups_count {meta.get('groups_count')}"
+            )
+        if len(found) >= extract.PER_PAGE:
+            raise ValueError(f"{request}: a full page of {len(found)} groups (more may exist)")
+    elif meta.get("count") is None or int(meta["count"]) != len(found):
+        raise ValueError(f"{request}: {len(found)} results, meta.count {meta.get('count')}")
     return found, meta
 
 

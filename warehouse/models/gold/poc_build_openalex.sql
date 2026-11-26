@@ -6,8 +6,8 @@
    id, label the field name} (fields do not overlap; works without a primary topic are in none, so the fields add up
    to less than all).
    Block 'institutions_pl' (silver.openalex_institution_works_by_year): per institution in Poland {institution:
-   OpenAlex id, label its name} openalex:institutions_pl:works:institution and :citations:institution by year (the
-   recent years OpenAlex lists; not additive over institutions).
+   OpenAlex id, label its name} openalex:institutions_pl:works:institution and :works:open_access:institution by
+   year (the recent years OpenAlex lists, 2010 onwards; not additive over institutions).
    The current year: kept as published at the read, status 'provisional' (the year of source_version, which is the
    read's time); past years are revised by OpenAlex too and are replaced by every read. Years after the read and
    before 1900 (the calendar's range) are not loaded. #}
@@ -44,23 +44,21 @@ works as (
 institutions as (
     select
         'institutions_pl' as block_id,
-        'openalex:institutions_pl:' || m.unit_code || ':institution' as measure_key,
-        case m.unit_code
-            when 'works' then 'Works with an author affiliated with the institution, by publication year'
-            else 'Citations received by the institution''s works, by year cited'
-        end || ' (OpenAlex; institutions in Poland)' as measure_name,
-        'institution' as measure_codes,
-        m.unit_code,
+        'openalex:institutions_pl:works' || m.suffix || ':institution' as measure_key,
+        'Works with an author affiliated with the institution' || m.label
+        || ', by publication year (OpenAlex; institutions in Poland)' as measure_name,
+        ltrim(m.suffix || ':institution', ':') as measure_codes,
+        'works' as unit_code,
         y.year as period_year,
         cast(to_json(map(['institution'], [y.institution_id])) as varchar) as breakdown_json,
         cast(to_json(map(['institution'], [i.display_name])) as varchar) as breakdown_label_json,
         false as is_total,
-        case m.unit_code when 'works' then y.works_count else y.cited_by_count end as value,
+        case m.suffix when '' then y.works_count else y.oa_works_count end as value,
         y.source_version,
         y.raw_sha256
     from {{ ref('openalex_institution_works_by_year') }} as y
     inner join {{ ref('openalex_institutions_pl') }} as i on y.institution_id = i.institution_id
-    cross join (values ('works'), ('citations')) as m (unit_code)
+    cross join (values ('', ''), (':open_access', ', open access')) as m (suffix, label)
 ),
 
 observations as (
@@ -74,13 +72,13 @@ select
     o.block_id,
     case o.block_id
         when 'works_pl' then 'OpenAlex: works with an author affiliated with an institution in Poland, annual'
-        else 'OpenAlex: works and citations per institution in Poland, annual'
+        else 'OpenAlex: works and open-access works per institution in Poland, annual'
     end as block_name,
     o.measure_key,
     o.measure_name,
     o.measure_codes,
     o.unit_code,
-    case o.unit_code when 'works' then 'works' else 'citations' end as unit_name,
+    'works' as unit_name,
     'PL' as geography_source_code,
     coalesce(g.geography_key, '_X') as geography_key,
     'A' as frequency,
