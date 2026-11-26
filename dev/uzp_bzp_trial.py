@@ -11,7 +11,9 @@ never writes a production namespace or prefix. No names, e-mails or phones are p
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import re
 import time
 
 import duckdb
@@ -79,7 +81,12 @@ def bronze_profile(con) -> dict:
             f"count(distinct object_id) from {t}",
         )[0],
         "versions_first_last": q(con, f"select min(source_version), max(source_version) from {t}")[0],
-        "dup_notice_numbers": q(con, f"select count(*) from (select notice_number from {t} group by 1 having count(*) > 1)")[0][0],
+        "dup_notice_numbers": q(
+            con,
+            f"select count(*) from (select notice_number from {t} where notice_number is not null "
+            "group by 1 having count(*) > 1)",
+        )[0][0],
+        "day_marker_rows": q(con, f"select count(*) from {t} where object_id is null")[0][0],
         "nulls": {c: n for c in cols if (n := q(con, f"select count(*) filter (where {c} is null) from {t}")[0][0])},
         "rows_with_at_sign_any_column": q(con, f"select count(*) from {t} where {personal}")[0][0],
         "subsidised_authorities_without_name": q(
@@ -102,6 +109,14 @@ def silver_checks(con) -> dict:
         "or notice_type is null or publication_date is null or entity is null or raw_sha256 is null",
         "days complete (tests/uzp_bzp_notices_days_complete.sql)": render(
             Path("warehouse/tests/uzp_bzp_notices_days_complete.sql").read_text(), {"uzp_bzp_notices": t}, {}
+        ),
+        "uzp_bzp_days: unique entity": "select entity from uzp_bzp_days group by 1 having count(*) > 1",
+        "uzp_bzp_days: not_null keys": "select 1 from uzp_bzp_days where entity is null or notice_type is null "
+        "or publication_date is null or raw_sha256 is null",
+        "uzp_bzp_days: accepted_values notice_type": "select 1 from uzp_bzp_days "
+        "where notice_type not in ('ContractNotice', 'TenderResultNotice')",
+        "uzp_bzp_days complete (tests/uzp_bzp_days_complete.sql)": render(
+            Path("warehouse/tests/uzp_bzp_days_complete.sql").read_text(), {"uzp_bzp_days": "uzp_bzp_days"}, {}
         ),
     }
     import yaml
@@ -145,7 +160,44 @@ def silver_checks(con) -> dict:
     return out
 
 
-def models(con, result: dict, gold: dict) -> None:
+def production_map() -> tuple[list, dict]:
+    """poc_map_geography as production builds it: dbt compiles the shared model (target prod, the R2 catalog attached
+    read-only in use, the build's `topics` var), then the whole compiled SQL is bound and run by DuckDB through
+    `dbt show --inline`, filtered to uzp_bzp. Nothing is written. Returns the uzp_bzp rows and a summary."""
+    import yaml
+    from dbt.cli.main import dbtRunner
+
+    topics = yaml.safe_load(Path("warehouse/warehouse.yaml").read_text(encoding="utf-8"))["topics"]
+    profiles = os.environ.get("TRIAL_PROFILES_DIR", "warehouse")  # a local test points this to a local profile
+    flags = ["--project-dir", "warehouse", "--profiles-dir", profiles, "--target", "prod"]
+    variables = {"topics": topics, **json.loads(os.environ.get("TRIAL_EXTRA_VARS", "{}"))}  # local tests only
+    flags += ["--vars", json.dumps(variables)]
+    runner = dbtRunner()
+    compiled = runner.invoke(["compile", "--select", "poc_map_geography", *flags])
+    if not compiled.success:
+        raise RuntimeError(f"dbt compile poc_map_geography failed: {compiled.exception}")
+    sql = compiled.result.results[0].node.compiled_code
+    summary = {
+        "compiled_lines": sql.count("\n") + 1,
+        "has_uzp_bzp_nuts_pl_cte": "uzp_bzp_nuts_pl as (" in sql,
+        "bare_nuts_pl_reads": len(re.findall(r"from\s+nuts_pl\b", sql)),
+    }
+    inline = (
+        "{% raw %}select source_system, source_code, geography_key from (" + sql + ") as m "
+        "where m.source_system = 'uzp_bzp'{% endraw %}"
+    )
+    shown = runner.invoke(["show", "--inline", inline, "--limit", "1000", *flags])
+    if not shown.success:
+        summary["bind_error"] = str(shown.exception or shown.result)[:1500]
+        return [], summary
+    rows = [[str(v) for v in row] for row in shown.result.results[0].agate_table.rows]
+    summary["bound_and_ran"] = True
+    summary["uzp_bzp_rows"] = len(rows)
+    summary["uzp_bzp_rows_sample"] = sorted(rows)[:3]
+    return rows, summary
+
+
+def models(con, result: dict, gold: dict, production: tuple[list, dict]) -> None:
     silver_sql = render(
         Path("warehouse/models/silver/uzp_bzp/uzp_bzp_notices.sql").read_text(), {}, {"uzp_bzp_notices": "bronze_bzp"}
     )
@@ -154,16 +206,45 @@ def models(con, result: dict, gold: dict) -> None:
         con.execute(f"create or replace table uzp_bzp_notices as {silver_sql}")
         counts.append(con.execute("select count(*) from uzp_bzp_notices").fetchone()[0])
     result["silver_rows_two_builds"] = counts
+    days_sql = render(
+        Path("warehouse/models/silver/uzp_bzp/uzp_bzp_days.sql").read_text(), {}, {"uzp_bzp_notices": "bronze_bzp"}
+    )
+    days = []
+    for _ in (1, 2):
+        con.execute(f"create or replace table uzp_bzp_days as {days_sql}")
+        days.append(con.execute("select count(*) from uzp_bzp_days").fetchone()[0])
+    result["days_rows_two_builds"] = days
+    result["days_zero_notices"] = q(
+        con, "select strftime(publication_date, '%Y-%m-%d'), notice_type from uzp_bzp_days where notices = 0 order by 1"
+    )
     result.update(silver_checks(con))
-    gmap = render("with nuts_pl as ({{ poc_nuts_pl() }}), {{ poc_geography__uzp_bzp() }} select * from uzp_bzp", {}, {})
-    con.execute(f"create or replace view gmap as {gmap}")
-    refs = {"uzp_bzp_notices": "uzp_bzp_notices", "poc_map_geography": "gmap"}
+    con.execute(
+        "create or replace table um as select * from read_csv('warehouse/seed_rows/unit_map/*.csv', "
+        "all_varchar = true, header = true, union_by_name = true)"
+    )
+    unmapped_sql = render(
+        Path("warehouse/tests/uzp_bzp_currency_unmapped.sql").read_text(),
+        {"uzp_bzp_notices": "uzp_bzp_notices", "unit_map": "um"},
+        {},
+    )
+    gold["currency_unmapped_warn_rows"] = q(con, unmapped_sql)
+    map_rows, gold["production_map"] = production
+    con.execute("create or replace table gmap (source_system varchar, source_code varchar, geography_key varchar)")
+    if map_rows:
+        con.executemany("insert into gmap values (?, ?, ?)", map_rows)
+    refs = {
+        "uzp_bzp_notices": "uzp_bzp_notices",
+        "uzp_bzp_days": "uzp_bzp_days",
+        "poc_map_geography": "gmap",
+        "unit_map": "um",
+    }
     build_sql = render(Path("warehouse/models/gold/poc_build_uzp_bzp.sql").read_text(), refs, {})
     rows = []
     for _ in (1, 2):
         con.execute(f"create or replace table build as {build_sql}")
         rows.append(con.execute("select count(*) from build").fetchone()[0])
     gold["gold_rows_two_builds"] = rows
+    gold["complete_months"] = [r[0] for r in q(con, "select distinct strftime(date_key, '%Y-%m') from build order by 1")]
     gold["gold_dup_series_date"] = q(
         con,
         "select count(*) from (select measure_key || '|' || geography_key || '|' || breakdown_json as sk, date_key "
@@ -239,6 +320,10 @@ def trial() -> int:
     bronze.annotate = collect
     landing.annotate = collect
     result: dict = {}
+    production = production_map()  # first: a map that does not bind fails the trial before any download
+    note("uzp_bzp trial production poc_map_geography", production[1], "notice" if production[0] else "error")
+    if not production[0]:
+        return 1
     last = landing.last_day()
     started = time.monotonic()
     result["landing_exit"] = [landing.extract(300, landing_root=SCRATCH, last=last) for _ in (1, 2)]
@@ -281,18 +366,21 @@ def trial() -> int:
     note("uzp_bzp trial Bronze (scratch)", result_b)
     result_s: dict = {}
     gold: dict = {}
-    models(con, result_s, gold)
-    tests_keys = ("silver_rows_two_builds", "silver_tests_failing_rows", "range_rows_days", "per_type", "contract_value",
-                  "contract_value_columns", "currencies", "estimated_value", "parts_concluded_cancelled")
+    models(con, result_s, gold, production)
+    tests_keys = ("silver_rows_two_builds", "days_rows_two_builds", "days_zero_notices", "silver_tests_failing_rows",
+                  "range_rows_days", "per_type", "contract_value", "contract_value_columns", "currencies",
+                  "estimated_value", "parts_concluded_cancelled")
     note("uzp_bzp trial Silver tests (local DuckDB over scratch Bronze)", {k: result_s[k] for k in tests_keys})
     note("uzp_bzp trial Silver profile", {k: v for k, v in result_s.items() if k not in tests_keys})
     gold["api_stats_2026_10"] = stats_month("2026-10-01", "2026-10-31")
-    grain_keys = ("gold_rows_two_builds", "gold_dup_series_date", "build_check", "unmatched_codes",
-                  "null_nan_or_negative", "entity_rows_two_builds", "entity_distinct_nulldate_geo")
+    grain_keys = ("production_map", "gold_rows_two_builds", "complete_months", "gold_dup_series_date", "build_check",
+                  "unmatched_codes", "null_nan_or_negative", "currency_unmapped_warn_rows", "entity_rows_two_builds",
+                  "entity_distinct_nulldate_geo")
     note("uzp_bzp trial Gold grain (build stage, entity table)", {k: gold[k] for k in grain_keys})
     note("uzp_bzp trial Gold spot values (Poland)", {k: v for k, v in gold.items() if k not in grain_keys})
     failing = sum(result_s["silver_tests_failing_rows"].values())
-    bad = failing or gold["gold_dup_series_date"] or result["verify_exit"]
+    map_ok = gold["production_map"].get("uzp_bzp_rows") == 17
+    bad = failing or gold["gold_dup_series_date"] or result["verify_exit"] or not map_ok
     return 1 if bad or any(result["landing_exit"]) or any(result_b["bronze_exit"]) else 0
 
 
