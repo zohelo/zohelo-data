@@ -218,16 +218,11 @@ def models(con, result: dict, gold: dict, production: tuple[list, dict]) -> None
         con, "select strftime(publication_date, '%Y-%m-%d'), notice_type from uzp_bzp_days where notices = 0 order by 1"
     )
     result.update(silver_checks(con))
-    con.execute(
-        "create or replace table um as select * from read_csv('warehouse/seed_rows/unit_map/*.csv', "
-        "all_varchar = true, header = true, union_by_name = true)"
-    )
-    unmapped_sql = render(
-        Path("warehouse/tests/uzp_bzp_currency_unmapped.sql").read_text(),
-        {"uzp_bzp_notices": "uzp_bzp_notices", "unit_map": "um"},
-        {},
-    )
-    gold["currency_unmapped_warn_rows"] = q(con, unmapped_sql)
+    for table, folder in (("um", "unit_map"), ("u", "unit")):
+        con.execute(
+            f"create or replace table {table} as select * from read_csv('warehouse/seed_rows/{folder}/*.csv', "
+            "all_varchar = true, header = true, union_by_name = true)"
+        )
     map_rows, gold["production_map"] = production
     con.execute("create or replace table gmap (source_system varchar, source_code varchar, geography_key varchar)")
     if map_rows:
@@ -236,7 +231,9 @@ def models(con, result: dict, gold: dict, production: tuple[list, dict]) -> None
         "uzp_bzp_notices": "uzp_bzp_notices",
         "uzp_bzp_days": "uzp_bzp_days",
         "poc_map_geography": "gmap",
+        "poc_build_uzp_bzp": "build",
         "unit_map": "um",
+        "unit": "u",
     }
     build_sql = render(Path("warehouse/models/gold/poc_build_uzp_bzp.sql").read_text(), refs, {})
     rows = []
@@ -244,6 +241,33 @@ def models(con, result: dict, gold: dict, production: tuple[list, dict]) -> None
         con.execute(f"create or replace table build as {build_sql}")
         rows.append(con.execute("select count(*) from build").fetchone()[0])
     gold["gold_rows_two_builds"] = rows
+    gold["test_uzp_bzp_unit_unmapped_rows"] = q(
+        con, render(Path("warehouse/tests/uzp_bzp_unit_unmapped.sql").read_text(), refs, {})
+    )
+    gold["test_uzp_bzp_build_months_complete_rows"] = q(
+        con, render(Path("warehouse/tests/uzp_bzp_build_months_complete.sql").read_text(), refs, {})
+    )
+    gold["months_excluded_landed_days_contract_result_of"] = q(
+        con,
+        "select strftime(n.m, '%Y-%m'), "
+        "(select count(*) from uzp_bzp_days d where d.notice_type = 'ContractNotice' "
+        "and date_trunc('month', d.publication_date) = n.m), "
+        "(select count(*) from uzp_bzp_days d where d.notice_type = 'TenderResultNotice' "
+        "and date_trunc('month', d.publication_date) = n.m), day(last_day(n.m)) "
+        "from (select distinct date_trunc('month', publication_date) as m from uzp_bzp_notices) n "
+        "where n.m not in (select date_key from build) order by 1",
+    )
+    # simulation: one landed day (2026-10-15, contract notices) taken away must keep October out of the build
+    con.execute(
+        "create or replace table days_sim as select * from uzp_bzp_days "
+        "where not (publication_date = date '2026-10-15' and notice_type = 'ContractNotice')"
+    )
+    sim_sql = render(
+        Path("warehouse/models/gold/poc_build_uzp_bzp.sql").read_text(), {**refs, "uzp_bzp_days": "days_sim"}, {}
+    )
+    gold["sim_missing_day_2026_10_15_months"] = [
+        r[0] for r in q(con, f"select distinct strftime(date_key, '%Y-%m') from ({sim_sql}) order by 1")
+    ]
     gold["complete_months"] = [r[0] for r in q(con, "select distinct strftime(date_key, '%Y-%m') from build order by 1")]
     gold["gold_dup_series_date"] = q(
         con,
@@ -374,13 +398,16 @@ def trial() -> int:
     note("uzp_bzp trial Silver profile", {k: v for k, v in result_s.items() if k not in tests_keys})
     gold["api_stats_2026_10"] = stats_month("2026-10-01", "2026-10-31")
     grain_keys = ("production_map", "gold_rows_two_builds", "complete_months", "gold_dup_series_date", "build_check",
-                  "unmatched_codes", "null_nan_or_negative", "currency_unmapped_warn_rows", "entity_rows_two_builds",
-                  "entity_distinct_nulldate_geo")
+                  "unmatched_codes", "null_nan_or_negative", "test_uzp_bzp_unit_unmapped_rows",
+                  "test_uzp_bzp_build_months_complete_rows", "months_excluded_landed_days_contract_result_of",
+                  "sim_missing_day_2026_10_15_months", "entity_rows_two_builds", "entity_distinct_nulldate_geo")
     note("uzp_bzp trial Gold grain (build stage, entity table)", {k: gold[k] for k in grain_keys})
     note("uzp_bzp trial Gold spot values (Poland)", {k: v for k, v in gold.items() if k not in grain_keys})
     failing = sum(result_s["silver_tests_failing_rows"].values())
     map_ok = gold["production_map"].get("uzp_bzp_rows") == 17
-    bad = failing or gold["gold_dup_series_date"] or result["verify_exit"] or not map_ok
+    sim_ok = "2026-10" in gold["complete_months"] and "2026-10" not in gold["sim_missing_day_2026_10_15_months"]
+    bad = failing or gold["gold_dup_series_date"] or result["verify_exit"] or not map_ok or not sim_ok
+    bad = bad or gold["test_uzp_bzp_build_months_complete_rows"] or gold["unmatched_codes"]
     return 1 if bad or any(result["landing_exit"]) or any(result_b["bronze_exit"]) else 0
 
 
