@@ -15,7 +15,7 @@ import requests
 from ingestion.common.report import annotate
 
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-API = "https://overpass-api.de/api"
+API = "https://overpass.private.coffee/api"
 FEATURES = (
     [("amenity", None), ("building", None), ("shop", None), ("tourism", None), ("leisure", None), ("office", None),
      ("craft", None), ("healthcare", None)]
@@ -53,13 +53,12 @@ def query(terc: str) -> str:
 
 def main(argv) -> int:
     pages = {}
-    for url in ["https://download.geofabrik.de/robots.txt", "https://download.geofabrik.de/europe/poland.html",
-                "https://overpass-api.de/", "https://overpass-api.de/robots.txt", f"{API}/status",
-                "https://dev.overpass-api.de/overpass-doc/en/preface/commons.html",
-                "https://wiki.openstreetmap.org/wiki/Overpass_API"]:
+    for url in ["https://download.geofabrik.de/robots.txt", "https://overpass-api.de/api/status",
+                "https://overpass.private.coffee/", "https://overpass.private.coffee/robots.txt", f"{API}/status",
+                "https://private.coffee/", "https://private.coffee/terms", "https://private.coffee/legal"]:
         code, body = text(url)
         keep = body[:1500]
-        if "wiki" in url or "commons" in url:
+        if False:
             keep = " | ".join(body[max(0, m.start() - 300): m.start() + 600] for m in
                               re.finditer(r"10,000|10 000|1 GB|usage policy|heavy", body))[:2500]
         pages[url] = [code, keep]
@@ -73,7 +72,7 @@ def main(argv) -> int:
              for e in r.json().get("elements", [])] if r.status_code == 200 else r.text[:500]
     annotate("notice", "osm overpass areas", {"http": r.status_code, "areas": areas, "osm3s": r.json().get("osm3s") if r.status_code == 200 else None})
     print(json.dumps(areas, ensure_ascii=False), flush=True)
-    for terc in argv or ["16", "14"]:
+    for terc in argv or ["16"]:
         time.sleep(10)
         code, status = text(f"{API}/status")
         t = time.monotonic()
