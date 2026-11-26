@@ -177,9 +177,11 @@ def trial(cat) -> None:
     from pyiceberg.expressions import EqualTo
 
     con.register("prg_a", cat.load_table(("silver", "prg_units")).scan(
-        row_filter=EqualTo("unit_level", "wojewodztwo"),
+        row_filter=EqualTo("unit_level", "gmina"),
         selected_fields=("unit_level", "teryt_code", "geometry_wkb")).to_arrow())
     con.execute("create table prg_t as select * from prg_a")
+    con.execute("create table prg_g as select teryt_code, g as geom, st_xmin(g) x0, st_xmax(g) x1, st_ymin(g) y0, "
+                "st_ymax(g) y1 from (select teryt_code, st_geomfromwkb(geometry_wkb) g from prg_t)")
     cte = Environment().from_string(MACROS + "{{ poc_geography__pig_midas() }}").render()
     con.execute(f"create table map_t as with geo as (select * from geo), {cte} select * from pig_midas")
     gold_sql = render("warehouse/models/gold/poc_build_pig_midas.sql", {
@@ -195,7 +197,7 @@ def trial(cat) -> None:
     series = ("measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || "
               "coalesce(geography_source_code, '') else '' end || '|' || breakdown_json")
     note("midas gold build_pig_midas", {
-        "rows_two_builds": gold_rows, "join_ops": ops, "prg_voivodeships": one(con, "select count(*) from prg_t"),
+        "rows_two_builds": gold_rows, "join_ops": ops, "prg_gminas": one(con, "select count(*) from prg_t"),
         "map_rows": one(con, "select count(*) from map_t"),
         "dup_series_x_date": one(con, f"select count(*) from (select {series}, date_key from gold_t group by all "
                                       "having count(*) > 1)"),
@@ -221,8 +223,9 @@ def trial(cat) -> None:
                                   "not is_total order by value desc limit 6"),
         "deposit_contours_outside_voivodeships": q(con, "select count(*), round(min(point_lat), 2), "
                                                         "round(max(point_lat), 2) from pig_midas_deposits d where "
-                                                        "layer = 'deposits' and not exists (select 1 from prg_t v where "
-                                                        "st_contains(st_geomfromwkb(v.geometry_wkb), "
+                                                        "layer = 'deposits' and not exists (select 1 from prg_g v where "
+                                                        "d.point_lon between v.x0 and v.x1 and d.point_lat between "
+                                                        "v.y0 and v.y1 and st_contains(v.geom, "
                                                         "st_point(d.point_lon, d.point_lat)))"),
         "spot_deposit_324": q(con, "select layer, deposit_number, deposit_name, mineral_code, point_lon, point_lat, "
                                    "shape_area_m2 from pig_midas_deposits where deposit_number = 324")})
