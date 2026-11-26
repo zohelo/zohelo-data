@@ -1,3 +1,2 @@
 unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-mw,MW,megawatts (mean power),megawaty (moc średnia),true,mw,1
 pln_per_mwh,zł/MWh,PLN per megawatt-hour,zł za megawatogodzinę,true,pln_per_mwh,1
