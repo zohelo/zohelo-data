@@ -73,7 +73,7 @@ entities (DBW: the files of one block), or, for a source whose Silver is a dbt t
 itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
-UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB and UNCTAD so far) declares them in the
+UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, and World Bank Findex, ICP and WGI so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
 build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
 builds them all, so they share one stage). The block's Silver files are the
@@ -218,6 +218,16 @@ one. It is retried when its recipe changes.
   `1995M01`). Economies through the curated map (EU27 members, 3412 European Union (2020 …), 0000 World);
   the other UNCTAD economies and groups stay `_X` with their code; commodity prices and the port liner
   shipping connectivity index have no economy (`_Z`; the port is a dimension of the measure).
+- **World Bank Findex.** `world_bank_findex:findex_observations:_Z:<indicator>@A`: an indicator code is one
+  measure whole; the population group is the breakdown as published (`{"group": …, "group_value": …}`, group
+  `all` = is_total), so the shares for women and for men are two series. Unit: a share of the population group,
+  0-1, as published (the curated code "share of population age 15+" holds for group `all` only).
+- **World Bank ICP.** `world_bank_icp:icp_observations:<classification>:<series>@A`: the classification (CN,
+  PPPGlob, PCAP.PP, PX.WL …) is measure and unit at once, the series the expenditure category, as in the curated
+  stage; no breakdowns.
+- **World Bank WGI.** `world_bank_wgi:wgi_observations:_Z:<indicator code>@A`, as WDI: every `GOV_WGI_<dimension>.<x>`
+  code (estimate, score and its bounds, standard error, number of sources) is one measure; unit the metadata
+  field as published, else `as named`.
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -269,6 +279,10 @@ rule-based build stages apply the rules the curated stages already apply:
   a missing-value reason and a value footnoted as a forecast or projection are not loaded; footnotes give
   `estimated` (estimate, nowcast), `break` and `provisional` (provisional, preliminary), other footnotes are
   notes and the value is `ok`, as in the curated stage.
+- World Bank Findex, ICP and WGI: a cell without a number (empty, `NA`, `..`: no value in Silver) is not loaded,
+  nor a value that is not a finite number, nor a year after the year of the version (a projection; none of the
+  three publishes one). Findex and WGI publish no flags (`ok`). ICP surveys the benchmark years 2017 and 2021;
+  every other year of ICP 2021 is filled between and around them and has status `estimated`, never `ok`.
 - FAOSTAT: a cell flagged `M` (missing value) is not loaded whatever number it carries; a projection (a year
   after the year of the file's version) is not loaded; flags E and I `estimated`, B `break`, P `provisional`, A
   and X `ok`, any other flag `flagged`. World Bank IDS: a year after the last actual year (the newest year of

@@ -365,6 +365,29 @@ SOURCES.update(
         )
     }
 )
+# World Bank Findex, ICP and WGI: one Silver dbt table each, every series by rule (economy codes as WDI); the
+# curated build_findex, build_icp and build_wgi stay the KPI layer. WGI names its indicators in wgi_indicators.
+SOURCES.update(
+    {
+        source: {
+            "tables": {table: (("silver", table), f"gold_{source}_build")},
+            "lookups": _area_map(source),
+            "keyed_by": ("geo_map",),
+        }
+        for source, table in (
+            ("world_bank_findex", "findex_observations"),
+            ("world_bank_icp", "icp_observations"),
+        )
+    }
+)
+SOURCES["world_bank_wgi"] = {
+    "tables": {"wgi_observations": (("silver", "wgi_observations"), "gold_world_bank_wgi_build")},
+    "lookups": {
+        **_area_map("world_bank_wgi"),
+        "indicators": ("silver", "wgi_indicators", ("indicator_code", "indicator_name", "unit_of_measure"), None),
+    },
+    "keyed_by": ("geo_map",),
+}
 SOURCES["undata"] = {
     "tables": {"undata_syb_values": (("silver", "undata_syb_values"), "gold_undata_build")},
     "lookups": {
