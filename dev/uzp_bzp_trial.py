@@ -62,7 +62,17 @@ def bronze_profile(con) -> dict:
     cols = [r[0] for r in con.execute(f"describe {t}").fetchall()]
     text_cols = [c for c in cols if c not in ("stats_count", "source_row_number", "ingested_at")]
     personal = " or ".join(f"coalesce({c}, '') like '%@%'" for c in text_cols)
+    at_by_column = {
+        c: n for c in text_cols if (n := q(con, f"select count(*) from {t} where coalesce({c}, '') like '%@%'")[0][0])
+    }
+    marks = {
+        c: n
+        for c in ("order_object", "organization_name", "organization_city")
+        if (n := q(con, f"select count(*) from {t} where coalesce({c}, '') like '%[e-mail]%'")[0][0])
+    }
     return {
+        "rows_with_at_sign_by_column": at_by_column,
+        "rows_with_email_mark_by_column": marks,
         "rows_files_entities_notices": q(
             con,
             f"select count(*), count(distinct raw_sha256), count(distinct entity), count(distinct notice_number), "
@@ -173,10 +183,15 @@ def models(con, result: dict, gold: dict) -> None:
         "where geography_key = 'PL' and measure_key = 'uzp_bzp:notices:notices' order by 1, 2",
         40,
     )
-    gold["pl_contract_value_by_month_mln"] = q(
+    gold["pl_pln_contract_value_by_month_mln"] = q(
         con,
         "select strftime(date_key, '%Y-%m'), round(value / 1e6, 1) from build where geography_key = 'PL' "
-        "and measure_key like '%contract_value' order by 1",
+        "and measure_key = 'uzp_bzp:notices:PLN:contract_value' order by 1",
+    )
+    gold["largest_pln_contract_values_mln"] = q(
+        con,
+        "select strftime(publication_date, '%Y-%m'), round(contract_value / 1e6, 1) from uzp_bzp_notices "
+        "where contract_value_currency = 'PLN' order by contract_value desc limit 5",
     )
     gold["voivodeships_vs_pl_2026_10"] = q(
         con,
@@ -272,9 +287,13 @@ def trial() -> int:
     note("uzp_bzp trial Silver tests (local DuckDB over scratch Bronze)", {k: result_s[k] for k in tests_keys})
     note("uzp_bzp trial Silver profile", {k: v for k, v in result_s.items() if k not in tests_keys})
     gold["api_stats_2026_10"] = stats_month("2026-10-01", "2026-10-31")
-    note("uzp_bzp trial Gold (build stage, entity table)", gold)
+    grain_keys = ("gold_rows_two_builds", "gold_dup_series_date", "build_check", "unmatched_codes",
+                  "null_nan_or_negative", "entity_rows_two_builds", "entity_distinct_nulldate_geo")
+    note("uzp_bzp trial Gold grain (build stage, entity table)", {k: gold[k] for k in grain_keys})
+    note("uzp_bzp trial Gold spot values (Poland)", {k: v for k, v in gold.items() if k not in grain_keys})
     failing = sum(result_s["silver_tests_failing_rows"].values())
-    return 1 if failing or gold["gold_dup_series_date"] or 1 in result["landing_exit"] else 0
+    bad = failing or gold["gold_dup_series_date"] or result["verify_exit"]
+    return 1 if bad or any(result["landing_exit"]) or any(result_b["bronze_exit"]) else 0
 
 
 def cleanup() -> None:
