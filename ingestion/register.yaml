@@ -4681,7 +4681,8 @@ sources:
   name: Supervised-entity registers and search
   short_name: KNF supervised entities
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_entities
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -4707,8 +4708,18 @@ sources:
       robots.txt (HTTP 404), except ewidencjaakcji.knf.gov.pl and rejestracjaakcji.knf.gov.pl ("Disallow: /", not
       read).'
   licence:
-    status: unresolved
-    notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read from a GitHub runner,
+    status: open-conditional
+    notes: 'Terms (route 1, the built source knf_entities): the "Legal Notice" footer link of registers.esma.europa.eu
+      leads to https://registers.esma.europa.eu/publication/legalNoticePage, the registers site''s own ESMA legal notice
+      (read from a GitHub runner, Dev probe 45811335888, 26 Nov 2026): "Reproduction of all information on this site
+      (REGISTERS information) is authorised except as otherwise stated, provided the source is acknowledged and: where
+      the original REGISTERS information is incorporated in documents that are sold (regardless of the medium), the
+      publisher must inform buyers that it may be obtained free of charge through the REGISTERS; if the REGISTERS
+      information is transformed by the user (e.g. by seasonal adjustment of statistical data, calculation of growth
+      rates) and republished this must be stated explicitly"; documents showing it must not imply ESMA endorsement or
+      present false or misleading information. Commercial reuse allowed (sold documents named), modification allowed
+      if stated; no named licence, so open-conditional (licence key esma_registers_notice). Route 2 (KNF pages) stays
+      unresolved: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read from a GitHub runner,
       12 Nov 2026): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z
       linkiem do serwisu www.knf.gov.pl." No licence is named and the notice grants no reuse: commercial reuse not
       stated, modification not stated, so the terms are unresolved (as for PLG-017). Disclaimer: the UKNF "nie ponosi
@@ -4720,9 +4731,8 @@ sources:
       (regardless of the medium), the publisher must inform buyers that it may be obtained free of charge through ESMA
       website; if the original material is transformed by the user (e.g. by making a summary of it or by translating
       it) and republished, this must be stated explicitly through the following disclaimer: ‘This document has been
-      drafted using material downloaded from ESMA’s website’". That notice is on www.esma.europa.eu; the registers
-      site registers.esma.europa.eu shows only a "Legal Notice" footer link whose target was not read, so the status
-      stays unresolved for both routes and the source is internal. Some KNF registers name natural persons (agents,
+      drafted using material downloaded from ESMA’s website’"; that notice is on www.esma.europa.eu, the registers
+      site has its own (above), which decides route 1. Some KNF registers name natural persons (agents,
       advisers, brokers, actuaries): personal data, not loaded.'
   updates: 'Continuous: entries change with KNF decisions; no change feed or release calendar. ESMA entries carry
     ae_lastUpdate per entity. Dated KNF pages show "Data aktualizacji" (for example 16 May 2026, 14 July 2026).'
@@ -4776,8 +4786,8 @@ sources:
       (banks, cooperative banks, credit unions, insurers, pension societies, brokerage houses, fund companies), never
       the pages that list natural persons (investment advisers, brokers, actuaries, agents who are natural persons)
       and never the register applications?'
-    - 'Build task, not a review blocker: re-read the Legal Notice link in the footer of registers.esma.europa.eu; if
-      it leads to the ESMA legal notice quoted in licence.notes, the ESMA route becomes open-conditional.'
+    - 'Build task done (#2994): the Legal Notice link in the footer of registers.esma.europa.eu leads to the registers
+      site''s own ESMA legal notice (quoted in licence.notes); the ESMA route is open-conditional.'
     - 'Lead for a separate entry, not read: KNF''s investment-fund API https://wybieramfundusze-api.knf.gov.pl (its
       robots.txt names documentation.html and terms.pdf).'
     - 'Not analysed: the register entries themselves and the regulations of the register sites; the pages that list
