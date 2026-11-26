@@ -17,7 +17,7 @@ Bronze table (the names travel in the data receipts and Bronze rows) and is arch
 
 - Bronze `bronze.nfz_ra_monthly_provisions`: one row per record, number text as published, the selection from
   the receipt, `meta_count` and page. Silver `silver.nfz_ra_monthly_provisions`: grain area × ATC selection ×
-  month, HISTORY. Gold `gold.build_nfz_pharmacy_refunds`: five measures (packages; refund, donation, patient
+  month, 2017-01 to 2024-12 (Dev trial 45789409839). Gold `gold.build_nfz_pharmacy_refunds`: five measures (packages; refund, donation, patient
   payment, value in PLN) × PL and 16 voivodeships (`TERC:02`…`TERC:32`) × total and 14 ATC groups, monthly.
   KPIs (draft): `nfz_pharmacy_refund`, `nfz_pharmacy_patient_payment`, `nfz_reimbursed_packages`.
 - `aggregationType` is not sent (the API's default); W, G13 and G14 only regroup package codes and gave the same

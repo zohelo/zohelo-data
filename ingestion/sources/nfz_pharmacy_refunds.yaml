@@ -31,8 +31,8 @@ bronze: [bronze.nfz_ra_monthly_provisions, bronze.nfz_pharmacy_refunds_rejected_
 silver: [silver.nfz_ra_monthly_provisions]
 gold: [gold.build_nfz_pharmacy_refunds]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  nfz_ra_monthly_provisions: {rows: 38000}  # estimate 25,500 (255 x ~100 months); measured: TRIAL
-  poc_build_nfz_pharmacy_refunds: {rows: 184000}  # estimate 122,400 (x 5 measures); measured: TRIAL
+  nfz_ra_monthly_provisions: {rows: 37000}  # measured 24,480 (255 x 96 months, Dev 45789409839)
+  poc_build_nfz_pharmacy_refunds: {rows: 182000}  # measured 121,350 (24,270 ok rows x 5 measures, Dev 45789409839)
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): 255 selections of about 100 rows (about 25,000 rows, 120,000 observations),

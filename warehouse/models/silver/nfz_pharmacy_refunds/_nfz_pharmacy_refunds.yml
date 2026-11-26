@@ -7,7 +7,7 @@ models:
       province filter, area_code PL) and the 16 voivodeships (NFZ codes 01-16), without ATC filter (atc_code _T)
       and for each of the 14 ATC main groups; the five values as published (quantity in packages, refund, donation,
       contribution_of_patient, value in PLN). Grain: area_code x atc_code x period_start (one entity <area>_<atc> per
-      area x ATC selection, newest download). History HISTORY (Dev trial TRIAL). tests/nfz_pharmacy_refunds_entities.sql
+      area x ATC selection, newest download). History 2017-01 to 2024-12, 96 months, 24,480 rows (Dev trial 45789409839). tests/nfz_pharmacy_refunds_entities.sql
       checks that every declared entity has rows, every Bronze entity yields Silver rows and each holds meta_count
       months.
     tests:
