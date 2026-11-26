@@ -197,6 +197,29 @@ def trial(cat) -> None:
                 con, "select count(*) from bronze_a where not regexp_full_match(coalesce(id_simc, ''), '[0-9]{7}')"
             ),
             "assigned_range": q(con, "select min(data_nad), max(data_nad), count(data_nad) from bronze_a"),
+            "literal_null_text": dict(
+                zip(
+                    attrs,
+                    con.execute(
+                        "select "
+                        + ", ".join(
+                            f"count(*) filter (where lower(trim({c})) in ('null', 'none', 'brak', '-'))" for c in attrs
+                        )
+                        + " from bronze_a"
+                    ).fetchone(),
+                    strict=True,
+                )
+            ),
+            "assigned_outside_1900_today": q(
+                con,
+                "select count(*), min(data_nad), max(data_nad) from bronze_a where data_nad < '1900' or "
+                "data_nad > cast(current_date as varchar)",
+            ),
+            "house_number_shapes": q(
+                con,
+                "select regexp_replace(regexp_replace(numer_porz, '[0-9]', '9', 'g'), '[^9/ -]', 'a', 'g'), count(*) "
+                "from bronze_a group by 1 order by 2 desc limit 8",
+            ),
             "gmina_type_digit": q(
                 con,
                 "select right(teryt_gmi, 1), count(distinct teryt_gmi), count(*) from bronze_a group by 1 order by 1",
@@ -214,8 +237,8 @@ def trial(cat) -> None:
             ),
             "repeated_local_id (keys, rows)": q(
                 con,
-                "select count(*), sum(n) from (select address_local_id, count(*) n from silver_a group by 1 "
-                "having count(*) > 1)",
+                "select count(*), sum(n) from (select regexp_replace(address_id, '_[0-9]{4}-[0-9]{2}-[0-9]{2}T.*$', "
+                "'') l, count(*) n from silver_a group by 1 having count(*) > 1)",
             ),
             "null_keys": dict(
                 zip(
@@ -230,8 +253,7 @@ def trial(cat) -> None:
             ),
             "nulls_other": q(
                 con,
-                "select count(*) filter (where address_local_id is null), count(*) filter (where address_version_at "
-                "is null), count(*) filter (where postal_code is null), count(*) filter (where ulic_code is null), "
+                "select count(*) filter (where address_version_at is null), count(*) filter (where postal_code is null), count(*) filter (where ulic_code is null), "
                 "count(*) filter (where simc_code is null), count(*) filter (where assigned_on is null) from silver_a",
             ),
             "xy": q(con, "select min(x_epsg2180), max(x_epsg2180), min(y_epsg2180), max(y_epsg2180) from silver_a"),
@@ -244,7 +266,7 @@ def trial(cat) -> None:
                     {"prg_address_points": "silver_a"},
                 ),
             ),
-            "types": q(con, "select column_name, data_type from (describe silver_a)"),
+            "types": q(con, "select column_name, column_type from (describe silver_a)"),
         },
     )
 
