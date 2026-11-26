@@ -11,10 +11,11 @@
      to one with it: KN holds 11 minerals), so a deposit with two minerals counts under each; the total (is_total,
      breakdown {}) counts each deposit once; a deposit with contours in two
      voivodeships counts in each, once in Poland. Removed deposits (archival layer) are left out.
-   - block mining_areas, pig_midas:mining_areas:mining_areas:current - current mining areas (layer mining_areas):
-     contours (ID_konturu); pig_midas:mining_areas:m2:legal_area - their legal area in m2 as published (Powierzchnia
-     OG), summed; an area with a contour without a legal area is not published (no partial sum). Abolished areas and
-     the mining terrains are left out. #}
+   - block mining_areas, pig_midas:mining_areas:mining_areas:current - current mining areas: contours (ID_konturu) of
+     the layer mining_areas with status 'aktualny' (a record the producer has not completed, without status, is left
+     out: 1 on 26 Nov 2026); pig_midas:mining_areas:m2:legal_area - their legal area in m2 as published (Powierzchnia
+     OG), summed; when a contour of the area has no legal area the sum covers the others and the row is flagged
+     'definition_differs' (never counted as 0). Abolished areas and the mining terrains are left out. #}
 with geo as (
     select
         source_code,
@@ -69,7 +70,7 @@ contours as (
         source_version,
         raw_sha256
     from {{ ref('pig_midas_mining_areas') }}
-    where layer = 'mining_areas'
+    where layer = 'mining_areas' and status = 'aktualny'
 ),
 
 candidates as (
@@ -123,7 +124,8 @@ counted as (
         '{}' as breakdown_json,
         cast(null as varchar) as breakdown_label_json,
         true as is_total,
-        cast(count(distinct entity_key) as double) as value
+        cast(count(distinct entity_key) as double) as value,
+        'ok' as observation_status_key
     from areas
     group by block_id, area_code
     union all
@@ -135,7 +137,8 @@ counted as (
         cast(json_object('mineral', mineral) as varchar) as breakdown_json,
         cast(null as varchar) as breakdown_label_json,
         false as is_total,
-        cast(count(distinct entity_key) as double) as value
+        cast(count(distinct entity_key) as double) as value,
+        'ok' as observation_status_key
     from areas
     where block_id = 'deposits'
     group by block_id, area_code, mineral
@@ -148,11 +151,12 @@ counted as (
         '{}' as breakdown_json,
         cast(null as varchar) as breakdown_label_json,
         true as is_total,
-        sum(legal_area_m2) as value
+        sum(legal_area_m2) as value,
+        case when count(*) > count(legal_area_m2) then 'definition_differs' else 'ok' end as observation_status_key
     from areas
     where block_id = 'mining_areas'
     group by block_id, area_code
-    having count(*) = count(legal_area_m2)
+    having count(legal_area_m2) > 0
 ),
 
 snapshot as (
@@ -192,7 +196,7 @@ select
     cast(null as varchar) as sex_code,
     c.is_total,
     c.value,
-    'ok' as observation_status_key,
+    c.observation_status_key,
     s.source_version,
     case
         when s.files > 1 then error('build_pig_midas: block ' || c.block_id || ' reads two Landing files')
