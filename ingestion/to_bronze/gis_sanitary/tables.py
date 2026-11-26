@@ -6,8 +6,8 @@ before it) with eight number cells, samples examined and the per cent disqualifi
 and for domestic, imported and EU foodstuffs. It is found and checked before a single cell is kept:
 
 - the page: its text holds the title, the header words (``HEADER``, "UE", "Rok" or "Lata") and at least two year
-  rows; exactly one page of the file may qualify (the table of contents and the table by food group have no year
-  rows);
+  rows (the table of contents and the table by food group have none); when several pages qualify their year rows
+  must be identical (2024: pages 24 and 25, Dev trial 45899904614) and the first is kept;
 - a year row: a cell ``20yy`` followed by eight cells alternating count / share (layout text, cells split at two or
   more spaces; a count is digits with single-space thousands groups, a share at most two decimals with a comma);
 - the years: unique, without gaps, the last one the edition's report year (from the entity name);
@@ -105,8 +105,11 @@ def read_report(pages: list[str], report_year: int) -> list[dict]:
         lines = [cells(line) for line in text.split("\n")]
         if sum(1 for parts in lines if year_row(parts)) >= 2:
             found.append((number, lines))
-    if len(found) != 1:
-        raise ValueError(f"table {TITLE!r}: expected on one page, found on {[n for n, _ in found]}")
+    if not found:
+        raise ValueError(f"table {TITLE!r}: no page with its title, header and year rows")
+    rows_of = [[row for parts in lines if (row := year_row(parts))] for _, lines in found]
+    if any(rows != rows_of[0] for rows in rows_of[1:]):
+        raise ValueError(f"table {TITLE!r}: different year rows on pages {[n for n, _ in found]}")
     number, lines = found[0]
     third, fourth = group_order(lines)
     columns = [(g, m) for g in ("total", "domestic", third, fourth) for m in ("samples", "disqualified_pct")]

@@ -5,9 +5,11 @@ seed list in ingestion/sources/gis_sanitary.yaml (``ssk_<year>`` / ``pis_<year>`
 on that page). Landing, receipts and versions are the shared bulk_file pattern's.
 
 landing.inspect  seed list vs Landing (bulk_file inspect), plus the page check below; no writes
-landing.extract  the files that are missing or whose Last-Modified is newer than the newest landed copy (HEAD per
-                 file first: the reports are 4 to 38 MB and almost never replaced), 5 s apart; the bulk_file load
-                 then skips unchanged bytes; plus the page check
+landing.extract  the files that are missing or whose Last-Modified (read case-insensitively from the headers of a
+                 streamed GET whose body is not read) is newer than the newest landed version, 5 s apart: the
+                 reports are 4 to 38 MB and almost never replaced; the bulk_file load then skips unchanged bytes;
+                 plus the page check. The landed version is the download time when the shared pattern finds no
+                 Last-Modified (the 26 Nov trial), which a replaced file's Last-Modified still exceeds
 landing.verify   every receipt has its file (bulk_file verify)
 
 Page check: a new edition gets a new attachment address on the same page, so the page's attachment links are
@@ -83,8 +85,9 @@ def changed_specs(landing_root: str = "01_landing") -> list[dict]:
             continue
         if n:
             time.sleep(PAUSE_SECONDS)
-        head, http = bulk_file.probe(spec["url"])
-        version = bulk_file.server_version(dict(head.headers)) if head is not None and http == "200" else None
+        head, http = bulk_file.probe(spec["url"], "get")  # headers only; HEAD gave no usable Last-Modified
+        modified = head.headers.get("Last-Modified") if head is not None and http == "200" else None
+        version = bulk_file.server_version({"Last-Modified": modified}) if modified else None
         if version is None or version > held[-1]["version_token"]:
             out.append(spec)  # no validator or a newer file: the load compares the SHA-256
     return out
