@@ -2,9 +2,9 @@
    of entity sor (bronze.gus_strateg_records, record_kind 'value'): level 0 (EU aggregates and EU countries, Poland
    100000000000) and level 2 (voivodeships, 10 + TERC voivodeship code + 00000000), by year, as published. value is the
    published text read as a number when it is one (digits, optional sign and decimal point); any other text keeps
-   value null and value_status 'not_numeric' and never becomes 0 (none in the trial of the PR); a period that is not
-   a year fails the build. The unit is the indicator's (SOR list). Grain: indicator_id x dimension_id x level_id x
-   territory_code x period_year. #}
+   value null and value_status 'not_numeric' and never becomes 0 (none of 20,869 in Dev trial 45757803813: STRATEG
+   leaves a missing value out of real_values, it prints no marker); a period that is not a year fails the build. The
+   unit is the indicator's (SOR list). Grain: indicator_id x dimension_id x level_id x territory_code x period_year. #}
 with records as (
     select *
     from {{ source('gus_strateg', 'gus_strateg_records') }}
