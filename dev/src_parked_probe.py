@@ -282,6 +282,7 @@ def dane_ds(did):
         out = {k: at.get(k) for k in ("title", "license_name", "license_condition_default_cc40", "license_condition_responsibilities", "license_condition_source", "license_condition_modification", "license_condition_cc40_responsibilities", "update_frequency", "modified")}
     r = jget(f"{api}/datasets/{did}/resources?per_page=30")
     if r:
+        print(f"=== DANE resources raw {did} {json.dumps(r, ensure_ascii=False)[:2500]}\n=== END", flush=True)
         res = []
         for x in r.get("data", [])[:30]:
             at = x.get("attributes", {})
@@ -372,12 +373,12 @@ def app_scan(url, bundles=4):
     srcs = [urllib.parse.urljoin(url, html.unescape(s)) for s in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', t)]
     srcs = [s for s in srcs if urllib.parse.urlsplit(s).netloc == host]
     hints: list[str] = []
-    for s in srcs[:bundles]:
+    for s in sorted(srcs, key=lambda x: (not re.search(r"main|app", x), x))[:bundles]:
         r = get(s, 15000000, 60)
         if "err" in r:
             continue
         b = r["body"].decode("utf-8", "replace")
-        for m in re.findall(r'["\'`](/?(?:api|rest|download|export|pobierz|files?|dane|data)[A-Za-z0-9_\-/\.{}$?=&]*)["\'`]', b):
+        for m in re.findall(r'["\'`]((?:\.\./|\./|/)?(?:api|rest|download|export|pobierz|files?|dane|data|assets)/[A-Za-z0-9_\-/\.{}$?=&]*)["\'`]', b):
             if m not in hints:
                 hints.append(m)
         for m in re.findall(r'https?://[A-Za-z0-9\.\-]+(?:/[A-Za-z0-9_\-/\.]*)?', b):
@@ -387,5 +388,38 @@ def app_scan(url, bundles=4):
     return {"scripts": [s[-60:] for s in srcs[:6]], "hints": hints[:40]}
 
 
+def two():
+    res: dict[str, object] = {}
+    res["dane_ds"] = {i: dane_ds(i) for i in ("2585", "2621", "1776", "608", "677", "1740", "175", "599")}
+    res["dane_q"] = {q: dane(q) for q in ("Centralny Rejestr Form Ochrony Przyrody", "nadleśnictw", "Barometr", "Ekonomiczne Losy Absolwentów")}
+    for u in ("https://barometrzawodow.pl/modul/prognozy-w-tabelach", "https://barometrzawodow.pl/en/module/forecasts-on-tables",
+              "https://barometrzawodow.pl/modul/publikacje?publication=national&year=2025", "https://barometrzawodow.pl/modul/prognozy-na-plakatach",
+              "https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1"):
+        got = page(u, text=20000)
+        if not got:
+            res[tag(u)[:60]] = "failed"
+            continue
+        p, ll, t = got
+        fl = [(a, x) for a, x in ll if re.search(r"(?i)\.(xlsx?|csv|zip|pdf|ods)(\?|$)|export|pobierz|download|wfs|ogc|api", a + " " + x)]
+        for a, x in fl[:60]:
+            print(f"  FILE {a} | {x}", flush=True)
+        forms = re.findall(r'(?is)<form\b[^>]*action=["\']([^"\']+)', t)[:5]
+        ajax = re.findall(r'data-ajax-url=["\']([^"\']+)', t)[:8]
+        print(f"  FORMS {forms} AJAX {ajax}", flush=True)
+        end()
+        res[tag(u)[:60]] = {"chars": len(p), "files": [f"{a[:25]}|{x[-80:]}" for a, x in fl[:8]], "forms": forms, "ajax": ajax,
+                            "wfs": around(p, r"WFS|OGC API", 60, 260, 3)}
+    res["ela_app"] = app_scan("https://ela.nauka.gov.pl/pl", 3)
+    res["ela_uczen_app"] = app_scan("https://ela-uczen.nauka.gov.pl", 3)
+    keys = list(res)
+    emit("parked2 dane datasets", res["dane_ds"])
+    emit("parked2 dane queries", res["dane_q"])
+    emit("parked2 barometr and lasy", {k: res[k] for k in keys if k not in ("dane_ds", "dane_q", "ela_app", "ela_uczen_app")})
+    emit("parked2 ela", {"ela": res["ela_app"], "uczen": res["ela_uczen_app"]})
+    emit("parked2 robots errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+
+    two() if sys.argv[1:] == ["two"] else main()
