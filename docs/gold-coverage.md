@@ -73,9 +73,10 @@ entities (DBW: the files of one block), or, for a source whose Silver is a dbt t
 itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
-UNdata and UNECE so far) declares them in the
+UNdata, UNECE and UNCTAD so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
-build stage, because two tables of one source rarely share a shape. The block's Silver files are the
+build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
+builds them all, so they share one stage). The block's Silver files are the
 table's current data files, taken from the table's file list, so the plan still reads metadata only.
 dbt writes new files whenever it rebuilds a table, so the block is rebuilt in Gold whenever the changed-only
 build rebuilt its Silver table, also when the rows came out the same (a rebuild after a change of shared
@@ -199,6 +200,13 @@ one. It is retried when its recipe changes.
 - **UNECE.** `unece:unece_observations:_Z:<table id>[:<codes>]@<freq>`: the value codes of every variable other
   than the area define the measure; frequency from the period (`1990`, `2025Q2`, `2025M07`); unit `as named`
   (the value labels). The UNECE groupings (CIS, CWG, EAEU, ECE, NA, ST7) stay `_X`.
+- **UNCTAD.** `unctad:<table>:<measure>[:<dimension codes>]@<freq>`, one block per Silver table: the measure
+  as UNCTAD names it is the unit (`US$ at current prices in millions`, a percentage, an index), and every
+  dimension other than the economy (flow, direction, category, commodity, port, vessel type) defines the
+  measure, codes joined by `.` in the table's column order; frequency from the period (`2025`, `2006Q01`,
+  `1995M01`). Economies through the curated map (EU27 members, 3412 European Union (2020 …), 0000 World);
+  the other UNCTAD economies and groups stay `_X` with their code; commodity prices and the port liner
+  shipping connectivity index have no economy (`_Z`; the port is a dimension of the measure).
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -242,7 +250,10 @@ rule-based build stages apply the rules the curated stages already apply:
   name no rate, growth, change, per cent or balance (an index, a level, an exchange rate) is a value below
   the printed precision or a cell without a value and is not loaded, as in the curated stage; a rate of 0 is
   kept. UNdata: a row footnoted as a projection is not loaded; footnotes give `definition_differs` or
-  `estimated` as in the curated stage. UNDP HDR: no flags, `ok`.
+  `estimated` as in the curated stage. UNDP HDR: no flags, `ok`. UNCTAD: a measure without a number, a value that carries
+  a missing-value reason and a value footnoted as a forecast or projection are not loaded; footnotes give
+  `estimated` (estimate, nowcast), `break` and `provisional` (provisional, preliminary), other footnotes are
+  notes and the value is `ok`, as in the curated stage.
 
 **GUS BDL geography by code.** A BDL unit id carries the TERYT code of its area, so Poland, a
 voivodeship, a powiat and a gmina are mapped by that code through the map's rows of the 7-digit
