@@ -114,16 +114,16 @@ full_rebuild:   # model: {rows: ceiling}
   poc_dim_geography: {rows: 120000}
   poc_dim_measure: {rows: 40000}
   poc_dim_observation_status: {rows: 1000}
-  poc_dim_series: {rows: 150000}  # 54,336 (10 Nov)
+  poc_dim_series: {rows: 226000}  # 150,679 (prod build 45735962376, 26 Nov); 1.5 x
   poc_dim_source: {rows: 1000}
   poc_dim_unit: {rows: 1000}
-  poc_fact_annual: {rows: 1500000, exception: "#2294"}  # 1,092,012 (10 Nov) + ~230,000 slice series (#2592); until the Gold v1 cut-over (D28)
+  poc_fact_annual: {rows: 2420000, exception: "#2294"}  # 1,612,178 (prod build 45735962376, 26 Nov); 1.5 x; until the Gold v1 cut-over (D28)
   poc_fact_daily: {rows: 800000}  # + ECB EXR (13 currencies) and EUR STR, ~95,000
   poc_fact_semiannual: {rows: 5000}  # 3,125 (Dev trial 43292078190)
   poc_fact_quarterly: {rows: 537000}  # 357,774 = 168,545 (Dev trial 43292078190) + BIS 95,479, ILOSTAT 37,642, UNECE 56,108 (Dev trial 43306220004, #2861); 1.5 x
   poc_fact_monthly: {rows: 971000}  # 647,049 = 541,532 (Dev trial 43292078190) + BIS 75,423, UNECE 30,094 (Dev trial 43306220004, #2861); 1.5 x
   poc_map_geography: {rows: 150000}
-  poc_measure_dimensions: {rows: 5000}
+  poc_measure_dimensions: {rows: 11500}  # 7,692 (prod build 45735962376, 26 Nov); 1.5 x
   kpi_dimension: {rows: 10000}
   poc_metrics_fx_rate: {rows: 600000}
   poc_metrics_exports_goods: {rows: 3000}  # 1,880 build rows of the measure (Dev trial 43100532689)
