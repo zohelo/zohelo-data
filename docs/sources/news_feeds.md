@@ -2,7 +2,7 @@
 
 **Implemented (10 Nov 2026, register TP-001…TP-008, family J; topics layer O32, [topics.md](../topics.md)).**
 One register entry per outlet; the feeds are complete small files at fixed URLs, landed whole through the
-shared `bulk_file` pattern every 3 hours (one request per feed and run; a copy is written only when the
+shared `bulk_file` pattern twice a day, loaded weekly (O46; one request per feed and run; a copy is written only when the
 SHA-256 changed). Feeds (Dev probe 42784534992): Bankier.pl `rss/wiadomosci.xml` (RSS, 50 items),
 Money.pl `rss/rss.xml` (RSS, 15 items, ~20 h), Business Insider Polska `gospodarka.feed` (RSS, 20 items,
 ~3 days; the main `/.feed` rolls over in ~3 h), Rzeczpospolita `rss/451-ekonomia` (RSS, 100 items, ~6

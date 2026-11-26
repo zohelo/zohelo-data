@@ -108,7 +108,8 @@ stages are `.github/backlog/stages.yaml`.
 
 - `extraction.schedule` in the source YAML: cron in UTC, run
   `full dataflow: landing → bronze → silver → gold → portal`, at a polite time after the
-  source's release, with the release rhythm in a comment. No faster than the source updates.
+  source's release, with the release rhythm in a comment. No faster than the source updates, and at most once a
+  week past Landing until production use (O46; a short-window source adds a `landing: extract` slot).
 - Proof is the scheduler's own runs (D18), never a manual dispatch: daily 3 runs in 7 days,
   weekly 3 in 21 days, monthly 2 in 62 days (D11). Production dispatches from a session are
   refused; do not try.

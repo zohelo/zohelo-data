@@ -1,0 +1,32 @@
+version: 2
+sources:
+- name: gios_air_quality
+  description: GIOŚ Portal Jakości Powietrza API v1 (register PL-ENV-010), ZIPs of the exact JSON-LD answers of one pass
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gios_air_quality/
+    loaded_by: ingestion/to_bronze/gios_air_quality/
+    config: ingestion/sources/gios_air_quality.yaml
+  tables:
+  - name: gios_air_stations
+    description: One row per station of the station list (station/findAll) of every daily pass, values as text; partitioned by entity (pass_<YYYYMMDD>).
+  - name: gios_air_sensors
+    description: One row per sensor of each station (station/sensors/{id}) of every daily pass, values as text.
+  - name: gios_air_measurements
+    description: >-
+      One row per sensor × hour of every daily pass (data/getData/{id}, last full hour to the third day back, local
+      time, µg/m³), value as printed or null; entity pass_<YYYYMMDD> = the UTC day of the pass.
+  - name: gios_air_quality_rejected_files
+    description: Files of gios_air_quality the Bronze decoder rejected, with the reason.
+- name: gios_air_quality_silver
+  description: >-
+    GIOŚ air quality Silver written per measurement day by ingestion/to_bronze/gios_air_quality/entities.py from
+    warehouse/entity/gios_air_hourly.sql, not by dbt (design #875).
+  database: r2
+  schema: silver
+  tables:
+  - name: gios_air_hourly
+    description: >-
+      Hourly values, grain sensor_id × measured_at (local time as published), newest pass per key, value null when
+      the API gives none, validation_status 'provisional'; entity = measurement day.

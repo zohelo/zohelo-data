@@ -888,7 +888,7 @@ def load_landing_state(r2: R2) -> dict[str, dict[str, set]]:
 def verify_landing(r2: R2, patterns: list[str]) -> dict:
     """Every receipt has its data file with the receipted size, in Landing or (once moved by
     landing.archive) in the Archive; data without receipt is listed."""
-    from ingestion.common.r2 import archive_key, archived
+    from ingestion.common.r2 import archive_key, archived, read_receipt
 
     stored = archived(r2.client, r2.landing, "eurostat")
     receipts, sizes = [], {}
@@ -904,7 +904,7 @@ def verify_landing(r2: R2, patterns: list[str]) -> dict:
                 sizes[obj["Key"]] = obj["Size"]
 
     def check(key: str) -> str:
-        receipt = json.loads(r2.client.get_object(Bucket=r2.landing, Key=key)["Body"].read())
+        receipt = json.loads(read_receipt(r2.client, r2.landing, key))
         data_key = (receipt.get("object") or {}).get("key")
         if data_key not in sizes:
             held = stored.get(str(receipt.get("sha256")))

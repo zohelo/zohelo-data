@@ -12,11 +12,15 @@ landing.extract  missing quarters, quarters whose link changed (a corrected file
 landing.verify   every receipt has its file (bulk_file pattern)
 
 The site carries Imperva Incapsula bot protection: a refusal (HTTP 401/403/429/503) or a challenge page instead of
-the listing or a PDF stops the run and is recorded; it is never retried around.
+the listing or a PDF stops the run and is recorded; it is never retried around. The page answers runners with a
+challenge at irregular times (#3162), so the schedule has several slots a month; a refused run is a warning only while
+Landing is current (``current``: the quarter after the newest held one is not yet overdue), and red otherwise
+(nothing landed yet, or a release overdue).
 """
 
 from __future__ import annotations
 
+from datetime import date
 import re
 import time
 from typing import Any
@@ -27,6 +31,7 @@ PAUSE = 4.0
 RECHECK = 2  # newest quarters downloaded again (unchanged bytes are not landed)
 ORDINALS = {"pierwszy": 1, "drugi": 2, "trzeci": 3, "czwarty": 4, "cały": 4}  # "cały rok" = the Q4 file
 REFUSED = {401, 403, 429, 503}
+OVERDUE_DAYS = 210  # a quarter is published three to six months after its end; later than this is overdue
 CHALLENGE = re.compile(rb"_Incapsula_Resource|Incapsula incident|captcha", re.IGNORECASE)
 
 
@@ -105,6 +110,31 @@ def _anchors(html: str) -> list[tuple[str, str]]:
     return [(href, " ".join(text.split())) for href, text in parser.out]
 
 
+def current(held: set[str], today: date) -> bool:
+    """True when Landing holds a quarter and the next quarter is not yet overdue (OVERDUE_DAYS after its end)."""
+    quarters = sorted(e for e in held if re.fullmatch(r"20\d\d_q[1-4]", e))
+    if not quarters:
+        return False
+    year, q = int(quarters[-1][:4]), int(quarters[-1][-1])
+    year, q = (year + 1, 1) if q == 4 else (year, q + 1)
+    end = date(year + 1, 1, 1) if q == 4 else date(year, 3 * q + 1, 1)  # the day after the next quarter ends
+    return (today - end).days < OVERDUE_DAYS
+
+
+def _refused(activity: str, detail: Any, landed: set[str]) -> int:
+    """A refusal is recorded; it fails the run unless Landing is current (see ``current``)."""
+    from ingestion.common.report import annotate
+
+    ok = current(landed, date.today())
+    newest = max(landed) if landed else None
+    annotate(
+        "warning" if ok else "error",
+        f"{SOURCE} {activity}",
+        {"refused": detail, "newest_held": newest, "landing_current": ok, "overdue_days": OVERDUE_DAYS},
+    )
+    return 0 if ok else 1
+
+
 def held(landing_root: str = "01_landing") -> dict[str, str]:
     """{entity: source URL of its newest landed copy}."""
     from ingestion.common.r2 import req, s3
@@ -146,8 +176,7 @@ def _inspect(p) -> int:
     try:
         found, unparsed = discover()
     except Refused as exc:
-        annotate("error", f"{SOURCE} landing inspect", {"refused": str(exc)})
-        return 1
+        return _refused("landing inspect", str(exc), landed)
     missing = sorted(set(found) - landed)
     summary = {"quarters_listed": len(found), "held": len(landed & set(found)), "missing": missing[:24]}
     summary.update({"newest_listed": max(found) if found else None, "links_without_quarter": unparsed[:5]})
@@ -167,8 +196,7 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
     try:
         found, unparsed = discover()
     except Refused as exc:
-        annotate("error", f"{SOURCE} landing extract", {"refused": str(exc)})
-        return 1
+        return _refused("landing extract", str(exc), held_entities(landing_root))
     todo = plan(found, held(landing_root))
     results, failed, deferred, refused = [], [], 0, None
     for n, spec in enumerate(todo):
@@ -195,8 +223,11 @@ def extract(budget_minutes: float, landing_root: str = "01_landing") -> int:
         "deferred_to_next_run": deferred,
         "links_without_quarter": unparsed[:5],
     }
-    annotate("warning" if failed or refused else "notice", f"{SOURCE} landing extract", summary)
-    return 1 if refused or (failed and not results) else 0
+    if refused:  # a PDF answered with a refusal or a challenge page
+        summary["refused"] = refused
+        return _refused("landing extract", summary, held_entities(landing_root))
+    annotate("warning" if failed else "notice", f"{SOURCE} landing extract", summary)
+    return 1 if failed and not results else 0
 
 
 def _extract(p) -> int:
