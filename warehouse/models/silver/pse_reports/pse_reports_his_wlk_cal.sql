@@ -11,7 +11,8 @@
    and period_utc as published text (the repeated autumn DST hour is marked '02a:15'), dtime_utc the UTC end,
    dtime_local the local end from dtime_utc and the offset at the start of the period, publication_ts as text beside
    the typed publication_ts_utc (the report is published at about 02:52 local, inside the repeated hour on the night of
-   the autumn switch), periods_expected the periods of the local day. Values are cast strictly: a text that is not a number fails the build. #}
+   the autumn switch), periods_expected the periods of the local day. Values are cast strictly: a text that is not a
+   number fails the build. #}
 with bronze as (
     select
         *,
