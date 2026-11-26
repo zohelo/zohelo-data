@@ -698,7 +698,81 @@ def three():
     emit("fix3268c errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
 
 
+def gios4():
+    out = {}
+    api = "https://wody.gios.gov.pl/pjwp/api"
+    files = []
+    for pid in ("367", "88", "87", "107", "108"):
+        r = get(f"{api}/publications/publication/{pid}", 3000000, 60)
+        if "err" in r:
+            out[pid] = r["err"]
+            continue
+        body = r["body"].decode("utf-8", "replace")
+        try:
+            content = json.loads(body).get("content") or ""
+        except ValueError:
+            content = body
+        hrefs = re.findall(r'href=["\']([^"\']+)', content)
+        print(f"=== GIOS publication {pid} bytes={len(body)} hrefs={len(hrefs)}\n" + "\n".join(hrefs[:150]) + f"\nTEXT {plain(content)[:3000]}\n=== END", flush=True)
+        fl = [h for h in hrefs if re.search(r"(?i)files/download|\.(xlsx?|csv|zip)", h)]
+        out[pid] = {"bytes": len(body), "hrefs": len(hrefs), "files": len(fl), "sample": [h[-70:] for h in fl[:4]]}
+        files += [urllib.parse.urljoin("https://wody.gios.gov.pl/pjwp/", h) for h in fl]
+    heads = []
+    for u in files[:3]:
+        r = get(u, 300000, 90)
+        heads.append({"u": u[-80:], **{k: r.get(k) for k in ("st", "ct", "len", "cd", "lm", "err") if r.get(k)},
+                      "magic": r["body"][:4].hex() if "body" in r else None})
+    out["file_gets"] = heads
+    out["n_files"] = len(files)
+    base = "https://wody.gios.gov.pl/arcgis/rest/services/PJWP"
+    for svc in ("Ocena_stanu_JCWP_rzeczne_2019_2024", "Wyniki_pomiarow_chemicznych_i_fizykochemicznych_2025", "Siec_PPK"):
+        m = jget(f"{base}/{svc}/MapServer?f=json")
+        if not m:
+            out[svc] = "failed"
+            continue
+        layers = [(x.get("id"), x.get("name")) for x in m.get("layers", [])]
+        o = {"caps": m.get("capabilities"), "layers": layers[:12], "max": m.get("maxRecordCount")}
+        if layers:
+            lid = layers[0][0]
+            lm = jget(f"{base}/{svc}/MapServer/{lid}?f=json") or {}
+            o["fields"] = [x.get("name") for x in lm.get("fields", [])][:40]
+            o["count"] = (jget(f"{base}/{svc}/MapServer/{lid}/query?where=1%3D1&returnCountOnly=true&f=json") or {}).get("count")
+            rawget(f"{base}/{svc}/MapServer/{lid}/query?where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=2&f=json", 300000, 2500)
+        out[svc] = o
+    return out
+
+
+def ela4():
+    base = "https://ela.nauka.gov.pl/"
+    got = page(base + "pl", text=100)
+    if not got:
+        return {"err": "failed"}
+    srcs = [urllib.parse.urljoin(base, s) for s in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', got[2])]
+    rt = [s for s in srcs if "runtime-es2015" in s]
+    texts = [bundle(u) for u in chunks_classic(base, bundle(rt[0]))[:40]] if rt else []
+    allt = "\n".join(texts)
+    consts = sorted(set(re.findall(r'([A-Z_]*API_URL)\s*=\s*["\'`]([^"\'`]{1,100})', allt)))
+    consts += sorted(set(re.findall(r'(\w+(?:Url|URL|Path))\s*[:=]\s*["\'`]([a-z][\w/\-]{2,80})["\'`]', allt)))[:40]
+    print(f"=== ELA consts {consts}\n=== END", flush=True)
+    contexts(allt, "ela4", ["FILTER_API_URL", "retrieve(this."], 300, 500, 4)
+    tried = {}
+    for name, val in consts[:12]:
+        if "/" in val or re.match(r"^[a-z][\w\-]+$", val):
+            u = base + "sla-server/v6.0/" + val.lstrip("/") + ("&" if "?" in val else "?") + "lang=pl"
+            r = rawget(u, 300000, 1500)
+            tried[u] = {k: r.get(k) for k in ("st", "ct", "len", "err") if r.get(k)}
+    return {"consts": consts[:20], "tried": tried}
+
+
+def four():
+    res = {"gios": gios4()}
+    emit("fix3268d PL-ENV-011 gios", res["gios"])
+    res["ela"] = ela4()
+    emit("fix3268d PLS-024 ela", res["ela"])
+    emit("fix3268d errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
+
+
 if __name__ == "__main__":
     import sys
 
-    {"one": one, "two": two, "three": three}.get((sys.argv[1:] or ["one"])[0], one)()
+    {"one": one, "two": two, "three": three, "four": four}.get((sys.argv[1:] or ["one"])[0], one)()
