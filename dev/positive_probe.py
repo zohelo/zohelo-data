@@ -41,49 +41,41 @@ def _show(title: str, sql: str, limit: int = 500) -> list[dict] | None:
 
 
 def main() -> int:
-    done = _dbt(["compile", "--select", "metrics_value_range"])
-    files = list((PROJECT / "target" / "compiled").rglob("metrics_value_range.sql"))
-    if done.returncode or not files:
-        annotate("error", "compile failed", {"rc": done.returncode, "out": (done.stdout + done.stderr)[-1500:]})
-        return 1
-    sql = files[0].read_text()
-    positive = ", ".join(f"'{c}'" for c in POSITIVE)
-    new_rule = (
-        f"(t.value <= 0 and t.concept_key in ({positive})) and not "
-        "(t.value < t.value_min or t.value > t.value_max or t.value_min is null)"
+    # The positive KPIs are read straight from their metrics tables (some metrics models of other KPIs are not
+    # built on production yet, so the compiled test as a whole cannot run there).
+    union = " union all ".join(
+        f"select concept_key, source_system, measure_key, geography_key, date_key, value from r2.gold.metrics_{c}"
+        for c in POSITIVE
     )
     grouped = (
-        "select t.concept_key, t.source_system, t.measure_key, count(*) as n, min(t.value) as min_value, "
-        "max(t.value) as max_value, min(t.date_key) as first_date, max(t.date_key) as last_date, "
-        "count(distinct t.geography_key) as areas, string_agg(distinct cast(t.geography_key as varchar), ' ') as geo "
-        f"from ({sql}) as t where {{cond}} group by all order by n desc"
+        "select concept_key, source_system, measure_key, count(*) filter (where value <= 0) as n, "
+        "count(*) filter (where value = 0) as zeros, count(*) as rows_total, min(value) as min_value, "
+        "min(date_key) filter (where value <= 0) as first_date, max(date_key) filter (where value <= 0) as last_date, "
+        "string_agg(distinct cast(geography_key as varchar), ' ') filter (where value <= 0) as geo "
+        f"from ({union}) as t group by all order by n desc, 1, 2, 3"
     )
-    rows = _show("1 new rule", grouped.format(cond=new_rule))
-    if rows is not None:
-        for r in rows:
-            r["geo"] = (r.get("geo") or "")[:200]
-        annotate(
-            "warning" if rows else "notice",
-            "1 values <= 0 of positive KPIs on production Gold (fail only by the new rule)",
-            {"groups": len(rows), "rows": sum(r["n"] for r in rows), "first": rows[:12]},
-        )
+    rows = _show("1 values <= 0", grouped)
+    if rows is None:
+        return 1
+    bad = [r for r in rows if r["n"]]
+    for r in bad:
+        r["geo"] = (r.get("geo") or "")[:200]
+    annotate(
+        "warning" if bad else "notice",
+        "1 values <= 0 of positive KPIs on production Gold",
+        {"groups": len(rows), "rows": sum(r["rows_total"] for r in rows), "bad_groups": len(bad),
+         "bad_rows": sum(r["n"] for r in bad), "bad": bad[:15]},
+    )
+    annotate("notice", "1a groups read", [[r["concept_key"], r["source_system"], r["measure_key"], r["rows_total"]]
+                                           for r in rows][:60])
+    if bad:
         examples = _show(
             "1b examples",
-            f"select t.concept_key, t.source_system, t.measure_key, t.geography_key, t.date_key, t.value from ({sql}) "
-            f"as t where {new_rule} order by 1, 2, 3, 5 limit 40",
+            f"select * from ({union}) as t where value <= 0 order by 1, 2, 3, 5 limit 40",
             40,
         )
         if examples is not None:
             annotate("notice", "1b examples", examples[:40])
-    other = _show("2 other failures", grouped.format(cond="not (" + new_rule + ")"))
-    if other is not None:
-        for r in other:
-            r["geo"] = (r.get("geo") or "")[:120]
-        annotate(
-            "warning" if other else "notice",
-            "2 other failing rows of metrics_value_range (exist on main too)",
-            {"groups": len(other), "rows": sum(r["n"] for r in other), "first": other[:10]},
-        )
     return 0
 
 
