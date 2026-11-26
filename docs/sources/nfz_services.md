@@ -56,7 +56,7 @@ branches (branch code n → voivodeship TERC 2n, `poc_geography__nfz_services()`
 H13 primary total hip replacement, H15 primary total knee replacement and A48 stroke unit > 7 days. The other
 series stay in Silver: every published value of every benefit by branch would be about 1.5 million rows (≈ 196,500
 Silver rows × 7.7 published values), above the 1 M limit of a build stage and more than `gold.fact_annual` holds in
-all (1,500,334 rows on 12 Nov 2026, ceiling 1,500,000, D28 exception #2294); they wait for the per-block Gold tables
+all (1,500,334 rows on 12 Nov 2026, ceiling then 1,500,000, D28 exception #2294); they wait for the per-block Gold tables
 of D35. The built scope is about 33,000 rows. KPIs
 (draft): `childbirth_hospitalisations`, `hip_replacements`, `knee_replacements`, `stroke_unit_hospitalisations`.
 
