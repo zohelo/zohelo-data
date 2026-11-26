@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: otomoto
+  description: OTOMOTO Insights, Raport Rynkowy OTOMOTO (register CD-034), the monthly editions on Infogram
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/otomoto/
+    loaded_by: ingestion/to_bronze/otomoto/
+    config: ingestion/sources/otomoto.yaml
+  tables:
+  - name: otomoto_cells
+    description: >-
+      Rows of the newest copy of every edition (entity edition_YYYY_MM), values as published text: record_kind 'cell'
+      (one per non-empty cell of a chart: tab, chart element id, sheet, row, column) and 'text' (the short texts of the
+      tabs that hold a chart: headings and chart titles); partitioned by entity.
+  - name: otomoto_rejected_files
+    description: Files of otomoto the Bronze decoder rejected, with the reason.

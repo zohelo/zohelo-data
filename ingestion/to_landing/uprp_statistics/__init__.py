@@ -24,9 +24,11 @@ from __future__ import annotations
 import re
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 SOURCE = "uprp_statistics"
 PAGE = "https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp"
+HOSTS = {"uprp.gov.pl", "www.uprp.gov.pl"}  # never statystyka.pue.uprp.gov.pl (robots.txt Disallow: /)
 FIRST_YEAR = 2019  # first report with the five-year statistics tables Bronze reads
 PAUSE = 3.0
 POLISH = re.compile(r"^((?:19|20)\d{2})(?:\s*\(wersja polska\))?$", re.IGNORECASE)
@@ -44,7 +46,7 @@ def reports(links: list[tuple[str, str]]) -> dict[str, dict[str, Any]]:
     by_year: dict[int, set[str]] = {}
     for href, text in links:
         match = POLISH.match(text.strip())
-        if not match or not href.lower().endswith(".pdf") or "uprp.gov.pl/" not in href:
+        if not match or not href.lower().endswith(".pdf") or urlparse(href).hostname not in HOSTS:
             continue
         by_year.setdefault(int(match.group(1)), set()).add(href)
     by_year = {y: h for y, h in by_year.items() if y >= FIRST_YEAR}

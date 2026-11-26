@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+- name: dane_gov_pl
+  description: >-
+    dane.gov.pl open-data catalogue (register PLG-030) as harvested by data.europa.eu (catalogue `dane-gov-pl`, search
+    API scroll), newest Landing copy; each dataset record reduced before Landing to an allowlist of catalogue fields.
+    Values as source text.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/dane_gov_pl/
+    loaded_by: ingestion/to_bronze/dane_gov_pl/
+    config: ingestion/sources/dane_gov_pl.yaml
+  tables:
+  - name: dane_gov_pl_datasets
+    description: >-
+      One row per dataset record of the harvested catalogue (data.europa.eu id, dane.gov.pl identifier and landing
+      page, Polish title, publisher name, type and dane.gov.pl institution link, issued, modified, periodicity URI,
+      categories as JSON text, high-value flag, the harvest record's issued and modified, country).
+  - name: dane_gov_pl_distributions
+    description: >-
+      One row per distribution of a dataset record (dataset id, distribution id, format, media type, byte size,
+      issued, modified, dane.gov.pl resource link, status, Polish title). Metadata only: the files are not read.
+  - name: dane_gov_pl_rejected_files
+    description: dane.gov.pl Landing files the Bronze decoder rejected (unknown keys, a missing or repeated id), with the reason.

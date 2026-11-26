@@ -1,0 +1,41 @@
+source_system: irena_stat
+description: "IRENASTAT (International Renewable Energy Agency): electricity statistics by country, technology, data type (installed capacity, MW; generation, GWh), grid connection and year, PxWeb API (register GL-035)"
+
+# Extraction strategy (docs/landing.md). Register GL-035. No bulk file: the IRENASTAT PxWeb API v1
+# (https://pxweb.irena.org/api/v1/en/IRENASTAT; robots.txt 404) lists tables by GET and answers data to POST queries
+# (JSON-stat 2.0), so a small extractor replaces the bulk_file pattern (ingestion/to_landing/irena_stat/). Selection:
+# the table Country_ELECSTAT_<year>_H<n>_PX of the folder "Power Capacity and Generation" (224 countries and areas x
+# 26 technologies x 2 data types x 3 grid connections x 26 years, 908,544 cells in release 2026 H2), queried in parts
+# of whole countries of at most 50,000 cells, one request at a time 2 s apart. Entity = the table without its release
+# (country_elecstat), one ZIP of the exact answers; version = <release>_<table updated>; an unchanged version is not
+# read again. Left out: the regional table and the renewable-share table of the same folder, and the folders "Heat
+# Generation" and "Finance". www.irena.org refuses runners (robots.txt HTTP 403) and is not used. Dev probe
+# 45866615504 (26 Nov 2026).
+extraction:
+  initial: api
+  production: snapshot                  # each file is the complete table of one release
+  incremental_policy: changed_since_last  # release and updated time in the listing, then SHA-256
+  schedule: # UTC; IRENASTAT is updated twice a year (2026 H2 release dated 28 Sep 2026); a monthly check on the 11th
+    # (the run ends with Bronze; the platform's weekly Sunday run builds Silver and Gold, O46)
+    - {cron: "25 7 11 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/irena_stat/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.irena_stat_electricity, bronze.irena_stat_rejected_files]
+silver: [silver.irena_stat_electricity]
+gold: [gold.build_irena_stat, gold.metrics_renewable_capacity, gold.metrics_renewable_generation]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45868633684 (26 Nov 2026), 1.5 x
+  irena_stat_electricity: {rows: 285000}  # 189,929: the cells with a value of release 2026 H2 (718,615 '..' cells not stored)
+  poc_build_irena_stat: {rows: 285000}  # 189,929 = Silver, 9,466 of them of 16 codes without a Gold country (_X)
+  poc_metrics_renewable_capacity: {rows: 7600}  # 5,028: Total Renewable capacity, All, 208 countries, 2000-2025
+  poc_metrics_renewable_generation: {rows: 7300}  # 4,827: Total Renewable generation, All, 207 countries, 2000-2024
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): one table of under a million cells, a new release twice a year (a release
+# restates history); small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #1268"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

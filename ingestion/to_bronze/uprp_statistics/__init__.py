@@ -89,7 +89,7 @@ PROCEDURE_SUMS = [
 ]
 ORIGIN_SUMS = [("total", ["domestic", "foreign"])]
 NUMBERED = re.compile(r"^\s*\d\.\s?\d{1,2}\.?\s")  # "1.1. ", "3.1 ", "1. 7." never seen
-LABEL = re.compile(r"^(\D*?)\s*((?:\d+\s*)*)$")  # label text, then digit tokens to the line's end
+LABEL = re.compile(r"^(\D*?)\s*(\d[\d\s]*)?$")  # label text, then digits and spaces to the line's end (linear)
 # the summary page's labelled figure of the year, "walidacje patentów" / "europejskich 10 580" (lower case at a line's
 # start: not the contents line "Walidacje patentów europejskich 17", not "wnioski o walidacje patentów europejskich")
 VALIDATIONS_FIGURE = re.compile(r"^\s*walidacje\s+patentów\s*\n?\s*europejskich\s+([\d ]+?)\s*$", re.MULTILINE)
@@ -227,7 +227,7 @@ def read_table(code: str, lines: list[tuple[int, str]], figure: tuple[int, int] 
         if not match:
             pending = ""  # a line with digits inside (a running head "84 3. Patenty …") names no country
             continue
-        label, digits = match.group(1).strip(), match.group(2)
+        label, digits = match.group(1).strip(), match.group(2) or ""
         if label and not digits:
             pending = label  # a label whose values are printed on the next line ("Tryb krajowy" in 2025, countries)
             continue
