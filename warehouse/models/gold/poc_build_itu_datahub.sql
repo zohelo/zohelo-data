@@ -1,6 +1,6 @@
 {{ config(alias='build_itu_datahub', tags=['gold_block']) }}
-{# Gold build stage: ITU DataHub ICT indicators (register GL-031) from silver.itu_datahub_observations (World Bank Data360
-   dataset ITU_DH), block 'itu_dh'. One measure per indicator and published unit, annual only:
+{# Gold build stage: ITU DataHub ICT indicators (register GL-031) from silver.itu_datahub_observations (World Bank
+   Data360 dataset ITU_DH), block 'itu_dh'. One measure per indicator and published unit, annual only:
    measure_key itu_datahub:itu_dh:<UNIT_MEASURE>:<INDICATOR>, e.g. itu_datahub:itu_dh:PT_POP:IT_NET_USER (individuals
    using the internet, % of population) and itu_datahub:itu_dh:SB_10P2_HB:IT_NET_BBND (fixed-broadband subscriptions
    per 100 inhabitants) beside itu_datahub:itu_dh:SB:IT_NET_BBND (the count): the unit is in the measure because ITU

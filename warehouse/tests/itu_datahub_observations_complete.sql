@@ -1,9 +1,9 @@
--- itu_datahub: the newest ITU_DH file holds at least 39 indicators (40 named by the Data360 indicator list, Dev probe
--- 45871438953), the internet-use total (IT_NET_USER, PT_POP, sex, age and urbanisation '_T') for at least 200 economies,
--- Poland's series of it from 2000 without a gap to a year no older than three years before today, one file version,
--- and a number in every row whose unit is not CAT (the IT_COMP_* text indicators). A shortened file, a lost indicator,
--- a gap in Poland's series, a mixed version or a value that is not a number fails here instead of thinning Gold
--- silently. One test per Silver model (it reads only this model).
+-- itu_datahub: the newest ITU_DH file holds at least 39 indicators (40 named by the Data360 indicator list, Dev
+-- probe 45871438953), the internet-use total (IT_NET_USER, PT_POP, sex, age and urbanisation '_T') for at least 200
+-- economies, Poland's series of it from 2000 without a gap to a year no older than three years before today, one file
+-- version, and a number in every row whose unit is not CAT (the IT_COMP_* text indicators). A shortened file, a lost
+-- indicator, a gap in Poland's series, a mixed version or a value that is not a number fails here instead of thinning
+-- Gold silently. One test per Silver model (it reads only this model).
 with obs as (select * from {{ ref('itu_datahub_observations') }}),
 
 users as (

@@ -35,11 +35,11 @@ archive_policy:
 bronze: [bronze.itu_datahub_observations, bronze.itu_datahub_rejected_files]
 silver: [silver.itu_datahub_observations]
 gold: [gold.build_itu_datahub, gold.metrics_fixed_broadband_subscriptions, gold.metrics_mobile_broadband_subscriptions]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial TRIAL_RUN, 1.5 x
-  itu_datahub_observations: {rows: 220000}
-  poc_build_itu_datahub: {rows: 220000}
-  poc_metrics_fixed_broadband_subscriptions: {rows: 7000}
-  poc_metrics_mobile_broadband_subscriptions: {rows: 3000}
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45874151208 (26 Nov 2026), 1.5 x
+  itu_datahub_observations: {rows: 217000}  # 144,549: every row of ITU_DH.csv (39 indicators, 236 economies, 2000-2025)
+  poc_build_itu_datahub: {rows: 209000}  # 139,238 = Silver less the 5,311 text rows (unit CAT); 2,606 of 23 codes without a Gold country (_X)
+  poc_metrics_fixed_broadband_subscriptions: {rows: 6500}  # 4,300: IT_NET_BBND per 100 inhabitants, 208 economies, 2000-2024
+  poc_metrics_mobile_broadband_subscriptions: {rows: 2600}  # 1,698: ACT_MOB_SB per 100 inhabitants, 176 economies, 2007-2024
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of about 66 MB and some 145,000 rows, replaced whole by each Data360
