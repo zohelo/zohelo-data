@@ -152,7 +152,7 @@ def main(argv) -> int:
                 "non_numeric_texts": n(f"select string_agg(distinct value_text, ' | ') from {s} where value is null"),
                 "zero_values": n(f"select count(*) from {s} where value = 0"),
                 "gold_rows": n(f"select count(*) from {g}"),
-                "gold_measures": n(f"select string_agg(x, '; ') from (select measure_codes || ' ' || frequency || ' ' || min(period_label) || '..' || max(period_label) || ' n=' || count(*) x from {g} group by all order by 1)"),
+                "gold_measures": n(f"select string_agg(x, '; ') from (select measure_codes || ' ' || frequency || ' ' || min(period_label) || '..' || max(period_label) || ' n=' || count(*) x from {g} group by measure_codes, frequency order by 1)"),
                 "dup_series_date": n(f"select count(*) from (select 1 from {g} group by measure_key || '|' || geography_key || '|' || breakdown_json, date_key having count(*) > 1)"),
                 "frequencies_per_measure": n(f"select max(c) from (select count(distinct frequency) c from {g} group by measure_key)"),
                 "null_values": n(f"select count(*) from {g} where value is null"),
