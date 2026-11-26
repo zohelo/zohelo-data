@@ -28,6 +28,7 @@ from ingestion.to_landing.patterns import bulk_file
 SOURCE = "pig_midas"
 SCRATCH = "zz_dev_pig_midas"
 NOTES = {"left": 9}
+CAPTURED: list = []
 MACROS = Path("warehouse/macros/sources/pig_midas.sql").read_text()
 
 
@@ -80,6 +81,10 @@ def trial(cat) -> None:
     verify = bulk_file.main(SOURCE, "verify", landing_root=SCRATCH, specs=specs)
     note("midas landing (scratch)", {
         "extract_two_runs": runs, "inspect_exit": inspect, "verify_exit": verify, "hits": matched,
+        "inspect_rows": [[r.get(k) for k in ("entity", "state", "http", "server_version")] for t, d in CAPTURED
+                         for r in (d.get("files") or d.get("results") or d.get("rows") or [] if isinstance(d, dict)
+                                   else d if isinstance(d, list) else []) if isinstance(r, dict)][:12],
+        "captured_titles": [[t, str(d)[:300]] for t, d in CAPTURED][:4],
         "receipts": {e: [[r["size_bytes"], r["version_token"], r["sha256"][:12]] for r in h] for e, h in held.items()}})
 
     timings = []
@@ -126,7 +131,9 @@ def trial(cat) -> None:
                                 "group by all order by 1, 3 desc"),
         "status": q(con, "select entity, status, count(*) from bronze_b group by all order by 1"),
         "kod_vs_kopalina": one(con, "select count(*) from (select kod from bronze_b where kod is not null group by 1 "
-                                    "having count(distinct kopalina) > 1)")})
+                                    "having count(distinct kopalina) > 1)"),
+        "kod_two_names_in_deposits": q(con, "select kod, list(distinct kopalina) from bronze_b where entity = 'deposits' "
+                                            "group by 1 having count(distinct kopalina) > 1 limit 5")})
 
     models = {m: render(f"warehouse/models/silver/pig_midas/{m}.sql", {}, {"pig_midas_features": "bronze_b"})
               for m in ("pig_midas_deposits", "pig_midas_mining_areas", "pig_midas_mining_terrains")}
@@ -178,6 +185,9 @@ def trial(cat) -> None:
     gold_sql = render("warehouse/models/gold/poc_build_pig_midas.sql", {
         "poc_map_geography": "map_t", "prg_units": "prg_t", "pig_midas_deposits": "pig_midas_deposits",
         "pig_midas_mining_areas": "pig_midas_mining_areas"}, {})
+    plan = " ".join(r[1] for r in con.execute("explain " + gold_sql).fetchall())
+    ops = sorted(set(re.findall(r"(SPATIAL_JOIN|NESTED_LOOP_JOIN|BLOCKWISE_NL_JOIN|PIECEWISE_MERGE_JOIN|IE_JOIN|"
+                                r"HASH_JOIN|CROSS_PRODUCT)", plan)))
     gold_rows = []
     for _ in (1, 2):
         con.execute(f"create or replace table gold_t as {gold_sql}")
@@ -185,7 +195,7 @@ def trial(cat) -> None:
     series = ("measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || "
               "coalesce(geography_source_code, '') else '' end || '|' || breakdown_json")
     note("midas gold build_pig_midas", {
-        "rows_two_builds": gold_rows, "prg_voivodeships": one(con, "select count(*) from prg_t"),
+        "rows_two_builds": gold_rows, "join_ops": ops, "prg_voivodeships": one(con, "select count(*) from prg_t"),
         "map_rows": one(con, "select count(*) from map_t"),
         "dup_series_x_date": one(con, f"select count(*) from (select {series}, date_key from gold_t group by all "
                                       "having count(*) > 1)"),
@@ -257,7 +267,7 @@ def cleanup(cat) -> None:
 
 
 def main() -> int:
-    bulk_file.annotate = lambda *_a, **_k: None  # their summaries go to the log only (cap 10)
+    bulk_file.annotate = lambda _l, title, data: CAPTURED.append([title, data])  # into the landing note (cap 10)
     midas_load.bulk_bronze.annotate = lambda *_a, **_k: None
     failed = 0
     cat = catalog()
