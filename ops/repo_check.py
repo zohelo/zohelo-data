@@ -594,16 +594,31 @@ OPTIONAL_REF = re.compile(r"poc_optional_ref\(\s*['\"](\w+)['\"]")
 OPTIONAL_PARENTS = re.compile(r"['\"]optional_parents['\"]\s*:\s*\[(.*?)\]", re.S)
 
 
+GEOGRAPHY_CTES = re.compile(r"\bpoc_geography_ctes\(")
+
+
 def optional_parents(files: list[Path]) -> list[str]:
     """A model reads a table through `poc_optional_ref('<model>', …)` exactly when it lists that model in its
     config meta `optional_parents`: warehouse/changed.py plans by the list (the model does not wait for those
-    parents), the macro reads by the call (an empty relation while the parent waits)."""
+    parents), the macro reads by the call (an empty relation while the parent waits). A model that places the
+    per-source geography CTEs (`poc_geography_ctes()`, docs/source-registration.md) reads the calls in every
+    `poc_geography__<source>()` macro too. A per-source macro file calls poc_optional_ref only inside its geography
+    macro, the one place a model's list covers."""
     problems = []
+    geography_reads = set()
+    for f in files:
+        if f.parent != SOURCE_MACROS or f.suffix != ".sql" or not (ROOT / f).exists():
+            continue
+        text = (ROOT / f).read_text()
+        inside = [body for kind, _, body in REGISTRATION.findall(text) if kind == "geography"]
+        geography_reads |= {m for body in inside for m in OPTIONAL_REF.findall(body)}
+        if len(OPTIONAL_REF.findall(text)) != sum(len(OPTIONAL_REF.findall(body)) for body in inside):
+            problems.append(f"{f}: poc_optional_ref outside poc_geography__{f.stem}() (no model lists it)")
     for f in files:
         if f.parts[:2] != ("warehouse", "models") or f.suffix != ".sql" or not (ROOT / f).exists():
             continue
         text = (ROOT / f).read_text()
-        read = set(OPTIONAL_REF.findall(text))
+        read = set(OPTIONAL_REF.findall(text)) | (geography_reads if GEOGRAPHY_CTES.search(text) else set())
         declared = OPTIONAL_PARENTS.search(text)
         listed = set(re.findall(r"['\"](\w+)['\"]", declared.group(1))) if declared else set()
         problems += [f"{f.stem}: poc_optional_ref('{m}') but not in meta optional_parents" for m in read - listed]

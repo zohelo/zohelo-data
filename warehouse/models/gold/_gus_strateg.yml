@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: poc_build_gus_strateg
+    description: >-
+      Build stage — GUS STRATEG (register PLS-003), block sor: the observed annual values of the indicators of the
+      Strategy for Responsible Development for the EU countries and aggregates (EU-27 2020, EU-27 2007) and the
+      voivodeships, one measure per SOR indicator dimension. Values and units as published; targets are not loaded;
+      licence cc_by_4_0_gus_strateg.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

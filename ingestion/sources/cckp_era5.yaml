@@ -1,0 +1,37 @@
+source_system: cckp_era5
+description: "World Bank Climate Change Knowledge Portal (CCKP): ERA5 0.25-degree reanalysis aggregated to countries and voivodeships, mean air temperature and precipitation, monthly and annual (register GL-036, Copernicus Climate Data Store)"
+
+# Extraction strategy (docs/landing.md). Register GL-036; route chosen by the register: the CDS serves gridded fields
+# only, CCKP serves ERA5 country and first-level unit series. No bulk file of these series: the documented download
+# API https://datacatalogapi.worldbank.org/ddhxext/v3/cckp/<dataset id>/<geocodes>?_format=json (cckpapi.worldbank.org
+# serves the same ids but its robots.txt answers HTTP 500). Selection: tas and pr, monthly and annual, all_countries
+# and Poland's 16 first-level units (stated codes from CCKP's geonames.json), about 11 requests, one at a time 5 s apart.
+# The period is part of the dataset id (1950-2024, 1950-2025 on 26 Nov 2026): each read uses the newest last year that
+# answers for POL (ingestion/to_landing/cckp_era5/). Entity = the selection, era5: one ZIP of the exact answers,
+# version = <period>_<read started>; a read equal to the newest copy writes nothing. Reanalysis only, no CMIP6
+# projections. Dev probes 45809457989, 45810479823 (test/2421-cckp-era5-probe).
+extraction:
+  initial: api
+  production: snapshot                  # the file is the complete selection
+  incremental_policy: changed_since_last  # SHA-256 of the read against the newest copy
+  schedule: # UTC; CCKP extends the series about once a year (no calendar); monthly check (O46: at most weekly), first Thursday
+    - {cron: "35 9 1-7 * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/cckp_era5/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.cckp_era5_records, bronze.cckp_era5_rejected_files]
+silver: [silver.cckp_era5_observations]
+gold: [gold.build_cckp_era5]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  cckp_era5_observations: {rows: 780000}  # 517,712: 2 variables x (246 countries + 16 voivodeships) x (912 months + 76 years), 1950-2025 (Dev trial 45831607817, 26 Nov 2026)
+  poc_build_cckp_era5: {rows: 780000}  # 517,712 = Silver, 59,280 of them of 30 codes without a Gold area (_X) (same trial)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): one file of a few MB and about half a million values, read whole (the API has no
+# changed-since filter, and a new period id replaces every series); small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2421"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

@@ -1,0 +1,38 @@
+version: 2
+models:
+  - name: bdot10k_powiat_packages
+    description: >-
+      GUGiK BDOT10k, topographic objects database (register PL-ENV-003; "Baza BDOT10k jest dostępna bezpłatnie i
+      możliwa do dowolnego wykorzystania", geoportal.gov.pl), newest copy of the index of the download packages (WFS
+      PobieranieBDOT10k, feature type BDOT10k_powiaty): one row per powiat package. Grain: package_id (the powiat
+      TERYT code). Powiat name, voivodeship code, update date and year, GML package URL, application schema year and
+      the date the index copy was read (snapshot_date). The packages themselves are not loaded.
+    columns:
+      - name: package_id
+        description: Powiat TERYT code as the index gives it (4 digits); the package file is <package_id>_GML.zip.
+        tests: [not_null, unique]
+      - name: voivodeship_code
+        description: First two digits of the TERYT code.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']
+      - name: powiat_name
+        tests: [not_null]
+      - name: update_date
+        description: Data_aktualizacji, the date of the package's current edition.
+        tests: [not_null]
+      - name: update_year
+        tests: [not_null]
+      - name: url_gml
+        tests: [not_null, unique]
+      - name: application_schema
+        description: Year of the application schema the package URL names (schemat2021).
+        tests: [not_null, {accepted_values: {arguments: {values: ['2021']}}}]
+      - name: snapshot_date
+        description: Date (UTC) the index copy was read (Landing ingested_at); the date of the Gold counts.
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the index answer (lineage to Landing/Archive).
+        tests: [not_null]

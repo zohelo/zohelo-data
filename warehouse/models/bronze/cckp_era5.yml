@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: cckp_era5
+  description: World Bank Climate Change Knowledge Portal (register GL-036), ERA5 0.25-degree country and voivodeship series
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/cckp_era5/
+    loaded_by: ingestion/to_bronze/cckp_era5/
+    config: ingestion/sources/cckp_era5.yaml
+  tables:
+  - name: cckp_era5_records
+    description: >-
+      Rows of the newest copy of entity era5, values as published text: one per variable x aggregation x geocode x
+      period of a data answer, with the period of the dataset id; partitioned by entity.
+  - name: cckp_era5_rejected_files
+    description: Files of cckp_era5 the Bronze decoder rejected, with the reason.

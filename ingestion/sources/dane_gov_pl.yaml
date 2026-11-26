@@ -1,0 +1,51 @@
+source_system: dane_gov_pl
+description: "dane.gov.pl open-data catalogue (Chancellery of the Prime Minister) as harvested by data.europa.eu: dataset and distribution metadata"
+
+# Extraction strategy (docs/landing.md, docs/sources/dane_gov_pl.md). Register PLG-030, #3263. dane.gov.pl itself
+# (dane.gov.pl, api.dane.gov.pl) does not accept a TCP connection from GitHub runners (Dev runs 43282997907,
+# 43288930412, 43831903004); the official EU republisher data.europa.eu harvests its catalogue as `dane-gov-pl` and
+# serves it through its public search API (no key, no published limit). No bulk file: the whole catalogue is read
+# through the API's scroll (pages of 1,000, one request at a time, a second apart; plain paging stops at 10,000 records
+# and repeats records), `includes` asks only for the fields kept, and each dataset record is reduced before Landing to
+# an allowlist of catalogue fields (ingestion/to_landing/dane_gov_pl/): descriptions, keywords and the publishers'
+# e-mail addresses are dropped in memory. Entity = the catalogue (one JSON-lines file sorted by dataset id), version =
+# download time (the API gives no version of the harvest); an unchanged catalogue (same SHA-256) is not landed again.
+# Distributions are metadata only: their files (api.dane.gov.pl) are never downloaded. Size (Dev probe 45818878323,
+# 26 Nov 2026): 10,001 dataset records with 672,460 distributions, 12 requests, 351 MB read, 341 MB landed, 68 s.
+# Dev trial 45827739830 (26 Nov 2026): 1 file of 341,213,763 bytes, the second Landing and Bronze passes wrote
+# nothing; Bronze 10,001 datasets and 672,460 distributions, 0 rejected; Silver 9,970 datasets (31 numbers on two
+# harvest records), dataset modifications from 2017-08-25 to 2026-11-25, distributions from 2014-05.
+extraction:
+  initial: api
+  production: snapshot                    # each file is the complete current catalogue
+  incremental_policy: changed_since_last  # SHA-256 of the reduced records; the API has no changed-since filter
+  schedule: # UTC; data.europa.eu harvests dane.gov.pl daily on its own schedule (harvest records of the probe end on
+    # 25 Nov 2026, 23:52 UTC); the catalogue changes every day (developers' daily price lists); one run a week,
+    # Wednesday 15:25 (O46), in Silver for the Sunday platform build
+    - {cron: "25 15 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/dane_gov_pl/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.dane_gov_pl_datasets, bronze.dane_gov_pl_distributions, bronze.dane_gov_pl_rejected_files]
+silver: [silver.dane_gov_pl_datasets, silver.dane_gov_pl_dataset_categories, silver.dane_gov_pl_distribution_months]
+gold: [gold.open_data_datasets_pl, gold.build_dane_gov_pl, gold.metrics_open_data_datasets_modified, gold.metrics_open_data_distributions_modified]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); about 1.5 x the rows of Dev trial 45827739830
+  dane_gov_pl_datasets: {rows: 15000}  # 9,970 measured
+  dane_gov_pl_dataset_categories: {rows: 16800}  # 11,192 measured
+  dane_gov_pl_distribution_months: {rows: 49000}  # 32,790 measured
+  open_data_datasets_pl: {rows: 15000}  # 9,970 measured
+  poc_build_dane_gov_pl: {rows: 37000}  # 24,699 measured (6 measures, months 2014-05 to 2026-11)
+  poc_metrics_open_data_datasets_modified: {rows: 120}  # 79 months in Gold
+  poc_metrics_open_data_distributions_modified: {rows: 220}  # 145 months in Gold
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one catalogue of about 10,000 datasets read whole in 12 requests, no
+# changed-since filter; a changed catalogue replaces the file, Silver and Gold are rebuilt in full. The
+# per-distribution rows (672,460, about 45,000 more a month) stay in Bronze, which is replaced whole; Silver keeps
+# them counted per dataset, month and format, so no full-rebuild model nears 1 M rows (#822, D28).
+refresh: {mode: full, decided: "D32 + #3263"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

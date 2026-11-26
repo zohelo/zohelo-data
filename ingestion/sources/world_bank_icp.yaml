@@ -22,7 +22,10 @@ archive_policy:
   prune: report
 bronze: [bronze.icp_observations, bronze.icp_rejected_files]
 silver: [silver.icp_observations]
-gold: [gold.build_icp]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.icp_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table icp_observations.
+gold: [gold.build_icp, gold.world_bank_icp_observations, gold.world_bank_icp_series, gold.world_bank_icp_measures,
+       gold.world_bank_icp_geography, gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   icp_observations: {rows: 350000}  # 231,174 (Dev trial 43085820597)
   poc_build_icp: {rows: 1250}  # 817 (Dev check 43092680524): 2 measures, 2017 and 2021 only
@@ -31,4 +34,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # Refresh policy for all layers (D32, small source: full in every layer): 48 series pages (~375 MB of JSON); rebuilt in full when the World Bank updates ICP.
 refresh: {mode: full, decided: "D32 + #2736"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

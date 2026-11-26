@@ -1,0 +1,38 @@
+source_system: gus_strateg
+description: "GUS STRATEG — indicators of the Strategy for Responsible Development (SOR) for the EU, its countries and the voivodeships (STRATEG API)"
+
+# Extraction strategy (docs/landing.md). Register PLS-003. No bulk feature: STRATEG serves its data through the REST
+# API https://strateg.stat.gov.pl/api/ (spec strateg_en.json; api-strateg.stat.gov.pl does not resolve, Dev probe
+# 43086687586). Selection: strategy 78 (SOR, 2017-2030), its 83 indicator dimensions, levels 0 (EU aggregates and
+# the EU countries) and 2 (voivodeships); other strategies and levels 3-6, M, O are left out (docs/sources/
+# gus_strateg.md). Entity = the selection, sor: one ZIP of the exact answers (about 190), version = time the read
+# started (the API gives no update time); a read equal to the newest copy writes nothing. Polite: one request at a
+# time, bursts of at most 90 then 16 minutes without a request (quota 100 per 15 minutes; an over-quota request gets
+# HTTP 404, trial 45754068310), about 38 minutes a read (ingestion/to_landing/gus_strateg/).
+# Dev probes 43800593902, 45746504682 (test/428-strateg-probe, test/2430-strateg-trial).
+extraction:
+  initial: api
+  production: snapshot                  # the file is the complete selection
+  incremental_policy: changed_since_last  # SHA-256 of the read against the newest copy
+  schedule: # UTC; indicators are updated when GUS revises them, no release calendar; weekly (O46), Wednesday morning
+    - {cron: "45 8 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_strateg/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gus_strateg_records, bronze.gus_strateg_rejected_files]
+silver: [silver.gus_strateg_indicators, silver.gus_strateg_observations]
+gold: [gold.build_gus_strateg]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_strateg_indicators: {rows: 125}  # 83 indicator dimensions (Dev trials 45757803813, 45768290198, 26 Nov 2026)
+  gus_strateg_observations: {rows: 31500}  # 20,869: 15,045 at level 0 and 5,824 at level 2, 2003-2025 (same trial)
+  poc_build_gus_strateg: {rows: 30500}  # 20,243: Silver less 338 EU-28 and 288 zero-filled rows (final Dev trial of #2430)
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): one file of under 1 MB and a few tens of thousands of values, read whole (the
+# API has no changed-since filter); small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2430"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
