@@ -20,7 +20,8 @@ id, never summed). Entity: one notice type on one UTC publication day (`contract
 persons, e-mails, telephones and the winning contractors' names and addresses; it is replaced by the template-
 labelled value lines (estimated value, value per part, outcome per part, offers received, price of the chosen offer,
 contract date, contract value). Contractors keep only province and country; a subsidised contracting authority
-(client type 3, possibly a natural person) keeps no name, city or ids. The receipt keeps the SHA-256 and size of
+(client type 3, possibly a natural person) keeps no name, city or ids; an e-mail address written into a kept
+free-text field (subject, authority name or city) becomes `[e-mail]`. The receipt keeps the SHA-256 and size of
 every original answer page. Unknown fields fail the day.
 
 Bronze `bronze.uzp_bzp_notices` (one row per notice, text). Silver `silver.uzp_bzp_notices` (grain: BZP notice
@@ -31,4 +32,6 @@ their line counts; `tests/uzp_bzp_notices_days_complete.sql` checks each type-da
 months; Poland and the contracting authority's voivodeship, `PL02`…`PL32` = `TERC:02`…`TERC:32`) and
 `gold.uzp_bzp_notice` (entity table keyed by the notice number). KPIs `bzp_notices` and `bzp_contract_value`
 (draft). Terms: no reuse or attribution clause found (API regulations of 24 Nov 2023); licence `unresolved`,
-internal. Refresh full (D32), daily at 02:47 UTC. Restart unit: one notice type on one day.
+internal. Refresh full (D32). Schedule weekly (O46): Saturday 02:47 UTC, Landing and Bronze (the missing days up
+to Friday, about 14 files; the API keeps every past day, so nothing is lost between runs); Silver and Gold come
+from the platform's Sunday build. Restart unit: one notice type on one day.

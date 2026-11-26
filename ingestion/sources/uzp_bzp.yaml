@@ -17,8 +17,11 @@ extraction:
   initial: api
   production: snapshot                    # each file is the complete reduced answer of one type on a closed day
   incremental_policy: changed_since_last  # missing days, then the newest three days again; unchanged bytes skipped
-  schedule: # UTC; BZP publishes every day, mostly 05:00-15:00 UTC on working days; daily after the UTC day ended
-    - {cron: "47 2 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  # UTC. BZP publishes every day (mostly 05:00-15:00 UTC on working days) and the API keeps every past day, so a
+  # weekly run loses nothing (O46: at most one run a week past Landing): Saturday 02:47 lands the missing days up
+  # to Friday (about 14 files) and loads them to Bronze; the platform's Sunday build makes Silver and Gold.
+  schedule:
+    - {cron: "47 2 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/uzp_bzp/
 archive_policy:
