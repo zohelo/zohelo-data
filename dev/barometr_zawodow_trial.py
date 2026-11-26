@@ -178,25 +178,21 @@ def _profile_queries() -> dict:
     v = "bronze"
     return {
         "rows": lambda con: one(con, f"select count(*) from {v}"),
-        "files": lambda con: rows(con, f"select split_part(entity, '_', 1), count(distinct entity), min(edition_year), max(edition_year) from {v} group by 1"),
-        "posters_per_file(entity,posters)": lambda con: rows(con, f"select entity, count(distinct area_label) from {v} group by 1 order by 1", 30),
-        "area_labels": lambda con: rows(con, f"select area_label, count(distinct entity) from {v} group by 1 order by 1", 60),
+        "files(kind,files,first,last)": lambda con: rows(con, f"select case when entity like 'plakat_p%' then 'province' else 'national' end, count(distinct entity), min(edition_year), max(edition_year) from {v} group by 1"),
+        "posters_per_year(year,files,areas)": lambda con: rows(con, f"select edition_year, count(distinct entity), count(distinct area_label) from {v} group by 1 order by 1", 30),
+        "area_labels(label,files)": lambda con: rows(con, f"select area_label, count(distinct entity) from {v} group by 1 order by 1", 60),
+        "province_page_to_area(page,areas)": lambda con: rows(con, f"select split_part(entity, '_', 2), string_agg(distinct area_label, ' | ') from {v} where entity like 'plakat_p%' group by 1 order by 1", 20),
         "category_labels(label,rows)": lambda con: rows(con, f"select category_label, count(*) from {v} group by 1 order by 1"),
-        "poster_categories(set,posters)": lambda con: rows(con, f"select poster_categories, count(distinct entity || area_label) from {v} group by 1 order by 1"),
+        "poster_categories(set,posters)": lambda con: rows(con, f"select poster_categories, count(distinct entity) from {v} group by 1 order by 1"),
         "dup_keys": lambda con: one(con, f"select count(*) from (select entity, area_label, occupation_name from {v} group by all having count(*) > 1)"),
         "null_keys": lambda con: one(con, f"select count(*) from {v} where entity is null or area_label is null or occupation_name is null or category_label is null or edition_year is null"),
-        "occupations_per_poster(min,max)": lambda con: rows(con, f"select min(n), max(n) from (select count(*) n from {v} group by entity, area_label)"),
-        "poland_by_year(year,category,n)": lambda con: rows(con, f"select edition_year, category_label, count(*) from {v} where entity like 'plakat%' group by all order by all", 60),
+        "occupations_per_poster(min,max)": lambda con: rows(con, f"select min(n), max(n) from (select count(*) n from {v} group by entity)"),
+        "poland_by_year(year,category,n)": lambda con: rows(con, f"select edition_year, category_label, count(*) from {v} where entity not like 'plakat_p%' group by all order by all", 60),
         "voiv_names_not_in_poland_list(year,n,sample)": lambda con: rows(con, f"""
-            select r.edition_year, count(*), min(r.occupation_name) from {v} r
-            where r.entity like 'raport%' and r.area_label <> 'Polska' and r.occupation_name not in
-              (select p.occupation_name from {v} p where p.entity like 'plakat%' and p.edition_year = r.edition_year)
+            select r.edition_year, count(*), string_agg(distinct r.occupation_name, ' | ')[:300] from {v} r
+            where r.entity like 'plakat_p%' and r.occupation_name not in
+              (select p.occupation_name from {v} p where p.entity not like 'plakat_p%' and p.edition_year = r.edition_year)
             group by 1 order by 1"""),
-        "report_polska_vs_poster(year,report_rows,diff)": lambda con: rows(con, f"""
-            with r as (select edition_year, occupation_name, category_label from {v} where entity like 'raport%' and area_label = 'Polska'),
-                 p as (select edition_year, occupation_name, category_label from {v} where entity like 'plakat%')
-            select r.edition_year, count(*), (select count(*) from (select * from r r2 where r2.edition_year = r.edition_year
-                   except select * from p where p.edition_year = r.edition_year)) from r group by 1 order by 1"""),
         "lowercase_or_odd_names": lambda con: rows(con, f"select occupation_name, count(*) from {v} where not regexp_matches(occupation_name, '^[A-ZĄĆĘŁŃÓŚŹŻ]') or length(occupation_name) > 90 group by 1 limit 20"),
     }
 
