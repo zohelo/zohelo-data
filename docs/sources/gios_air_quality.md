@@ -88,7 +88,13 @@ two voivodeships fails the build; codes found nowhere, a few mobile stations, co
 `air_<pollutant>_daily_verified` and `air_<pollutant>_monthly_verified` (draft). Not in Gold: manual daily values
 (`24g`), other indicators (CO, benzene, metals, PAHs, ions, NOx, NO), and a daily series for the voivodeships.
 
-Trial (Dev run TRIAL_RUN, final code): TRIAL_NUMBERS
+Trial (Dev run 45766240551, final code, scratch namespaces removed): Landing 27 files, 1,115 MB, a second run wrote
+nothing; Bronze and Silver 150,772,558 value rows in 26 year files (405,185 for 2000, 8.6 to 9.1 million a year since
+2019), 2000-01-01 to 2025-12-31, 0 duplicate and 0 null keys, 0 non-numeric cells (21.1 million decimal-comma cells),
+0 rejected years, a second run wrote nothing; 1,147 stations. Gold: 42,582 daily rows (Poland) and 21,844 monthly rows
+(Poland and 16 voivodeships), 0 duplicates by series_key × date_key, 0 unmatched areas; first Poland month NO2 and O3
+2000-01, SO2 2001-01, PM10 2003-01, PM2.5 2009-06. The stations behind Poland grow from 25 (2000) to 216 (2025)
+hourly series, so a long trend mixes change and coverage.
 
 **Left out:** the manual sensors of the API (above; their values are in the archive), the air quality index
 (`aqindex/getIndex`, derived from the same values), API station metadata (`metadata/stations`), exceedance information,
