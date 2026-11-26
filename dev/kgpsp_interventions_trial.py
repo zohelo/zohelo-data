@@ -138,12 +138,14 @@ def main(argv) -> int:
         tests = schema_tests(con, s)
         complete = con.sql(render(ROOT / f"warehouse/tests/{s}_complete.sql", {s: s})).fetchall()
         entities = con.sql(render(ROOT / f"warehouse/tests/{SOURCE}_entities_in_silver.sql", {f"{SOURCE}_cells": "cells", s: s})).fetchall()
+        city = con.sql(render(ROOT / f"warehouse/tests/{SOURCE}_city_districts.sql", {s: s})).fetchall()
         failing = {k: v for k, v in tests.items() if v}
         stats["silver"] = {
             "rows_two_builds": counts,
             "schema_tests": len(tests), "schema_tests_failing": failing,
             "complete_rows": len(complete), "complete_first": [list(map(str, r)) for r in complete[:8]],
             "entities_without_silver": [list(r) for r in entities],
+            "warn_city_districts": [list(map(str, r)) for r in city],
             "years": n(f"select min(report_year) || '..' || max(report_year) from {s}"),
             "per_layout": n(f"select string_agg(k, '; ' order by k) from (select layout || ' ' || table_code || ': ' || count(*) || ' rows, ' || count(distinct area_code) || ' areas, ' || count(distinct report_year) || ' years' k from {s} group by layout, table_code)"),
             "not_numeric": n(f"select coalesce(string_agg(value_text || '=' || c, ' '), 'none') from (select value_text, count(*) c from {s} where value_status <> 'ok' group by 1)"),
@@ -183,7 +185,9 @@ def main(argv) -> int:
             "freq_per_measure_gt1": n("select count(*) from (select measure_key from gold group by 1 having count(distinct frequency) > 1)"),
             "unmatched": n("select count(*) from gold where geography_key = '_X'"),
             "null_values": n("select count(*) from gold where value is null"),
-            "rows_per_year_min_max": n("select min(c) || '..' || max(c) from (select count(*) c from gold group by period_label)"),
+            "rows_per_year": n("select string_agg(period_label || '=' || c, ' ' order by period_label) from (select period_label, count(*) c from gold group by period_label)"),
+            "areas_2025": n("select string_agg(distinct geography_key, ' ' order by geography_key) from gold where period_label = '2025'"),
+            "kpi_rows": n("select count(*) from gold where block_id = 'incidents' and measure_codes = 'P'"),
             "kpi_outside_bounds": {k: n(f"select count(*) from gold where measure_codes = '{k}' and block_id = 'incidents' and (value < {lo} or value > {hi})") for k, (lo, hi) in bounds.items()},
             "kpi_range": {k: n(f"select min(value) || '..' || max(value) from gold where measure_codes = '{k}' and block_id = 'incidents'") for k in bounds},
             "voiv_sum_vs_PL_max_abs_diff": n("select max(abs(r - p)) from (select measure_key, date_key, sum(value) filter (where geography_key like 'TERC:%') r, max(value) filter (where geography_key = 'PL') p from gold group by all)"),
