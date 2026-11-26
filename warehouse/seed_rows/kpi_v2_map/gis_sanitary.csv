@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+food_samples_disqualified_share,poland,A,food_samples_disqualified_share,gis_sanitary,Jakość zdrowotna środków spożywczych,gis_sanitary:food_samples:pct:disqualified_share_total,A,PL,,rate,down,needs-block,"in Gold (build_gis_sanitary, Poland, 2012 onwards, share as printed); waits for its metrics model poc_metrics_food_samples_disqualified_share"
