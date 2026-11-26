@@ -2,8 +2,9 @@
 
 **Extraction (26 Nov 2026, register PLG-018, #2871).** Every KNF statistics release is its own article of
 `https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne`, so the article and the file URL change with each
-release. `ingestion/to_landing/knf_pensions/` reads the PPK category page (`/dane_statystyczne/PPK`; the main listing
-when it holds no PPK article), takes the newest quarterly release "Wartość aktywów netto funduszy zdefiniowanej daty
+release. `ingestion/to_landing/knf_pensions/` reads the listing filtered to the PPK category
+(`?categories=/publikacje_i_opracowania/dane_statystyczne/PPK`, Dev probe 45764209192; the main listing when it holds
+no PPK article), takes the newest quarterly release "Wartość aktywów netto funduszy zdefiniowanej daty
 (PPK) wg stanu na koniec <quarter> kwartału <year>" by the quarter in its title, and lands its one XLSX
 (`www_Art_100435.49_UoPPK_2026_3Q_100435.xlsx`, 130 kB, 30 October 2026) as entity `ppk_quarterly`; more than one
 XLSX on the article stops the run instead of picking one. The workbook is a rolling series since 2020 Q1, so only the

@@ -1,8 +1,9 @@
 """KNF pension statistics Landing activities (register PLG-018): the quarterly PPK information.
 
 KNF publishes every statistics release as its own article of the listing
-https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne (category pages under the same path, e.g.
-``/dane_statystyczne/PPK``), so the file URL and the article change with every release. The quarterly PPK release
+https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne (filtered by market with
+``?categories=/publikacje_i_opracowania/dane_statystyczne/PPK``), so the file URL and the article change with every
+release. The quarterly PPK release
 ("Wartość aktywów netto funduszy zdefiniowanej daty (PPK) wg stanu na koniec <quarter> kwartału <year>") links one
 XLSX that holds the whole series since the first quarter of 2020 (rolling), so only the newest release is landed.
 Entity = ``ppk_quarterly``; version = the file's Last-Modified (download time when absent: KNF sends none), written
@@ -10,7 +11,7 @@ only when the SHA-256 changed. robots.txt of www.knf.gov.pl allows every agent (
 the file.
 
 landing.inspect  the newest PPK article and its XLSX link vs Landing; no writes
-landing.extract  the newest release's XLSX (the PPK category page first, the main listing when it has no PPK article),
+landing.extract  the newest release's XLSX (the PPK-filtered listing first, the main listing when it has none),
                  one request at a time, PAUSE seconds apart
 landing.verify   every receipt has its file (bulk_file pattern)
 """
@@ -25,7 +26,9 @@ from typing import Any
 SOURCE = "knf_pensions"
 ENTITY = "ppk_quarterly"
 BASE = "https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne"
-LISTINGS = [BASE + "/PPK", BASE]  # the category page first; the main listing (newest releases of every market) second
+# The listing filtered to the PPK category (the form's "categories" filter; lists the PPK releases newest first, ten
+# a page: Dev probe 45764209192), then the unfiltered listing (newest releases of every market) as a fallback.
+LISTINGS = [BASE + "?categories=/publikacje_i_opracowania/dane_statystyczne/PPK", BASE]
 PAUSE = 4.0
 ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4}
 ANCHOR = re.compile(r'<a\s[^>]*href="(?P<href>[^"]+)"[^>]*>(?P<label>.*?)</a>', re.S | re.I)
@@ -82,7 +85,7 @@ def discover() -> dict[str, Any] | None:
             time.sleep(PAUSE)
         try:
             response = _get(listing)
-        except bulk_file.PermanentError as exc:  # the category page may not exist: try the main listing
+        except bulk_file.PermanentError as exc:  # a refused filter: try the main listing
             read.append({"listing": listing, "error": str(exc)[:80]})
             continue
         found = articles(response.text, response.url)

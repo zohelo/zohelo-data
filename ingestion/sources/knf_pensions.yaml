@@ -3,8 +3,9 @@ description: "KNF — pension-market statistics: quarterly net asset value of PP
 
 # Extraction strategy (docs/landing.md). Register PLG-018, Task #2871. Bulk by release: every KNF statistics release
 # is its own article of https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne, so the file URL changes
-# with each release; ingestion/to_landing/knf_pensions/ reads the PPK category page (the main listing when it holds no
-# PPK article), takes the newest quarterly PPK release ("Wartość aktywów netto funduszy zdefiniowanej daty (PPK) wg
+# with each release; ingestion/to_landing/knf_pensions/ reads the listing filtered to the PPK category (the main
+# listing when it holds no PPK article; Dev probe 45764209192), takes the newest quarterly PPK release ("Wartość
+# aktywów netto funduszy zdefiniowanej daty (PPK) wg
 # stanu na koniec III kwartału 2026", 30 October 2026) and its single XLSX
 # (www_Art_100435.49_UoPPK_2026_3Q_100435.xlsx, 131,783 bytes; Dev probe 45758367857, test/2871-knf-probe; robots.txt
 # allows every agent). The workbook is a rolling series since the first quarter of 2020 (Tabela 1 by fund in PLN,
