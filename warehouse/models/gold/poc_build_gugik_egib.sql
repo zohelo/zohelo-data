@@ -119,7 +119,7 @@ select
         else 'GUGiK KI EGiB buildings (register count)'
     end as block_name,
     'gugik_egib:' || m.block_id || ':' || m.block_id || ':' || m.measure_code as measure_key,
-    initcap(m.block_id) || case m.measure_code
+    case m.block_id when 'parcels' then 'Parcels' else 'Buildings' end || case m.measure_code
         when 'register_count'
             then
                 ' in the EGiB register supplied by county services on the day '
