@@ -4,10 +4,11 @@
     {{ return({'block_model': 'poc_build_cckp_era5', 'blocks': [['era5', 'World Bank CCKP: ERA5 0.25-degree air temperature and precipitation']]}) }}
 {% endmacro %}
 
-{# Stated code map of Poland's first-level units in CCKP (geonames.json, Dev probe 45810479823): CCKP code, the name
-   CCKP publishes (no diacritics, its own spellings 'Lubeiskie' and 'Malopolske') and the TERC voivodeship code. The
-   test cckp_era5_units_complete fails when a code is missing or carries another name, so a renumbered unit is never
-   mapped by position or by name. #}
+{# Stated code map of Poland's first-level units in CCKP: CCKP code, the name CCKP publishes in geonames.json (no
+   diacritics, its own spellings 'Lubeiskie' and 'Malopolske'; read in Dev probe 45810479823 and trial 45826698285)
+   and the TERC voivodeship code. Nothing is matched by name or position. The extractor requests exactly these codes
+   (POL_ADM1) and fails when an answer lacks one; the test cckp_era5_observations_complete fails on a first-level code
+   outside this list or a listed code without data. #}
 {% macro poc_cckp_era5_voivodeships() %}
     select * from (
         values

@@ -41,7 +41,7 @@ CONTRACT = ["source_system", "block_id", "block_name", "measure_key", "measure_n
             "unit_name", "geography_source_code", "geography_key", "frequency", "date_key", "period_label",
             "breakdown_json", "breakdown_label_json", "sex_code", "is_total", "value", "observation_status_key",
             "source_version", "raw_sha256"]
-SILVER = ("cckp_era5_units", "cckp_era5_observations")
+SILVER = ("cckp_era5_observations",)
 SEED_ROWS = ["source", "licence", "kpi", "kpi_measure", "kpi_v2_map", "unit", "unit_map", "unit_decimals"]
 SELECT = [*SILVER, *SEED_ROWS, "poc_map_geography", "poc_build_cckp_era5"]
 
@@ -116,12 +116,12 @@ def bronze() -> tuple[dict, object]:
 
 
 def bronze_profile(con) -> dict:
-    v = "(select * from bronze where record_kind = 'value')"
-    u = "(select * from bronze where record_kind = 'unit')"
+    v = "bronze"
     return {
-        "rows_by_kind": rows(con, "select record_kind, count(*) from bronze group by 1 order by 1"),
+        "rows": one(con, "select count(*) from bronze"),
         "values_by_member(member,rows,geocodes,min,max,dataset_period)": rows(con, f"select member, count(*), count(distinct geocode), min(period), max(period), "
                                                                                f"string_agg(distinct dataset_period, ',') from {v} group by 1 order by 1"),
+        "pol_adm1_codes": rows(con, f"select string_agg(distinct geocode, ',' order by geocode) from {v} where member like '%POL_adm1%'"),
         "dup_keys": one(con, f"select count(*) from (select variable, aggregation, geocode, period from {v} group by all having count(*) > 1)"),
         "null_keys": one(con, f"select count(*) from {v} where variable is null or aggregation is null or geocode is null or period is null"),
         "null_values": one(con, f"select count(*) from {v} where value is null"),
@@ -130,13 +130,8 @@ def bronze_profile(con) -> dict:
         "value_shapes": rows(con, f"select regexp_replace(coalesce(value, 'null'), '[0-9]+', 'n', 'g'), count(*) from {v} group by 1 order by 2 desc limit 8"),
         "zeros_by_variable": rows(con, f"select variable, aggregation, count(*) from {v} where try_cast(value as double) = 0 group by all order by all"),
         "annual_keys_not_07": one(con, f"select count(*) from {v} where aggregation = 'annual' and right(period, 3) <> '-07'"),
-        "units_by_level": rows(con, f"select parent_geocode is null, count(*) from {u} group by 1 order by 1"),
-        "pol_units": rows(con, f"select geocode, name from {u} where parent_geocode = 'POL' order by 1", 20),
-        "unit_codes_listed_twice(code,parents,names)": rows(con, f"select geocode, string_agg(coalesce(parent_geocode, '-'), ','), string_agg(name, ' | ') "
-                                                               f"from {u} group by 1 having count(*) > 1 order by 1", 20),
         "country_codes_not_3_letters": rows(con, f"select geocode, count(*) from {v} where member like '%all_countries%' "
                                                  f"and not regexp_full_match(geocode, '[A-Z]{{3}}') group by 1", 20),
-        "codes_in_data_not_in_geonames": rows(con, f"select distinct geocode from {v} anti join {u} using (geocode)", 30),
         "pr_annual_vs_sum_of_months(n,max_abs_diff,over_0.05)": rows(con, f"""
             with m as (select geocode, left(period, 4) y, sum(cast(value as double)) s, count(*) n from {v}
                        where variable = 'pr' and aggregation = 'monthly' group by all),
@@ -278,7 +273,7 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
     con = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
     con = duckdb.connect(str(work / "r2.duckdb"), read_only=True)
     rel = {m: f'{s}."{a}"' for m, (s, a) in aliases.items()}
-    ob, un, b = rel["cckp_era5_observations"], rel["cckp_era5_units"], rel["poc_build_cckp_era5"]
+    ob, b = rel["cckp_era5_observations"], rel["poc_build_cckp_era5"]
     dbt_summary = {"runs": runs, "tests_skipped_parent_missing": skipped,
                    "second_build_same_tables": fingerprints[0] == fingerprints[1],
                    "rows": {m: v[0] for m, v in fingerprints[0].items()},
@@ -290,7 +285,6 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
         "null_values": one(con, f"select count(*) from {ob} where value is null"),
         "dataset_period": rows(con, f"select dataset_period, count(*) from {ob} group by 1"),
         "dup_grain": one(con, f"select count(*) from (select variable, aggregation, geocode, period_label from {ob} group by all having count(*) > 1)"),
-        "units": rows(con, f"select unit_level, count(*) from {un} group by 1 order by 1"),
         "range(var,agg,level,min,max)": rows(con, f"select variable, aggregation, geo_level, min(value), max(value) from {ob} group by all order by all"),
         "extremes": rows(con, f"select variable, aggregation, arg_min(geocode || ' ' || period_label || ' ' || value, value), "
                               f"arg_max(geocode || ' ' || period_label || ' ' || value, value) from {ob} group by all order by all"),
@@ -304,8 +298,7 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
                                                         f"from {b} where geography_key <> '_X' group by all having count(*) > 1)")
     g["measures"] = rows(con, f"select measure_key, frequency, count(*), count(distinct geography_key), min(date_key), max(date_key) from {b} group by all order by 1")
     g["measures_with_two_frequencies"] = one(con, f"select count(*) from (select measure_key from {b} group by 1 having count(distinct frequency) > 1)")
-    g["unmatched(code,name,rows)"] = rows(con, f"select b.geography_source_code, any_value(u.name), count(*) from {b} b left join {un} u "
-                                               f"on u.geocode = b.geography_source_code where b.geography_key = '_X' group by 1 order by 1", 40)
+    g["unmatched(code,rows)"] = rows(con, f"select geography_source_code, count(*) from {b} where geography_key = '_X' group by 1 order by 1", 40)
     g["null_values"] = one(con, f"select count(*) from {b} where value is null")
     g["map_rows"] = rows(con, f"select geography_key like 'TERC:%', count(*) from {rel['poc_map_geography']} where source_system = '{SOURCE}' group by 1")
     g["areas"] = rows(con, f"select case when geography_key like 'TERC:%' then 'voivodeship' when geography_key = '_X' then '_X' "
@@ -386,8 +379,7 @@ def main(argv: list[str]) -> int:
         con = duckdb.connect()
         con.register("bronze", arrow)
         prof = bronze_profile(con)
-        detail = ("values_by_member(member,rows,geocodes,min,max,dataset_period)", "pol_units", "codes_in_data_not_in_geonames",
-                  "unit_codes_listed_twice(code,parents,names)")
+        detail = ("values_by_member(member,rows,geocodes,min,max,dataset_period)", "pol_adm1_codes")
         note(f"{SOURCE} bronze profile", {k: v for k, v in prof.items() if k not in detail})
         note(f"{SOURCE} bronze members and codes", {k: prof[k] for k in detail})
         con.close()

@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """CCKP ERA5 bronze.load: newest Landing copy of the ERA5 selection → bronze.cckp_era5_records.
 
-The Landing file (ingestion/to_landing/cckp_era5/) is a ZIP of exact answers: ``geonames.json`` (CCKP's spatial unit
-names and codes) and ``<var>_<agg>_<area>.json`` for tas and pr, monthly and annual, ``all_countries`` and
-``POL_adm1``. Two kinds of Bronze rows, values as published text:
+The Landing file (ingestion/to_landing/cckp_era5/) is a ZIP of exact answers ``<var>_<agg>_<area>.json`` for tas
+and pr, monthly and annual, ``all_countries`` and ``POL_adm1``. One Bronze row per geocode x period of an answer:
+variable, aggregation and the dataset id's period from the member name and the receipt, the value as its JSON text
+(null kept as null).
 
-- ``unit``: one per country (``country`` object of geonames.json: ISO3 code and name) and per first-level unit
-  (code, name, parent country code); the other unit kinds of the file (river and ocean basins, EEZs) are not read;
-- ``value``: one per geocode x period of a data answer (variable, aggregation and the dataset id's period from the
-  member and the receipt; the value as its JSON text, null kept as null).
-
-A member name outside these patterns, a missing data member, an answer that is not ``{"metadata": {"status":
+A member name outside these patterns, a missing member, an answer that is not ``{"metadata": {"status":
 "success"}, "data": {geocode: {period: value}}}``, an empty answer, a period key that is not ``YYYY-MM`` or a value
 that is an object rejects the file into bronze.cckp_era5_rejected_files (never guessed).
 """
@@ -31,18 +27,7 @@ from ingestion.to_landing.cckp_era5 import extract
 SOURCE = "cckp_era5"
 TABLE = "cckp_era5_records"
 REJECTED = "cckp_era5_rejected_files"
-VALUE_COLUMNS = [
-    "record_kind",
-    "variable",
-    "aggregation",
-    "dataset_period",
-    "geocode",
-    "parent_geocode",
-    "period",
-    "value",
-    "name",
-    "member",
-]
+VALUE_COLUMNS = ["variable", "aggregation", "dataset_period", "geocode", "period", "value", "member"]
 COLUMNS = [
     ("entity", "VARCHAR"),
     *[(c, "VARCHAR") for c in VALUE_COLUMNS],
@@ -70,38 +55,17 @@ def text(value: Any) -> str | None:
     return json.dumps(value)
 
 
-def unit_rows(geonames: Any) -> list[dict[str, Any]]:
-    countries = geonames.get("country") if isinstance(geonames, dict) else None
-    if not isinstance(countries, dict) or not countries:
-        raise ValueError("geonames.json: no country object")
-    rows: list[dict[str, Any]] = []
-    for code, item in countries.items():
-        if not isinstance(item, dict) or not isinstance(item.get("N"), str):
-            raise ValueError(f"geonames.json: unexpected country item {code}: {str(item)[:120]}")
-        rows.append({"geocode": code, "name": item["N"]})
-        subs = item.get("S") or {}
-        if not isinstance(subs, dict):
-            raise ValueError(f"geonames.json: first-level units of {code} are not an object")
-        for sub, name in subs.items():
-            if not isinstance(name, str):
-                raise ValueError(f"geonames.json: unexpected name of {sub}")
-            rows.append({"geocode": sub, "parent_geocode": code, "name": name})
-    for n, row in enumerate(rows, start=1):
-        row.update({"record_kind": "unit", "member": "geonames.json", "source_row_number": n})
-    return rows
-
-
 def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
     period = str(receipt["version_token"]).split("_")[0]
     if not PERIOD.fullmatch(period):
         raise ValueError(f"version {receipt['version_token']} does not start with a period")
     with zipfile.ZipFile(io.BytesIO(body)) as archive:
         members = {name: json.loads(archive.read(name)) for name in archive.namelist()}
-    unknown = set(members) - EXPECTED - {"geonames.json"}
-    missing = (EXPECTED | {"geonames.json"}) - set(members)
+    unknown = set(members) - EXPECTED
+    missing = EXPECTED - set(members)
     if unknown or missing:
         raise ValueError(f"members unknown {sorted(unknown)}, missing {sorted(missing)}")
-    rows = unit_rows(members["geonames.json"])
+    rows: list[dict[str, Any]] = []
     for name in sorted(EXPECTED):
         variable, aggregation, _ = DATA.fullmatch(name).groups()
         answer = members[name]
@@ -120,7 +84,6 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
                 n += 1
                 rows.append(
                     {
-                        "record_kind": "value",
                         "variable": variable,
                         "aggregation": aggregation,
                         "dataset_period": period,

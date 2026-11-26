@@ -2,8 +2,11 @@
 -- first-level units; every series runs without a gap from 1950 to the last year of the dataset id, with 12 months a
 -- year (monthly) or one 'YYYY-07' key a year (annual); one dataset period only. A shortened answer, a lost
 -- voivodeship, a gap or a changed period key fails here instead of thinning Gold silently. One test per Silver model
--- (it reads only this model).
+-- (it reads only this model). The first-level codes must be exactly the stated voivodeship map
+-- (poc_cckp_era5_voivodeships() in macros/sources/cckp_era5.sql, read by the Gold geography map).
 with obs as (select * from {{ ref('cckp_era5_observations') }}),
+
+stated as ({{ poc_cckp_era5_voivodeships() }}),
 
 series as (
     select
@@ -51,6 +54,20 @@ select
 from obs
 where aggregation = 'annual' and right(period_label, 3) <> '-07'
 having count(*) > 0
+union all
+select
+    'first-level code not in the stated map: ' || o.geocode as problem,
+    count(*) as found
+from obs as o
+anti join stated as s on o.geocode = s.geocode
+where o.geo_level = 'adm1'
+group by o.geocode
+union all
+select
+    'stated code without data: ' || s.geocode as problem,
+    1 as found
+from stated as s
+anti join obs as o on s.geocode = o.geocode
 union all
 select
     'dataset periods' as problem,
