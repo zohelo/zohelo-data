@@ -2,8 +2,9 @@
    (bronze.cckp_era5_records, record_kind 'unit'): countries and territories by ISO3 code (unit_level 'country') and
    their first-level units by CCKP code, e.g. POL.1982376 Mazowieckie (unit_level 'adm1', parent_geocode the country).
    Names as published, without diacritics and with CCKP's own spellings (POL.1982373 'Lubeiskie', POL.1982375
-   'Malopolske'), so Gold maps voivodeships by a stated code list (macros/sources/cckp_era5.sql), never by name.
-   Grain: geocode. #}
+   'Malopolske'), so Gold maps voivodeships by a stated code list (macros/sources/cckp_era5.sql), never by name. A few
+   first-level codes are listed under two countries in geonames.json (4 in Dev trial 45826698285); each keeps one row
+   per parent, nothing is dropped. Grain: geocode x parent_geocode. #}
 with records as (
     select *
     from {{ source('cckp_era5', 'cckp_era5_records') }}

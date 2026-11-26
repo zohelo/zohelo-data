@@ -21,9 +21,10 @@
     ) as t (geocode, cckp_name, terc_woj)
 {% endmacro %}
 
-{# Countries by ISO3 (dim_geography iso3, the World Bank economy code, as unhcr); voivodeships by the stated map
-   above. Static, so the map does not read CCKP Silver. A CCKP country code without a Gold country maps to _X and is
-   counted by build_check. #}
+{# Countries by ISO3 (dim_geography iso3, the World Bank economy code, as unhcr), except Kosovo, which CCKP codes KSV
+   (geonames.json 'Kosovo') and the World Bank XKX (as owid); voivodeships by the stated map above. Static, so the map
+   does not read CCKP Silver. A CCKP code without a Gold country (30 territories and Taiwan in Dev trial 45826698285,
+   e.g. GUF, REU, JEY, TWN) maps to _X with its code kept and is counted by build_check. #}
 {% macro poc_geography__cckp_era5() %}
 cckp_era5 as (
     select
@@ -32,6 +33,13 @@ cckp_era5 as (
         g.geography_key
     from geo as g
     where g.level_name = 'country' and g.iso3 is not null
+    union all
+    select
+        'cckp_era5' as source_system,
+        'KSV' as source_code,
+        g.geography_key
+    from geo as g
+    where g.level_name = 'country' and g.iso3 = 'XKX'
     union all
     select
         'cckp_era5' as source_system,

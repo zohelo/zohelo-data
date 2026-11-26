@@ -26,9 +26,9 @@ bronze: [bronze.cckp_era5_records, bronze.cckp_era5_rejected_files]
 silver: [silver.cckp_era5_units, silver.cckp_era5_observations]
 gold: [gold.build_cckp_era5]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  cckp_era5_units: {rows: 6000}  # placeholder until the Dev trial
-  cckp_era5_observations: {rows: 800000}  # placeholder until the Dev trial
-  poc_build_cckp_era5: {rows: 800000}  # placeholder until the Dev trial
+  cckp_era5_units: {rows: 5600}  # 3,744: 243 countries and 3,501 first-level units in geonames.json (Dev trial 45826698285, 26 Nov 2026)
+  cckp_era5_observations: {rows: 780000}  # 517,712: 2 variables x (246 countries + 16 voivodeships) x 912 months + 76 years, 1950-2025 (same trial)
+  poc_build_cckp_era5: {rows: 780000}  # 517,712 = Silver, 61,256 of them of 31 codes without a Gold area (_X) (same trial)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): one file of a few MB and about half a million values, read whole (the API has no

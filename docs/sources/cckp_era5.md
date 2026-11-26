@@ -23,10 +23,13 @@ nothing). Historical reanalysis only: CMIP6 projections are not observations and
 Bronze `bronze.cckp_era5_records` (`unit` rows from `geonames.json`, `value` rows per variable x aggregation x geocode
 x period, all text). Silver `silver.cckp_era5_units` (geocode, name as published, parent country) and
 `silver.cckp_era5_observations` (variable x aggregation x geocode x period; tas in degC, pr in mm; annual pr is the
-year's total, the sum of the months; annual periods are published as `YYYY-07`; a value that is not a number keeps
-`value` null, never 0). Gold block `era5` (`warehouse/macros/sources/cckp_era5.sql`): four measures with one frequency
+year's total, the sum of the months; annual tas is CCKP's yearly mean, within 0.15 °C of the plain average of the
+months; annual periods are published as `YYYY-07`; a value that is not a number keeps `value` null, never 0; CCKP
+prints no markers and leaves no gaps). Size (Dev trial 45826698285, 26 Nov 2026): one Landing file of 2.3 MB,
+517,712 values, 1950-01 to 2025-12, 246 countries and territories and 16 voivodeships; 3,744 spatial units. Gold block `era5` (`warehouse/macros/sources/cckp_era5.sql`): four measures with one frequency
 each, `cckp_era5:era5:degC:tas.monthly` (M), `…:tas.annual` (A), `cckp_era5:era5:mm:pr.monthly` (M), `…:pr.annual` (A);
-countries by ISO3 through `dim_geography`, voivodeships by a stated code map (`POL.1982370` Dolnośląskie … `POL.1982385`
+countries by ISO3 through `dim_geography` (Kosovo: CCKP `KSV` = World Bank `XKX`; 30 territories and Taiwan have no
+Gold area and stay `_X` with their code, 61,256 rows), voivodeships by a stated code map (`POL.1982370` Dolnośląskie … `POL.1982385`
 Zachodniopomorskie → `TERC:<code>`). CCKP spells some names its own way (`Lubeiskie`, `Malopolske`), so nothing is
 matched by name: the test `cckp_era5_units_complete` fails when a mapped code is missing or renamed. Values and units
 as published (D33). These are reanalysis estimates, not station observations: IMGW (`imgw_archive`) stays the national
