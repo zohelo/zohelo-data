@@ -4014,7 +4014,8 @@ sources:
   name: Weekly agricultural market situation reports
   short_name: KOWR agricultural markets
   provider: Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)
-  status: approved
+  source_system: kowr_markets
+  status: built
   family: B
   kpi: true
   geography: Poland
