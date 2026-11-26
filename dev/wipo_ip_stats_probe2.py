@@ -45,7 +45,7 @@ def main(argv):
                 p = tmp / m
                 p.write_bytes(z.read(m))
                 t = f"{kind}_{m.split('_')[3]}_{m.split('_')[4]}"
-                dim = "tec_id" if kind == "patent" else "class_id"
+                dim = "tec_id" if "technology" in m else "class_id"
                 con.execute(f"create table {t} as select cast(year as int) as year, office, origin, cast({dim} as int) as k, cast(count as bigint) as n "
                             f"from read_csv('{p}', all_varchar=true)")
                 log(f"{t} rows", q(con, f"select count(*), min(year), max(year), min(n), max(n), count(*) filter (where n = 0) from {t}"))
