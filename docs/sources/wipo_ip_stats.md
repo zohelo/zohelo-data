@@ -22,7 +22,8 @@ and is never used. Entity = one ZIP; version = its Last-Modified (the files on t
   origins) and, as a separate measure, by applicant origin (summed over offices), per technology field or Locarno
   class; patents also as the total of the fields. Designs get no total: the design files hold only the offices that
   report by class (the Polish office has at most 61 designs a year in applications before 2018), so a sum is not an
-  office total. Offices that are not countries and `**` map to `_X` with their code kept. KPIs (draft, own
+  office total. Offices that are not countries, historical codes and `**` map to `_X` with their code kept (Dev trial
+  45875926273: 15,168 of 375,863 rows; `**`, EA, EP, AP, YU, BX, OA, EM, CS, GC, DD, EU). KPIs (draft, own
   concepts, because a sum of technology fields is not the office's own annual total):
   `patent_grants_filing_office`, `patent_grants_applicant_origin`.
 - Schedule: monthly, the 19th at 05:35 UTC (WIPO updates the files once a year at most; O46). Refresh full (D32).

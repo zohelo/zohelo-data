@@ -1,6 +1,7 @@
 {# WIPO IP Statistics (GL-032, #1262): patent grants, total of the technology fields, countries only, 2000-2022 (file of
-   April 2024; Dev probe 45872152431 and the PR's Dev trial): by filing office 1 to 798,431 (China 2022; Poland 2022
-   2,222), by applicant origin 1 to the largest origin total of the trial; counts are at least 1 (no zero rows). #}
+   April 2024; Dev trial 45875926273, the metrics filter applied to build_wipo_ip_stats): by filing office 1 (Ireland
+   2005) to 798,431 (China 2022; Poland 2022 2,222), by applicant origin 1 (Montenegro 2008) to 736,101 (China 2022;
+   Poland 2022 2,750); counts are at least 1 (the files have no zero rows). #}
 {% macro poc_value_range__wipo_ip_stats() %}
     {{ return({
         'bounds': [
