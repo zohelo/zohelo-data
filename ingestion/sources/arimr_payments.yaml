@@ -6,8 +6,9 @@ description: "ARiMR — direct-payment statistics: applications, decisions and a
 # 43343134150: 0 spreadsheet attachments on the index and 13 scheme pages) and api.dane.gov.pl timed out from the
 # runner. The page https://www.gov.pl/web/arimr/platnosci-bezposrednie2 lists one report a month, "Dane wg stanu na
 # <date>" (Dec 2017 to the newest month), Excel sheets printed to PDF (text layer, probe 43345651745). Each report
-# restates all campaigns cumulatively, so only the newest report and the newest year-end (31 December) report are
-# landed (ingestion/to_landing/arimr_payments/). Entity = one report (report_<yyyymmdd>); version = download time
+# restates all campaigns cumulatively, so only the newest report and the year-end (31 December) reports are landed
+# (ingestion/to_landing/arimr_payments/): when Bronze rejects one year-end report (31.12.2025 prints a voivodeship
+# twice, Dev run 45747874758), the next older one holds the same campaigns. Entity = one report (report_<yyyymmdd>); version = download time
 # (gov.pl sends no version); a landed attachment URL is not downloaded again. Restart unit: one file. Bronze reads
 # the text layer with pypdf (requirements.txt) into table cells, guarded (ingestion/to_bronze/arimr_payments/).
 # Left out: the PS WPR 2023-2027 intervention reports, national aid, RDP/KPO/fisheries programmes (other pages).

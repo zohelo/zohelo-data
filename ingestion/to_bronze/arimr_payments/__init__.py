@@ -12,8 +12,11 @@ runs of spaces) holds tables of one shape: a title ("Liczba złożonych wnioskó
 obszarowych", "Liczba wydanych decyzji o przyznani(e|u) płatności obszarowych", "Kwota zrealizowanych płatności
 w ramach płatności bezpośrednich"), "Dane na dzień <dd.mm.yyyy> r.", header lines naming one campaign year per
 column ("wniosków 2021", "w kampanii 2004", "Kampania 2023**") after that date line, then the 16 voivodeships and
-"Razem". No value is taken by its position alone; a table is accepted only when
-- its header names as many campaign years as every row has values, each year once and in increasing order;
+"Razem". The last amounts table of a report may end with a column "Razem" over "Kampanie 2004-2025", the row's total
+over the campaigns; it is kept as printed (column label "Razem Kampanie ...") and Silver leaves it out. No value is
+taken by its position alone; a table is accepted only when
+- its header names as many columns as every row has values: campaign years, each once and in increasing order, then
+  at most that one total column;
 - it has each of the 16 voivodeships and "Razem" exactly once, and no other row;
 - every value is a number as printed (digits grouped by spaces, decimal comma);
 - in every column "Razem" equals the sum of the voivodeships (counts exactly; amounts, printed rounded to the
@@ -57,6 +60,10 @@ TITLE = re.compile(
 )
 AS_OF = re.compile(r"Dane na dzień\s+(\d{2}\.\d{2}\.\d{4})")
 YEAR = re.compile(r"(?:[Kk]ampani[ia]|wniosków)\s+((?:19|20)\d{2})(\**)(?![\d,-])")
+# a last header "Razem" over "Kampanie 2004-2025": the row's total over the campaigns (amounts table of the newest
+# reports; it sums 2004 to the newest campaign whatever its label says, report of 30.09.2026)
+TOTAL_HEADER = re.compile(r"\s{2,}Razem\s*$")
+TOTAL_SPAN = re.compile(r"^\s*(Kampanie\s+\d{4}\s*-\s*\d{4})\s*$")
 ROW = re.compile(r"^\s*([A-ZŁŚŻŹĆŃÓĘĄ][a-ząćęłńóśźż]+(?:\s*-\s*[a-ząćęłńóśźż]+)?)\s{2,}(\S.*?)\s*$")
 NUMBER = re.compile(r"\d{1,3}(?: \d{3})*(?:,\d{1,2})?")
 AMOUNT_TOLERANCE = Decimal(9)  # 17 values rounded to the złoty: at most 8.5 zł apart
@@ -78,22 +85,27 @@ def number(text: str) -> Decimal:
 def check(table: dict[str, Any]) -> None:
     """The guards of a finished table (module docstring); raises Layout."""
     where = f"page {table['page']} table {table['number']} ({table['title'][:60]!r})"
-    years = [y for y, _ in table["columns"]]
+    years = [y for y, _ in table["columns"] if y]
     if not years or years != sorted(set(years)):
         raise Layout(f"{where}: campaign years in the header not increasing: {years}")
+    if [y for y, _ in table["columns"]][: len(years)] != years:
+        raise Layout(f"{where}: a column without a campaign year before the last: {table['columns']}")
     labels = [label(r) for r, _ in table["rows"]]
     if sorted(labels) != sorted([*VOIVODESHIPS, TOTAL]):
-        raise Layout(f"{where}: rows {labels}")
+        twice = sorted({x for x in labels if labels.count(x) > 1})
+        missing = sorted({*VOIVODESHIPS, TOTAL} - set(labels))
+        raise Layout(f"{where}: rows printed twice {twice}, missing {missing}")
+    columns = [heading for _, heading in table["columns"]]
     for row, values in table["rows"]:
-        if len(values) != len(years):
-            raise Layout(f"{where}: row {row!r} has {len(values)} values for {len(years)} campaign years")
+        if len(values) != len(columns):
+            raise Layout(f"{where}: row {row!r} has {len(values)} values for {len(columns)} columns {columns}")
         bad = [v for v in values if not NUMBER.fullmatch(v)]
         if bad:
             raise Layout(f"{where}: row {row!r} values not numbers as printed: {bad[:3]}")
     if not table["as_of"]:
         raise Layout(f"{where}: no 'Dane na dzień' date")
     total = next(values for row, values in table["rows"] if label(row) == TOTAL)
-    for i, year in enumerate(years):
+    for i, year in enumerate(columns):
         parts = sum(number(values[i]) for row, values in table["rows"] if label(row) != TOTAL)
         tolerance = AMOUNT_TOLERANCE if "," in total[i] else Decimal(0)
         if abs(parts - number(total[i])) > tolerance:
@@ -106,7 +118,7 @@ def parse(pages: list[str]) -> list[dict[str, Any]]:
     tables: list[dict[str, Any]] = []
     table: dict[str, Any] | None = None
     for page_number, text in enumerate(pages, start=1):
-        for line in text.splitlines():
+        for line in text.replace("\xa0", " ").splitlines():  # titles of the year-end reports use no-break spaces
             if TITLE.match(line):
                 if table is not None:
                     raise Layout(f"page {page_number}: a new title before 'Razem' of {table['title'][:60]!r}")
@@ -137,6 +149,11 @@ def parse(pages: list[str]) -> list[dict[str, Any]]:
             elif table["as_of"]:
                 # header lines follow the date; the title's own lines ("w ramach kampanii 2021-2026") do not count
                 table["columns"] += [(y, y + marks) for y, marks in YEAR.findall(line)]
+                span = TOTAL_SPAN.match(line)
+                if TOTAL_HEADER.search(line):
+                    table["columns"].append((None, "Razem"))
+                elif span and table["columns"] and table["columns"][-1] == (None, "Razem"):
+                    table["columns"][-1] = (None, "Razem " + " ".join(span.group(1).split()))
     if table is not None:
         raise Layout(f"table {table['title'][:60]!r} has no 'Razem' row")
     if not tables:

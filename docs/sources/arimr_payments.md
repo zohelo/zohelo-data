@@ -4,8 +4,11 @@
 the gov.pl scheme pages linked from "Wdrażane programy i działania - dane liczbowe" (no XLSX or CSV; Dev probe
 43343134150). The page https://www.gov.pl/web/arimr/platnosci-bezposrednie2 lists one report a month, "Dane wg stanu na
 <date>" (December 2017 to the newest month), Excel sheets printed to PDF. Each report restates every campaign
-cumulatively as of its date, so Landing takes two reports: the newest and the newest year-end (31 December) one, which
-also holds applications and decisions back to 2004. Entity = one report (`report_<yyyymmdd>`), version = download
+cumulatively as of its date, so Landing takes the newest report and every year-end (31 December) report, which also
+hold applications and decisions back to 2004 (ten files, about 3 MB). Every year-end report is landed, not only the
+newest, because Bronze rejects a whole file it cannot check: the 31.12.2025 report prints "Zachodniopomorskie" twice
+and no "Wielkopolskie" in its 2004-2016 applications table (Dev run 45747874758), so those campaigns come from the
+31.12.2024 report. Entity = one report (`report_<yyyymmdd>`), version = download
 time, a landed attachment URL is not downloaded again, restart unit one file (`ingestion/to_landing/arimr_payments/`);
 two files for one report date, or no year-end report on the page, fail Landing.
 

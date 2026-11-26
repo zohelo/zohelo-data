@@ -6,13 +6,15 @@ lists one PDF report a month, "Dane wg stanu na <dd.mm.yyyy> r." (84 attachments
 month; Dev probes 43343134150 and 43345651745). Each report restates the cumulative figures of every campaign by
 voivodeship as of its date: applications for area payments, decisions granting them and the amount paid. The newest
 report holds the amounts of every campaign since 2004; a year-end report (31 December) also holds applications and
-decisions since 2004. So two reports are landed: the newest and the newest year-end one. Entity = one report
+decisions since 2004. So the newest report and every year-end report are landed (nine year-end reports, December
+2017 to December 2025, about 0.3 MB each): when Bronze rejects one, the next older one holds the same campaigns.
+Entity = one report
 (``report_<yyyymmdd>``, the "stanu na" date); version = download time (gov.pl sends no version); an attachment URL
 already landed is not downloaded again, a new URL for the same date (a replaced file) lands as a new version.
 Restart unit: one file. Older monthly reports are not landed (each later report restates them).
 
 landing.inspect  the reports the page lists vs Landing (to land / held); no writes
-landing.extract  the newest and the newest year-end report if not landed, one download at a time, PAUSE apart
+landing.extract  the newest and every year-end report not yet landed, one download at a time, PAUSE apart
 landing.verify   every receipt has its file (bulk_file pattern)
 """
 
@@ -53,13 +55,13 @@ def listed(links: list[tuple[str, str]]) -> dict[date, str]:
 
 
 def wanted(reports: dict[date, str]) -> dict[str, dict[str, Any]]:
-    """The newest report and the newest year-end (31 December) report, as bulk_file specs by entity."""
-    picks = set()
+    """The newest report and every year-end (31 December) report, as bulk_file specs by entity. Every year-end
+    report, not only the newest: Bronze rejects a whole file whose table it cannot check (the 31.12.2025 report
+    prints "Zachodniopomorskie" twice and no "Wielkopolskie" in its 2004-2016 applications table, Dev run
+    45747874758), and Silver then takes each campaign from the next older report that holds it."""
+    picks = {d for d in reports if (d.month, d.day) == (12, 31)}
     if reports:
         picks.add(max(reports))
-    year_end = [d for d in reports if (d.month, d.day) == (12, 31)]
-    if year_end:
-        picks.add(max(year_end))
     specs = [{"entity": f"report_{d:%Y%m%d}", "url": reports[d], "format": "raw", "version": "ingested"} for d in picks]
     return {spec["entity"]: spec for spec in sorted(specs, key=lambda s: s["entity"])}
 

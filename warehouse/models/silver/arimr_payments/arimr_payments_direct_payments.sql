@@ -6,7 +6,8 @@
    so two files with one date and one key fail the unique test instead of being picked from). Values as printed
    (decimal comma, digits grouped by spaces); footnote marks of the column header in column_note ('*' decisions:
    cases with a granting decision; '**' applications 2025+: unique producers who applied, amounts 2023+: including
-   the CAP Strategic Plan payments). Grain: measure_code x area_name x campaign_year. #}
+   the CAP Strategic Plan payments). The column "Razem" (total over the campaigns, printed after the last campaign of
+   the amounts) is left out. Grain: measure_code x area_name x campaign_year. #}
 with cells as (
     select
         entity,
@@ -27,6 +28,8 @@ with cells as (
         regexp_extract(column_label, '(\*+)$', 1) as column_note,
         lower(regexp_replace(trim(row_label), '\s*-\s*', '-', 'g')) as label_key
     from ({{ xlsx_newest_cells(source('arimr_payments', 'arimr_payments_cells')) }})
+    -- campaign columns only: the total column "Razem Kampanie 2004-2025" of the last amounts table is a row sum
+    where regexp_matches(column_label, '^\d{4}\**$')
 )
 
 select
