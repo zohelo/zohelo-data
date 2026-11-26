@@ -42,8 +42,7 @@ geo_map as (
 publishers as (
     select
         dataset_number,
-        coalesce(cast(publisher_number as varchar), '_U') as publisher_code,
-        coalesce(publisher_name, 'nie podano (not given)') as publisher_label
+        coalesce(cast(publisher_number as varchar), '_U') as publisher_code
     from datasets
 ),
 
@@ -87,24 +86,25 @@ counted as (
         group by all
         union all
         select
-            '{{ count_code }}',
-            'publisher',
+            '{{ count_code }}' as count_code,
+            'publisher' as breakdown_code,
             r.date_key,
-            json_object('publisher', p.publisher_code)::varchar,
-            json_object('publisher', pn.publisher_label)::varchar,
-            sum(r.n)
+            cast(json_object('publisher', p.publisher_code) as varchar) as breakdown_json,
+            cast(json_object('publisher', pn.publisher_label) as varchar) as breakdown_label_json,
+            sum(r.n) as value
         from {{ rows }} as r
         inner join publishers as p on r.dataset_number = p.dataset_number
         inner join publisher_names as pn on p.publisher_code = pn.publisher_code
         group by all
         union all
         select
-            '{{ count_code }}',
-            'category',
+            '{{ count_code }}' as count_code,
+            'category' as breakdown_code,
             r.date_key,
-            json_object('category', coalesce(c.category_code, '_U'))::varchar,
-            json_object('category', coalesce(c.category_code, 'brak kategorii (no category)'))::varchar,
-            sum(r.n)
+            cast(json_object('category', coalesce(c.category_code, '_U')) as varchar) as breakdown_json,
+            cast(json_object('category', coalesce(c.category_code, 'brak kategorii (no category)')) as varchar)
+                as breakdown_label_json,
+            sum(r.n) as value
         from {{ rows }} as r
         left join categories as c on r.dataset_number = c.dataset_number
         group by all
