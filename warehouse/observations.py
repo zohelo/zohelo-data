@@ -380,16 +380,11 @@ SOURCES.update(
         )
     }
 )
-# KNF banking-sector data, NBP balance of payments and UN WPP: one Silver dbt table each, every series by rule; the
-# curated build_knf_banking, build_nbp_bop and build_un_wpp stay the KPI layer. KNF and NBP BOP are Poland's own
-# accounts (geography PL, no lookup, as NBP's rates); UN WPP maps its locations as the curated stage does.
+# NBP balance of payments and UN WPP: one Silver dbt table each, every series by rule; the curated build_nbp_bop and
+# build_un_wpp stay the KPI layer. NBP BOP is Poland's own accounts (geography PL, no lookup, as NBP's rates); UN WPP
+# maps its locations as the curated stage does.
 SOURCES.update(
     {
-        "knf_banking": {
-            "tables": {"knf_banking_series": (("silver", "knf_banking_series"), "gold_knf_banking_build")},
-            "lookups": {},
-            "keyed_by": (),
-        },
         "nbp_bop": {
             "tables": {"nbp_bop_observations": (("silver", "nbp_bop_observations"), "gold_nbp_bop_build")},
             "lookups": {},

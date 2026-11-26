@@ -73,8 +73,8 @@ entities (DBW: the files of one block), or, for a source whose Silver is a dbt t
 itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
-UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, World Bank Findex, ICP and WGI, KNF banking-sector data,
-NBP balance of payments and UN WPP so far) declares them in the
+UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, World Bank Findex, ICP and WGI, NBP balance of
+payments and UN WPP so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
 build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
 builds them all, so they share one stage). The block's Silver files are the
@@ -229,11 +229,6 @@ one. It is retried when its recipe changes.
 - **World Bank WGI.** `world_bank_wgi:wgi_observations:_Z:<indicator code>@A`, as WDI: every `GOV_WGI_<dimension>.<x>`
   code (estimate, score and its bounds, standard error, number of sources) is one measure; unit the metadata
   field as published, else `as named`.
-- **KNF banking-sector data.** `knf_banking:knf_banking_series:<unit>:<sheet>:<item path>@<M|Q>`: the sheet and
-  Silver's item path (headings and parent labels joined with ` > `, never a row position) are one measure; the
-  bank group is the breakdown as published (`{"bank_group": …}`, `Sektor bankowy` = is_total; the other groups are
-  parts of it). Unit: `share` for a value under a `%` number format (a fraction as stored), else the sheet's
-  `Dane w` label as published (`zł`, `sztukach`). Poland only (`PL`).
 - **NBP balance of payments.** `nbp_bop:nbp_bop_observations:mln_<currency>:<workbook>:<item code>@<M|Q>`: workbook
   (bop_m, bop_q, iip_q), currency sheet (PLN, EUR, USD; never converted) and Silver's item code define the measure;
   no breakdowns. Poland only (`PL`).
@@ -306,8 +301,7 @@ rule-based build stages apply the rules the curated stages already apply:
   nor a value that is not a finite number, nor a year after the year of the version (a projection; none of the
   three publishes one). Findex and WGI publish no flags (`ok`). ICP surveys the benchmark years 2017 and 2021;
   every other year of ICP 2021 is filled between and around them and has status `estimated`, never `ok`.
-- KNF banking-sector data: an empty cell is no Silver row and is not loaded (nothing is 0-filled); a cell that is
-  not a number already fails Silver's test; no flags (`ok`). NBP balance of payments: a cell without a number or
+- NBP balance of payments: a cell without a number or
   outside the period grid is not loaded (it fails Silver's tests); the newest period of each workbook is
   `provisional` (NBP revises it with the next release), every earlier one `ok`, as in the curated stage. UN WPP:
   the projections (years from 2024 in the 2024 revision) are not loaded, nor an empty cell; no flags (`ok`).
