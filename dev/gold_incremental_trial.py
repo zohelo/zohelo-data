@@ -196,6 +196,15 @@ def step_duckdb(con, cat, table: str, name: str, blocks: list[str], explicit: bo
     return step
 
 
+def to_arrow(relation):
+    """A DuckDB relation as a pyarrow Table (the method's name changed in DuckDB 2.0)."""
+    for method in ("to_arrow_table", "arrow", "fetch_arrow_table"):
+        if hasattr(relation, method):
+            result = getattr(relation, method)()
+            return result.read_all() if hasattr(result, "read_all") else result
+    raise AttributeError("no Arrow export on this DuckDB relation")
+
+
 def step_pyiceberg(con, cat, table: str, name: str, blocks: list[str]) -> dict:
     """The fallback: one PyIceberg overwrite with a filter on gold_block (one commit)."""
     from pyiceberg.expressions import In, NotIn, Or
@@ -209,7 +218,7 @@ def step_pyiceberg(con, cat, table: str, name: str, blocks: list[str]) -> dict:
     con.execute("UPDATE staged SET value = value * 2")
     new_rows = list(con.execute("SELECT count(*), round(sum(value), 6) FROM staged").fetchone())
     iceberg = cat.load_table((NAMESPACE, name))
-    arrow = con.execute("SELECT * FROM staged").fetch_arrow_table().cast(iceberg.schema().as_arrow())
+    arrow = to_arrow(con.sql("SELECT * FROM staged")).cast(iceberg.schema().as_arrow())
     snaps = len(iceberg.metadata.snapshots)
     calls = dict(r2.CATALOG_CALLS)
     step: dict = {"mode": "pyiceberg", "changed": changed, "removed": removed}
@@ -265,18 +274,22 @@ def main() -> int:
         results = {}
         for name, mode in (("fact_tx", "tx"), ("fact_auto", "auto"), ("fact_py", "py")):
             table = f"r2.{NAMESPACE}.{name}"
+            report["results"] = results
             con.execute(f"CREATE TABLE {table} AS {union}")
             start = per_block(con, table)
-            if mode == "py":
-                steps = [step_pyiceberg(con, cat, table, name, models)]
-            else:
-                # two steps: the second one changes another block on top of the first one's deletes
-                first = step_duckdb(con, cat, table, name, models, explicit=mode == "tx")
-                steps = [first]
-                if first.get("ok"):
-                    steps.append(step_duckdb(con, cat, table, name, [models[2], models[0], models[3]], mode == "tx"))
+            steps: list[dict] = []
             results[name] = {"start": start, "steps": steps}
-        report["results"] = results
+            try:
+                if mode == "py":
+                    steps.append(step_pyiceberg(con, cat, table, name, models))
+                else:
+                    # two steps: the second one changes another block on top of the first one's deletes
+                    steps.append(step_duckdb(con, cat, table, name, models, explicit=mode == "tx"))
+                    if steps[0].get("ok"):
+                        second = [models[2], models[0], models[3]]
+                        steps.append(step_duckdb(con, cat, table, name, second, mode == "tx"))
+            except Exception as exc:
+                steps.append({"mode": mode, "ok": False, "error": f"{type(exc).__name__}: {str(exc)[:700]}"})
         problems = [
             f"{name} {s['mode']}: {p}"
             for name, r in results.items()
