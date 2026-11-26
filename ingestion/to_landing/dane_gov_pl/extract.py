@@ -5,9 +5,9 @@ catalogue is read from the official EU republisher, the search API of data.europ
 ``https://data.europa.eu/api/hub/search/search?filter=dataset&facets={"catalog":["dane-gov-pl"]}``. Plain paging
 (``page``, ``limit``) is unusable: the index serves at most 10,000 records that way and its default order is not
 stable (probe 45813541234: 10,000 rows read, 7,751 distinct). The scroll is: ``scroll=true`` on the first request
-returns a ``scrollId``, ``/search/scroll?scrollId=<id>`` the next page of the same snapshot of the index, until a page
-comes back empty (probe 45815120866: 10,001 of 10,001 records in 12 pages of 1,000). ``includes`` limits each record
-to the fields named, which cuts the transfer to about a third (3.0 GB for the full records).
+returns a ``scrollId``, ``/api/hub/search/scroll?scrollId=<id>`` the next page of the same snapshot of the index,
+until a page comes back empty (probe 45815120866: 10,001 of 10,001 records in 12 pages of 1,000). ``includes``
+limits each record to the fields named, which cuts the transfer to about a third (3.0 GB for the full records).
 
 Reduction: each record keeps the catalogue fields of ``reduce`` (identifier, Polish title, publisher name, type and
 dane.gov.pl institution link, issued and modified, periodicity, categories, high-value flag, the harvest record's
@@ -192,7 +192,7 @@ class Client:
                 raise Stop(f"time budget ended after {pages} pages")
             if pages >= MAX_PAGES:
                 raise Stop(f"more than {MAX_PAGES} pages")
-            result = self.call("/search/scroll", {"scrollId": scroll_id}, waits=())  # a repeat could skip a page
+            result = self.call("/scroll", {"scrollId": scroll_id}, waits=())  # a repeat could skip a page
             pages += 1
         if not isinstance(count, int) or len(records) != count:
             raise Stop(f"{len(records)} distinct datasets, the API reports count {count}")
@@ -246,7 +246,7 @@ def _land(client: Any, bucket: str, records: dict, facts: dict, held: list, land
         "version_basis": "download time",
         "ingested_at": ingested,
         "source_url": f"{API}/search?filter=dataset&facets={FACETS}&limit={PAGE_SIZE}&scroll=true&includes=<fields>",
-        "final_url": f"{API}/search/scroll",
+        "final_url": f"{API}/scroll",
         "sha256": digest,
         "size_bytes": len(body),
         "object": {"bucket": bucket, "key": key},
