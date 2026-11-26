@@ -219,7 +219,7 @@ def trial(cat) -> None:
         "voivodeships_deposits": q(con, "select g.name_pl, b.value from gold_t as b join geo as g using "
                                         "(geography_key) where b.measure_key = 'pig_midas:deposits:deposits:documented' "
                                         "and b.is_total order by 2 desc limit 5"),
-        "poland_minerals": q(con, "select breakdown_label_json, value from gold_t where geography_key = 'PL' and "
+        "poland_minerals": q(con, "select breakdown_json, value from gold_t where geography_key = 'PL' and "
                                   "not is_total order by value desc limit 6"),
         "deposit_contours_outside_voivodeships": q(con, "select count(*), round(min(point_lat), 2), "
                                                         "round(max(point_lat), 2) from pig_midas_deposits d where "
