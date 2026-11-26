@@ -15,7 +15,8 @@ extraction:
   initial: bulk
   production: snapshot                  # each report restates every campaign as of its date
   incremental_policy: changed_since_last  # new attachment URL
-  schedule: # UTC; the month's report appears about the 25th-28th of the next month; monthly check on the 2nd
+  schedule: # UTC; the month's report appears about the 25th-28th of the next month; monthly check on the 2nd (the run
+    # ends with Bronze; the platform's weekly Sunday run builds Silver and Gold, O46)
     - {cron: "45 5 2 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/arimr_payments/

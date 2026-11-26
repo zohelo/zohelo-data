@@ -23,7 +23,9 @@ payments) by campaign and voivodeship, "Razem" = Poland; the newest report holdi
 2025 on count unique producers who applied (footnote "Raport DPB"); the footnote marks stay in `column_note`.
 Gold block `direct_payments` (annual, date = 1 January of the campaign; a campaign whose payment window to 30 June of
 the next year was still open at the report date is `provisional`), registered in
-`warehouse/macros/sources/arimr_payments.sql`; KPI `direct_payments_paid` (draft, million PLN in metrics). Monthly
-check on the 2nd. Licence: gov.pl terms plus the report's own line "Wykorzystanie danych możliwe za podaniem źródła"
+`warehouse/macros/sources/arimr_payments.sql`; KPI `direct_payments_paid` (draft, million PLN in metrics); value
+bound in `warehouse/macros/value_range/arimr_payments.sql` (D37). Schedule: one run a month on the 2nd, 05:45 UTC
+(the month's report appears about the 25th to 28th of the next month); the run ends with Bronze, and Silver and Gold
+are built by the platform's weekly run on Sunday (O46). Licence: gov.pl terms plus the report's own line "Wykorzystanie danych możliwe za podaniem źródła"
 (`gov_pl_terms_arimr`, attribution required, share-alike applied as for gov.pl text). Not modelled: the PS WPR
 2023-2027 intervention reports, national aid, RDP, KPO, fisheries and market-mechanism pages.
