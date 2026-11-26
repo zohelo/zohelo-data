@@ -22,7 +22,9 @@ retried with backoff).
 Bronze `bronze.gus_strateg_records` (`indicator` rows from the list, `value` rows from `real_values`, all text).
 Silver `silver.gus_strateg_indicators` (one row per indicator dimension; targets as published JSON text, not
 observations) and `silver.gus_strateg_observations` (indicator dimension x level x territory x year; a value that
-is not a number keeps `value` null, `value_status = 'not_numeric'`, never 0). Gold block `sor`
+is not a number keeps `value` null, `value_status = 'not_numeric'`, never 0; STRATEG prints no markers, but it
+fills some years without voivodeship data with zeros, so a year whose 16 voivodeship values are all 0 keeps `value`
+null, `value_status = 'zero_filled'`: 288 rows of three poverty and farm-structure indicators). Gold block `sor`
 (`warehouse/macros/sources/gus_strateg.sql`): one annual measure per indicator dimension, values and units as
 published (D33); Poland from level 0, voivodeships from level 2; EU-28 (`030000000000`) has no Gold area and is not
 built. Size (26 Nov 2026): 83 indicator dimensions, all with values for Poland, 21 also for the 16 voivodeships;
