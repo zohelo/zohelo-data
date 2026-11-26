@@ -83,7 +83,7 @@ def terms() -> dict:
     out = {}
     for name in ("strateg_en.json", "strateg_pl.json"):
         url = f"https://strateg.stat.gov.pl/{name}"
-        time.sleep(extract.PAUSE_SECONDS)
+        extract.pace(time.monotonic() + 3600)  # counted with the reads (quota: an over-quota request gets 404)
         try:
             r = requests.get(url, headers={"User-Agent": extract.USER_AGENT}, timeout=(30, 60))
             info = r.json().get("info", {})
@@ -385,7 +385,6 @@ def main(argv: list[str]) -> int:
     del argv
     status = 0
     try:
-        terms_pages = terms()
         land = landing()
         note(f"{SOURCE} landing (twice), inspect, verify", land)
         runs = land["runs"]
@@ -412,7 +411,7 @@ def main(argv: list[str]) -> int:
         note(f"{SOURCE} gold", {**g, "failures": failures})
         if failures:
             status = 1
-        note(f"{SOURCE} licence gate and STRATEG spec licence", {**licence(), "spec": terms_pages})
+        note(f"{SOURCE} licence gate and STRATEG spec licence", {**licence(), "spec": terms()})
     except Exception as exc:  # noqa: BLE001
         status = 1
         import traceback
