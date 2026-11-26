@@ -19,10 +19,10 @@ lands only when its SHA-256 changed; restart unit one layer.
   `silver.pig_midas_mining_terrains` (layer x ID_konturu; register number, legal dates, decisions, legal area in m²).
   The archival layers are in the same tables (`layer` `*_archival` / `deposits_removed`).
 - Gold block `gold.build_pig_midas` (`warehouse/macros/sources/pig_midas.sql`): documented deposits (distinct deposit
-  numbers, total and by MIDAS mineral code) and current mining areas (contours, legal area in m²), Poland and
+  numbers, total and by mineral as published) and current mining areas (contours, legal area in m²), Poland and
   voivodeships, at the download date (frequency D). The WFS has no territory attribute: a contour counts in the
-  voivodeship whose PRG boundary (`silver.prg_units`) holds the point on its surface; contours at sea count for Poland
-  only. Archival layers and mining terrains stay out of Gold. No KPI (register `kpi: false`).
+  voivodeship of the PRG gmina (`silver.prg_units`) whose boundary holds the point on its surface; contours at sea
+  count for Poland only. Archival layers and mining terrains stay out of Gold. No KPI (register `kpi: false`).
 - Schedule: monthly, the 17th at 04:55 UTC (O46). Refresh full (D32).
 - Licence: open-conditional, PIG-PIB rules for re-use of public sector information
   (`https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html`), named by the MIDAS

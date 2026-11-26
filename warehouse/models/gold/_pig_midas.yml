@@ -3,7 +3,7 @@ models:
   - name: poc_build_pig_midas
     description: >-
       Build stage — PIG-PIB MIDAS snapshot counts (register PL-ENV-015): documented mineral deposits (distinct deposit
-      numbers, total and by MIDAS mineral code) and current mining areas (contours and legal area in m2), Poland and
+      numbers, total and by mineral, Kopalina) and current mining areas (contours and legal area in m2), Poland and
       the 16 voivodeships (point on the contour's surface in the PRG voivodeship boundary), one date = the download
       date of the layer (frequency D).
     columns:

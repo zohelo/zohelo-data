@@ -19,7 +19,7 @@ models:
       - name: deposit_number
         tests: [not_null]
       - name: mineral_code
-        description: MIDAS mineral code (Kod, e.g. WK hard coal, KN sand and gravel); 60 codes on 26 Nov 2026.
+        description: MIDAS code (Kod) as published; not one to one with the mineral (KN holds 11 minerals, Dev trial).
         tests: [not_null]
       - name: mineral
         tests: [not_null]
