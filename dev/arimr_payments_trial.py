@@ -258,7 +258,7 @@ def main(argv) -> int:
             ),
             "unmatched_geo": n("select count(*) from gold where geography_key = '_X'"),
             "geos": n("select count(distinct geography_key) from gold"),
-            "status": n("select string_agg(x, ' ') from (select observation_status_key || '=' || count(*) x from gold group by 1)"),
+            "status": n("select string_agg(x, ' ') from (select observation_status_key || '=' || count(*) x from gold group by observation_status_key)"),
             "provisional": n("select string_agg(distinct measure_codes || ' ' || year(date_key), ',') from gold where observation_status_key = 'provisional'"),
             "date_range": n("select min(date_key) || ' ' || max(date_key) from gold"),
             "value_range_failures": n(f"select count(*) from ({vr})"),
