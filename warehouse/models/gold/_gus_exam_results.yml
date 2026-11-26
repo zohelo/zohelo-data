@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_gus_exam_results
+    description: >-
+      Build stage — GUS republication of the CKE/OKE results (register PLS-025, #449), block exam8: mean eighth-grade
+      exam result in % of the maximum number of points, one measure per subject (8), sex as the breakdown (ogółem =
+      total), Poland and the 16 voivodeships, annual 2019-2025, values and units as published (D33); rows with a GUS
+      sign have no value and are not loaded. Licence: GUS terms (gus_copyright_exam_results, source required).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
