@@ -37,19 +37,6 @@ voivodeships as materialized (  -- parsed once; the bounding box narrows each po
     ) as parsed
 ),
 
-candidates as (
-    select
-        c.contour_key,
-        c.point_lon,
-        c.point_lat,
-        v.teryt_code
-    from contours as c
-    inner join voivodeships as v
-        on
-            c.point_lon between v.xmin and v.xmax
-            and c.point_lat between v.ymin and v.ymax
-),
-
 contours as (
     select
         'deposits' as block_id,
@@ -80,6 +67,19 @@ contours as (
         raw_sha256
     from {{ ref('pig_midas_mining_areas') }}
     where layer = 'mining_areas'
+),
+
+candidates as (
+    select
+        c.contour_key,
+        c.point_lon,
+        c.point_lat,
+        v.teryt_code
+    from contours as c
+    inner join voivodeships as v
+        on
+            c.point_lon between v.xmin and v.xmax
+            and c.point_lat between v.ymin and v.ymax
 ),
 
 placed as (
