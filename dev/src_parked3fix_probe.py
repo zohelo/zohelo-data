@@ -512,7 +512,126 @@ def one():
     emit("fix3268 errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
 
 
+def chunks_classic(base, runtime):
+    """Angular CLI runtime: map of chunk id -> hash, names optional."""
+    print(f"=== RUNTIME {base}\n{runtime[:4000]}\n=== END", flush=True)
+    out = []
+    for m in re.finditer(r'"-es2015\."\s*\+\s*\{([^}]*)\}', runtime):
+        hashes = dict(re.findall(r'"?([\w-]+)"?:"([0-9a-f]{16,24})"', m.group(1)))
+        pre = runtime[max(0, m.start() - 3000) : m.start()]
+        names = dict(re.findall(r'"?(\d+)"?:"([A-Za-z][\w-]*)"', pre))
+        for k, h in hashes.items():
+            out.append(urllib.parse.urljoin(base, f"{names.get(k, k)}-es2015.{h}.js"))
+    return out
+
+
+def api_strings(text, label):
+    pats = [r'apiUrl\s*\+\s*["\'`]([^"\'`]{1,120})', r'\$\{[\w.$]*(?:apiUrl|Url|url|URL)\}([^`$\s]{1,120})',
+            r'apiService\.(\w+)\(\s*["\']([^"\']{1,120})["\']', r'(\w+Url)\s*[:=]\s*["\'](/[^"\']{1,120})["\']',
+            r'\.get\(\s*["\'`]([^"\'`]{2,120})["\'`]', r'\.post\(\s*["\'`]([^"\'`]{2,120})["\'`]']
+    out = []
+    for p in pats:
+        for m in re.findall(p, text):
+            s = "|".join(m) if isinstance(m, tuple) else m
+            if s not in out:
+                out.append(s)
+    print(f"=== API {label} n={len(out)}\n" + "\n".join(out[:300]) + "\n=== END", flush=True)
+    return out
+
+
+def ela2():
+    out = {}
+    base = "https://ela.nauka.gov.pl/"
+    got = page(base + "pl", text=200)
+    if got:
+        srcs = [urllib.parse.urljoin(base, s) for s in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', got[2])]
+        rt = [s for s in srcs if "runtime-es2015" in s]
+        texts = []
+        if rt:
+            urls = chunks_classic(base, bundle(rt[0]))
+            out["chunks"] = len(urls)
+            for u in urls[:40]:
+                texts.append(bundle(u))
+        texts.append(bundle([s for s in srcs if "main-es2015" in s][0]))
+        allt = "\n".join(texts)
+        contexts(allt, "ela2", ["apiUrl", "sla-server", "/.cdn/", "config.json", "boardUrl"], 250, 450, 6)
+        found = api_strings(allt, "ela2")
+        out["api"] = found[:50]
+        tried = {}
+        for p in ["", "config", "reports", "dictionaries"] + [f.split("|")[-1] for f in found if not re.search(r"[{}$]", f)][:10]:
+            u = urllib.parse.urljoin(base + "sla-server/v6.0/", p.lstrip("/"))
+            if u in tried:
+                continue
+            r = rawget(u, 300000, 1500)
+            tried[u] = {k: r.get(k) for k in ("st", "ct", "len", "err") if r.get(k)}
+        out["tried"] = tried
+    ub = "https://ela-uczen.nauka.gov.pl/"
+    got = page(ub, text=200)
+    if got:
+        srcs = [urllib.parse.urljoin(ub, s) for s in re.findall(r'(?is)<script\b[^>]*src=["\']([^"\']+)', got[2])]
+        main = bundle([s for s in srcs if "main-" in s][0])
+        names = sorted(set(re.findall(r'(chunk-[A-Z0-9]{6,}\.js)', main)))
+        texts = [main] + [bundle(ub + n) for n in names[:40]]
+        more = sorted(set(re.findall(r'(chunk-[A-Z0-9]{6,}\.js)', "\n".join(texts))) - set(names))
+        texts += [bundle(ub + n) for n in more[:30]]
+        allt = "\n".join(texts)
+        out["uczen_chunks"] = len(names) + len(more)
+        contexts(allt, "uczen2", ["apiUrl", "boardUrl", "http.get(", "sla-server", "environment"], 250, 450, 6)
+        found = api_strings(allt, "uczen2")
+        out["uczen_api"] = found[:50]
+    return out
+
+
+def gios2():
+    out = {}
+    b = bundle("https://wody.gios.gov.pl/pjwp/bundle-505ffd16142c797f5674.min.js")
+    contexts(b, "gios2", ["ARCGIS_SERVICES_PATH", "getFinalUrl:", "fetchIndicatorsUrl", "geoFileWmsTypesDict", "downloadFile=", "/geo-files-export/download/",
+                          "/publications/", "getRequest:"], 300, 600, 4)
+    found = api_strings(b, "gios2")
+    out["api"] = found[:80]
+    tried = {}
+    plain_get = [f.split("|")[1] for f in found if re.match(r"(getRequest|getPageRequest)\|", f)]
+    for p in ["/publications?page=0&size=5", "/publications/367", "/publication/367"] + plain_get[:10]:
+        if re.search(r"[{}$]", p):
+            continue
+        u = "https://wody.gios.gov.pl/pjwp" + p
+        if u in tried:
+            continue
+        r = rawget(u, 400000, 2500)
+        tried[u] = {k: r.get(k) for k in ("st", "ct", "len", "err") if r.get(k)}
+    out["tried"] = tried
+    svc = jget("https://wody.gios.gov.pl/arcgis/rest/services?f=json")
+    out["arcgis_root"] = svc if not svc else {"folders": svc.get("folders"), "services": [s.get("name") for s in svc.get("services", [])][:30]}
+    print(f"=== ARCGIS root {json.dumps(svc)[:3000]}\n=== END", flush=True)
+    layer = None
+    for f in (svc or {}).get("folders", [])[:6]:
+        d = jget(f"https://wody.gios.gov.pl/arcgis/rest/services/{f}?f=json")
+        names = [s.get("name") for s in (d or {}).get("services", [])]
+        print(f"=== ARCGIS folder {f} {names}\n=== END", flush=True)
+        out.setdefault("folders", {})[f] = names[:40]
+        for nm in names:
+            if nm.endswith("PWW_M_PPK_KLASYFIKACJA_WSK") and not layer:
+                layer = f"https://wody.gios.gov.pl/arcgis/rest/services/{nm}/MapServer/0"
+    if layer:
+        meta = jget(layer + "?f=json")
+        out["layer"] = {"url": layer, "name": (meta or {}).get("name"), "fields": [x.get("name") for x in (meta or {}).get("fields", [])][:40],
+                        "maxRecordCount": (meta or {}).get("maxRecordCount")}
+        c = jget(layer + "/query?where=1%3D1&returnCountOnly=true&f=json")
+        out["layer"]["count"] = c
+        one = rawget(layer + "/query?where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=2&f=json", 300000, 3000)
+        out["layer"]["one"] = {k: one.get(k) for k in ("st", "len", "err")}
+    return out
+
+
+def two():
+    res = {"gios": gios2()}
+    emit("fix3268b PL-ENV-011 gios", res["gios"])
+    res["ela"] = ela2()
+    emit("fix3268b PLS-024 ela", res["ela"])
+    emit("fix3268b errors", {"requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
+
+
 if __name__ == "__main__":
     import sys
 
-    {"one": one}.get((sys.argv[1:] or ["one"])[0], one)()
+    {"one": one, "two": two}.get((sys.argv[1:] or ["one"])[0], one)()
