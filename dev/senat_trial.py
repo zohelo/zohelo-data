@@ -78,12 +78,70 @@ def count(con, sql: str) -> int:
     return con.execute(f"select count(*) from ({sql})").fetchone()[0]
 
 
+def dane_gov_pl() -> None:
+    """Metadata only (no file download): the Chancellery of the Senate's datasets on dane.gov.pl, found by the route
+    probe 45746035725, so the PR can say whether they could replace or check the web route."""
+    import requests
+
+    session = requests.Session()
+    session.headers["User-Agent"] = (
+        "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
+    )
+    out: dict = {}
+    for name, url in (
+        ("dataset_4648", "https://api.dane.gov.pl/1.4/datasets/4648"),
+        ("dataset_4648_resources", "https://api.dane.gov.pl/1.4/datasets/4648/resources?per_page=50"),
+        ("resource_2592577", "https://api.dane.gov.pl/1.4/resources/2592577"),
+        ("institution_344_datasets", "https://api.dane.gov.pl/1.4/institutions/344/datasets?per_page=50"),
+    ):
+        time.sleep(2)
+        try:
+            r = session.get(url, timeout=(15, 60))
+            body = r.json() if r.status_code == 200 else {}
+        except Exception as exc:
+            out[name] = f"{type(exc).__name__}: {str(exc)[:200]}"
+            continue
+        data = body.get("data")
+        items = data if isinstance(data, list) else [data] if data else []
+        out[name] = {
+            "status": r.status_code,
+            "items": [
+                {
+                    "id": i.get("id"),
+                    **{
+                        k: (i.get("attributes") or {}).get(k)
+                        for k in (
+                            "title",
+                            "format",
+                            "modified",
+                            "data_date",
+                            "created",
+                            "file_size",
+                            "link",
+                            "download_url",
+                            "update_frequency",
+                            "license_condition_source",
+                            "license_name",
+                        )
+                    },
+                    "relation": ((i.get("relationships") or {}).get("dataset") or {}).get("data"),
+                }
+                for i in items
+            ][:40],
+        }
+    note("senat trial dane.gov.pl (metadata only)", out)
+
+
 def trial() -> int:
     from ingestion.common.r2 import catalog, req, s3
     from ingestion.to_bronze.senat import load as bronze
     from ingestion.to_landing import senat as landing
 
     bronze.annotate = collect
+    try:
+        dane_gov_pl()
+    except Exception as exc:
+        note("senat trial dane.gov.pl failed", {"error": f"{type(exc).__name__}: {str(exc)[:300]}"}, "warning")
     # --- Landing ---------------------------------------------------------------------------------------------
     t0 = time.monotonic()
     passes, timing = [], []
@@ -327,8 +385,8 @@ def trial() -> int:
         "date_key from poc_build_senat group by all having count(*) > 1",
     )
     bounds = re.findall(
-        r"\('(senate_\w+)', 'senat', '%', ([\d.e]+), ([\d.e]+)\)",
-        Path("warehouse/tests/metrics_value_range.sql").read_text(),
+        r"\['(senate_\w+)', '%', '([\d.e]+)', '([\d.e]+)'\]",
+        Path("warehouse/macros/value_range/senat.sql").read_text(),
     )
     kpi = {"senate_sitting_days": "senat:sitting_days:days:monthly", "senate_votes": "senat:votes:votes:monthly"}
     out_of_bounds = {
@@ -378,12 +436,33 @@ def trial() -> int:
             ),
         },
     )
-    con.execute(
-        "create or replace table seed_source as select * from read_csv('warehouse/seeds/source.csv', all_varchar=true)"
-    )
-    con.execute(
-        "create or replace table seed_licence as select * from read_csv('warehouse/seeds/licence.csv', all_varchar=true)"
-    )
+    # code lists as rows per source (D36): every file of the folder, as models/gold/seed_rows/<list>.sql reads them
+    for lst in ("source", "licence", "kpi", "kpi_measure", "unit", "unit_map", "unit_decimals"):
+        con.execute(
+            f"create or replace table seed_{lst} as select * from read_csv('warehouse/seed_rows/{lst}/*.csv', "
+            f"all_varchar=true, union_by_name=true)"
+        )
+    seed_rows = {
+        lst: q(con, f"select * from read_csv('warehouse/seed_rows/{lst}/senat.csv', all_varchar=true)")
+        for lst in ("kpi_measure", "unit", "unit_map", "unit_decimals")
+    }
+    seed_problems = {
+        "measure_without_build_rows": q(
+            con,
+            "select m.measure_key_pattern from seed_kpi_measure m where m.source_system = 'senat' and m.measure_key_pattern not in "
+            "(select measure_key from poc_build_senat)",
+        ),
+        "build_unit_unmapped": q(
+            con,
+            "select distinct b.unit_code from poc_build_senat b left join seed_unit_map u on "
+            "u.source_system = 'senat' and u.unit_code = b.unit_code where u.unit_key is null",
+        ),
+        "unit_map_target_missing": q(
+            con,
+            "select u.unit_key from seed_unit_map u left join seed_unit n using (unit_key) "
+            "where u.source_system = 'senat' and n.unit_key is null",
+        ),
+    }
     note(
         "senat trial licence and Gold maxima",
         {
@@ -402,9 +481,14 @@ def trial() -> int:
                 "select measure_key, value, observation_status_key from poc_build_senat "
                 "where period_label = '2026-05' order by 1",
             ),
+            "seed_rows_senat": seed_rows,
+            "seed_problems": seed_problems,
+            "silver_row_counts_for_ceilings": {k: v[-1] for k, v in silver.items()},
+            "gold_row_counts_for_ceilings": {k: v[-1] for k, v in gold.items()},
         },
     )
     problems = {
+        "seed_problems": {k: v for k, v in seed_problems.items() if v},
         "landed_by_idempotency_pass": landed_again,
         "rejected_files": len(rejected),
         "bronze_second_load_candidates": (COLLECTED.get("senat Bronze from Landing") or [{}, {}])[-1].get("candidates"),
@@ -415,7 +499,11 @@ def trial() -> int:
         "rows_out_of_bounds": {k: c for k, c in out_of_bounds.items() if c},
     }
     bad = {k: v for k, v in problems.items() if v}
-    note("senat trial verdict", {"problems": bad} if bad else {"result": "all checks passed"}, "error" if bad else "notice")
+    note(
+        "senat trial verdict",
+        {"problems": bad} if bad else {"result": "all checks passed"},
+        "error" if bad else "notice",
+    )
     return 1 if bad else 0
 
 
