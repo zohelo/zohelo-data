@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+doctors_working,gus_health,gus_health:health_care_resources:persons:doctors,"GUS Zdrowie i ochrona zdrowia, medical personnel by voivodeship (data of MZ, MSWiA and GUS), 31 December, reference years 2021- (earlier years not comparable), Poland and voivodeships",1,
+nurses_working,gus_health,gus_health:health_care_resources:persons:nurses,"GUS Zdrowie i ochrona zdrowia, medical personnel by voivodeship (data of MZ, MSWiA and GUS), 31 December, reference years 2021- (earlier years not comparable), Poland and voivodeships",1,
+hospital_beds,gus_health,gus_health:health_care_resources:beds:beds,"GUS Zdrowie i ochrona zdrowia, general hospitals by voivodeship (data of MZ and MSWiA), beds and incubators for newborns, 31 December, Poland and voivodeships",1,

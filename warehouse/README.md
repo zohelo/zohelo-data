@@ -53,8 +53,10 @@ Metrics models are block-scoped (#3204, D38; kill switch `metrics_scoped` in `wa
 Gold blocks of the KPI's sources (`seed_rows/kpi_measure`; source → block from `poc_legacy_block_models()`,
 each `poc_source__<source>()` and a block's config meta `source_systems`). It is rebuilt when one of those
 blocks was rebuilt in this run or after its last build, or when a parent that does not derive from a block
-(`kpi`, `kpi_measure`, `unit`, `unit_map`, `poc_dim_geography`, `poc_dim_calendar`, and `gold_coverage.coverage`
-through `poc_dim_measure`) changed; a rebuilt fact or dimension alone no longer rebuilds all of them. Its
+(`kpi`, `kpi_measure`, `unit`, `unit_map`, `poc_dim_geography`, `poc_dim_calendar`) changed; a rebuilt fact or
+dimension alone no longer rebuilds all of them. `gold_coverage.coverage` is not an input (`OUTSIDE_METRICS` in
+`changed.py`): it adds only non-activated rows to `poc_dim_measure`, which no metrics model reads; the data test
+`tests/gold_coverage_outside_metrics.sql` fails the build if that stops being true. Its
 fingerprint includes the code of the facts and dimensions above it (not the block list or the per-source macro
 files), so an edit to `poc_fact_annual.sql` still rebuilds every metrics model and a new source none of the
 others. A KPI with a source that maps to no block stays unscoped. The plan lists the metrics models the old rule
@@ -73,6 +75,21 @@ build properties, the scheduled build rebuilds it in full once (dbt var
 Bronze rows rewritten under the same `raw_sha256` (a to_bronze re-decode) are not noticed:
 such a fix must also change the model's code (e.g. a line in its header comment), so the
 next scheduled build rebuilds it in full; announce it in the Work log.
+
+The five Gold facts and `poc_dim_series` are incremental per Gold block (#3204 PR B, D39;
+`macros/poc_incremental.sql`). Every row carries its block model in a trailing column `gold_block`
+(`poc_observations()`). The changed-only plan lists `changed_blocks`: the blocks rebuilt in the run, and the blocks
+whose table changed after such a model's last build. `build.py` passes them as a dbt var, and the model reads only
+those blocks. The strategy `gold_blocks` then deletes the rows of those blocks and of every block that is no
+longer registered, and inserts the new rows, in one explicit transaction: one Iceberg commit. Their fingerprint
+leaves out the block list and the per-source macro files, so a new source is a block change, not a code change.
+The block list they were built with is the property `zohelo.build_blocks`; when it differs, the plan says "blocks
+changed" and the model is rebuilt incrementally. A full refresh happens when the model's code changed, it has no
+build properties or no table, or more than half of its counted rows are position deletes ("position deletes";
+`total-records` in the snapshot summary still counts deleted rows). A build that is not the changed-only plan (an
+explicit filter, `fqn:*`) has no `changed_blocks` var and rebuilds them in full, as before. They have no
+`full_rebuild` ceiling; the grain tests (`fact_grain`, unique `series_key` in `dim_series`) catch a series that
+two blocks emit.
 
 Every other model is a full-rebuild table (the project default) and must be small (owner
 policy #822: below ~1M rows). `full_rebuild` (in the source's own YAML, or `warehouse.yaml` for a shared model) gives each one a row ceiling;

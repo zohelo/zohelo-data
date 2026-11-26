@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: poc_build_gus_health
+    description: >-
+      Build stage — GUS Zdrowie i ochrona zdrowia (register PLS-004, health family; #2451), block
+      health_care_resources: doctors and nurses (31 December; reference years to 2020 as doctors_pre2021 and
+      nurses_pre2021, not comparable with 2021-), general hospitals, their beds and beds per 10,000 population
+      (31 December), inpatients in the year, Poland and the 16 voivodeships, annual, reference years 2012-2024, the
+      edition year of each edition. Values and units as published (D33); rows without a value are not loaded.
+      Licence: GUS terms (gus_copyright_health, source required).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

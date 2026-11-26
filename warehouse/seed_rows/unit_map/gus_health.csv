@@ -1,0 +1,5 @@
+source_system,unit_code,measure_key_pattern,unit_key
+gus_health,persons,,persons
+gus_health,facilities,,facilities
+gus_health,beds,,beds
+gus_health,per_10k_population,,per_10k_population
