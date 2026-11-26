@@ -12,7 +12,7 @@ powiat and gmina, and the sejmiki town/country file (Poland).
   directory `csv`). A wrong name or stamp answers the HTML shell with status 200: `format: zip` rejects it, so a
   changed stamp fails `landing.extract` (and needs the declaration updated) instead of landing HTML.
 - **Entity and version.** One file; version = Last-Modified; a copy lands only when its SHA-256 changed; restart
-  unit one file. The files are static after the official results: monthly check (3rd, 05:25 UTC).
+  unit one file. The files are static after the official results: monthly check (3rd, 19:20 UTC; slower than O46's weekly maximum, elections are irregular).
 - **Bronze.** `bronze.pkw_cells`: one row per non-empty cell (member or sheet, row, column, text), the shape of the
   workbook sources; CSV members read by DuckDB, XLSX by `ingestion/common/xlsx_cells.py`; a file that is not UTF-8,
   has rows of different widths or is not a ZIP is rejected (`bronze.pkw_rejected_files`).

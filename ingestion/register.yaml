@@ -5470,7 +5470,7 @@ sources:
       elections: https://danewyborcze.kbw.gov.pl/ (a static archive; its front page only redirects, content not inventoried).'
     incremental: 'Static after each election: land once per election (snapshot), version = Last-Modified; add the next election
       by hand when it is called.'
-    identifiers: Election id (site name), territorial code (TERYT expected, to confirm in the files), list or candidate number.
+    identifiers: Election id (site name), territorial code (TERYT, 6 digits without the gmina type digit), list or candidate number.
   modelling:
     notes: 'Smallest Gold selection: voivodeship and gmina results files of Sejm 2023, EP 2024, voivodeship assemblies 2024
       and president 2025. New KPIs: voter turnout (%) and vote share by list or candidate, Poland and voivodeships; new dimension:
