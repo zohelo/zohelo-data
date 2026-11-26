@@ -6303,7 +6303,8 @@ sources:
   name: Krajowa Integracja Numeracji Adresowej / PRG address services
   short_name: GUGiK address points
   provider: GUGiK and municipalities
-  status: approved
+  source_system: gugik_prg
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -6334,7 +6335,8 @@ sources:
     history: 'Bulk, stable URLs (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)): https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
       (SHP, 564,429,905 bytes, Last-Modified and ETag sent) and https://opendata.geoportal.gov.pl/prg/adresy/PRG-punkty_adresowe.zip
       (GML, 804,643,553 bytes). Packages per gmina, powiat and voivodeship come from WMS GetFeatureInfo of https://integracja.gugik.gov.pl/cgi-bin/PanstwowyRejestrGranic.
-      Row count not measured.'
+      Address layer PRG_PunktyAdresowe_POLSKA: 8,647,096 points, 11 attributes (Dev probes 45810275130, 45811745316, 26 Nov
+      2026; members Deflate64).'
     incremental: Entity = national SHP package, version = Last-Modified; snapshot, changed_since_last. The file is rebuilt
       often (Last-Modified on the probe day) and is 0.56 GB, so load monthly and keep only the newest version in the Archive.
       Add it as an entity of the existing gugik_prg source rather than a new source.
@@ -6349,9 +6351,7 @@ sources:
     priority: conditional
     evidence: tested
     connection: tested
-    blockers:
-    - Attribute list and row count of the SHP package were not opened; check on the real file before Bronze (0.56 GB zipped,
-      bounded memory).
+    blockers: []
     references:
     - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/
     - https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
