@@ -97,12 +97,15 @@ def profile_file(body: bytes, label: str) -> None:
         names = zf.namelist()
         note("zip", {"file": label, "members": names[:30]})
         if any(n.startswith("xl/") for n in names):
-            import openpyxl  # noqa: PLC0415
-            wb = openpyxl.load_workbook(io.BytesIO(body), read_only=True, data_only=True)
-            note("xlsx", {"file": label, "sheets": wb.sheetnames})
-            for ws in wb.worksheets[:3]:
-                rows = [["" if c is None else c for c in r] for r in ws.iter_rows(values_only=True)]
-                profile_rows(rows, f"{label}#{ws.title}")
+            from ingestion.common.xlsx_cells import cells  # noqa: PLC0415
+            grid: dict[str, dict[int, dict[int, str]]] = {}
+            for c in cells(body):
+                grid.setdefault(c["sheet_name"], {}).setdefault(c["row_number"], {})[c["column_number"]] = c["value_text"] or ""
+            note("xlsx", {"file": label, "sheets": list(grid)})
+            for sheet, rows_by_n in list(grid.items())[:3]:
+                width = max((max(r) for r in rows_by_n.values() if r), default=0)
+                rows = [[rows_by_n[n].get(j, "") for j in range(1, width + 1)] for n in sorted(rows_by_n)]
+                profile_rows(rows, f"{label}#{sheet}")
             return
         for n in names[:3]:
             if n.lower().endswith((".csv", ".txt")):
