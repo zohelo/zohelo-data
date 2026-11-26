@@ -65,7 +65,7 @@ example as (
   CTEs named `<source_system>_<x>`. It is placed right after `geo`, so it may read `geo` and any `ref()`,
   not the CTEs of other sources. Prefer static lists and `geo` (iso2, iso3, wb_code) over the
   source's own Silver table, so the shared model never waits for a new source.
-- Registered sources are placed in name order (in the geography map before the CTEs still written in the model;
+- Registered sources are placed in name order (in the geography map every source, closed by an empty branch;
   in the block lists after the older ones): the compiled SQL depends on which sources exist, never on the order
   pull requests were merged.
 
@@ -97,11 +97,15 @@ it cannot follow macros found by name; a full parse takes about five seconds.
   `poc_geography__<source>()` in `macros/sources/<source>.sql` (gus_bdl, gus_dbw, mrpips_unemployment, oecd, gleif,
   gus_teryt, gugik_prg, the five World Bank sources, zus_psz, ecb, un_wpp, unhcr, eea; the World Bank map is
   `poc_world_bank_economies(source_system)` in `world_bank_wdi.sql`, one CTE per source instead of the shared `ids`
-  and `wb_family`). The map returns the same rows; the compiled SQL of no other model changed. Four sources stay in
-  the model: unctad, who, unesco_uis and faostat read their own Silver tables through `poc_optional_ref`, which
-  `repo_check` pairs with the model's config meta `optional_parents`, so they move only when that check reads the
-  macros too. Still shared: the Gold macros of `poc_blocks.sql`. Moving the Gold
-  macros is mechanical (cut the block macros, the list line, the CTE and the branch into
+  and `wb_family`). The map returns the same rows; the compiled SQL of no other model changed. Moved (26 November,
+  second step): the last four, unctad, who, unesco_uis and faostat, which read their own Silver tables through
+  `poc_optional_ref`. Their tables stay in the map's config meta `optional_parents` (`warehouse/changed.py` plans by
+  it), and `repo_check` now pairs that list with the calls in every `poc_geography__<source>()` as well as the
+  model's own text; a call anywhere else in a source's macro file fails the check. The model writes no source's CTE
+  any more: the registered CTEs, then one union of them closed by an empty branch (the compiled map has the same 95
+  CTEs, text unchanged, and the same 71 branches, now all in name order). Still shared: the `optional_parents` list
+  itself, for the rare source whose map must read its own Silver table (prefer static codes), and the Gold macros
+  of `poc_blocks.sql`. Moving the Gold macros is mechanical (cut the block macros, the list line, the CTE and the branch into
   `macros/sources/<source>.sql`; a trial move of WHO changed only the position of its branches in the
   compiled SQL) but reorders the unions, so the compiled SQL of the facts changes once. Do it in one pull
   request when no source pull request is open.
@@ -196,7 +200,8 @@ or both; a source with a block in the old list and a registration; a value-range
 defining another macro than `poc_value_range__<source>`, or such a macro outside `macros/value_range/` or called by
 a model; a registration that names no model or no
 blocks, sits in the wrong file or names an unknown source; a geography CTE that is not named after its
-source or whose name already exists (in `poc_map_geography.sql` or in another source's macro);
+source or whose name already exists (in `poc_map_geography.sql` or in another source's macro); a
+`poc_optional_ref` table the map does not list in `optional_parents`, or one listed and not read;
 a `source.csv` or `licence.csv` row missing for a source (`register`); a choice list put back on the
 Pipeline `source` input.
 
