@@ -8,7 +8,7 @@ models:
       purpose and year, elevation, coordinates, location basis, locality and the gmina, powiat and voivodeship names,
       archive, inventory number, core store, geophysics, analyses and studies as published (Polish, with the English
       labels the WFS gives), the point in degrees (EPSG:4326); snapshot_date = download date: the register state on
-      that date. Completeness: tests/pig_boreholes_boreholes_complete.sql. Trial run TRIAL_RUN.
+      that date. Completeness: tests/pig_boreholes_boreholes_complete.sql. History: drilling years 1824-2026 (Dev trial 45899934080).
     tests:
       - unique:
           column_name: id_cbdg
@@ -20,8 +20,8 @@ models:
       - name: objectid
         tests: [not_null]
       - name: drilling_purpose
-        description: Cel wiercenia as published; NULL where the producer gives none (its literal 'null').
-        tests: [{accepted_values: {arguments: {values: ['złożowy', 'hydrogeologiczny', 'geologiczno-inżynierski', 'badawczy', 'kartograficzny', 'brak danych', 'geotechniczny', 'technologiczny']}}}]
+        description: Cel wiercenia as published (11 values on 26 Nov 2026, 'brak danych' = the producer's 'no data', 2,917 boreholes); NULL where the producer writes 'null' (6,756).
+        tests: [{accepted_values: {arguments: {values: ['złożowy', 'hydrogeologiczny', 'geologiczno-inżynierski', 'badawczy', 'kartograficzny', 'brak danych', 'geotechniczny', 'technologiczny', 'ciepło Ziemi', 'inny']}}}]
       - name: voivodeship_name
         description: Województwo as published (name, no code); NULL where the producer gives none. Not used to place the borehole in Gold.
         tests: [{accepted_values: {arguments: {values: ['dolnośląskie', 'kujawsko-pomorskie', 'lubelskie', 'lubuskie', 'łódzkie', 'małopolskie', 'mazowieckie', 'opolskie', 'podkarpackie', 'podlaskie', 'pomorskie', 'śląskie', 'świętokrzyskie', 'warmińsko-mazurskie', 'wielkopolskie', 'zachodniopomorskie']}}}]
