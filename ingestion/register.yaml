@@ -5608,7 +5608,9 @@ sources:
     blockers:
     - 'Not a route to the resources: every distribution read points to api.dane.gov.pl, which does not answer runners, so
       PL-ENV-025 (UTK passenger and freight CSVs, datasets 1650-1652), PLG-032 and PL-ENV-028 gain no route from this entry.'
-    - Harvest lag of data.europa.eu against dane.gov.pl is unknown; measure in the Landing trial.
+    - 'Built through data.europa.eu (#3263): harvest lag measured in Dev trial 45827739830 (newest modification 18.8 h
+      old, newest harvest record 13.5 h; median 63 h from modification to harvest record for datasets modified in the
+      last 30 days). Distributions are counted, never downloaded.'
     references:
     - https://data.europa.eu/api/hub/search/catalogues/dane-gov-pl
     - https://data.europa.eu/en/copyright-notice

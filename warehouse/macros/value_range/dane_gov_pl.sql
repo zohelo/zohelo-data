@@ -1,6 +1,6 @@
 {# dane.gov.pl catalogue (#3263): datasets and distributions per month of last modification, Poland. A month can hold
-   at most the whole catalogue (10,001 datasets, 672,460 distributions in Dev probe 45818878323); largest months
-   BOUNDS_EVIDENCE. #}
+   at most the whole catalogue (10,001 datasets, 672,460 distributions in Dev trial 45827739830); largest months
+   2,942 datasets (2025-09) and 198,552 distributions (2026-01), 0 rows outside these bounds (same trial). #}
 {% macro poc_value_range__dane_gov_pl() %}
     {{ return({
         'bounds': [

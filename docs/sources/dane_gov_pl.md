@@ -29,7 +29,11 @@ download date, so earlier months change as datasets are modified again; the down
 KPIs `open_data_datasets_modified` and `open_data_distributions_modified` (no v2 map row). Weekly, Wednesday 15:25 UTC
 (O46).
 
-Harvest lag: HARVEST_LAG_PLACEHOLDER
+Harvest lag (Dev trial 45827739830, 26 Nov 2026, 13:19 UTC): the newest dataset modification in the harvest was 18.8 h
+old and the newest harvest record 13.5 h old (data.europa.eu harvests daily, its records changed between 17:00 and
+24:00 UTC); for datasets modified in the last 30 days, the harvest record followed the modification by 63 h at the
+median and 375 h at the 90th percentile. So the weekly run reads a catalogue at most about a day behind dane.gov.pl
+for most records, and up to about two weeks behind for some. The entity table carries `harvest_lag_hours` per dataset.
 
 Licence: CC0 1.0 for the metadata (`cc0_data_europa_eu`), from the copyright notice of data.europa.eu
 (https://data.europa.eu/en/copyright-notice): "To the extent possible under law, the European Union has waived all

@@ -12,7 +12,9 @@ description: "dane.gov.pl open-data catalogue (Chancellery of the Prime Minister
 # download time (the API gives no version of the harvest); an unchanged catalogue (same SHA-256) is not landed again.
 # Distributions are metadata only: their files (api.dane.gov.pl) are never downloaded. Size (Dev probe 45818878323,
 # 26 Nov 2026): 10,001 dataset records with 672,460 distributions, 12 requests, 351 MB read, 341 MB landed, 68 s.
-# TRIAL_PLACEHOLDER
+# Dev trial 45827739830 (26 Nov 2026): 1 file of 341,213,763 bytes, the second Landing and Bronze passes wrote
+# nothing; Bronze 10,001 datasets and 672,460 distributions, 0 rejected; Silver 9,970 datasets (31 numbers on two
+# harvest records), dataset modifications from 2017-08-25 to 2026-11-25, distributions from 2014-05.
 extraction:
   initial: api
   production: snapshot                    # each file is the complete current catalogue
@@ -30,14 +32,14 @@ archive_policy:
 bronze: [bronze.dane_gov_pl_datasets, bronze.dane_gov_pl_distributions, bronze.dane_gov_pl_rejected_files]
 silver: [silver.dane_gov_pl_datasets, silver.dane_gov_pl_dataset_categories, silver.dane_gov_pl_distribution_months]
 gold: [gold.open_data_datasets_pl, gold.build_dane_gov_pl, gold.metrics_open_data_datasets_modified, gold.metrics_open_data_distributions_modified]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); CEILINGS_PLACEHOLDER
-  dane_gov_pl_datasets: {rows: 15000}
-  dane_gov_pl_dataset_categories: {rows: 16000}
-  dane_gov_pl_distribution_months: {rows: 300000}
-  open_data_datasets_pl: {rows: 15000}
-  poc_build_dane_gov_pl: {rows: 60000}
-  poc_metrics_open_data_datasets_modified: {rows: 300}
-  poc_metrics_open_data_distributions_modified: {rows: 300}
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); about 1.5 x the rows of Dev trial 45827739830
+  dane_gov_pl_datasets: {rows: 15000}  # 9,970 measured
+  dane_gov_pl_dataset_categories: {rows: 16800}  # 11,192 measured
+  dane_gov_pl_distribution_months: {rows: 49000}  # 32,790 measured
+  open_data_datasets_pl: {rows: 15000}  # 9,970 measured
+  poc_build_dane_gov_pl: {rows: 37000}  # 24,699 measured (6 measures, months 2014-05 to 2026-11)
+  poc_metrics_open_data_datasets_modified: {rows: 120}  # 79 months in Gold
+  poc_metrics_open_data_distributions_modified: {rows: 220}  # 145 months in Gold
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one catalogue of about 10,000 datasets read whole in 12 requests, no
