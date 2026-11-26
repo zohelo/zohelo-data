@@ -54,7 +54,7 @@ import zipfile
 import requests
 import yaml
 
-from ingestion.common.r2 import archive_key, archived, get_with_backoff, req, s3
+from ingestion.common.r2 import archive_key, archived, get_with_backoff, remember_receipt, req, s3
 from ingestion.common.report import annotate, step_summary
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -412,12 +412,9 @@ def reduce_held(client: Any, bucket: str, source: str, spec: dict[str, Any], lan
             "reduced": spec["reduce"],
             "reduced_at": stamp(datetime.now(UTC)),
         }
-        client.put_object(
-            Bucket=bucket,
-            Key=receipt_key,
-            ContentType="application/json",
-            Body=json.dumps(receipt, indent=2, sort_keys=True).encode(),
-        )
+        rewritten = json.dumps(receipt, indent=2, sort_keys=True).encode()
+        client.put_object(Bucket=bucket, Key=receipt_key, ContentType="application/json", Body=rewritten)
+        remember_receipt(bucket, receipt_key, rewritten)  # the receipt cache must not serve the replaced bytes
         done += 1
     return done
 

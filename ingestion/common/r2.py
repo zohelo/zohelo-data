@@ -218,9 +218,11 @@ def head_sha256(client, bucket: str, keys: list[str]) -> dict[str, str]:
 
 
 # ----------------------------------------------------------------------------- Landing receipts
-# A Landing receipt is written once and never changed (docs/landing.md: Landing is never overwritten), and every
-# reader GETs all of a source's receipts (#3133: GUS BDL about 40,000, read 8 to 11 times per run, most of the R2
-# Class B bill). Within one process each receipt is read from R2 once; later readers get the same bytes.
+# A Landing receipt is written once and changed in place only by the one-off reduction of a held copy
+# (bulk_file.reduce_held, which then calls remember_receipt), and every reader GETs all of a source's receipts
+# (#3133: GUS BDL about 40,000, read 8 to 11 times per run, most of the R2 Class B bill). Within one process each
+# receipt is read from R2 once; later readers get the same bytes. A writer that replaces a receipt under its key
+# must call remember_receipt with the new bytes, or the process keeps serving the old ones.
 RECEIPT_SUFFIX = ".receipt.json"
 _receipts: dict[tuple[str, str], bytes] = {}
 _receipts_lock = threading.Lock()
@@ -242,6 +244,13 @@ def read_receipt(client, bucket: str, key: str, fetch=None) -> bytes:
         _receipts[(bucket, key)] = body
         RECEIPT_READS["from_storage"] += 1
     return body
+
+
+def remember_receipt(bucket: str, key: str, body: bytes) -> None:
+    """Records the bytes just written under a receipt key, so this process never serves the replaced ones."""
+    if key.endswith(RECEIPT_SUFFIX):
+        with _receipts_lock:
+            _receipts[(bucket, key)] = body
 
 
 def get_with_backoff(client, bucket: str, key: str, attempts: int = 6) -> bytes:
