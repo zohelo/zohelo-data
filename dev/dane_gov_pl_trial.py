@@ -351,9 +351,22 @@ def gold_step(con, sources: dict) -> None:
             ),
             "spot_publishers": q(
                 con,
-                f"select breakdown_label_json, sum(value) from {m} "
-                f"where measure_key = 'dane_gov_pl:catalogue:datasets:publisher:monthly' group by 1 order by 2 desc",
+                f"select breakdown_json, breakdown_label_json, sum(value) filter (where measure_key like '%:datasets:%'), "
+                f"sum(value) filter (where measure_key like '%:distributions:%') from {m} "
+                f"where measure_key like 'dane_gov_pl:catalogue:%:publisher:monthly' group by 1, 2 order by 3 desc",
                 5,
+            ),
+            "spot_categories": q(
+                con,
+                f"select breakdown_json, sum(value) filter (where measure_key like '%:datasets:%'), "
+                f"sum(value) filter (where measure_key like '%:distributions:%') from {m} "
+                f"where measure_key like 'dane_gov_pl:catalogue:%:category:monthly' group by 1 order by 2 desc",
+            ),
+            "spot_distributions_7044": q(
+                con,
+                "select modified_month, format_code, distributions, sized, bytes from dane_gov_pl_distribution_months "
+                "where dataset_number = 7044 order by 1 desc",
+                4,
             ),
             "totals_match_silver": q(
                 con,
