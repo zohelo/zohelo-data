@@ -3,16 +3,24 @@ models:
   - name: eli_pl_acts
     description: >-
       ELI Poland (register PLG-026): one row per act published in Dziennik Ustaw (DU) or Monitor Polski (MP), metadata
-      only. Grain: eli_id (journal / year / position). Title, type and status as published, promulgation and
-      announcement dates (the API gives no promulgation date for many older acts), text flags; acts_listed = the
-      journal's act count on /eli/acts. Position is not unique within a journal year: Monitor Polski 1946 repeats 10
-      positions under distinct ELI ids (Dev trial). History and trial run: ingestion/sources/eli_pl.yaml.
+      only. Grain: eli_id, which encodes journal / year / issue (volume, 'Nr') / position, so the act's address
+      journal x year x volume x position is unique too. Position alone is not unique within a journal year before
+      2012, when acts were cited by issue and position: the API lists two or three different acts (distinct ELI ids,
+      issues and titles) under one position in Monitor Polski 1946 (positions 45, 90, 91, 92, 95, 96, 97, 98, 170) and
+      2000 (469); all are kept, none is picked (Dev trial 43856642960). Title, type and status as published,
+      promulgation and announcement dates (the API gives no promulgation date for many older acts), text flags;
+      acts_listed = the journal's act count on /eli/acts. History and trial run: ingestion/sources/eli_pl.yaml.
+    tests:
+      - unique:
+          column_name: "row(publisher, year, volume, position)"
     columns:
       - name: eli_id
         tests: [not_null, unique]
       - name: publisher
         tests: [not_null, {accepted_values: {arguments: {values: ['DU', 'MP']}}}]
       - name: year
+        tests: [not_null]
+      - name: volume
         tests: [not_null]
       - name: position
         tests: [not_null]
