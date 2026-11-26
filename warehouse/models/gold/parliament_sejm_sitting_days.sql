@@ -1,7 +1,7 @@
 {{ config(alias='parliament_sejm_sitting_days') }}
 {# Gold entity table (register source, kpi false; docs/model.md "Fact kinds": events): one row per sitting day of the
    Sejm, terms 9 and 10 (register PLG-024), keyed by the API's term, sitting number and the day; date_key = the
-   day. is_held false for the planned later days of a running sitting. #}
+   day. is_held false for the planned days after the build date. #}
 select
     term,
     sitting_number,

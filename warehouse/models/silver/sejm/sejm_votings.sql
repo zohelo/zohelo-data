@@ -4,7 +4,9 @@
    (votings_listed, for the completeness test). Totals as published for electronic votes. A list vote (kind
    ON_LIST, e.g. electing the Marshal) carries its result per option, which is not loaded, and a traditional vote
    (TRADITIONAL) has no counted totals: the API sends 0 for their yes, no and abstain (Dev trial: all 31 such votes),
-   so they are empty here, never 0. Individual MPs' votes are not read. #}
+   so they are empty here, never 0. A traditional vote's total_voted, present, not_participating and against_all are
+   0 as well when nothing was counted (Dev trial 45755790301: total_voted 0 on all 16), so a 0 there is empty too; a
+   list vote keeps its real totals (419 to 459 voted). Individual MPs' votes are not read. #}
 with votings as (
     select
         cast(term as integer) as term,
@@ -59,10 +61,11 @@ select
     case when v.kind = 'ELECTRONIC' then v.yes end as yes,
     case when v.kind = 'ELECTRONIC' then v.no end as no,
     case when v.kind = 'ELECTRONIC' then v.abstain end as abstain,
-    v.not_participating,
-    v.total_voted,
-    v.present,
-    v.against_all,
+    case when v.kind = 'TRADITIONAL' then nullif(v.not_participating, 0) else v.not_participating end
+        as not_participating,
+    case when v.kind = 'TRADITIONAL' then nullif(v.total_voted, 0) else v.total_voted end as total_voted,
+    case when v.kind = 'TRADITIONAL' then nullif(v.present, 0) else v.present end as present,
+    case when v.kind = 'TRADITIONAL' then nullif(v.against_all, 0) else v.against_all end as against_all,
     v.voting_options,
     l.votings_listed,
     v.source_version,

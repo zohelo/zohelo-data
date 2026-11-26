@@ -3,9 +3,10 @@ models:
   - name: sejm_sitting_days
     description: >-
       Sejm API (register PLG-024), terms 9 and 10: one row per day of a numbered sitting. Grain: term x
-      sitting_number x day_date. Days as the proceedings list gives them (later days of a running or planned sitting
-      have is_held false); votings_listed = votings the API lists for the day (empty on a day without votes).
-      History and trial run: ingestion/sources/sejm.yaml.
+      sitting_number x day_date. Days as the proceedings list gives them (days after the build date have is_held
+      false); votings_listed = votings the API lists for the day (empty on a day without votes); per sitting, the
+      votings and days with votes the voting days list gives and the votings rows loaded in Bronze (for the
+      completeness test). History and trial run: ingestion/sources/sejm.yaml.
     tests:
       - unique:
           column_name: "term || '|' || sitting_number || '|' || day_date"
@@ -25,7 +26,8 @@ models:
       Sejm API (register PLG-024), terms 9 and 10: one row per voting. Grain: term x sitting_number x voting_number.
       Time, kind, majority, title, topic, description and totals as published; yes, no and abstain are empty for
       list votes (ON_LIST, per-option result not loaded) and traditional votes (TRADITIONAL), for which the API
-      sends 0. Individual MPs' votes are not read.
+      sends 0; for traditional votes total_voted, present, not_participating and against_all sent as 0 (not counted)
+      are empty as well, while list votes keep their real totals. Individual MPs' votes are not read.
     tests:
       - unique:
           column_name: "term || '|' || sitting_number || '|' || voting_number"

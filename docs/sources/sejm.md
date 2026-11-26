@@ -6,13 +6,15 @@ bulk file. robots.txt (`Allow: /`) is read first in every run; one request at a 
 time, written only when the SHA-256 changed): `terms`; per term 9 and 10 `term<t>_proceedings`, `term<t>_voting_days`,
 `term<t>_prints`; one `term<t>_votings_<sitting>` per sitting with votes; `term10_mps`, reduced before Landing to id,
 active, club, districtNum, districtName and voivodeship (no names, birth data, e-mails, professions or photos land).
-Term 9 and the votings of finished sittings are read once; the lists of term 10 and the votings of its two newest
-sittings every run. Restart unit: one answer. Size and history: `ingestion/sources/sejm.yaml`.
+The lists of term 9 are read once, those of term 10 every run. A sitting's votings are read every run while it is
+one of the two newest sittings of term 10 or while its newest landed copy holds fewer or more votings than the
+voting days list gives; then they are held. robots.txt answering 401, 403, 429 or 5xx stops the run (RFC 9309). Restart unit: one answer. Size and history: `ingestion/sources/sejm.yaml`.
 
 Bronze (`ingestion/to_bronze/sejm/`, an unknown item key rejects the file into `bronze.sejm_rejected_files`):
 `sejm_terms`, `sejm_proceedings`, `sejm_voting_days`, `sejm_votings`, `sejm_prints`, `sejm_mps`. Silver:
-`sejm_sitting_days` (numbered sittings only; planned entries numbered 0 are left out), `sejm_votings` (totals as
-published; yes, no and abstain empty for list and traditional votes), `sejm_prints`, `sejm_mps`. Gold: entity tables
+`sejm_sitting_days` (numbered sittings only; planned entries numbered 0 are left out; days after the build date
+are not held), `sejm_votings` (totals as published; yes, no and abstain empty for list and traditional votes, and
+a traditional vote's other totals sent as 0 empty too), `sejm_prints`, `sejm_mps`. Gold: entity tables
 `parliament_sejm_sitting_days`, `parliament_sejm_votings`, `parliament_sejm_prints`, `parliament_sejm_mps`; build
 stage `build_sejm` (blocks `sitting_days`, `votings`, `prints`: counts per month, Poland, only months with an event);
 draft KPIs `sejm_sitting_days`, `sejm_votings`, `sejm_prints` (no v2 map row). Weekly, Monday 19:20 UTC (O46). Licence:

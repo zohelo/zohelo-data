@@ -3,7 +3,8 @@ models:
   - name: parliament_sejm_sitting_days
     description: >-
       Entity table (events): one row per sitting day of the Sejm of the Republic of Poland, terms 9 and 10 (register
-      PLG-024), keyed by term, sitting number and day; date_key = the day; is_held false for planned later days.
+      PLG-024), keyed by term, sitting number and day; date_key = the day; is_held false for days after the build
+      date.
     tests:
       - unique:
           column_name: "term || '|' || sitting_number || '|' || date_key"
@@ -16,7 +17,8 @@ models:
     description: >-
       Entity table (events): one row per voting of the Sejm, terms 9 and 10, keyed by term, sitting number and voting
       number; date_key = the day of the voting; title, topic and totals as published (empty yes, no and abstain for
-      list and traditional votes). Individual MPs' votes are not kept.
+      list and traditional votes; a traditional vote's total_voted, present, not_participating and against_all sent
+      as 0, not counted, are empty too). Individual MPs' votes are not kept.
     tests:
       - unique:
           column_name: "term || '|' || sitting_number || '|' || voting_number"
@@ -49,9 +51,9 @@ models:
         tests: [not_null]
   - name: poc_build_sejm
     description: >-
-      Build stage - Sejm of the Republic of Poland, terms 9 and 10 (from November 2019), Poland: held sitting days
-      (block sitting_days), votings (block votings) and prints by delivery date (block prints) per month (M). Only
-      months in which something happened have a row (no zero filling); the month of the newest download is
+      Build stage - Sejm of the Republic of Poland, terms 9 and 10 (from November 2019), Poland: distinct held
+      sitting days (block sitting_days), votings (block votings) and prints by delivery date (block prints) per month
+      (M). Only months in which something happened have a row (no zero filling); the month of the build date is
       provisional.
     columns:
       - name: measure_key

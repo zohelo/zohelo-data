@@ -8,8 +8,9 @@ description: "Sejm API (api.sejm.gov.pl): terms 9 and 10 sittings, sitting days,
 # (ingestion/to_landing/sejm/). Entities: terms; per term proceedings, voting_days, prints; one votings answer per
 # sitting; term10_mps reduced before Landing to id, active, club, districtNum, districtName, voivodeship (no names,
 # birth data, e-mails, professions or photos land). Version = download time (no Last-Modified); a copy lands only
-# when its SHA-256 changed. Term 9 (ended 12 Nov 2023) and the votings of finished sittings are read once; the
-# lists of term 10 and the votings of its two newest sittings are read every run. Restart unit: one answer.
+# when its SHA-256 changed. The lists of term 9 (ended 12 Nov 2023) are read once, those of term 10 every run; a
+# sitting's votings are read every run while it is one of the two newest of term 10 or while its newest landed copy
+# holds another number of votings than the voting days list gives, then held. Restart unit: one answer.
 # Size (Dev probe 43797117724, 16 Nov 2026): term 10 has 89 proceedings entries (planned sittings with number 0),
 # 171 voting days in 68 sittings, 3,592 prints; votings of sitting 1: 147 in 88 KB; MP list 499 MPs (260 KB raw);
 # term 9: 177 voting days, 4,142 prints. First load about 160 requests, later runs about 8.
@@ -18,7 +19,7 @@ description: "Sejm API (api.sejm.gov.pl): terms 9 and 10 sittings, sitting days,
 extraction:
   initial: api
   production: snapshot                    # each answer is the complete current list
-  incremental_policy: changed_since_last  # SHA-256; ended term and finished sittings read once
+  incremental_policy: changed_since_last  # SHA-256; ended term and complete finished sittings read once
   schedule: # UTC; the Sejm sits every two to three weeks and votes mostly on Wednesday to Friday; weekly (O46), Monday
     # evening, so the votes of the week before are in Silver for the Sunday platform build
     - {cron: "20 19 * * 1", run: "full dataflow: landing → bronze → silver → gold → portal"}
