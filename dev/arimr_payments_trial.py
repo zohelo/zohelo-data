@@ -1,5 +1,5 @@
 """Dev trial of arimr_payments (#2487, register PLS-034) on the final code: (1) the Bronze parser over every report of
-the gov.pl page dated 31.12.2025 or later (read only, one GET at a time, 2 s apart; nothing stored); (2) Landing and
+the gov.pl page dated 31.12.2025 or later and every year-end report (read only, one GET at a time, 2 s apart; nothing stored); (2) Landing and
 Bronze into zz_dev_arimr/ (both buckets) and namespace zz_dev_arimr, each twice, and Landing verify; (3) the branch's
 Silver, Gold and test SQL applied in memory (Jinja-rendered with warehouse/macros), with profiles, checks and spot
 values annotated. Reads silver.teryt_terc (read-only) for the voivodeship keys. Everything written is removed at the
@@ -54,7 +54,7 @@ def parser_check() -> dict:
 
     reports = tl.listed(tl._links(tl.PAGE))
     out, failed = {}, 0
-    for d in sorted(x for x in reports if x >= date(2025, 12, 31)):
+    for d in sorted(x for x in reports if x >= date(2025, 12, 31) or (x.month, x.day) == (12, 31)):
         time.sleep(2.0)
         body = requests.get(reports[d], headers={"User-Agent": USER_AGENT}, timeout=120).content
         try:
@@ -166,6 +166,7 @@ def main(argv) -> int:
         )
         out["bronze_column_labels"] = n("select string_agg(distinct regexp_replace(column_label, '[0-9]', '', 'g'), ',') from cells")
         out["bronze_titles"] = n("select count(distinct table_title) from cells")
+        out["bronze_total_column_cells"] = n("select count(*) from cells where column_label like 'Razem%'")
         note("arimr landing+bronze", out)
 
         silver_sql = render(
@@ -196,6 +197,10 @@ def main(argv) -> int:
                 "select string_agg(x, ' ' order by x) from (select measure_code || ':' || count(*) || ' rows '"
                 " || min(campaign_year) || '-' || max(campaign_year) || ' from ' || string_agg(distinct strftime(as_of_date, '%Y-%m-%d'), '+') x"
                 " from silver group by measure_code)"
+            ),
+            "source_report_by_campaigns": n(
+                "select string_agg(x, '; ' order by x) from (select measure_code || ' ' || min(campaign_year) || '-' || max(campaign_year)"
+                " || ' from ' || strftime(as_of_date, '%Y-%m-%d') x from silver group by measure_code, as_of_date)"
             ),
             "notes": n("select string_agg(distinct measure_code || ' ' || campaign_year || column_note, ',') from silver where column_note <> ''"),
         }
