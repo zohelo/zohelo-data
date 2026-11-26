@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+legal_acts_published,eli_pl,eli_pl:acts:acts:DU,"acts published per month in Dziennik Ustaw, all types, by promulgation date",1,acts
