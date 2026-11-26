@@ -1,6 +1,6 @@
-"""Read-only probe for the re-review of parked register entries, batch 1 (26 Nov 2026).
+"""Read-only probe for the re-review of parked register entries, batch 3, Task #2915 (26 Nov 2026).
 
-PLS-008, PLS-016, PLS-018, PLS-019, PLS-024, PLS-025, PLS-030, PLS-033, PLG-013, PLG-015, PLG-019, PLG-027.
+PL-ENV-006, -011, -013, -014, -016, -017, -018, -035, PLS-016, PLS-019, PLS-024, PLS-025, PLS-030.
 GET and HEAD only, one request at a time, at least a second apart per host, robots.txt honoured; a refused,
 walled or timed-out host is reported and not asked again. Page text and links go to the job log; at most ten
 notices carry the summary.
@@ -15,7 +15,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import urllib.robotparser
-import zlib
 
 UA = "zohelo-data-research/1.0 (+https://zohelo.com)"
 CTX = ssl.create_default_context()
@@ -76,7 +75,7 @@ def robots_ok(url, timeout=25):
             else:
                 rp.parse([])
                 ROBOTS[host] = rp
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             ROBOTS_TXT[host] = ROBOTS[host] = f"robots.txt {type(e).__name__}: {str(e)[:80]}"
         print(f"=== ROBOTS {host}\n{ROBOTS_TXT[host]}\n=== END", flush=True)
     rp = ROBOTS[host]
@@ -101,7 +100,7 @@ def get(url, n=3000000, timeout=40, method="GET", robots_timeout=25):
         return raw(url, n, timeout, method)
     except urllib.error.HTTPError as e:
         return {"err": f"HTTP {e.code}"}
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         msg = f"{type(e).__name__}: {str(e)[:90]}"
         if "timed out" in msg or "Name or service" in msg or "CERTIFICATE" in msg:
             DEAD[host] = msg
@@ -280,19 +279,26 @@ def dane_ds(did):
 
 
 ENTRIES = {
-    "PLS-008": {"pages": ["https://api.stat.gov.pl/Home/RegonApi", "https://api.stat.gov.pl/Home/RegonApi?lang=en"], "dane": ["REGON"]},
+    "PL-ENV-006": {"pages": ["https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/"],
+                   "raw": ["https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza?service=WFS&request=GetCapabilities",
+                           "https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza?service=WFS&version=2.0.0&request=GetFeature&typeNames=ms:dzialki&resultType=hits",
+                           "https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza?service=WFS&version=2.0.0&request=GetFeature&typeNames=ms:budynki&resultType=hits"]},
+    "PL-ENV-011": {"pages": ["https://wody.gios.gov.pl/pjwp/publication/367", "https://www.gov.pl/web/gios/monitoring-jakosci-wod"], "app": "https://wody.gios.gov.pl/pjwp/",
+                   "dane": ["wód powierzchniowych", "monitoring wód"], "inst": ["Ochrony Środowiska"]},
+    "PL-ENV-013": {"pages": ["https://isok.gov.pl/inspire.html", "https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami"],
+                   "dane": ["zagrożenia powodziowego", "Wody Polskie"], "inst": ["Wody Polskie"]},
+    "PL-ENV-014": {"pages": ["https://baza.pgi.gov.pl/podsystemy/otwory"], "app": "https://dm.pgi.gov.pl/", "dane": ["otwory wiertnicze", "Państwowy Instytut Geologiczny"]},
+    "PL-ENV-016": {"pages": ["https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8888-dane-hydrogeologiczne-mhp.html"], "dane": ["hydrogeologiczna"]},
+    "PL-ENV-017": {"pages": ["https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych", "https://sdi.gdos.gov.pl/wfs"], "dane": ["form ochrony przyrody", "Natura 2000"], "inst": ["Ochrony Środowiska"]},
+    "PL-ENV-018": {"pages": ["https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1", "https://www.bdl.lasy.gov.pl/portal/regulamin"], "dane": ["Bank Danych o Lasach", "Lasy Państwowe"]},
+    "PL-ENV-035": {"pages": ["https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-informacje"], "app": "https://rejestr-urbanistyczny.gov.pl/published", "dane": ["rejestr urbanistyczny", "plan ogólny"]},
     "PLS-016": {"pages": ["https://ezdrowie.gov.pl/portal/home/badania-i-dane", "https://ezdrowie.gov.pl/portal/artykul/e-zdrowie-w-liczbach-e-recepty"], "dane": ["Centrum e-Zdrowia", "e-recepty"], "inst": ["e-Zdrowia"]},
-    "PLS-018": {"pages": ["https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju"], "dane": ["Główny Inspektorat Sanitarny", "stan sanitarny"], "inst": ["Inspektorat Sanitarny"]},
     "PLS-019": {"pages": ["https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html", "https://www.pzh.gov.pl/"], "dane": ["choroby zakaźne", "zachorowania"], "inst": ["Zdrowia Publicznego"]},
-    "PLS-024": {"pages": ["https://ela.nauka.gov.pl/pl"], "app": "https://ela.nauka.gov.pl/pl", "dane": ["absolwentów", "ELA"]},
-    "PLS-025": {"pages": ["https://cke.gov.pl/egzamin-osmoklasisty/wyniki/", "https://cke.gov.pl/egzamin-maturalny/egzamin-w-nowej-formule/wyniki/", "https://mapa.wyniki.edu.pl/"],
-                "dane": ["egzaminu ósmoklasisty", "egzamin maturalny"], "inst": ["Komisja Egzaminacyjna"],
-                "heads": ["https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/5488/18/1/1/srednie_wyniki_uczniow_na_egzaminie_osmoklasisty.csv"]},
+    "PLS-024": {"pages": ["https://ela.nauka.gov.pl/pl"], "app": "https://ela.nauka.gov.pl/pl", "dane": ["absolwentów", "Ekonomiczne Losy"]},
+    "PLS-025": {"pages": ["https://cke.gov.pl/egzamin-osmoklasisty/wyniki/", "https://mapa.wyniki.edu.pl/", "https://stat.gov.pl/obszary-tematyczne/edukacja/edukacja/srednie-wyniki-uczniow-na-egzaminie-osmoklasisty,18,1.html"],
+                "dane": ["egzaminu ósmoklasisty", "wyniki egzaminu"], "inst": ["Komisja Egzaminacyjna"],
+                "raw": ["https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/5488/18/1/1/srednie_wyniki_uczniow_na_egzaminie_osmoklasisty.csv"]},
     "PLS-030": {"pages": ["https://barometrzawodow.pl/", "https://barometrzawodow.pl/en/module/forecasts-on-maps", "https://barometrzawodow.pl/forecast-card-zip/2026/"], "app": "https://barometrzawodow.pl/en/module/forecasts-on-maps", "dane": ["barometr zawodów"]},
-    "PLS-033": {"pages": ["https://www.gov.pl/web/kowr/Rynek-zboz", "https://www.gov.pl/web/kowr/Rynek-miesa"], "dane": ["Krajowy Ośrodek Wsparcia Rolnictwa"], "inst": ["Wsparcia Rolnictwa"]},
-    "PLG-013": {"pages": ["https://rdf-przegladarka.ms.gov.pl/"], "dane": ["sprawozdania finansowe", "Repozytorium Dokumentów Finansowych"]},
-    "PLG-015": {"pages": ["https://www.podatki.gov.pl/crbr/", "https://crbr.podatki.gov.pl/"], "dane": ["beneficjentów rzeczywistych", "CRBR"]},
-    "PLG-019": {"pages": ["https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne"], "dane": ["ostrzeżeń publicznych", "Komisja Nadzoru Finansowego"]},
 }
 
 
@@ -305,9 +311,18 @@ def main():
                 out[tag(u)[:60]] = probe_page(u)
             if spec.get("app"):
                 out["app"] = app_scan(spec["app"])
-            for u in spec.get("heads", []):
-                h = get(u, method="HEAD")
-                out["head " + u[-50:]] = {"st": h.get("st") or h.get("err"), "len": h.get("len"), "lm": h.get("lm"), "ct": h.get("ct")}
+            for u in spec.get("raw", []):
+                r = get(u, 2000000, 90)
+                if "err" in r:
+                    fail(u, r)
+                    out["raw " + u[-60:]] = r["err"][:80]
+                    continue
+                b = r.pop("body")
+                body = b.decode("utf-8", "replace")
+                print(f"=== RAW {u}\nMETA {json.dumps({k: v for k, v in r.items() if v}, ensure_ascii=False)} read={len(b)}\nBODY {body[:6000]}\n=== END", flush=True)
+                out["raw " + u[-60:]] = {"st": r.get("st"), "ct": r.get("ct"), "len": len(b), "lm": r.get("lm"),
+                                          "hits": re.findall(r'number(?:Matched|OfFeatures)="([^"]+)"', body)[:2],
+                                          "types": re.findall(r"<(?:wfs:)?Name>([^<]+)</", body)[:12], "head": re.sub(r"\s+", " ", body[:300])}
             dn = {}
             for q in spec.get("dane", []):
                 dn[q] = dane(q)
@@ -319,12 +334,12 @@ def main():
                 if isinstance(v, dict) and not q.startswith("inst:"):
                     top += [x["id"] for x in v.get("rows", [])[:2] if x.get("id")]
             out["dane_ds"] = {i: dane_ds(i) for i in list(dict.fromkeys(top))[:3]}
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             ERR.append(f"{eid}: {type(e).__name__}: {str(e)[:120]}")
             print(f"=== {eid} FAILED {type(e).__name__}: {e}", flush=True)
         res[eid] = out
     ids = list(res)
-    groups = [ids[0:2], ids[2:3], ids[3:4], ids[4:5], ids[5:6], ids[6:7], ids[7:8], ids[8:10], ids[10:11]]
+    groups = [ids[0:1], ids[1:2], ids[2:4], ids[4:6], ids[6:8], ids[8:9], ids[9:10], ids[10:11], ids[11:13]]
     for g in groups:
         emit("parked " + ",".join(g), {k: res[k] for k in g})
     emit("parked robots errors totals", {"robots": {h.split("//")[1]: t[:160] for h, t in ROBOTS_TXT.items()}, "requests": COUNT[0], "dead": DEAD, "errors": ERR[:25]})
