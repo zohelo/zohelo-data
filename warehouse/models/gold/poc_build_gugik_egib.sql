@@ -119,11 +119,13 @@ select
         else 'GUGiK KI EGiB buildings (register count)'
     end as block_name,
     'gugik_egib:' || m.block_id || ':' || m.block_id || ':' || m.measure_code as measure_key,
-    case m.measure_code
-        when 'register_count' then initcap(m.block_id) || ' in the EGiB register supplied by county services on the day '
-            || '(register count, not a census; voivodeship and Poland: sum of powiats)'
-        when 'service_total' then initcap(m.block_id) || ' in the EGiB aggregate service on the day (all records)'
-        else initcap(m.block_id) || ' in the EGiB register with a unit code outside the TERYT powiat list'
+    initcap(m.block_id) || case m.measure_code
+        when 'register_count'
+            then
+                ' in the EGiB register supplied by county services on the day '
+                || '(register count, not a census; voivodeship and Poland: sum of powiats)'
+        when 'service_total' then ' in the EGiB aggregate service on the day (all records)'
+        else ' in the EGiB register with a unit code outside the TERYT powiat list'
     end as measure_name,
     m.measure_code as measure_codes,
     m.block_id as unit_code,

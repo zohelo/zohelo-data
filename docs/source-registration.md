@@ -143,6 +143,11 @@ source declares both in its own file, `warehouse/macros/value_range/<source_syst
   gus_culture_participation, gus_nsp2021, gus_psr2020, gus_tourism, mrpips_social_assistance, ms_isws, owid,
   policja_statistics, radon, rpwdl, ted_notices and ulc_airports (the compiled test reads the same 116 bounds and 57 models, and returns the
   same rows on the same data). The other sources' rows stay in the test file.
+- Counts and levels cannot be 0 (#2807): for the KPIs in the test's `positive_concepts` (population,
+  population_projection, gdp_current_prices, gdp_per_capita, fx_rate) the lower bound is exclusive, whatever the
+  source's bound says, so a 0 stored in place of a missing value fails. A 0 that the publisher itself prints goes into
+  `published_zeros` (KPI, source, measure, area) with the evidence; the only one is the World Bank's Serbian GDP in
+  current dinars, 1990-1992.
 - No model calls these macros (`repo_check` `configuration`), and `warehouse/changed.py` keeps
   `macros/value_range/` out of every build fingerprint: a new or changed bound rebuilds nothing. The test runs when
   one of the models it reads is built, as before.
