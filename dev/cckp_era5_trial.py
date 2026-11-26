@@ -132,6 +132,8 @@ def bronze_profile(con) -> dict:
         "annual_keys_not_07": one(con, f"select count(*) from {v} where aggregation = 'annual' and right(period, 3) <> '-07'"),
         "units_by_level": rows(con, f"select parent_geocode is null, count(*) from {u} group by 1 order by 1"),
         "pol_units": rows(con, f"select geocode, name from {u} where parent_geocode = 'POL' order by 1", 20),
+        "unit_codes_listed_twice(code,parents,names)": rows(con, f"select geocode, string_agg(coalesce(parent_geocode, '-'), ','), string_agg(name, ' | ') "
+                                                               f"from {u} group by 1 having count(*) > 1 order by 1", 20),
         "country_codes_not_3_letters": rows(con, f"select geocode, count(*) from {v} where member like '%all_countries%' "
                                                  f"and not regexp_full_match(geocode, '[A-Z]{{3}}') group by 1", 20),
         "codes_in_data_not_in_geonames": rows(con, f"select distinct geocode from {v} anti join {u} using (geocode)", 30),
@@ -317,6 +319,9 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, list[str]]:
     g["voivodeship_mean_vs_PL_tas_annual(max_abs_diff)"] = one(con, f"select max(abs(v - p)) from (select date_key, avg(value) v from {b} "
                                                                     f"where geography_key like 'TERC:%' and measure_codes = 'tas.annual' group by 1) "
                                                                     f"join (select date_key, value p from {b} where geography_key = 'PL' and measure_codes = 'tas.annual') using (date_key)")
+    g["KSV"] = rows(con, f"select geography_key, count(*) from {b} where geography_source_code = 'KSV' group by 1")
+    g["value_range_by_level(measure,level,min,max)"] = rows(con, f"select measure_codes, geography_key like 'TERC:%', min(value), max(value) from {b} "
+                                                                f"where geography_key <> '_X' group by all order by all")
     g["units_in_gold"] = rows(con, f"select unit_code, count(distinct measure_key) from {b} group by 1 order by 1")
     con.close()
     if g["dup_series_date"] or g["dup_series_date_without_source_code"] or g["null_values"] or not g["rows"]:
@@ -381,7 +386,8 @@ def main(argv: list[str]) -> int:
         con = duckdb.connect()
         con.register("bronze", arrow)
         prof = bronze_profile(con)
-        detail = ("values_by_member(member,rows,geocodes,min,max,dataset_period)", "pol_units", "codes_in_data_not_in_geonames")
+        detail = ("values_by_member(member,rows,geocodes,min,max,dataset_period)", "pol_units", "codes_in_data_not_in_geonames",
+                  "unit_codes_listed_twice(code,parents,names)")
         note(f"{SOURCE} bronze profile", {k: v for k, v in prof.items() if k not in detail})
         note(f"{SOURCE} bronze members and codes", {k: prof[k] for k in detail})
         con.close()

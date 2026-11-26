@@ -4,10 +4,11 @@ models:
     description: >-
       World Bank Climate Change Knowledge Portal (register GL-036; licence cc_by_4_0_cckp_era5): CCKP's spatial units
       from geonames.json, countries and territories by ISO3 code and their first-level units by CCKP code, names as
-      published (no diacritics, CCKP's own spellings). Grain: geocode.
+      published (no diacritics, CCKP's own spellings). A few first-level codes are listed under two countries in
+      geonames.json and keep one row per parent. Grain: geocode x parent_geocode.
     tests:
       - unique:
-          column_name: geocode
+          column_name: "geocode || '|' || coalesce(parent_geocode, '')"
     columns:
       - name: geocode
         tests: [not_null]
