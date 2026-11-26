@@ -14,9 +14,10 @@ description: "GPW report list, EBI rows (reports of NewConnect and Catalyst issu
 extraction:
   initial: web
   production: delta                       # one document per day of publication; days accumulate
-  incremental_policy: changed_since_last  # each run reads from the newest held day (or 3 days back); SHA-256
-  schedule: # UTC; EBI reports arrive on working days until late evening (Warsaw); daily at 04:55
-    - {cron: "55 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  incremental_policy: changed_since_last  # each weekly run reads from the newest held day (or 8 days back); SHA-256
+  schedule: # UTC; EBI reports arrive on working days until late evening (Warsaw). Weekly until production use (O46):
+    # Friday 05:50; each run reads from the newest held day, so nothing between runs is missed
+    - {cron: "50 5 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gpw_ebi/
 archive_policy:

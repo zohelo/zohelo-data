@@ -13,9 +13,10 @@ description: "KNF OAM list of ESPI issuer reports (regulated information of issu
 extraction:
   initial: web
   production: delta                       # one document per day of receipt; days accumulate
-  incremental_policy: changed_since_last  # each run reads today and 3 days back, plus days not held yet; SHA-256
-  schedule: # UTC; ESPI reports arrive all day until late evening (Warsaw); daily, after the night, at 04:40
-    - {cron: "40 4 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  incremental_policy: changed_since_last  # each weekly run reads today and 8 days back, plus days not held yet; SHA-256
+  schedule: # UTC; ESPI reports arrive every day until late evening (Warsaw). Weekly until production use (O46): Tuesday
+    # 05:20; each run reads the 8 days before (REREAD_DAYS), so the days since the last run are read again in full
+    - {cron: "20 5 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/knf_espi/
 archive_policy:
