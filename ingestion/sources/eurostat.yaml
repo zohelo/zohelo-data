@@ -6,10 +6,10 @@ extraction:
   initial: bulk                         # official bulk download, one gzip TSV per dataset
   production: snapshot                  # every file is a complete dataset version
   incremental_policy: changed_since_last  # inventory "last data change" vs Landing
-  # UTC; datasets changed since the last run. Eurostat publishes twice a day, 11:00 and 23:00
-  # Brussels: run 30-90 min after each (10:30/22:30 UTC: after both releases in CET and CEST)
-  schedule: # UTC; release: database updated twice a day, 11:00 and 23:00 CET; runs 30 min after (90 min in summer time)
-    - {cron: "30 10,22 * * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  # UTC; datasets changed since the last run. Eurostat publishes twice a day, 11:00 and 23:00 Brussels.
+  schedule: # UTC; one run a week (O46, weekly until production use; was 10:30 and 22:30 daily), Friday 10:30,
+    # after Thursday's late release, so a run catches every dataset changed during the week
+    - {cron: "30 10 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/eurostat/
 # Landing → Archive (docs/landing.md): Bronze-loaded files are moved (copy, verify, delete);

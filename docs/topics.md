@@ -28,14 +28,16 @@ the same way.
 | Signal | Source | What we keep | Refresh |
 |---|---|---|---|
 | Official releases | Release calendars of GUS, Eurostat (euro indicators), NBP (MPC meetings, publications), Ministry of Finance, ECB; the existing seed `release_calendar.csv` stays as the manual fallback | date, source, title, link, linked KPIs | daily |
-| News headlines | RSS/Atom feeds of Polish business and general news: at the start Bankier.pl, Money.pl, Business Insider Polska, Rzeczpospolita (ekonomia), Puls Biznesu, Forsal, PAP (free feed), Notes from Poland (EN); more by register entry | title, link, outlet, language, published_at, feed | every 3 hours |
+| News headlines | RSS/Atom feeds of Polish business and general news: at the start Bankier.pl, Money.pl, Business Insider Polska, Rzeczpospolita (ekonomia), Puls Biznesu, Forsal, PAP (free feed), Notes from Poland (EN); more by register entry | title, link, outlet, language, published_at, feed | fetched twice a day, loaded weekly (O46) |
 | News volume | GDELT 2.0 DOC API (CD-030): per topic query, daily article volume and tone in Polish-language and Poland-located coverage | topic, day, volume, normalised volume, tone | daily |
 | Public attention | Wikimedia pageviews REST API (CD-025): daily views of the Polish (and English) Wikipedia articles listed per topic | article, day, views | daily |
 
 As built (routes and terms in [sources.md](sources.md)): `news_feeds` (TP-001…TP-008, one register entry per
-outlet; PAP parked, its feed is behind bot protection), a full dataflow every 3 hours from 00:05 UTC that fetches,
-loads and rebuilds the topics, so the ranking follows the day; `wikimedia_pageviews` (CD-025, 04:10 UTC) and `gdelt`
-(CD-030, 04:30 UTC, best effort: GDELT refuses shared runner addresses for long stretches), both built from the seed
+outlet; PAP parked, its feed is behind bot protection), a Landing fetch twice a day (05:05 and 17:05 UTC; the feeds keep
+20 hours to 6 days) and a full dataflow on Saturday 17:35 UTC that loads the week's copies, before the weekly
+platform build (Sunday 09:41 UTC) rebuilds the topics (O46; was a full dataflow every 3 hours); `wikimedia_pageviews`
+(CD-025, Saturday 04:10 UTC) and `gdelt`
+(CD-030, Saturday 04:30 UTC, each file covers the last 14 days, best effort: GDELT refuses shared runner addresses for long stretches), both built from the seed
 `topic_signal.csv`, early so the day starts with yesterday's complete attention data; `release_calendars` (Eurostat
 euro indicators, GUS kalendarium, ECB; TP-010, TP-011, TP-014; 05:00 UTC, before the day's releases). NBP and
 the Ministry of Finance calendars are parked (TP-012, TP-013: bot protection, refused connections).
