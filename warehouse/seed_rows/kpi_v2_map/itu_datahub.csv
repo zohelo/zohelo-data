@@ -1,0 +1,3 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+fixed_broadband_subscriptions,poland,A,fixed_broadband_subscriptions,itu_datahub,ITU_DH,itu_datahub:itu_dh:SB_10P2_HB:IT_NET_BBND,A,PL;EU,,rate,up,ready,"Data360 copy of the ITU DataHub; end of year; licence unresolved (internal)"
+mobile_broadband_subscriptions,poland,A,mobile_broadband_subscriptions,itu_datahub,ITU_DH,itu_datahub:itu_dh:SB_10P2_HB:ACT_MOB_SB,A,PL;EU,,rate,up,ready,"Data360 copy of the ITU DataHub; end of year; licence unresolved (internal)"
