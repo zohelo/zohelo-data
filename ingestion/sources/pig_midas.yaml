@@ -9,18 +9,19 @@ description: "PIG-PIB MIDAS — documented mineral deposits, mining areas and mi
 # 45818533713 (every layer paged by count=2000: all features, OBJECTID never repeated, 2-3.5 MB and 4-11 s a page),
 # 45820730349 (one request for a whole layer: 4,002 of 4,002 features, 5.0 MB in 3.8 s). One request per layer is
 # lighter for the server than 3-10 pages and needs no paging code; the Dev trial compared each layer's features with
-# resultType=hits. Entity = one feature type; the WFS gives no version, so version = download time, and a copy lands
-# only when its SHA-256 changed. Restart unit: one layer. The layers change about daily (dated download packages).
+# resultType=hits. The server answers HEAD with 500, so landing.inspect asks with a streamed GET (probe: get).
+# Entity = one feature type; the WFS gives no version, so version = download time, and a copy lands only when its
+# SHA-256 changed. Restart unit: one layer. The layers change about daily (dated download packages).
 extraction:
   kind: bulk_file
   bulk_file:
     files:
-      - {entity: deposits, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_udokumentowane_złoża_kopalin&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600}
-      - {entity: mining_areas, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_obszary_górnicze&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600}
-      - {entity: mining_terrains, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_tereny_górnicze&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600}
-      - {entity: deposits_removed, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS___złoża_wybilansowane__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600}
-      - {entity: mining_areas_archival, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_archiwalne_obszary_górnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600}
-      - {entity: mining_terrains_archival, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_archiwalne_tereny_górnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600}
+      - {entity: deposits, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_udokumentowane_złoża_kopalin&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_areas, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_obszary_górnicze&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_terrains, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_tereny_górnicze&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: deposits_removed, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS___złoża_wybilansowane__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_areas_archival, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_archiwalne_obszary_górnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
+      - {entity: mining_terrains_archival, url: "https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetFeature&version=2.0.0&typeNames=midas:MIDAS_-_archiwalne_tereny_górnicze__wyselekcjonowane_dane_archiwalne_&outputFormat=GEOJSON", format: json, version: ingested, read_timeout: 600, probe: get}
   initial: bulk
   production: snapshot                    # each response is the whole current layer
   incremental_policy: changed_since_last  # SHA-256 of the response (the WFS sends no Last-Modified)
