@@ -19,9 +19,9 @@ extraction:
   production: snapshot                  # each entity is the complete list of one case and voivodeship that month
   incremental_policy: changed_since_last  # this month's entities missing from Landing
   schedule: # UTC; providers publish the month-end waiting-list counts of month M in the first days of M+1 and update the forecast dates continuously; monthly on the 20th (most counts of the previous month are in), a read of about 2.5 hours (330-minute budget)
-    # a second slot on the 23rd reads only the entities of the month still missing (time budget or a failed entity), so a month is never left incomplete; a complete month makes it write nothing
+    # a second slot on the 27th, a week after the first (owner decision of 25 Nov: at most one scheduled run per source per week), reads only the entities of the month still missing (time budget or a failed entity), so a month is never left incomplete; a complete month makes it write nothing
     - {cron: "10 1 20 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
-    - {cron: "10 1 23 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+    - {cron: "10 1 27 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/nfz_waiting_times/
 archive_policy:

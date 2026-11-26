@@ -8,7 +8,7 @@ branch (01-16) at a time, 25 records a page, one request at a time with a 0.3 s 
 per IP), bounded retries. The site runs bot protection; a challenge or HTTP 403 fails the run and is never worked
 around. Entity = one case × branch in one snapshot month (`queues_<YYYYMM>_case<c>_<pp>`, 32 a month), all pages
 landed as one ZIP of the exact answers; version = time the read started; restart unit: one entity. A month is read
-whole on the 20th (about 2.5 hours, about 6,000 pages); a second slot on the 23rd reads only the entities of the
+whole on the 20th (about 2.5 hours, about 6,000 pages); a second slot on the 27th (a week later: at most one scheduled run per week, owner decision of 25 Nov) reads only the entities of the
 month still missing.
 
 **Layers.** Bronze `bronze.nfz_waiting_times_queues`: one row per queue record, values as text. Silver
