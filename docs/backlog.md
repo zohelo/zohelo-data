@@ -30,6 +30,8 @@ Status: approved by the owner, 27 Oct 2026. Applies to `zohelo/zohelo-data`, `zo
 | Deliverable | `Deliverable` | Epic (may be in another repo of the org) | ≤ 5 days, a shippable component or stage | all Tasks closed and its `done_when` verified |
 | Task / Bug | `Task` / `Bug` | Deliverable | ≤ 1 day, one PR | its PR merges (`Closes #n`) and `verify` passes |
 
+The daily Ops run is `backlog_sync apply --no-create` (O45): it updates, reparents and closes issues but opens none; a node without an issue is counted as "not created" and gets its issue when work on it starts (`apply` without the flag).
+
 `backlog_sync apply` closes a Deliverable once all its Tasks are closed and it has no `todo` lines, and an Epic once all its
 Deliverables are closed (comment lists the `done_when`), so progress rolls up on the board; it never reopens an issue.
 The two Source review Tasks of a generated source Epic are the exception to "its PR merges": a review is a register

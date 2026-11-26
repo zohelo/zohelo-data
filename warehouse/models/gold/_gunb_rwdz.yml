@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: poc_build_gunb_rwdz
+    description: >-
+      Build stage — GUNB RWDZ building-permit decisions per month (register PL-ENV-033, block permits): register
+      records by month of decision, Poland, voivodeships (file) and powiats (TERYT code of the record), by kind of
+      investment (single-family house, other, not stated) and in total; months from 2020-01 to the month before the
+      oldest file version. Licence unresolved: internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

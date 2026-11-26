@@ -46,13 +46,21 @@ archive_policy:
   prune: report
 bronze: [bronze.ilostat_observations, bronze.ilostat_rejected_files]
 silver: [silver.ilostat_observations]
-gold: [gold.build_ilostat]
+# Full coverage (O43, D35, docs/gold-coverage.md, #2943): every series of silver.ilostat_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table ilostat_observations.
+gold: [gold.build_ilostat, gold.ilostat_observations, gold.ilostat_series, gold.ilostat_measures, gold.ilostat_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   poc_build_ilostat: {rows: 117000}  # 78,147: EU27, annual 40,505 + quarterly 37,642 (Dev trial 43290214779); 1.5 x
+  ilostat_observations: {rows: 2600000, exception: "#2832"}  # 1,718,986 (Dev trial 43091444753); D32: narrow table, five whole files, full rebuild weekly
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): five whole-indicator snapshots; each new copy replaces its entity,
 # and Silver (newest copy per entity) is rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2753"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35; #2943): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
