@@ -9,7 +9,11 @@
    A value belongs to the month whose header cell is in its column or one or two columns left of it (2022 prints
    March under column K, its header in J); a number in a data row outside every month's columns keeps period_month
    null and fails not_null, a text value keeps value null with cell_status 'unparsed' and fails accepted_values: an
-   unknown layout stops the build instead of being read by position. The national total is the row right below the
+   unknown layout stops the build instead of being read by position. A cell to the right of a block's last month
+   column (more than two columns past its header) belongs to no month: it is kept with cell_status 'outside_table'
+   and period_month null, never assigned to a month, left out of Gold and listed by the warning test
+   cepik_outside_table_cells (the 2026 workbook of 26 Nov 2026 repeats September in an unheaded column 13, one
+   value differing: Świętokrzyskie 5,145 against 5,156 under the September header). The national total is the row right below the
    Roman month header (I ... XII); it is kept only for months that have voivodeship values in the same workbook
    (the current year's workbook prints 0 for months not published yet), so an unpublished month is absent, never 0.
    Blank cells (no registrations printed) are absent. Label typo 'WARMIKŃSKO-MAZURSKIE' (2016-2019) read as
@@ -76,6 +80,16 @@ month_columns as (
     inner join month_names as m on lower(c.value_text) = m.month_name
 ),
 
+block_extent as (
+    select
+        entity,
+        sheet_name,
+        header_row,
+        max(header_column) as last_header_column
+    from month_columns
+    group by all
+),
+
 data_rows as (
     select
         c.entity,
@@ -105,10 +119,13 @@ block_values as (
         c.number_value,
         c.source_version,
         c.raw_sha256,
-        m.period_month
+        m.period_month,
+        m.period_month is null and c.column_number > b.last_header_column + 2 as outside_table
     from data_rows as r
     inner join cells as c
         on r.entity = c.entity and r.sheet_name = c.sheet_name and r.row_number = c.row_number and c.column_number > 1
+    inner join block_extent as b
+        on r.entity = b.entity and r.sheet_name = b.sheet_name and r.header_row = b.header_row
     left join month_columns as m
         on
             r.entity = m.entity
@@ -136,7 +153,8 @@ national as (
         c.number_value,
         c.source_version,
         c.raw_sha256,
-        rm.period_month
+        rm.period_month,
+        false as outside_table
     from roman_rows as rr
     inner join cells as h on rr.entity = h.entity and rr.sheet_name = h.sheet_name and rr.roman_row = h.row_number
     inner join roman as rm on h.value_text = rm.numeral
@@ -154,7 +172,7 @@ published_months as (
         entity,
         period_month
     from block_values
-    where table_code = 'voivodeship' and number_value is not null
+    where table_code = 'voivodeship' and number_value is not null and not outside_table
 ),
 
 all_values as (
@@ -177,7 +195,8 @@ typed as (
         period_year,
         period_month,
         number_value as value,
-        case when number_value is null then 'unparsed' else 'ok' end as cell_status,
+        case when outside_table then 'outside_table' when number_value is null then 'unparsed' else 'ok' end
+            as cell_status,
         value_text,
         entity,
         source_version,
@@ -190,7 +209,7 @@ regions as (
         *,
         value / sum(value) over (partition by entity, period_month) as month_share
     from typed
-    where table_code = 'voivodeship' and group_code <> 'polska' and value is not null
+    where table_code = 'voivodeship' and group_code <> 'polska' and cell_status = 'ok'
 ),
 
 shares as (
