@@ -91,6 +91,18 @@ def later(states: dict) -> int:
     return max([*times, T1]) + 1
 
 
+def why(plan: dict) -> dict:
+    """Rebuild reasons by kind, with the inputs named most often (the first three of each reason)."""
+    kinds: dict[str, int] = {}
+    named: dict[str, int] = {}
+    for reason in plan["reasons"].values():
+        kind, _, rest = reason.partition(": ")
+        kinds[kind] = kinds.get(kind, 0) + 1
+        for item in filter(None, rest.split(", ")):
+            named[item] = named.get(item, 0) + 1
+    return {"kinds": kinds, "inputs": dict(sorted(named.items(), key=lambda kv: -kv[1])[:8])}
+
+
 def metrics(plan: dict) -> set[str]:
     return {name for name in plan["select"] if name.startswith(changed.METRICS_PREFIX)}
 
@@ -147,9 +159,20 @@ def main(argv: list[str]) -> int:
             "old_select": len(today["old"]["select"]),
             "new_select": len(today["new"]["select"]),
             "stalled": today["new"]["stalled"],
+            "new_why": why(today["new"]),
         }
     base = steady(meta, real)
     baseline = plan_with(meta, base)
+    report["pending"] = {**summary(baseline), "new_why": why(baseline["new"])}
+    if real is not None:
+        # Settle the real state: the build that is pending now (both rules' selection) ran and recorded its
+        # properties, so each scenario below shows only what its own change selects.
+        when = later(base)
+        rels = relations(meta)
+        for name in set(baseline["old"]["select"]) | set(baseline["new"]["select"]):
+            uid = by_name[name]
+            base[rels[uid]] = {"snapshot_ms": when, "built_from_ms": when, "fingerprint": graph[uid]["fingerprint"]}
+        baseline = plan_with(meta, base)
     report["baseline"] = summary(baseline)
     base_new = metrics(baseline["new"])
     if not metrics(baseline["new"]) <= metrics(baseline["old"]):
@@ -246,7 +269,13 @@ def main(argv: list[str]) -> int:
     out.mkdir(parents=True, exist_ok=True)
     (out / "plan_compare.json").write_text(json.dumps(report, indent=2, default=str))
     print(json.dumps(report, indent=2, default=str))
-    compact = {k: v for k, v in report.items() if k not in ("scenarios", "unscoped_metrics", "scope_inputs")}
+    compact = {
+        k: v
+        for k, v in report.items()
+        if k not in ("scenarios", "unscoped_metrics", "scope_inputs", "scope_ancestors", "tables_missing")
+    }
+    for part in ("pending", "baseline"):
+        compact[part] = {k: v for k, v in compact[part].items() if k != "new_metrics_selected"}
     annotate("notice" if not problems else "error", "plan_compare: setup and baseline", compact)
     for name, data in scenarios.items():  # at most 7 more annotations
         annotate("notice", f"plan_compare: {name}", {k: v for k, v in data.items() if k != "new_metrics_selected"})
