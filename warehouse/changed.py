@@ -44,7 +44,8 @@ Block-scoped metrics (#3204, kill switch ``metrics_scoped`` in warehouse.yaml): 
 the shared facts and dimensions, which union all Gold blocks, so one changed block used to rebuild all of them. A
 metrics model whose concept's sources (seed_rows/kpi_measure) all map to Gold blocks (``block_sources()``) is
 "scoped": its parents that derive from blocks (facts, dimensions, concept measures) are replaced by its scope blocks
-and by the inputs of those parents that do not derive from blocks (kpi_measure, kpi, unit, gold_coverage). It is
+and by the inputs of those parents that do not derive from blocks (kpi_measure, kpi, unit; not gold.coverage, whose
+rows never reach a metrics row: OUTSIDE_METRICS, enforced by a data test). It is
 rebuilt when one of those or one of its other parents was rebuilt in this run or changed after its build, not when
 another source's block changed. Its fingerprint carries the code of the block-derived models above it (without the
 per-source macro files and the block parents), its scope blocks and its sources' macro files, so an edit to a fact
@@ -103,6 +104,12 @@ SOURCE_REGISTRATION = "poc_source__"  # macros/sources/<source>.sql: {'block_mod
 REGISTERED_MODEL = re.compile(r"['\"]block_model['\"]\s*:\s*['\"](\w+)['\"]")
 SOURCE_SYSTEMS = "source_systems"  # config meta of a block that emits more source_systems than it is declared for
 SCOPED_SWITCH = "metrics_scoped"  # warehouse.yaml; false = every metrics model reads all blocks (the rule before #3204)
+# Sources (`<source>.<table>`) that a block-derived ancestor reads but whose rows never reach a metrics row, so they
+# are not scope inputs (#3204 PR A2). gold.coverage adds only activated = false rows to poc_dim_measure, and the
+# metrics read activated measures only. Not assumed: the data test warehouse/tests/gold_coverage_outside_metrics.sql
+# fails the build when a coverage row could reach a metrics model, and ops/repo_check.py requires that test.
+OUTSIDE_METRICS = ("gold_coverage.coverage",)
+OUTSIDE_METRICS_TEST = "warehouse/tests/gold_coverage_outside_metrics.sql"
 
 
 def metrics_scoped() -> bool:
@@ -306,6 +313,11 @@ def block_sources(meta: dict[str, Any]) -> dict[str, set[str]]:
     return out
 
 
+def outside_metrics(uid: str) -> bool:
+    """True for a source node listed in OUTSIDE_METRICS (``source.<project>.<source>.<table>``)."""
+    return uid.startswith("source.") and ".".join(uid.split(".")[-2:]) in OUTSIDE_METRICS
+
+
 def concept_sources() -> dict[str, set[str]]:
     """kpi_key → the source_systems of its kpi_measure rows (seed_rows/kpi_measure)."""
     out: dict[str, set[str]] = {}
@@ -319,8 +331,9 @@ def metric_scopes(meta: dict[str, Any], graph: dict[str, dict[str, Any]]) -> dic
 
     A scope is {"concept", "sources", "blocks": block unique ids, "ancestors": the block-derived models above it
     (reached without passing a block), "inputs": its parents and its ancestors' parents that neither are nor derive
-    from a block}. Unscoped: the model is not exactly one poc_concept_metrics('<kpi>') call, the concept has no
-    kpi_measure rows, or one of its sources maps to no block of the project."""
+    from a block, without the ancestors' OUTSIDE_METRICS sources}. Unscoped: the model is not exactly one
+    poc_concept_metrics('<kpi>') call, the concept has no kpi_measure rows, or one of its sources maps to no block of
+    the project."""
     by_source = block_sources(meta)
     sources_of = concept_sources()
     names = {m["name"]: uid for uid, m in graph.items()}
@@ -352,14 +365,15 @@ def metric_scopes(meta: dict[str, Any], graph: dict[str, dict[str, Any]]) -> dic
         inputs: set[str] = set()
         queue = [uid]
         while queue:
-            for p in graph[queue.pop()]["parents"]:
+            child = queue.pop()
+            for p in graph[child]["parents"]:
                 if p in graph and graph[p]["block"]:
                     continue
                 if block_derived(p):
                     if p not in ancestors:
                         ancestors.add(p)
                         queue.append(p)
-                else:
+                elif child == uid or not outside_metrics(p):  # read by the metrics model itself: always an input
                     inputs.add(p)
         out[uid] = {
             "concept": calls[0],
