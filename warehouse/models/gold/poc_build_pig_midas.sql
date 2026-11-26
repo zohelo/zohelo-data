@@ -7,8 +7,9 @@
    voivodeship outlines, because a full-resolution voivodeship polygon parsed per point exhausts memory. A point on
    a gmina border lies in two gminas: of one voivodeship it is kept once; of two voivodeships it fails the build.
    - block deposits, pig_midas:deposits:deposits:documented - documented mineral deposits: distinct deposit numbers of
-     the layer deposits; breakdown mineral = MIDAS mineral code (Kod) of the contour, so a deposit with two minerals
-     counts under each; the total (is_total, breakdown {}) counts each deposit once; a deposit with contours in two
+     the layer deposits; breakdown mineral = the contour's mineral (Kopalina, as published; the code Kod is not one
+     to one with it: KN holds 11 minerals), so a deposit with two minerals counts under each; the total (is_total,
+     breakdown {}) counts each deposit once; a deposit with contours in two
      voivodeships counts in each, once in Poland. Removed deposits (archival layer) are left out.
    - block mining_areas, pig_midas:mining_areas:mining_areas:current - current mining areas (layer mining_areas):
      contours (ID_konturu); pig_midas:mining_areas:m2:legal_area - their legal area in m2 as published (Powierzchnia
@@ -131,17 +132,13 @@ counted as (
         area_code,
         'deposits' as unit_code,
         'documented' as measure_code,
-        cast(json_object('mineral', mineral_code) as varchar) as breakdown_json,
-        case
-            when count(distinct mineral) > 1
-                then error('build_pig_midas: mineral code ' || mineral_code || ' has two names')
-            else cast(json_object('mineral', min(mineral)) as varchar)
-        end as breakdown_label_json,
+        cast(json_object('mineral', mineral) as varchar) as breakdown_json,
+        cast(null as varchar) as breakdown_label_json,
         false as is_total,
         cast(count(distinct entity_key) as double) as value
     from areas
     where block_id = 'deposits'
-    group by block_id, area_code, mineral_code
+    group by block_id, area_code, mineral
     union all
     select
         block_id,
