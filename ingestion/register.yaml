@@ -3143,7 +3143,8 @@ sources:
   name: Raport – Stan Sanitarny Kraju
   short_name: GIS sanitary state report
   provider: Główny Inspektorat Sanitarny (GIS)
-  status: approved
+  source_system: gis_sanitary
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -3151,7 +3152,7 @@ sources:
   domains: [public health, sanitary inspection, food safety, environmental health]
   entities: [country, inspection-aggregate, establishment-aggregate, sample-aggregate]
   granularity: Annual report table/indicator aggregated from national, voivodeship, powiat and border sanitary inspectorates.
-  coverage: Annual report family; opened page confirms current family but full archive start not verified.
+  coverage: 'Annual reports 2006 to 2025 on the page (Dev probe 45894316074): Stan Sanitarny Kraju 2006-2023, Raport z działań PIS 2024 and 2025; built from 2012 (food-samples table, years 2010-2025).'
   access:
     endpoint: https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
     kind: bulk_file

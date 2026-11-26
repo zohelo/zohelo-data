@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+food_samples_disqualified_share,gis_sanitary,gis_sanitary:food_samples:pct:disqualified_share_total,"GIS annual report, table Jakość zdrowotna środków spożywczych, all foodstuffs, Poland, each year from its own report",1,
