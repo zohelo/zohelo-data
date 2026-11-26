@@ -17,21 +17,28 @@
 --   date_key    = first day of the period (A, S, Q, M) in the year id_daty; other periods are not loaded
 --   geography   = the position of the territorial slot, by name through gold.map_geography; a block without
 --                 one → _Z; unmatched → _X with `<NAME> #<position id>` kept in the key
--- Cells that are not plain values (DBW's id_brak_wartosci, id_tajnosci, id_flaga):
+-- Cells that are not plain values (DBW's id_brak_wartosci, id_tajnosci, id_flaga; the ids below are every id
+-- all of Silver holds, with their labels in DBW's dictionary files, Dev run 45745873785):
 --   empty value                          not loaded
 --   0 with a no-value sign               not loaded: DBW writes 0 with 42 "zjawisko nie wystąpiło", 38 "brak
 --                                        informacji, konieczność zachowania tajemnicy…", 725 "wartość mniejsza
 --                                        niż przyjęty format prezentacji"; 253 "Nie dotyczy" marks a real value
---   non-zero with a no-value sign        loaded, status `flagged` (a number is never dropped)
---   id_tajnosci other than 43 "Dane jawne"   loaded, status `confidential`
---   id_flaga     31, 308 → provisional; 29, 35 → estimated; 30 "Prognoza" → forecast; 1 → break;
---                251 → low_reliability; 36, 346, 33, 32, 305 (not applicable, final, full population,
---                revised) → ok; any other flag → flagged
+--   0 under confidentiality              not loaded: id_tajnosci other than 43 "Dane jawne" (44 "Na agregat
+--                                        składają się mniej niż trzy jednostki statystyczne") with 0 is a
+--                                        withheld cell, not a zero (the same rule as the no-value signs)
+--   non-zero under confidentiality       loaded, status `confidential`: id_tajnosci other than 43, or no-value
+--   or with sign 38                      sign 38 (it says the figure is withheld)
+--   non-zero with another no-value sign  loaded, status `flagged` (a number is never dropped)
+--   id_flaga     none or 0 → ok; 31, 308 → provisional; 29, 35 → estimated; 30 "Prognoza" → forecast;
+--                1 → break; 251 → low_reliability; 36, 346, 33, 32, 305, 474 (not applicable, final, full
+--                population, revised, informative note) → ok; any other flag → flagged
+-- warehouse/entity/gold_gus_dbw_not_loaded.sql counts what is not loaded with the same conditions.
 with flags as (
     select * from (
         values
-        (31, 'provisional'), (308, 'provisional'), (29, 'estimated'), (35, 'estimated'), (30, 'forecast'),
-        (1, 'break'), (251, 'low_reliability'), (36, 'ok'), (346, 'ok'), (33, 'ok'), (32, 'ok'), (305, 'ok')
+        (0, 'ok'), (31, 'provisional'), (308, 'provisional'), (29, 'estimated'), (35, 'estimated'),
+        (30, 'forecast'), (1, 'break'), (251, 'low_reliability'),
+        (36, 'ok'), (346, 'ok'), (33, 'ok'), (32, 'ok'), (305, 'ok'), (474, 'ok')
     ) as t (flag_id, observation_status_key)
 ),
 
@@ -92,7 +99,8 @@ placed as (
     cross join shape as sh
     inner join periods as pe on s.period_id = pe.period_id
     where
-        s.value is not null and (coalesce(s.missing_reason_id, 253) = 253 or s.value <> 0)
+        s.value is not null
+        and (s.value <> 0 or (coalesce(s.missing_reason_id, 253) = 253 and coalesce(s.confidentiality_id, 43) = 43))
         and pe.frequency is not null
         and s.year between 1000 and 9999
 ),
@@ -183,7 +191,7 @@ select
     len(list_filter(p.slot_positions, lambda x: not list_contains(p.totals, x))) = 0 as is_total,  -- noqa: RF02
     p.value,
     case
-        when p.confidentiality_id is not null and p.confidentiality_id <> 43 then 'confidential'
+        when coalesce(p.confidentiality_id, 43) <> 43 or p.missing_reason_id = 38 then 'confidential'
         when coalesce(p.missing_reason_id, 253) <> 253 then 'flagged'
         when p.flag_id is null then 'ok'
         else coalesce(f.observation_status_key, 'flagged')

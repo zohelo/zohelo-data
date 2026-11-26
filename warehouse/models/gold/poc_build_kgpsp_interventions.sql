@@ -6,7 +6,10 @@
    2016-2022 as published in the voivodeship workbooks (rows 'Polska' and the voivodeships). From 2023 the producer
    publishes gmina rows only: a voivodeship is the sum of its gmina rows (TERYT WWPPGG, WW = the voivodeship) and Poland
    the sum of all, kept only when every gmina row of the area has a number for the measure (a non-number never counts
-   as 0). Gmina rows themselves are not in Gold yet. #}
+   as 0) and the area's cities with districts (TERYT: Wrocław 0264, Łódź 1061, Kraków 1261, Warszawa 1465, Poznań
+   3064) are printed with their district rows: the 2025 tables have one row for each of these cities (Warszawa 1,852
+   incidents against 22,847 summed over 19 rows in 2024; Dev trial 45756529767), so 2025 has no value for Poland and
+   those five voivodeships. Gmina rows themselves are not in Gold yet. #}
 with silver as (
     select * from {{ ref('kgpsp_interventions_counts') }}
 ),
@@ -22,6 +25,18 @@ published as (
         raw_sha256
     from silver
     where area_level in ('country', 'voivodeship') and value_status = 'ok'
+),
+
+-- a city with districts printed as a single row: its voivodeship and Poland are not summed for that year and table
+incomplete_cities as (
+    select
+        report_year,
+        table_code,
+        left(area_code, 2) as voivodeship_code
+    from silver
+    where area_level = 'gmina' and left(area_code, 4) in ('0264', '1061', '1261', '1465', '3064')
+    group by report_year, table_code, left(area_code, 4), left(area_code, 2)
+    having count(distinct area_code) < 2
 ),
 
 from_gminas as (
@@ -58,6 +73,14 @@ from_gminas as (
         from silver
         where area_level = 'gmina'
     ) as g
+    where
+        not exists (
+            select 1
+            from incomplete_cities as i
+            where
+                i.report_year = g.report_year and i.table_code = g.table_code
+                and (g.area_code = 'PL' or i.voivodeship_code = g.area_code)
+        )
     group by report_year, table_code, area_code, measure_code
     having count(*) filter (where value_status <> 'ok') = 0
 ),

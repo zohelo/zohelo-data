@@ -32,12 +32,12 @@ gold:
   - gold.metrics_fire_service_fires
   - gold.metrics_fire_service_local_hazards
   - gold.metrics_fire_service_false_alarms
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial of the PR
-  kgpsp_interventions_counts: {rows: 400000}
-  poc_build_kgpsp_interventions: {rows: 9000}
-  poc_metrics_fire_service_fires: {rows: 300}
-  poc_metrics_fire_service_local_hazards: {rows: 300}
-  poc_metrics_fire_service_false_alarms: {rows: 300}
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45756529767 and the PR's final trial
+  kgpsp_interventions_counts: {rows: 400000}  # 259,454: 2016-2022 voivodeship rows 4,046, 2023-2025 gmina rows 255,408
+  poc_build_kgpsp_interventions: {rows: 8500}  # 5,576: 34 measures x 17 areas x 10 years, less 2025 for PL and 5 voivodeships
+  poc_metrics_fire_service_fires: {rows: 250}  # about 164: 17 areas x 10 years, less 6 in 2025
+  poc_metrics_fire_service_local_hazards: {rows: 250}
+  poc_metrics_fire_service_false_alarms: {rows: 250}
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): ten yearly ZIPs of about 8-12 MB, one new a year; small, rebuilt in full.
