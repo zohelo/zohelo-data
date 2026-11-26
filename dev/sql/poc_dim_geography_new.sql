@@ -70,7 +70,7 @@ geo_codes as (
 
 -- NUTS regions (#2775): a GEO code of 3 to 5 characters is a NUTS region only when its first two characters are a
 -- country that has NUTS or statistical regions (EU members, EL and UK, EFTA, the candidate countries with
--- statistical regions). Every other GEO code of that shape is an aggregate: the euro areas (EA11 … EA20), the EU of
+-- statistical regions, Bosnia and Herzegovina's BA0 … BA03 among them). Every other GEO code of that shape is an aggregate: the euro areas (EA11 … EA20), the EU of
 -- a past composition (EU15, EU25, EU28), EFTA, NMS10, and the European Economic Area, whose codes begin with
 -- Estonia's EE (EEA, EEA28, EEA30), so they are named here.
 geo_shapes as (
@@ -81,8 +81,8 @@ geo_shapes as (
         and regexp_matches(code, '^[A-Z]{2}[A-Z0-9]{1,3}$')
         and substr(code, 1, 2) in (
             'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR', 'HR', 'HU', 'IE', 'IT', 'LT',
-            'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK', 'UK', 'CH', 'IS', 'LI', 'NO', 'AL', 'ME',
-            'MK', 'RS', 'TR'
+            'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK', 'UK', 'CH', 'IS', 'LI', 'NO', 'AL', 'BA',
+            'ME', 'MK', 'RS', 'TR'
         )
         and code not like 'EEA%' as is_nuts
     from geo_codes

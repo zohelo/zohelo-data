@@ -112,6 +112,21 @@ def main() -> int:
                 "order by 1",
             ),
         }
+        dim["left"] = [r[0] for r in dim["left"]]
+        dim["arrived"] = [r[0] for r in dim["arrived"]]
+        dim["level_changed"] = len(dim["level_changed"])
+        dim["moved_with_country_prefix"] = rows(
+            con,
+            "select o.nuts_code, o.name_en from dim_old o anti join dim_new n using (geography_key) "
+            "where o.level_name like 'nuts%' and substr(o.nuts_code, 1, 2) in "
+            "(select geography_key from dim_new where level_name = 'country' union select 'EL' union select 'UK') "
+            "order by 1",
+        )
+        dim["nuts_left_named_like_aggregate"] = rows(
+            con,
+            "select nuts_code, name_en from dim_new where level_name like 'nuts%' and regexp_matches(lower(name_en), "
+            "'countr|union|euro area|bank|fund|association|community|organi|group|total|world') order by 1",
+        )
         annotate("notice", "2775 dimension", {**prod, **dim})
         changed = rows(
             con,
@@ -133,7 +148,14 @@ def main() -> int:
             "using (source_system, source_code) group by 1 having count(*) filter (where o.geography_key = '_X') "
             "<> count(*) filter (where n.geography_key = '_X') order by 1",
         )
-        annotate("notice", "2775 map", {"changed": changed, "rows_only_in_one": only, "unmatched_old_new": unmatched})
+        compact = {
+            "eurostat_codes_moved": len([c for c in changed if c[0] == "eurostat"]),
+            "eurostat_not_nuts_to_eurostat": [
+                c[1] for c in changed if c[0] == "eurostat" and (c[2], c[3]) != ("NUTS:" + c[1], "EUROSTAT:" + c[1])
+            ],
+            "other_sources": [c for c in changed if c[0] != "eurostat"],
+        }
+        annotate("notice", "2775 map", {**compact, "rows_only_in_one": only, "unmatched_old_new": unmatched})
         tests = {
             "dim_unique_dup": one(
                 con, "select count(*) from (select geography_key from dim_new group by 1 having count(*) > 1)"
