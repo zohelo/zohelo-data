@@ -123,10 +123,10 @@ def trial(cat, minutes: float) -> None:
                                          "filter (where scope = 'powiat') powiats, count(*) filter (where scope = "
                                          "'powiat') n_powiats, max(n) filter (where scope = 'PL') - sum(n) filter "
                                          "(where scope = 'powiat') outside from b group by 1"),
-        "voivodeship_vs_powiat_sum": q(con, "select v.type_name, v.code, v.n, sum(p.n), v.n - sum(p.n) from b v "
-                                            "join b p on p.type_name = v.type_name and p.scope = 'powiat' and "
-                                            "left(p.code, 2) = v.code where v.scope = 'voivodeship' group by all "
-                                            "order by 1, 2")})
+        "voivodeship_vs_powiat_sum": q(con, "select type_name, code, n, s, n - s from (select v.type_name, v.code, "
+                                            "v.n, sum(p.n) s from b v join b p on p.type_name = v.type_name and "
+                                            "p.scope = 'powiat' and left(p.code, 2) = v.code where v.scope = "
+                                            "'voivodeship' group by v.type_name, v.code, v.n) order by 1, 2")})
 
     silver_sql = render("warehouse/models/silver/gugik_egib/gugik_egib_counts.sql", {}, {"gugik_egib_hits": "bronze_b"})
     rows = []
