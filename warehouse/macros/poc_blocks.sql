@@ -245,13 +245,13 @@
 {% endmacro %}
 
 {# OECD area codes that are not ISO 3166 alpha-3 countries: their names, and the Eurostat aggregate they equal
-   (EU27_2020 only: Gold has no Eurostat EA20 member, so the OECD euro areas are OECD:<code> members). #}
+   (EU27_2020, EA20, EA19; #2775). A code without one is an OECD:<code> member. #}
 {% macro poc_oecd_areas() %}
     select * from (
         values
         ('EU27_2020', 'European Union (27 countries from 2020)', 'EU27_2020'),
-        ('EA20', 'Euro area (20 countries)', ''),
-        ('EA19', 'Euro area (19 countries)', ''),
+        ('EA20', 'Euro area (20 countries)', 'EA20'),
+        ('EA19', 'Euro area (19 countries)', 'EA19'),
         ('EU', 'European Union (OECD composite)', ''),
         ('OECDXEA', 'OECD excluding the euro area', ''),
         ('OECD', 'OECD total', ''),
@@ -381,12 +381,12 @@
 
 {# ECB area codes → Gold area (poc_map_geography section ecb; static, so Gold does not depend on ECB Silver
    existing). Countries are ISO two-letter codes and map by themselves; these are the aggregates (TITLE_COMPL in
-   silver.ecb_observations, Dev trial 43088143150). I8/I9 use the keys Eurostat's EA19/EA20 have today
-   (NUTS:EA19, NUTS:EA20). I10 (euro area 21) and V5 have no Gold area yet. #}
+   silver.ecb_observations, Dev trial 43088143150). I8/I9 are Eurostat's EA19/EA20 aggregates (#2775).
+   I10 (euro area 21) and V5 have no Gold area yet. #}
 {% macro poc_ecb_areas() %}
     select * from (
         values
-        ('U2', 'EUROSTAT:EA'), ('I8', 'NUTS:EA19'), ('I9', 'NUTS:EA20'), ('B6', 'EUROSTAT:EU27_2020'),
+        ('U2', 'EUROSTAT:EA'), ('I8', 'EUROSTAT:EA19'), ('I9', 'EUROSTAT:EA20'), ('B6', 'EUROSTAT:EU27_2020'),
         ('B0', 'EUROSTAT:EU'), ('D0', 'EUROSTAT:EU')
     ) as t (area_code, candidate_key)
 {% endmacro %}
