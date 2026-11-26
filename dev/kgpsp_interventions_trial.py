@@ -6,17 +6,19 @@ warehouse/macros), each built twice, with profiles, grain checks and Poland spot
 
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 import re
 import sys
+import zipfile
 
 import duckdb
 import jinja2
 import yaml
 
 from ingestion.common import bronze_files as bf
-from ingestion.common import bulk_bronze, report
+from ingestion.common import bulk_bronze, report, xlsx_cells
 from ingestion.common.r2 import catalog, req, s3
 from ingestion.to_bronze import kgpsp_interventions as bronze
 from ingestion.to_landing import kgpsp_interventions as landing
@@ -79,6 +81,131 @@ def schema_tests(con, model: str) -> dict:
     return out
 
 
+VOIVODESHIPS = {
+    "dolnośląskie": "02", "kujawsko-pomorskie": "04", "lubelskie": "06", "lubuskie": "08", "łódzkie": "10",
+    "małopolskie": "12", "mazowieckie": "14", "opolskie": "16", "podkarpackie": "18", "podlaskie": "20",
+    "pomorskie": "22", "śląskie": "24", "świętokrzyskie": "26", "warmińsko-mazurskie": "28", "wielkopolskie": "30",
+    "zachodniopomorskie": "32",
+}
+
+
+def _num(text):
+    t = (text or "").strip().replace("\u00a0", "").replace(" ", "").replace(",", ".")
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
+def workbook_rows(data: bytes):
+    """(labels per value column, [(label, {col: value or None}, raw label)]) of a voivodeship/powiat/gmina workbook
+    of the 2016-2022 layout: area column headed 'Podział administracyjny', header from the first row naming (P)/(MZ)."""
+    grid: dict[int, dict[int, str]] = {}
+    for c in xlsx_cells.cells(data):
+        grid.setdefault(c["row_number"], {})[c["column_number"]] = re.sub(r"\s+", " ", c["value_text"] or "").strip()
+    label_at = [(r, c) for r, cols in grid.items() for c, t in cols.items() if t == "Podział administracyjny"]
+    if len(label_at) != 1:
+        raise ValueError(f"label column found {len(label_at)} times")
+    label_row, label_col = label_at[0]
+    first = min(r for r, cols in grid.items() if any("(P)" in t or "(MZ)" in t for t in cols.values()))
+    rows = [r for r in sorted(grid) if r > label_row and grid[r].get(label_col)]
+    data_start = rows[0]
+    value_cols = sorted({c for r in rows for c in grid[r] if c > label_col})
+    labels = {}
+    for col in value_cols:
+        parts = []
+        for r in range(first, data_start):
+            left = [c for c in grid.get(r, {}) if (c == col if r == data_start - 1 else label_col < c <= col)]
+            if left:
+                parts.append(grid[r][max(left)])
+        labels[col] = " / ".join(parts)
+    out = [(grid[r][label_col].lower(), {c: _num(grid[r].get(c)) for c in value_cols}, grid[r][label_col]) for r in rows]
+    return labels, out
+
+
+def cross_check_2022(client, receipts) -> dict:
+    """Read-only: the 2022 gmina copies (1_2_2022, 10_2_2022) summed per voivodeship vs the published 2022
+    voivodeship rows (1_2022, 10_2022), per measure. Powiat rows of the gmina copy are told apart by walking the
+    powiat copy (1_1_2022, 10_1_2022) in order (same label and values); a powiat without gmina rows below counts as
+    its own gmina (leaf)."""
+    rec = max((r for r in receipts if r["entity"] == "tabele_2022"), key=lambda r: r["version_token"])
+    body = client.get_object(Bucket=rec["object"]["bucket"], Key=rec["object"]["key"])["Body"].read()
+    z = zipfile.ZipFile(io.BytesIO(body))
+    base = {i.filename.rsplit("/", 1)[-1]: i.filename for i in z.infolist() if not i.is_dir()}
+    result = {}
+    for table in ("1", "10"):
+        names = {k: base.get(f"{table}{suffix}_2022.xlsx") for k, suffix in (("voiv", ""), ("powiat", "_1"), ("gmina", "_2"))}
+        if not all(names.values()):
+            result[table] = {"error": f"members not found: {names}"}
+            continue
+        lv, voiv = workbook_rows(z.read(names["voiv"]))
+        lp, powiat = workbook_rows(z.read(names["powiat"]))
+        lg, gmina = workbook_rows(z.read(names["gmina"]))
+        expected = [r for r in powiat if r[0] != "polska" and r[0] not in VOIVODESHIPS]
+        kinds, current, ptr = [], None, 0
+        for label, values, raw in gmina:
+            if label == "polska":
+                kinds.append(["PL", None, label, values, raw])
+            elif label in VOIVODESHIPS:
+                current = VOIVODESHIPS[label]
+                kinds.append(["voivodeship", current, label, values, raw])
+            elif ptr < len(expected) and label == expected[ptr][0] and values == expected[ptr][1]:
+                ptr += 1
+                kinds.append(["powiat", current, label, values, raw])
+            else:
+                kinds.append(["gmina", current, label, values, raw])
+        leaves = 0
+        for i, k in enumerate(kinds):
+            if k[0] == "powiat" and (i + 1 == len(kinds) or kinds[i + 1][0] != "gmina"):
+                k[0] = "gmina"
+                leaves += 1
+        print(f"\n=== 2022 table {table}: first 40 classified rows of {names['gmina']}", flush=True)
+        for k in kinds[:40]:
+            print(f"  {k[0]:12} {k[1]} {k[4]}", flush=True)
+        warsaw = [k[4] for k in kinds if k[1] == "14" and "warszaw" in k[2]]
+        print(f"  Warszawa rows (mazowieckie): {warsaw}", flush=True)
+        published = {VOIVODESHIPS[label]: values for label, values, _ in voiv if label in VOIVODESHIPS}
+        published["PL"] = next(values for label, values, _ in voiv if label == "polska")
+        cols = sorted(published["PL"])
+        sums: dict = {}
+        not_numbers = 0
+        for kind, w, _label, values, _raw in kinds:
+            if kind != "gmina":
+                continue
+            for col in cols:
+                v = values.get(col)
+                if v is None:
+                    not_numbers += 1
+                    continue
+                for area in (w, "PL"):
+                    sums[(area, col)] = sums.get((area, col), 0) + v
+        diffs, equal_cells = [], 0
+        for area, vals in sorted(published.items()):
+            for col in cols:
+                pub, got = vals.get(col), sums.get((area, col), 0)
+                if pub is not None and abs(pub - got) < 1e-9:
+                    equal_cells += 1
+                else:
+                    diffs.append({"area": area, "measure": lv.get(col), "gmina_sum": got, "published": pub})
+        per_measure = {}
+        for col in cols:
+            d = [x for x in diffs if x["measure"] == lv.get(col)]
+            per_measure[lv.get(col)] = "equal" if not d else f"{len(d)} areas differ, max {max(abs((x['published'] or 0) - x['gmina_sum']) for x in d):.0f}"
+        print(f"  differences ({len(diffs)}): {json.dumps(diffs[:60], ensure_ascii=False)}", flush=True)
+        result[table] = {
+            "members": names,
+            "headers_equal": lv == lg == lp,
+            "rows": {k: sum(1 for x in kinds if x[0] == k) for k in ("PL", "voivodeship", "powiat", "gmina")},
+            "powiats_matched": f"{ptr}/{len(expected)}", "leaf_powiats_as_gmina": leaves,
+            "gmina_rows_without_voivodeship": sum(1 for x in kinds if x[0] == "gmina" and x[1] is None),
+            "not_numbers_in_gmina_rows": not_numbers,
+            "cells_equal": f"{equal_cells}/{len(published) * len(cols)}",
+            "per_measure": per_measure,
+            "first_differences": diffs[:5],
+        }
+    return result
+
+
 def main(argv) -> int:
     client = s3()
     cat = bf.retry(catalog, "catalog")
@@ -101,6 +228,12 @@ def main(argv) -> int:
             "years": f"{min(held)}..{max(held)}", "bytes": sum(r["size_bytes"] for r in receipts),
             "copies_per_entity_max": max(sum(1 for r in receipts if r["entity"] == e) for e in held),
         }}
+        # 2022 layout-break cross-check (review of #3248, should-fix 2), read-only from the scratch Landing copy
+        try:
+            xc = cross_check_2022(client, receipts)
+        except Exception as exc:  # report, do not stop the trial
+            xc = {"error": f"{type(exc).__name__}: {exc}"[:500]}
+        note(f"{SOURCE} trial 2022 gmina sums vs published voivodeship rows", xc)
         # Bronze, twice: the second run must add nothing
         loads = []
         for attempt in (1, 2):
@@ -146,6 +279,9 @@ def main(argv) -> int:
             "complete_rows": len(complete), "complete_first": [list(map(str, r)) for r in complete[:8]],
             "entities_without_silver": [list(r) for r in entities],
             "warn_city_districts": [list(map(str, r)) for r in city],
+            "city_codes": n(f"""select string_agg(k, '; ' order by k) from (select report_year || ' t' || table_code || ' ' || left(area_code, 4) || ': '
+                || count(distinct area_code) || ' codes ' || min(area_code) || '..' || max(area_code) k from {s}
+                where layout = 'gmina' and left(area_code, 4) in ('0264', '1061', '1261', '1465', '3064') group by report_year, table_code, left(area_code, 4))"""),
             "years": n(f"select min(report_year) || '..' || max(report_year) from {s}"),
             "per_layout": n(f"select string_agg(k, '; ' order by k) from (select layout || ' ' || table_code || ': ' || count(*) || ' rows, ' || count(distinct area_code) || ' areas, ' || count(distinct report_year) || ' years' k from {s} group by layout, table_code)"),
             "not_numeric": n(f"select coalesce(string_agg(value_text || '=' || c, ' '), 'none') from (select value_text, count(*) c from {s} where value_status <> 'ok' group by 1)"),
