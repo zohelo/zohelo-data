@@ -20,17 +20,47 @@ SOURCE = "gddkia_gpr"
 KINDS = {1: "s", 2: "n", 3: "n", 4: "b", 5: "e"}  # xlrd cell types: text, number, date (serial), boolean, error
 
 
+def _sst_strings_present(unpack):
+    """xlrd's shared-string reader for a workbook whose SST header declares more unique strings than its records hold
+    (the 2020/21 national-roads workbook: xlrd stops with an AssertionError at the end of the SST data). The count is
+    lowered to the strings actually present (the largest count xlrd reads without running out of data, found by
+    bisection; reading fewer strings than present never fails, reading more always does). A cell that refers to a
+    string beyond them still fails the file (IndexError in xlrd), so nothing is guessed."""
+
+    def tolerant(datatab, nstrings):
+        try:
+            return unpack(datatab, nstrings)
+        except (AssertionError, IndexError):
+            low, high = 0, nstrings  # low reads, high fails
+            while high - low > 1:
+                mid = (low + high) // 2
+                try:
+                    unpack(datatab, mid)
+                    low = mid
+                except (AssertionError, IndexError):
+                    high = mid
+            return unpack(datatab, low)
+
+    return tolerant
+
+
 def xls_cells(body: bytes):
     """Every non-empty cell of an .xls workbook as (sheet index, sheet name, row, column, cell ref, kind, text).
     Numbers keep their stored float (integers without '.0'); error cells keep their Excel text (#N/A), never a
     number. ``ignore_workbook_corruption``: the 2020/21 national-roads workbook has an inconsistent OLE sector
-    table that xlrd refuses by default; the cell records themselves read in full (Dev probe, see the source YAML)."""
+    table that xlrd refuses by default; its SST declares more strings than it holds (``_sst_strings_present``); the
+    cell records themselves read in full (Dev trial, see the source YAML)."""
     import xlrd
+    import xlrd.book
 
+    original = xlrd.book.unpack_SST_table
+    xlrd.book.unpack_SST_table = _sst_strings_present(original)
     try:
         book = xlrd.open_workbook(file_contents=body, on_demand=True, ignore_workbook_corruption=True)
-    except (xlrd.XLRDError, AssertionError) as exc:
+    except (xlrd.XLRDError, AssertionError, IndexError) as exc:
         raise ValueError(f"not a readable .xls workbook: {type(exc).__name__}: {exc}") from exc
+    finally:
+        xlrd.book.unpack_SST_table = original
     for index, name in enumerate(book.sheet_names(), start=1):
         sheet = book.sheet_by_name(name)
         for r in range(sheet.nrows):
