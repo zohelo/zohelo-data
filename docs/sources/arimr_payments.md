@@ -17,7 +17,12 @@ row per table cell: title, "Dane na dzień" date, column header as printed (camp
 label, value as printed. A table is accepted only when its header names one increasing campaign year per value, its
 rows are the 16 voivodeships and "Razem" once each, every value is a number as printed, and "Razem" equals the sum of
 the voivodeships in every column (counts exactly, amounts printed rounded to the złoty within 9 zł); any other
-layout rejects the whole file into `bronze.arimr_payments_rejected_files`. Footer lines, including the names of the
+layout rejects the whole file into `bronze.arimr_payments_rejected_files`. The reports differ over the years
+(no-break spaces in titles, "31-12-2018" dates in 2017 to 2019, "Liczbawydanych" in 2018, a few ungrouped numbers in
+31.12.2024, a last column "Razem" with the row total over the campaigns, which Silver leaves out; its label "Kampanie
+2004-2025" in the 2026 reports also covers 2026). Rejected on 26 Nov 2026 (Dev run 45756527254): 31.12.2017 (a
+one-column table names its campaign only in the title) and 31.12.2025 (the producer's row error above); every
+campaign they hold is in a later or an older report that loads. Footer lines, including the names of the
 ARiMR staff responsible for the release, stay in the Landing file only.
 
 Silver `silver.arimr_payments_direct_payments`: applications for area payments submitted, decisions granting them

@@ -247,9 +247,13 @@ rule-based build stages apply the rules the curated stages already apply:
   year after the year of the subgroup's version, and every row of a subgroup named a projection
   (`prognoza`), has status `forecast`.
 - GUS DBW: an empty value is not loaded; a 0 with a no-value sign (`id_brak_wartosci` other than 253
-  "Nie dotyczy") is not loaded, a non-zero number with such a sign is loaded as `flagged`; a value whose
-  `id_tajnosci` is not 43 "Dane jawne" is loaded with status `confidential`; `id_flaga` gives
-  `provisional`, `estimated`, `break`, `low_reliability` and `forecast` (30 "Prognoza").
+  "Nie dotyczy") or under confidentiality (`id_tajnosci` other than 43 "Dane jawne") is not loaded; a
+  non-zero number under confidentiality or with sign 38 (figure withheld) is loaded as `confidential`,
+  one with another no-value sign (42, 725) as `flagged`; `id_flaga` gives `provisional`, `estimated`,
+  `break`, `low_reliability` and `forecast` (30 "Prognoza"), none, 0 and the final, revised, full
+  population, not applicable and informative-note flags are `ok`. These ids are every id in DBW's Silver
+  (Dev run 45745873785); the run summary counts the rows left out by reason
+  (`gold_gus_dbw_not_loaded.sql`).
 - World Bank WDI: an empty cell is not loaded; a year after the year of the archive's version is a
   projection and is not loaded. OECD: a period without a number is not loaded; `OBS_STATUS` becomes the
   status (`A` or none ok, `P`, `E`, `B`, `D`, `U`, `N`; any other code `flagged`, never silently ok), and

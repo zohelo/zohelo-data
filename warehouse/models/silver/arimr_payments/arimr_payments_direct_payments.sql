@@ -18,12 +18,13 @@ with cells as (
         value_text,
         source_version,
         raw_sha256,
+        -- titles and dates as printed: 'Liczbawydanych' (2018), '31-12-2018' (2017 to 2019)
         case
             when starts_with(table_title, 'Liczba złożonych wniosków o przyzna') then 'applications'
-            when starts_with(table_title, 'Liczba wydanych decyzji o przyzna') then 'decisions'
+            when regexp_matches(table_title, '^Liczba ?wydanych decyzji o przyzna') then 'decisions'
             when starts_with(table_title, 'Kwota zrealizowanych płatności') then 'amount_paid'
         end as measure_code,
-        cast(strptime(as_of_text, '%d.%m.%Y') as date) as as_of_date,
+        cast(strptime(replace(as_of_text, '-', '.'), '%d.%m.%Y') as date) as as_of_date,
         cast(regexp_extract(column_label, '^(\d{4})', 1) as integer) as campaign_year,
         regexp_extract(column_label, '(\*+)$', 1) as column_note,
         lower(regexp_replace(trim(row_label), '\s*-\s*', '-', 'g')) as label_key

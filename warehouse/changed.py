@@ -40,6 +40,17 @@ input was added to it before that input's first load. It is listed under ``stall
 tables, and the build stops before dbt runs (warehouse/build.py): such a model would otherwise stay frozen
 without a word, and a stalled Gold block must never be passed on as an empty one.
 
+Block-scoped metrics (#3204, kill switch ``metrics_scoped`` in warehouse.yaml): every ``poc_metrics_<kpi>`` model reads
+the shared facts and dimensions, which union all Gold blocks, so one changed block used to rebuild all of them. A
+metrics model whose concept's sources (seed_rows/kpi_measure) all map to Gold blocks (``block_sources()``) is
+"scoped": its parents that derive from blocks (facts, dimensions, concept measures) are replaced by its scope blocks
+and by the inputs of those parents that do not derive from blocks (kpi_measure, kpi, unit, gold_coverage). It is
+rebuilt when one of those or one of its other parents was rebuilt in this run or changed after its build, not when
+another source's block changed. Its fingerprint carries the code of the block-derived models above it (without the
+per-source macro files and the block parents), its scope blocks and its sources' macro files, so an edit to a fact
+model still rebuilds every metrics model and a new source rebuilds none of the others. A concept with a source that
+maps to no block stays unscoped (the rule above).
+
 Table compaction also makes a new snapshot, so a compacted input causes a rebuild:
 conservative, never a missed change.
 """
@@ -53,6 +64,8 @@ from pathlib import Path
 import re
 import subprocess
 from typing import Any
+
+import yaml
 
 from warehouse import seed_rows
 
@@ -81,6 +94,20 @@ EXTERNAL_MODELS: frozenset[str] = frozenset()  # models built outside the schedu
 START_MARGIN_MS = 10 * 60 * 1000
 # Rebuild reasons after which an incremental model's rows cannot be trusted to follow its code.
 FULL_REFRESH_REASONS = ("no build properties", "code changed")
+# Block-scoped metrics (#3204): the models, the one macro call each must be, and where a block names its sources.
+METRICS_PREFIX = "poc_metrics_"
+CONCEPT_CALL = re.compile(r"\bpoc_concept_metrics\(\s*'([a-z0-9_]+)'\s*\)")
+LEGACY_BLOCKS = "poc_legacy_block_models"  # macros/poc_blocks.sql: `model:source_system` per line
+LEGACY_ENTRY = re.compile(r"^\s*(\w+):(\w+)\s*$", re.M)
+SOURCE_REGISTRATION = "poc_source__"  # macros/sources/<source>.sql: {'block_model': ...}
+REGISTERED_MODEL = re.compile(r"['\"]block_model['\"]\s*:\s*['\"](\w+)['\"]")
+SOURCE_SYSTEMS = "source_systems"  # config meta of a block that emits more source_systems than it is declared for
+SCOPED_SWITCH = "metrics_scoped"  # warehouse.yaml; false = every metrics model reads all blocks (the rule before #3204)
+
+
+def metrics_scoped() -> bool:
+    """The kill switch of block-scoped metrics: ``metrics_scoped`` in warehouse.yaml (absent = off)."""
+    return bool((yaml.safe_load((PROJECT / "warehouse.yaml").read_text()) or {}).get(SCOPED_SWITCH, False))
 
 
 def manifest(target: str = "prod") -> dict[str, Any]:
@@ -176,13 +203,19 @@ def files_digest(files: list[str]) -> str:
 
 
 def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """unique_id → name, namespace, table, parents (unique ids of models, seeds and sources), fingerprint.
+    """unique_id → name, namespace, table, parents (unique ids of models, seeds and sources), fingerprint, core
+    (the fingerprint without per-source macro files and block parents), scope (metric_scopes(); None for others).
     Seeds are planned like models: their checksum is the CSV's, so an edited seed rebuilds itself
     and the models that ref it. A model that reads a code list kept per source (config meta SEED_ROWS) has the
     list's files in its fingerprint, so an added or edited file does the same."""
     shared = shared_digest()
     per_source = source_macro_files(meta)
     nodes = {**meta["nodes"], **meta["sources"]}
+    blocks = {
+        uid
+        for uid, node in meta["nodes"].items()
+        if node.get("resource_type") == "model" and BLOCK_TAG in node.get("tags", [])
+    }
     out = {}
     for uid, node in meta["nodes"].items():
         if node.get("resource_type") not in ("model", "seed"):
@@ -203,15 +236,137 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
             sort_keys=True,
             default=str,
         )
+        # The code of the model without the per-source macro files and the block parents (#3204): what a scoped
+        # metrics model takes from each block-derived model above it, so a new block changes none of them.
+        core = json.dumps(
+            [
+                shared,
+                node["checksum"]["checksum"],
+                node.get("config", {}),
+                sorted(".".join(relation(nodes[p])) for p in upstream if p in nodes and p not in blocks),
+                files_digest(rows),
+            ],
+            sort_keys=True,
+            default=str,
+        )
         out[uid] = {
             "name": node["name"],
             "namespace": relation(node)[0],
             "table": relation(node)[1],
             "parents": [p for p in upstream if p.startswith(("model.", "source.", "seed."))],
             "fingerprint": hashlib.sha256(code.encode()).hexdigest()[:32],
+            "core": hashlib.sha256(core.encode()).hexdigest()[:32],
             "incremental": node.get("config", {}).get("materialized") == "incremental",
-            "block": BLOCK_TAG in node.get("tags", []),
+            "block": uid in blocks,
             "optional": set(node.get("config", {}).get("meta", {}).get(OPTIONAL_PARENTS) or []),
+            "scope": None,
+        }
+    for uid, scope in metric_scopes(meta, out).items():
+        model = out[uid]
+        model["scope"] = scope
+        if scope is None:
+            continue
+        macro_files = [
+            f"{SOURCE_MACROS}/{source}.sql"
+            for source in scope["sources"]
+            if (PROJECT / SOURCE_MACROS / f"{source}.sql").is_file()
+        ]
+        extra = json.dumps(
+            [
+                model["fingerprint"],
+                sorted((out[a]["name"], out[a]["core"]) for a in scope["ancestors"]),
+                sorted(out[b]["name"] for b in scope["blocks"]),
+                files_digest(macro_files),
+            ],
+            sort_keys=True,
+        )
+        model["fingerprint"] = hashlib.sha256(extra.encode()).hexdigest()[:32]
+    return out
+
+
+def block_sources(meta: dict[str, Any]) -> dict[str, set[str]]:
+    """source_system → the names of the Gold block models that emit it; pure (reads the manifest only).
+
+    From poc_legacy_block_models() (``model:source_system`` per line), each registration poc_source__<source>()
+    (its 'block_model') and the config meta ``source_systems`` of a block that emits other source_systems too
+    (poc_build_public_finance). A source under two blocks is returned with both (ops/repo_check.py forbids it)."""
+    project = meta["metadata"]["project_name"]
+    macros = {m["name"]: m.get("macro_sql", "") for m in meta["macros"].values() if m["package_name"] == project}
+    out: dict[str, set[str]] = {}
+    for model, source in LEGACY_ENTRY.findall(macros.get(LEGACY_BLOCKS, "")):
+        out.setdefault(source, set()).add(model)
+    for name, sql in macros.items():
+        found = REGISTERED_MODEL.search(sql) if name.startswith(SOURCE_REGISTRATION) else None
+        if found:
+            out.setdefault(name[len(SOURCE_REGISTRATION) :], set()).add(found.group(1))
+    for node in meta["nodes"].values():
+        if node.get("resource_type") == "model" and BLOCK_TAG in node.get("tags", []):
+            for source in node.get("config", {}).get("meta", {}).get(SOURCE_SYSTEMS) or []:
+                out.setdefault(source, set()).add(node["name"])
+    return out
+
+
+def concept_sources() -> dict[str, set[str]]:
+    """kpi_key → the source_systems of its kpi_measure rows (seed_rows/kpi_measure)."""
+    out: dict[str, set[str]] = {}
+    for row in seed_rows.rows("kpi_measure"):
+        out.setdefault(row["kpi_key"], set()).add(row["source_system"])
+    return out
+
+
+def metric_scopes(meta: dict[str, Any], graph: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any] | None]:
+    """unique_id of every metrics model (``poc_metrics_*``) → its scope, or None when it stays unscoped (#3204).
+
+    A scope is {"concept", "sources", "blocks": block unique ids, "ancestors": the block-derived models above it
+    (reached without passing a block), "inputs": its parents and its ancestors' parents that neither are nor derive
+    from a block}. Unscoped: the model is not exactly one poc_concept_metrics('<kpi>') call, the concept has no
+    kpi_measure rows, or one of its sources maps to no block of the project."""
+    by_source = block_sources(meta)
+    sources_of = concept_sources()
+    names = {m["name"]: uid for uid, m in graph.items()}
+    derived: dict[str, bool] = {}
+
+    def block_derived(uid: str) -> bool:
+        if uid not in graph:
+            return False
+        if uid not in derived:
+            derived[uid] = False  # a cycle cannot occur in dbt; this only guards the recursion
+            derived[uid] = graph[uid]["block"] or any(block_derived(p) for p in graph[uid]["parents"])
+        return derived[uid]
+
+    out: dict[str, dict[str, Any] | None] = {}
+    for uid, model in graph.items():
+        if not model["name"].startswith(METRICS_PREFIX) or model["block"]:
+            continue
+        out[uid] = None
+        calls = CONCEPT_CALL.findall(meta["nodes"][uid].get("raw_code", ""))
+        if len(calls) != 1:
+            continue
+        sources = sources_of.get(calls[0], set())
+        blocks = {names.get(b) for s in sources for b in by_source.get(s, ())}
+        if not sources or any(not by_source.get(s) for s in sources) or None in blocks:
+            continue
+        if not all(graph[b]["block"] for b in blocks):
+            continue
+        ancestors: set[str] = set()
+        inputs: set[str] = set()
+        queue = [uid]
+        while queue:
+            for p in graph[queue.pop()]["parents"]:
+                if p in graph and graph[p]["block"]:
+                    continue
+                if block_derived(p):
+                    if p not in ancestors:
+                        ancestors.add(p)
+                        queue.append(p)
+                else:
+                    inputs.add(p)
+        out[uid] = {
+            "concept": calls[0],
+            "sources": sorted(sources),
+            "blocks": sorted(blocks),
+            "ancestors": sorted(ancestors),
+            "inputs": sorted(inputs),
         }
     return out
 
@@ -240,13 +395,15 @@ def table_state(cat, namespace: str, table: str) -> dict[str, Any] | None:
     }
 
 
-def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
+def plan(cat, meta: dict[str, Any], scoped: bool | None = None) -> dict[str, Any]:
     """{"select": model names to build, "reasons": name → why, "unchanged": count,
     "full_refresh": incremental models among them to rebuild in full, "waiting": models left out because a
     source table they read does not exist yet, "empty_blocks": the Gold blocks among them that have no table
     either, read as zero rows, "stalled": waiting model → the missing source tables, for every waiting model
     that has a table (the build must stop on any), "waiting_tests": the data tests that read a waiting model
-    (waiting_tests; the build leaves them out)}."""
+    (waiting_tests; the build leaves them out), "scoped": whether metrics models were block-scoped,
+    "scoped_skipped": the models the unscoped rule would also rebuild}. ``scoped``: None reads the kill switch
+    (metrics_scoped()). Both rules use the same table states: the comparison costs no catalog read."""
     graph = models(meta)
     relations = {uid: (m["namespace"], m["table"]) for uid, m in graph.items()}
     for uid in {p for m in graph.values() for p in m["parents"] if p.startswith("source.")}:
@@ -259,8 +416,6 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
             return 0  # a missing source cannot have changed since; dbt will fail on it if read
         return s["built_from_ms"] if s["built_from_ms"] is not None else s["snapshot_ms"]
 
-    reasons: dict[str, str] = {}
-    done: dict[str, bool] = {}
     blocked: dict[str, bool] = {}
 
     def waiting(uid: str) -> bool:
@@ -286,36 +441,49 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
             missing[uid] = found
         return missing[uid]
 
-    def stale(uid: str) -> bool:
-        if uid in done:
-            return done[uid]
-        model, own = graph[uid], state[uid]
-        if waiting(uid):
-            done[uid] = False
-            return False
-        upstream = [p for p in model["parents"] if p in graph and stale(p)]
-        reason = None
-        if model["name"] in EXTERNAL_MODELS:
-            reason = None
-        elif own is None:
-            reason = "table missing"
-        elif own["built_from_ms"] is None or own["fingerprint"] is None:
-            reason = "no build properties"
-        elif own["fingerprint"] != model["fingerprint"]:
-            reason = "code changed"
-        elif upstream:
-            reason = "upstream rebuilt: " + ", ".join(graph[p]["name"] for p in upstream[:3])
-        else:
-            newer = [p for p in model["parents"] if updated(p) > own["built_from_ms"]]
-            if newer:
-                reason = "input changed: " + ", ".join(".".join(relations[p]) for p in newer[:3])
-        if reason:
-            reasons[model["name"]] = reason
-        done[uid] = reason is not None
-        return done[uid]
+    def rebuild(scope_metrics: bool) -> dict[str, str]:
+        """name → why, for every model to rebuild; scope_metrics: scoped metrics models read their scope only."""
+        reasons: dict[str, str] = {}
+        done: dict[str, bool] = {}
 
-    for uid in graph:
-        stale(uid)
+        def stale(uid: str) -> bool:
+            if uid in done:
+                return done[uid]
+            model, own = graph[uid], state[uid]
+            if waiting(uid):
+                done[uid] = False
+                return False
+            scope = model["scope"] if scope_metrics else None
+            # A scoped metrics model: its block-derived parents stand for their blocks; only its own blocks count.
+            inputs = model["parents"] if scope is None else scope["inputs"] + scope["blocks"]
+            upstream = [p for p in inputs if p in graph and stale(p)]
+            reason = None
+            if model["name"] in EXTERNAL_MODELS:
+                reason = None
+            elif own is None:
+                reason = "table missing"
+            elif own["built_from_ms"] is None or own["fingerprint"] is None:
+                reason = "no build properties"
+            elif own["fingerprint"] != model["fingerprint"]:
+                reason = "code changed"
+            elif upstream:
+                reason = "upstream rebuilt: " + ", ".join(graph[p]["name"] for p in upstream[:3])
+            else:
+                newer = [p for p in inputs if updated(p) > own["built_from_ms"]]
+                if newer:
+                    reason = "input changed: " + ", ".join(".".join(relations[p]) for p in newer[:3])
+            if reason:
+                reasons[model["name"]] = reason
+            done[uid] = reason is not None
+            return done[uid]
+
+        for uid in graph:
+            stale(uid)
+        return reasons
+
+    use_scope = metrics_scoped() if scoped is None else scoped
+    reasons = rebuild(use_scope)
+    skipped = sorted(set(rebuild(False)) - set(reasons)) if use_scope else []
     waits = sorted(graph[u]["name"] for u, b in blocked.items() if b)
     full = sorted(
         m["name"] for m in graph.values() if m["incremental"] and reasons.get(m["name"]) in FULL_REFRESH_REASONS
@@ -325,6 +493,8 @@ def plan(cat, meta: dict[str, Any]) -> dict[str, Any]:
         "reasons": reasons,
         "unchanged": len(graph) - len(reasons) - sum(blocked.values()),
         "full_refresh": full,
+        "scoped": use_scope,
+        "scoped_skipped": skipped,
         "waiting": waits,
         "waiting_tests": sorted(waiting_tests(meta, waits).values()),
         "empty_blocks": sorted(
