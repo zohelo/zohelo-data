@@ -8281,7 +8281,7 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: D38 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+    - 'Route decision: D39 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
       public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
       Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): http://moam.knf.gov.pl/moam.nsf
@@ -8353,7 +8353,7 @@ sources:
     evidence: tested
     connection: tested
     blockers:
-    - 'Route decision: D38 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+    - 'Route decision: D39 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
       public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
       Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
     - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.gpw.pl/espi-ebi-reports

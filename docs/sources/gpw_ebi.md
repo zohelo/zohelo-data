@@ -1,6 +1,6 @@
 # GPW EBI issuer reports, GPW report list (`gpw_ebi`)
 
-**Built (16 Nov 2026, register CD-007, #1488).** Route (decision D38): GPW's public list
+**Built (16 Nov 2026, register CD-007, #1488).** Route (decision D39): GPW's public list
 `https://www.gpw.pl/espi-ebi-reports` through the page's own "Show more" request (the form posted to
 `https://www.gpw.pl/ajaxindex.php`, only "EBI" ticked, 15 rows a request, newest first), one request at a time 5 s
 apart, the platform's User-Agent, at most 3 tries; robots.txt allows it; a 4xx stops the run.

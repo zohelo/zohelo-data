@@ -134,6 +134,8 @@ def _why(plan: dict) -> dict:
         "why": kinds,
         "waiting": plan.get("waiting", []),
         "empty_blocks": plan.get("empty_blocks", []),  # waiting Gold blocks the facts read as zero rows
+        # models the unscoped rule would also rebuild: metrics models whose blocks did not change (#3204)
+        "scoped_skipped": len(plan.get("scoped_skipped", [])),
     }
 
 
