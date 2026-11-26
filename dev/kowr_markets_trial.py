@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -248,9 +249,43 @@ def bronze() -> tuple[dict, object]:
     except Exception:  # noqa: BLE001
         rej = []
     out["rejected_n"] = len(rej)
-    out["rejected"] = [{k: (str(v)[:260] if v is not None else None) for k, v in r.items()
-                        if k in ("entity", "error", "reason")} for r in rej][:12]
+    reasons: dict = {}
+    for r in rej:
+        text = str(r.get("error") or r.get("reason") or "")
+        key = re.sub(r"\d", "9", text.split(":", 2)[-1] if text.count(":") >= 2 else text)[:90]
+        reasons.setdefault(key, []).append(str(r.get("entity", ""))[6:])
+    out["rejected_by_reason"] = {k: [len(v), v[:6]] for k, v in sorted(reasons.items(), key=lambda kv: -len(kv[1]))}
+    diagnose(rej, arrow)
     return out, arrow
+
+
+def diagnose(rej, arrow) -> None:
+    """Logs only: every rejection with the text of the pages it concerns; the positions of the EU table's labels of
+    one accepted and up to three rejected files."""
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
+    receipts = {r["entity"]: r for r in bulk_file.landed(client, bucket, f"{SCRATCH}/{SOURCE}/snapshot/data/")}
+    accepted = sorted(set(arrow.column("entity").to_pylist()))[:1]
+    shown_eu = 0
+    for n, r in enumerate([*[{"entity": e, "error": "accepted"} for e in accepted], *rej]):
+        entity, error = r.get("entity"), str(r.get("error") or r.get("reason"))
+        print(f"@@@@@ {entity} :: {error}", flush=True)
+        if n > 60 or entity not in receipts:
+            continue
+        try:
+            texts, frags = bronze_mod.text_pages(bulk_bronze.read_raw(client, bucket, SOURCE, receipts[entity]))
+        except Exception as exc:  # noqa: BLE001
+            print(f"  unreadable: {exc}", flush=True)
+            continue
+        for i, t in enumerate(texts):
+            keys = ("Eksportowe", "krajach UE", "giełdach towarowych")
+            if error == "accepted" or any(k in t for k in keys):
+                if error != "accepted":
+                    print(f"----- page {i + 1}\n{t}", flush=True)
+                if "krajach UE" in t and (error == "accepted" or "eu" in error) and shown_eu < 4:
+                    shown_eu += 1
+                    labels = [(f[0].strip()[:20], round(f[1]), round(f[2])) for f in frags[i]
+                              if f[0].strip()[:6] in ("Cena w", "Pszeni", "Jęczmi", "Kukury", "Polska", "Austri")]
+                    print(f"  positions page {i + 1}: {labels}", flush=True)
 
 
 def bronze_profile(con) -> dict:
