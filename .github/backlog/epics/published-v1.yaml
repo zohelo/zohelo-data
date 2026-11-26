@@ -384,9 +384,9 @@ deliverables:
           - "repo_check passes (notify needs every job)"
         verify:
           - run: "PYTHONPATH=. python run.py plan --source platform --run 'gold: publish'"
-            expect: "{\"activities\": [\"gold.publish\"], \"extract_matrix\": [0]}"
+            expect: "{\"activities\": [\"gold.publish\"], \"extract_matrix\": [0], \"observation_sources\": [\"none\"]}"
           - run: "PYTHONPATH=. python run.py plan --source nbp --run 'full dataflow: landing → bronze → silver → gold → portal'"
-            expect: "activities end with silver_gold.build, gold.publish, serving.refresh_index"
+            expect: "activities end with landing.archive, archive.prune (a source run ends with Bronze or Silver: #3133, O46)"
           - run: PYTHONPATH=. python run.py schedule --check
             expect: "problems []"
           - run: python -m ops.repo_check

@@ -114,7 +114,7 @@ jobs:
         id: app
         if: needs.resolve.outputs.script == 'check_credentials'
         continue-on-error: true  # a failed mint becomes a failed row, the other rows still run
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
         with:
           client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
@@ -128,7 +128,7 @@ jobs:
       - name: Setup token
         id: setup
         if: needs.resolve.outputs.script == 'project' && startsWith(needs.resolve.outputs.args, 'setup')
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
         with:
           client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
@@ -136,7 +136,7 @@ jobs:
       - name: Project token
         id: project
         if: (needs.resolve.outputs.script == 'project' && !startsWith(needs.resolve.outputs.args, 'setup')) || needs.resolve.outputs.script == 'tracker' || needs.resolve.outputs.script == 'backlog_sync'
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
         with:
           client-id: ${{ vars.ORG_BOT_CLIENT_ID }}  # the app's Client ID (organisation variable)
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
@@ -154,7 +154,7 @@ jobs:
       - name: Security alerts token
         id: security
         if: needs.resolve.outputs.script == 'security_alerts'
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
         with:
           client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
           private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
@@ -310,11 +310,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+      - uses: github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea  # v4.39.4
         with:
           languages: ${{ matrix.language }}
           build-mode: none
-      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+      - uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea  # v4.39.4
         with:
           category: /language:${{ matrix.language }}
 

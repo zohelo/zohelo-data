@@ -1,0 +1,44 @@
+source_system: mrirw_zsrir
+description: "MRiRW ZSRIR (Zintegrowany System Rolniczej Informacji Rynkowej) — weekly market bulletins: monthly purchase prices of cereals, raw milk and pigs, Poland"
+
+# Extraction strategy (docs/landing.md). Register PLS-032. The legacy gov.pl market pages only point to dane.gov.pl
+# (which does not answer runners); the ministry's ZSRIR portal zsrir.minrol.gov.pl publishes every market bulletin as
+# XLSX and PDF since August 2024 through its own public endpoints (GetReportFileList, DownloadReportFile; no sign-in,
+# no robots.txt). The portal omits its intermediate certificate; the extractor adds the CA's published intermediate to
+# certifi's roots and verifies as usual (ingestion/to_landing/mrirw_zsrir). Entity = one market's bulletin (cereals
+# report 2, milk 1, pork 14), version = download time, only the newest XLSX issue (its monthly sheets carry the
+# history); a copy lands only when the newest file id changed and the SHA-256 differs. Restart unit: one file.
+# Left out: the weekly tables (no weekly fact in curated Gold yet), macroregion tables, the other bulletins (poultry,
+# beef, eggs, oilseeds, fruit, vegetables, feed, sugar, mutton, tobacco, hops), the cross-market summary (report 15)
+# and the PDF copies. Dev probes 43813028487 (chain), 43831907287 (API), 43838495001, 43854953045, 43856647230
+# (file lists and workbook layouts) on test/zsrir; trial 45705794335.
+extraction:
+  initial: bulk
+  production: snapshot                    # the newest issue of each bulletin as published; a correction replaces it
+  incremental_policy: changed_since_last  # newest file id of each bulletin, then SHA-256
+  schedule: # UTC; bulletins appear Wednesday to Friday for the week before (file lists: published Thu-Fri ~09-16 UTC);
+    # monthly prices change once a month, weekly check on Saturday morning
+    - {cron: "40 6 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/mrirw_zsrir/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.mrirw_zsrir_cells, bronze.mrirw_zsrir_rejected_files]
+silver: [silver.mrirw_zsrir_prices]
+gold: [gold.build_mrirw_zsrir, gold.metrics_milk_purchase_price, gold.metrics_pig_purchase_price, gold.metrics_wheat_purchase_price]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  # measured in Dev trial 45705794335 (issues of week 46/2026); growth about 160 rows a year
+  mrirw_zsrir_prices: {rows: 4800}  # 3,208
+  poc_build_mrirw_zsrir: {rows: 4500}  # 3,007
+  poc_metrics_milk_purchase_price: {rows: 400}  # 270
+  poc_metrics_pig_purchase_price: {rows: 90}  # 58
+  poc_metrics_wheat_purchase_price: {rows: 360}  # 240
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): three workbooks of 1-3 MB a week and a few thousand Silver rows, no changed-since
+# feature beyond the file list; small, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2484"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
