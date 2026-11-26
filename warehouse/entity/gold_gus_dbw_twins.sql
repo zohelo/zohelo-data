@@ -67,7 +67,9 @@ candidates as (
                 when 9 then s.position_9_id
             end
             = a.position_id
-    where s.value is not null and (coalesce(s.missing_reason_id, 253) = 253 or s.value <> 0)
+    where
+        s.value is not null
+        and (s.value <> 0 or (coalesce(s.missing_reason_id, 253) = 253 and coalesce(s.confidentiality_id, 43) = 43))
 )
 
 select distinct
