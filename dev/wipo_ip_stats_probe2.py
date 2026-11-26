@@ -46,7 +46,7 @@ def main(argv):
                 p.write_bytes(z.read(m))
                 t = f"{kind}_{m.split('_')[3]}_{m.split('_')[4]}"
                 dim = "tec_id" if kind == "patent" else "class_id"
-                con.execute(f"create table {t} as select year::int year, office, origin, {dim}::int k, count::bigint n "
+                con.execute(f"create table {t} as select cast(year as int) as year, office, origin, cast({dim} as int) as k, cast(count as bigint) as n "
                             f"from read_csv('{p}', all_varchar=true)")
                 log(f"{t} rows", q(con, f"select count(*), min(year), max(year), min(n), max(n), count(*) filter (where n = 0) from {t}"))
                 log(f"{t} dup keys", q(con, f"select count(*) from (select year, office, origin, k from {t} group by all having count(*) > 1)"))
