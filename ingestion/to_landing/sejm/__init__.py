@@ -9,8 +9,10 @@ after the file, unchanged bytes skipped; the API sends no Last-Modified, so vers
   term<t>_votings_<sitting>   /sejm/term<t>/votings/<sitting>: every voting of one sitting with its totals
   term10_mps                  /sejm/term10/MP, reduced before Landing to the allowlist of MP_FIELDS (no names,
                               birth data, e-mails, professions or photos ever land)
-Term 9 has ended: its entities are read once. In term 10 the lists are read every run; the votings of a sitting
-are read once, except the newest OPEN_SITTINGS sittings, which are read again (votes of a running sitting).
+Term 9 has ended: its lists are read once. In term 10 the lists are read every run. The votings of a sitting are
+read again on every run while it is one of the newest OPEN_SITTINGS sittings of term 10, or while its newest landed
+copy holds another number of votings than the voting days list gives for the sitting (a copy taken during a voting
+day stays open until it is complete); otherwise it is held (read once).
 
 landing.inspect  robots.txt, Landing per entity, one request to /sejm/term (no validator: load compares SHA-256)
 landing.extract  robots.txt first; one request at a time, PAUSE_SECONDS apart, bounded retries (bulk_file)
@@ -71,28 +73,52 @@ def base_specs() -> list[dict]:
     return specs
 
 
-def sittings(landing_root: str = "01_landing") -> dict[int, list[int]]:
-    """Sitting numbers with votes per term, from the newest landed voting_days answer of each term."""
+def sittings(landing_root: str = "01_landing") -> dict[int, dict[int, int]]:
+    """{term: {sitting: votings the API lists}} from the newest landed voting_days answer of each term."""
     from ingestion.common.bulk_bronze import read_raw
     from ingestion.common.r2 import req, s3
     from ingestion.to_landing.patterns import bulk_file
 
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
-    found: dict[int, list[int]] = {}
+    found: dict[int, dict[int, int]] = {}
     for term in TERMS:
         held = bulk_file.landed(client, bucket, bulk_file.prefix(SOURCE, f"term{term}_voting_days", landing_root))
         if held:
-            days = json.loads(read_raw(client, bucket, SOURCE, held[-1]))
-            found[term] = sorted({int(d["proceeding"]) for d in days})
+            listed: dict[int, int] = {}
+            for day in json.loads(read_raw(client, bucket, SOURCE, held[-1])):
+                listed[int(day["proceeding"])] = listed.get(int(day["proceeding"]), 0) + int(day["votingsNum"])
+            found[term] = dict(sorted(listed.items()))
     return found
 
 
-def sitting_specs(found: dict[int, list[int]]) -> list[dict]:
+def complete_sittings(found: dict[int, dict[int, int]], landing_root: str = "01_landing") -> set[tuple[int, int]]:
+    """(term, sitting) whose newest landed votings copy holds as many votings as the voting days list gives."""
+    from ingestion.common.bulk_bronze import read_raw
+    from ingestion.common.r2 import req, s3
+    from ingestion.to_landing.patterns import bulk_file
+
+    client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
+    complete = set()
+    for term, listed in found.items():
+        for n, votings in listed.items():
+            held = bulk_file.landed(client, bucket, bulk_file.prefix(SOURCE, f"term{term}_votings_{n}", landing_root))
+            if held:
+                items = json.loads(read_raw(client, bucket, SOURCE, held[-1]))
+                if isinstance(items, list) and len(items) == votings:
+                    complete.add((term, n))
+    return complete
+
+
+def sitting_specs(found: dict[int, dict[int, int]], complete: set[tuple[int, int]] | None = None) -> list[dict]:
+    """One votings answer per sitting; held (closed) only when not among the newest and complete."""
+    complete = complete or set()
     specs = []
-    for term, numbers in found.items():
+    for term, listed in found.items():
+        numbers = list(listed)
         newest = set(numbers[-OPEN_SITTINGS:]) if term == CURRENT_TERM else set()
         for n in numbers:
-            specs.append(_spec(f"term{term}_votings_{n}", f"/sejm/term{term}/votings/{n}", n not in newest))
+            closed = n not in newest and (term, n) in complete
+            specs.append(_spec(f"term{term}_votings_{n}", f"/sejm/term{term}/votings/{n}", closed))
     return specs
 
 
@@ -112,7 +138,7 @@ def robots_allow() -> tuple[bool, str]:
         answer = requests.get(f"{HOST}/robots.txt", headers={"User-Agent": USER_AGENT}, timeout=60)
     except requests.RequestException as exc:
         return False, f"robots.txt unreachable: {type(exc).__name__}"
-    if answer.status_code in (401, 403, 429):
+    if answer.status_code in (401, 403, 429) or answer.status_code >= 500:  # RFC 9309: 5xx = disallow
         return False, f"robots.txt {answer.status_code}"
     parser.parse(answer.text.splitlines() if answer.status_code == 200 else [])
     ok = all(parser.can_fetch(USER_AGENT, f"{HOST}{p}") for p in ("/sejm/term", f"/sejm/term{CURRENT_TERM}/votings/1"))
@@ -134,7 +160,8 @@ def run(mode: str, landing_root: str = "01_landing") -> int:
         return bulk_file.main(SOURCE, "verify", landing_root, specs=specs(landing_root))
     status = bulk_file.main(SOURCE, "load", landing_root, specs=base_specs(), pause_seconds=PAUSE_SECONDS)
     time.sleep(PAUSE_SECONDS)
-    more = sitting_specs(sittings(landing_root))
+    found = sittings(landing_root)
+    more = sitting_specs(found, complete_sittings(found, landing_root))
     return max(status, bulk_file.main(SOURCE, "load", landing_root, specs=more, pause_seconds=PAUSE_SECONDS))
 
 

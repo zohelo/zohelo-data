@@ -450,7 +450,13 @@ const FolderBrowser: React.FC<FolderBrowserProps> = ({ onFileSelect, onFileImpor
           </span>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={mountFolder}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={mountFolder}
+                aria-label="Add folder"
+              >
                 <FolderPlus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>

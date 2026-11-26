@@ -1,5 +1,5 @@
 {# Sejm (#481): held sitting days per month (a month has at most 31 days), votings and prints per month, Poland;
-   largest months MAXMONTH_TRIAL (Dev trial TRIAL_ID). #}
+   largest months: 9 sitting days (2026-07), 709 votings (2020-02), 175 prints (2025-07) (Dev trial 45755790301). #}
 {% macro poc_value_range__sejm() %}
     {{ return({
         'bounds': [

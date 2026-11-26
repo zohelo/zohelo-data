@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+government_drafts_published,poland,M,government_drafts_published,kprm_work_list,drafts_published,kprm_work_list:drafts_published:drafts:total:monthly,M,PL,,sum,neutral,ready,"drafts published on the work list of the Council of Ministers by month, from December 2023 (current government); the current month is provisional"

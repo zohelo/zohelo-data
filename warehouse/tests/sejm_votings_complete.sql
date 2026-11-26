@@ -1,6 +1,7 @@
--- sejm (PLG-024): the number of votings of every sitting equals the number the API's voting days list gives for
--- the sitting (an answer not landed, or rows the decoder dropped, fail here), and every voting belongs to the term
--- of its answer. Voting numbers are not checked for gaps: in term 9 the API skips numbers in 10 sittings while the
+-- sejm (PLG-024): the number of votings of every sitting with votings rows equals the number the API's voting days
+-- list gives for the sitting (rows the decoder dropped fail here; a sitting of that list without any votings row,
+-- whose answer was not landed or loaded, fails sejm_sitting_days_complete), and every voting belongs to the term of
+-- its answer. Voting numbers are not checked for gaps: in term 9 the API skips numbers in 10 sittings while the
 -- counts match its own list (Dev trial). One test per Silver model (it reads no other model).
 with votings as (
     select * from {{ ref('sejm_votings') }}

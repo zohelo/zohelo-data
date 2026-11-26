@@ -531,24 +531,36 @@
     poc_build_zus_psz:zus_psz
 {% endmacro %}
 
-{# All Gold observations in the common shape: the union of the Gold blocks. A block without a table is
-   left out (zero rows) only when the changed-only plan declared it waiting: warehouse/changed.py lists
+{# All Gold observations in the common shape: the union of the Gold blocks, each row stamped with its block model
+   in a trailing column `gold_block` (the key of the per-block incremental models, #3204 PR B). A block without a
+   table is left out (zero rows) only when the changed-only plan declared it waiting: warehouse/changed.py lists
    it under `empty_blocks` (its source tables do not exist yet and neither does its own table; a waiting
    block that has a table is never listed, the build stops instead) and warehouse/build.py passes that list
    as the dbt var `waiting_blocks`. Any other missing block (a partial catalog listing, a run killed
    between renames, an explicit-filter build) is a compiler error, so a source never drops out of Gold
    silently; a block built in this run that fails makes dbt skip every model reading it. At parse time
-   every block is ref'd, so dbt records each dependency. #}
-{% macro poc_observations() %}
-    {% set ns = namespace(first=true) %}
+   every block is ref'd, so dbt records each dependency.
+   `incremental`: the caller's is_incremental(). Then only the blocks of the dbt var `changed_blocks` are read
+   (changed.py, passed by build.py); with none of them, an empty relation of the same columns. #}
+{% macro poc_observations(incremental=false) %}
+    {% set only = var('changed_blocks', none) if incremental else none %}
+    {% set ns = namespace(first=true, empty=none, empty_model=none) %}
     {% for entry in poc_block_models().split() %}
-        {% set relation = ref(entry.split(':')[0]) %}
+        {% set model = entry.split(':')[0] %}
+        {% set relation = ref(model) %}
         {% if not execute or not (poc_block_waiting(entry, relation) | trim) %}
-            {% if not ns.first %}union all {% endif %}select * from {{ relation }}
-            {% set ns.first = false %}
+            {% if only is none or model in only %}
+                {% if not ns.first %}union all {% endif %}select *, '{{ model }}' as gold_block from {{ relation }}
+                {% set ns.first = false %}
+            {% elif ns.empty is none %}
+                {% set ns.empty = relation %}
+                {% set ns.empty_model = model %}
+            {% endif %}
         {% endif %}
     {% endfor %}
-    {% if ns.first %}
+    {% if ns.first and ns.empty is not none %}
+        select *, '{{ ns.empty_model }}' as gold_block from {{ ns.empty }} where false
+    {% elif ns.first %}
         {% do exceptions.raise_compiler_error('poc_observations: no Gold block table exists') %}
     {% endif %}
 {% endmacro %}
