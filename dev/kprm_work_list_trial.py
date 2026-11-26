@@ -198,7 +198,7 @@ def trial() -> int:
             "rejected": [{k: r.get(k) for k in ("entity", "error")} for r in rejected][:3],
         },
     )
-    cols = [c for c, _ in bronze.COLUMNS if c not in ("entity", "raw_sha256", "source_version", "ingested_at")]
+    cols = [c for c, _ in bronze.COLUMNS if c not in ("entity", "raw_sha256", "source_version", "ingested_at", "source_row_number")]
     note(
         "kprm trial Bronze profile",
         {
@@ -214,7 +214,7 @@ def trial() -> int:
     )
     closed = {
         c: q(con, f"select {c}, count(*) from {b} group by 1 order by 2 desc")
-        for c in ("document_kind", "document_type", "status_text", "empty_1", "empty_2", "empty_3")
+        for c in ("document_kind", "document_type", "status_text")
     }
     note("kprm trial Bronze closed lists", closed, quiet=True)
     for c in ("responsible_body", "drafting_body"):
