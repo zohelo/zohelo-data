@@ -4,7 +4,8 @@
    map through gold.map_geography.
 
    Mapped: EL and UK to their ISO codes; Polish NUTS 1 and NUTS 2 through poc_nuts_pl() (a NUTS 2 region that
-   is a voivodeship maps to its TERC key); countries; NUTS regions of other countries; Eurostat aggregates.
+   is a voivodeship maps to its TERC key); countries; NUTS regions of other countries; Eurostat aggregates (a code of
+   NUTS shape whose first two characters are not a NUTS country, such as EA19, EU15 or EFTA, is an aggregate; #2775).
 
    Polish NUTS 3 (PLxxx, 73 podregions): dim_geography keys a podregion by its GUS BDL unit id (`BDL:<id>`), which
    carries no NUTS code, and no table we load holds the NUTS–KTS correspondence. So a code is mapped by Eurostat's

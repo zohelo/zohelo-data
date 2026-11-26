@@ -1,0 +1,85 @@
+{{ config(alias='build_knf_espi', tags=['gold_block']) }}
+{# Gold build stage: ESPI issuer reports received by KNF (silver.knf_espi_reports) counted per month of receipt,
+   Poland. Fact kind: event counts. measure_key knf_espi:reports:reports, monthly only; breakdown report_type
+   (the ESPI form code as listed, '_U' none) and the total (report_type _T, is_total). Only complete months: after
+   the month of the oldest day held (the history is read newest first, so that month can be partial) and before the
+   month of the newest day held (and the current month). Gold builds weekly, days after the last read (Tuesday) are
+   not held yet, so the calendar alone would count a month whose last days are unread; a report received after the
+   month proves a read after the month ended, and every read takes the 8 days before it again (REREAD_DAYS), so the
+   month's last day was read. A window day that failed is read again by later runs (days_to_read) and the full
+   rebuild corrects the month. A month outside that range has no row, never a 0. A report is counted once, on its
+   day of receipt; a correction is its own report. Provenance: the newest version and the newest day document of
+   the month. #}
+with reports as (
+    select
+        received_date,
+        report_type,
+        source_version,
+        raw_sha256,
+        ingested_at
+    from {{ ref('knf_espi_reports') }}
+),
+
+window_months as (
+    select
+        date_trunc('month', min(received_date)) + interval 1 month as first_month,
+        least(date_trunc('month', current_date), date_trunc('month', max(received_date))) as open_month
+    from reports
+),
+
+by_type as (
+    select
+        cast(date_trunc('month', r.received_date) as date) as date_key,
+        r.report_type,
+        count(*) as reports,
+        max(r.source_version) as source_version,
+        max(r.ingested_at) as ingested_at,
+        arg_max(r.raw_sha256, r.ingested_at) as raw_sha256
+    from reports as r
+    cross join window_months as w
+    where r.received_date >= w.first_month and r.received_date < w.open_month
+    group by date_trunc('month', r.received_date), r.report_type
+),
+
+counted as (
+    select
+        date_key,
+        report_type,
+        reports,
+        source_version,
+        raw_sha256
+    from by_type
+    union all
+    select
+        date_key,
+        '_T' as report_type,
+        sum(reports) as reports,
+        max(source_version) as source_version,
+        arg_max(raw_sha256, ingested_at) as raw_sha256
+    from by_type
+    group by date_key
+)
+
+select
+    'knf_espi' as source_system,
+    'reports' as block_id,
+    'ESPI issuer reports received by KNF (OAM list)' as block_name,
+    'knf_espi:reports:reports' as measure_key,
+    'ESPI issuer reports received by KNF per month' as measure_name,
+    'reports' as measure_codes,
+    'reports' as unit_code,
+    'reports' as unit_name,
+    'PL' as geography_source_code,
+    'PL' as geography_key,
+    'M' as frequency,
+    date_key,
+    strftime(date_key, '%Y-%m') as period_label,
+    cast(json_object('report_type', report_type) as varchar) as breakdown_json,
+    cast(null as varchar) as breakdown_label_json,
+    cast(null as varchar) as sex_code,
+    report_type = '_T' as is_total,
+    cast(reports as double) as value,
+    'ok' as observation_status_key,
+    source_version,
+    raw_sha256
+from counted

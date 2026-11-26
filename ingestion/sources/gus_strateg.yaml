@@ -26,9 +26,9 @@ bronze: [bronze.gus_strateg_records, bronze.gus_strateg_rejected_files]
 silver: [silver.gus_strateg_indicators, silver.gus_strateg_observations]
 gold: [gold.build_gus_strateg]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  gus_strateg_indicators: {rows: 125}  # 83 indicator dimensions (Dev trial 45757803813, 26 Nov 2026)
+  gus_strateg_indicators: {rows: 125}  # 83 indicator dimensions (Dev trials 45757803813, 45768290198, 26 Nov 2026)
   gus_strateg_observations: {rows: 31500}  # 20,869: 15,045 at level 0 and 5,824 at level 2, 2003-2025 (same trial)
-  poc_build_gus_strateg: {rows: 31000}  # 20,531: Silver less the 338 EU-28 values (same trial)
+  poc_build_gus_strateg: {rows: 30500}  # 20,243: Silver less 338 EU-28 and 288 zero-filled rows (final Dev trial of #2430)
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): one file of under 1 MB and a few tens of thousands of values, read whole (the

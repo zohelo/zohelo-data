@@ -1,10 +1,11 @@
 {# RPWDL organisational cells (komórki organizacyjne: wards, clinics, labs) of the healthcare providers' units,
-   register PLS-020: one row per cell (cell_id) of the newest active and inactive provider files
-   (bronze.rpwdl_cells). Grain: cell_id. Allowlist: no provider ledger id, REGON, name, address or contact columns
-   (the ids kept identify places of care, not their provider). specialty_code = department code part VIII as
-   published, specialty_name its label. Bed and place counts as published (a missing count stays null; text that
-   is not a count fails the build). is_active = in an active ledger file and not ended on the snapshot date (a
-   suspended cell counts). #}
+   register PLS-020: one row per cell (cell_id) of the newest active and inactive provider files (bronze.rpwdl_cells).
+   Grain: snapshot_year x cell_id. Allowlist: no provider ledger id, REGON, name, address or contact columns (the ids
+   kept identify places of care, not their provider). specialty_code = department code part VIII as published,
+   specialty_name its label. Bed and place counts as published (a missing count stays null; text that is not a count
+   fails the build). is_active = in an active ledger file and not ended on the snapshot date (a suspended cell counts).
+   Years (#3139): the newest files of each snapshot year (snapshot_year = the year of the entity), so a past year keeps
+   its last state; snapshot_date = the download day of the file. #}
 with newest as ({{ poc_rpwdl_newest('rpwdl_cells') }}
 ),
 
@@ -13,7 +14,7 @@ typed as (
         cell_id,
         unit_id,
         establishment_id,
-        case when ends_with(entity, '_active') then 'active' else 'inactive' end as ledger_state,
+        {{ poc_rpwdl_ledger_state() }} as ledger_state,
         {{ poc_rpwdl_text('unit_code') }} as unit_code,
         {{ poc_rpwdl_text('cell_code') }} as cell_code,
         {{ poc_rpwdl_text('specialty_code') }} as specialty_code,
@@ -28,6 +29,7 @@ typed as (
         {{ poc_rpwdl_date('end_date', 'rpwdl_cells.end_date') }} as end_date,
         {{ poc_rpwdl_date('suspension_start', 'rpwdl_cells.suspension_start') }} as suspension_start,
         {{ poc_rpwdl_date('suspension_end', 'rpwdl_cells.suspension_end') }} as suspension_end,
+        {{ poc_rpwdl_year() }} as snapshot_year,
         {{ poc_rpwdl_snapshot() }} as snapshot_date,
         raw_sha256,
         source_version,

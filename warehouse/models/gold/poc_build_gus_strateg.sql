@@ -3,7 +3,7 @@
    for Responsible Development from silver.gus_strateg_observations. One measure per SOR indicator dimension:
    measure_key gus_strateg:sor:<unit as published>:<indicator_id>.<dimension_id>, e.g. gus_strateg:sor:%:14.5 (R&D
    expenditure in relation to GDP); annual only, so one frequency per measure. Values and units as published (D33);
-   values that are not numbers (value_status not_numeric) are not loaded. The strategy's base, intermediate and target
+   values that are not numbers and the zero-filled voivodeship years of Silver (value null) are not loaded. The strategy's base, intermediate and target
    values are not observations and stay in silver.gus_strateg_indicators. Areas through poc_map_geography (section
    gus_strateg, static): level 0 keeps the EU countries and aggregates (codes ending in ten zeros), level 2 the
    voivodeships; Poland is taken from level 0 only, so no area comes from two levels. 030000000000 (EU-28) has no Gold

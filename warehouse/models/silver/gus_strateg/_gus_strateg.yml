@@ -24,7 +24,9 @@ models:
     description: >-
       Observed values of the SOR indicators in GUS STRATEG (register PLS-003): level 0 (EU aggregates and EU
       countries, Poland 100000000000) and level 2 (voivodeships), by year; value as published (published text in
-      value_text; text that is not a number keeps value null, value_status not_numeric, never 0); unit of the SOR list.
+      value_text; text that is not a number keeps value null, value_status not_numeric, never 0; a year whose 16
+      voivodeship values are all 0 is a year without data that STRATEG filled with zeros: value null, value_status
+      zero_filled); unit of the SOR list.
       Overlaps GUS BDL and Eurostat by design (source kept, never deduplicated). Grain: indicator_id x dimension_id x
       level_id x territory_code x period_year.
     tests:
@@ -42,7 +44,7 @@ models:
       - name: period_year
         tests: [not_null]
       - name: value_status
-        tests: [not_null, {accepted_values: {arguments: {values: [ok, not_numeric]}}}]
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, not_numeric, zero_filled]}}}]
       - name: unit_code
         tests: [not_null]
       - name: raw_sha256
