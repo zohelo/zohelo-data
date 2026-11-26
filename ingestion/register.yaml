@@ -5762,7 +5762,7 @@ sources:
   source_system: kprm_work_list
   status: built
   family: F
-  kpi: false
+  kpi: true
   geography: Poland
   provider_type: national-public
   domains: [legislation, public consultation]

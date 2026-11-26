@@ -23,8 +23,10 @@ extraction:
   initial: bulk
   production: snapshot                  # each file is the complete work list
   incremental_policy: changed_since_last  # SHA-256
-  schedule: # UTC; rows are added and changed as drafts enter the list or change status (the Council of Ministers sits on Tuesdays); weekly, Wednesday 04:35
-    - {cron: "35 4 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+  schedule: # UTC; rows are added and changed any weekday as drafts enter the list or change status (the Council of
+    # Ministers usually sits on Tuesdays); one run a week, Friday 19:20, after the week's entries (O46, weekly until
+    # production use; the file holds the whole list, so a skipped week loses nothing)
+    - {cron: "20 19 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/kprm_work_list/
 archive_policy:
@@ -33,11 +35,12 @@ archive_policy:
   prune: report
 bronze: [bronze.kprm_work_list_drafts, bronze.kprm_work_list_rejected_files]
 silver: [silver.kprm_work_list_drafts]
-gold: [gold.government_drafts, gold.build_kprm_work_list]
+gold: [gold.government_drafts, gold.build_kprm_work_list, gold.metrics_government_drafts_published]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   kprm_work_list_drafts: {rows: 2500}  # TRIAL
   government_drafts: {rows: 2500}  # TRIAL
   poc_build_kprm_work_list: {rows: 5000}  # TRIAL
+  poc_metrics_government_drafts_published: {rows: 100}  # TRIAL
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of about 1,500 drafts (a few hundred new ones a year), no changed-since
