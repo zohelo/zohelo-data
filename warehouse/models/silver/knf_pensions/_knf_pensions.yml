@@ -1,0 +1,30 @@
+version: 2
+models:
+  - name: knf_pensions_ppk_net_assets
+    description: >-
+      KNF quarterly PPK information (register PLG-018): net asset value of the PPK target-date funds by managing
+      institution and the total ('Suma'), thousand PLN as published, at the end of each quarter from 2020 Q1 to the
+      newest quarter (2026 Q3 in the release of 30 October 2026), from Tabela 2 of the newest release (entity
+      ppk_quarterly). Grain: entity x manager_label x period_year x period_quarter. Header found by its label, years
+      carried from their merged header cells, rows to the 'Suma' row; '-' is cell_status 'no_value' (value null, never
+      0). Layout and trial run: see the model header and ingestion/sources/knf_pensions.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', entity, manager_label, period_year, period_quarter)"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [ppk_quarterly]}}}]
+      - name: manager_label
+        tests: [not_null]
+      - name: is_total
+        tests: [not_null]
+      - name: period_year
+        tests: [not_null]
+      - name: period_quarter
+        tests: [not_null, {accepted_values: {arguments: {values: [1, 2, 3, 4], quote: false}}}]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, no_value]}}}]
+      - name: unit_label
+        tests: [not_null, {accepted_values: {arguments: {values: [tys. PLN]}}}]
+      - name: raw_sha256
+        tests: [not_null]
