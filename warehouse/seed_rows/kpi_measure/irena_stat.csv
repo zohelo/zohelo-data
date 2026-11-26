@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+renewable_capacity,irena_stat,irena_stat:elecstat:MW:capacity.total_renewable,"IRENASTAT Country_ELECSTAT, Electrical Installed Capacity (MW), technology Total Renewable, grid connection All",1,
+renewable_generation,irena_stat,irena_stat:elecstat:GWh:generation.total_renewable,"IRENASTAT Country_ELECSTAT, Electricity Generation (GWh), technology Total Renewable, grid connection All",1,
