@@ -39,8 +39,8 @@ bronze: [bronze.knf_banking_cells, bronze.knf_banking_rejected_files]
 silver: [silver.knf_banking_series]
 gold: [gold.build_knf_banking]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  knf_banking_series: {rows: 300000}  # MEASURED
-  poc_build_knf_banking: {rows: 6000}  # MEASURED
+  knf_banking_series: {rows: 300000}  # 193,909 measured (Dev trial 45763173227): 13 sheets, January 2018 to September 2026
+  poc_build_knf_banking: {rows: 3500}  # 2,307 measured: 7 measures, the sector and up to three bank groups
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one workbook of about 2 MB (about 200,000 cells), replaced monthly as a whole;

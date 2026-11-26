@@ -30,8 +30,8 @@ bronze: [bronze.knf_pensions_cells, bronze.knf_pensions_rejected_files]
 silver: [silver.knf_pensions_ppk_net_assets]
 gold: [gold.build_knf_pensions]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  knf_pensions_ppk_net_assets: {rows: 900}  # MEASURED
-  poc_build_knf_pensions: {rows: 900}  # MEASURED
+  knf_pensions_ppk_net_assets: {rows: 900}  # 594 measured (Dev trial 45763173227): 22 rows x 27 quarters, 2020 Q1 to 2026 Q3
+  poc_build_knf_pensions: {rows: 800}  # 503 measured: the 594 Silver rows less 91 '-' cells
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): one workbook of about 130 kB, replaced quarterly as a whole; small, rebuilt in
