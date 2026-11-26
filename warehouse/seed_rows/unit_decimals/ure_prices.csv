@@ -1,0 +1,4 @@
+unit_key,decimals
+pln_per_mwh,2
+pln_per_kwh,4
+pln_per_m3,2

@@ -1,0 +1,5 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+electricity_price_competitive_annual,ure_prices,ure_prices:energy_prices:pln_per_mwh:electricity_competitive_market.annual,"URE indicator page: Average electricity sale price on the competitive market (yearly), Poland",1,
+electricity_price_competitive_quarterly,ure_prices,ure_prices:energy_prices:pln_per_mwh:electricity_competitive_market.quarterly,"URE indicator page: Average electricity sale price on the competitive market (quarterly), Poland",1,
+electricity_price_households,ure_prices,ure_prices:energy_prices:pln_per_kwh:electricity_households.annual,"URE indicator page: Average electricity price for households, Poland",1,
+gas_import_price_eu_efta,ure_prices,ure_prices:energy_prices:pln_per_mwh:gas_import_eu_efta.quarterly,"URE indicator page: Average purchase price of natural gas imported from EU or EFTA states, Poland",1,
