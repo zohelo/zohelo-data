@@ -226,6 +226,16 @@ def main() -> None:
                        "abstract": re.findall(r"<Abstract>([^<]*)<", t)[:5]})
     for name in [n for n in names if n != "WMS"][:2]:
         wms_info(wms, name)
+    import hashlib
+    idx = SERVICES[0] + ("?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=BDOT10k_powiaty"
+                         "&PROPERTYNAME=TERYT,NAZWA_POWIATU,Data_aktualizacji,URL_GML")
+    for attempt in range(2):
+        body, info = fetch(idx)
+        t = (body or b"").decode("utf-8", "replace")
+        note("index.v100", {**info, "bytes": len(body or b""), "sha256": hashlib.sha256(body or b"").hexdigest(),
+                            "members": t.count("<ms:TERYT>"), "head": t[:900] if attempt == 0 else "",
+                            "stamp": re.findall(r"timeStamp=\"[^\"]*\"", t)[:1]})
+        time.sleep(20)
     note("budget", BUDGET)
 
 
