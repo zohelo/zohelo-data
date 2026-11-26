@@ -135,6 +135,16 @@ def main(argv) -> int:
         }
         annotate("notice" if not any(tests.values()) else "warning", "gddkia_gpr trial silver", stats["silver"])
         show(con, "complete test rows", render(ROOT / "warehouse/tests/gddkia_gpr_sdrr_complete.sql", {"gddkia_gpr_sdrr": s}), limit=40)
+        show(con, "classes with '-' on sections whose total is measured", f"""select edition_code, road_class, vehicle_class, count(*) n
+            from {s} x where value_status <> 'ok' and exists (select 1 from {s} t where t.edition_code = x.edition_code
+            and t.road_class = x.road_class and t.section_code = x.section_code and t.vehicle_class = 'motor_vehicles'
+            and t.value_status = 'ok') group by all order by all""")
+        stats["silver"]["dash_classes_on_measured_sections"] = n(f"""select string_agg(k, '; ') from (select edition_code || ' ' || road_class || ' ' || vehicle_class || '=' || count(*) k
+            from {s} x where value_status <> 'ok' and exists (select 1 from {s} t where t.edition_code = x.edition_code
+            and t.road_class = x.road_class and t.section_code = x.section_code and t.vehicle_class = 'motor_vehicles'
+            and t.value_status = 'ok') group by edition_code, road_class, vehicle_class)""")
+        stats["gold_trucks_sections"] = n(f"""select count(*) from (select section_code from {s} where vehicle_class in ('trucks_without_trailer', 'trucks_with_trailer') and value_status <> 'ok' group by edition_code, road_class, section_code)""")
+        annotate("notice", "gddkia_gpr trial dash classes", {"silver": stats["silver"]["dash_classes_on_measured_sections"], "sections_with_a_truck_dash": stats["gold_trucks_sections"]})
         show(con, "remarks", f"select left(remark, 90) r, count(distinct edition_code || road_class || section_code) from {s} where remark is not null group by 1 order by 2 desc", limit=40)
         show(con, "repeated section numbers in a file (before the erratum rule)", f"select entity, section_number, count(*) / count(distinct vehicle_class) n from {s} group by all having count(*) > count(distinct vehicle_class)", limit=40)
         show(con, "top sections", f"select edition_code, road_class, section_code, road_number, section_name, length_km, value from {s} where vehicle_class = 'motor_vehicles' and value_status = 'ok' order by value desc limit 8")
