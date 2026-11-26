@@ -6,7 +6,8 @@ update frequency "Rocznie"): one file per year and indicator group, titled "Wyni
 fizykochemicznych NIEORGANICZNYCH|ORGANICZNYCH - monitoring jakości wód podziemnych - monitoring diagnostyczny|
 operacyjny" (2019 and 2020 as CSV, 2021 on as XLSX; 12 files 2019-2024 on 26 Nov 2026, Dev probe 45810873298). The
 producer's own portal https://mjwp.gios.gov.pl/ answered every request, robots.txt included, with HTTP 403 and a
-maintenance page on 26 Nov 2026 (Dev probes 45809388367, 45809752001); it is not used (docs/sources/gios_groundwater.md).
+maintenance page on 26 Nov 2026 (Dev probes 45809388367, 45809752001); it is not used
+(docs/sources/gios_groundwater.md).
 
 The resource list is read once per run from the portal's public API (``/1.4/datasets/1405/resources``, no key).
 Entity = year x indicator group x monitoring kind (``<year>_<inorganic|organic>_<diagnostic|operational>``);

@@ -28,11 +28,11 @@ archive_policy:
 bronze: [bronze.gios_groundwater_records, bronze.gios_groundwater_rejected_files]
 silver: [silver.gios_groundwater_results, silver.gios_groundwater_points]
 gold: [gold.build_gios_groundwater, gold.metrics_groundwater_nitrate_above_50_share]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822)
-  gios_groundwater_results: {rows: 750000}  # estimate before the trial
-  gios_groundwater_points: {rows: 9000}  # estimate before the trial
-  poc_build_gios_groundwater: {rows: 1000}  # estimate before the trial
-  poc_metrics_groundwater_nitrate_above_50_share: {rows: 300}  # estimate before the trial
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45816380441 (2019-2024, 12 files)
+  gios_groundwater_results: {rows: 620000}  # 412,078: 142,376 measured and 269,702 below the limit (19,686 n.o. not loaded)
+  gios_groundwater_points: {rows: 6300}  # 4,187 point-years: 1,289 to 1,404 a year diagnostic, 362 to 390 operational
+  poc_build_gios_groundwater: {rows: 430}  # 285: 3 measures x 15-17 areas x 6 years
+  poc_metrics_groundwater_nitrate_above_50_share: {rows: 145}  # 95 share rows of the build stage, at most 1 per area x year
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a file
 # Refresh policy for all layers (D32): 12 files of under 1 MB (about 6 MB) and about half a million values, one new
