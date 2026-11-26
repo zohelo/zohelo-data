@@ -1,0 +1,47 @@
+version: 2
+models:
+  - name: zus_yearbook_tables
+    description: >-
+      ZUS Rocznik Statystyczny Ubezpieczeń Społecznych (register PLS-010): curated tables of each PDF edition read from
+      its text layer (bronze.zus_yearbook_lines, newest copy of each edition): contribution payers (Tabl. 8) and
+      insured persons (Tabl. 9) by voivodeship, 31 December, Poland and the 16 voivodeships, 2009-2023. Grain:
+      measure_code x area_name x period_year (each edition covers three years; editions do not overlap). Tables found by title, the
+      table's half of a two-page spread by the title's column, values by the header's years; ZUS signs kept as
+      cell_status without a value. Dev trial 45708846339: 510 rows, 0 duplicate or null keys, no ZUS signs.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', measure_code, area_name, period_year)"
+    columns:
+      - name: edition
+        tests: [not_null]
+      - name: table_code
+        tests: [not_null, {accepted_values: {arguments: {values: [payers_voiv, insured_voiv]}}}]
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [payers, insured]}}}]
+      - name: unit_code
+        tests: [not_null]
+      - name: area_name
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  [polska, dolnośląskie, kujawsko-pomorskie, lubelskie, lubuskie, łódzkie, małopolskie, mazowieckie,
+                   opolskie, podkarpackie, podlaskie, pomorskie, śląskie, świętokrzyskie, warmińsko-mazurskie,
+                   wielkopolskie, zachodniopomorskie]
+      - name: area_basis
+        description: >-
+          How the table assigns to voivodeships, from its footnote: payer_seat (insured persons, 2009-2011 edition),
+          residence (insured persons from the 2012-2014 edition), not_stated (payers).
+        tests: [not_null, {accepted_values: {arguments: {values: [payer_seat, residence, not_stated]}}}]
+      - name: period_year
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, nil, missing, not_applicable]}}}]
+      - name: value_joined
+        description: >-
+          True for the first-year value of the Polska row of the 2015-2017 edition, whose leading digit group the text
+          layer prints on the next line; the model puts it back under a guard (see the model's header).
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

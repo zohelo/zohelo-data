@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GUS DBW (Dziedzinowe Bazy Wiedzy) Landing: the website's bulk ZIP files.
 
-Route (docs/sources.md, GUS DBW): the DBW website publishes every indicator as bulk CSV ZIP
+Route (docs/sources/gus_dbw.md): the DBW website publishes every indicator as bulk CSV ZIP
 files, one per indicator × cross-section × presentation × periodicity (large ones also per
 year), listed with their last update date by the website's own application endpoints:
 
@@ -221,10 +221,13 @@ def inventory(
         if cache_only:  # inspect and shard jobs never list the website
             stats["indicators_not_listed_yet"] += 1
             continue
-        if age is not None and age > 48:
-            stats["indicators_listing_older_than_48h"] += 1
+        # a listing two days old is counted only when this run leaves it old (budget or failure),
+        # not when this run renews it: a run that catches up after an outage is not a warning
+        behind = age is not None and age > 48
         if time.monotonic() > deadline:
             stats["indicators_not_listed_time_budget"] += 1
+            if behind:
+                stats["indicators_listing_older_than_48h"] += 1
             if entry:  # an older listing still says what exists; its files are not lost
                 found += entry["files"]
             continue
@@ -237,6 +240,8 @@ def inventory(
             continue
         except (RuntimeError, ValueError) as exc:  # one indicator's failure is counted; the run goes on
             stats["indicators_failed"] += 1
+            if behind:
+                stats["indicators_listing_older_than_48h"] += 1
             stats.setdefault("indicators_failed_sample", []).append(f"{ind['indicator_id']}: {str(exc)[:120]}")
             if entry:
                 found += entry["files"]
@@ -245,6 +250,8 @@ def inventory(
         held[str(ind["indicator_id"])] = {"listed_at": datetime.now(UTC).isoformat(), "files": files}
         stats["indicators"] += 1
         stats["indicators_without_files"] += not files
+        if behind:
+            stats["indicators_caught_up_older_than_48h"] += 1
         found += files
         renewed += 1
         if save and renewed % 100 == 0:
@@ -448,8 +455,9 @@ def main(argv=None) -> int:
             **stats,
         }
         # inspect only reports: an unfinished listing is a warning, never a reason to skip the extract
-        # a listing cut by its budget continues next run (oldest listings first); one that falls
-        # two days behind is a warning the owner sees (exit 2)
+        # a listing cut by its budget continues next run (oldest listings first); one that this run
+        # leaves more than two days behind is a warning the owner sees (exit 2); one renewed in this
+        # run after an outage is only counted (indicators_caught_up_older_than_48h)
         status = 2 if args.mode == "load" and stats.get("indicators_listing_older_than_48h") else 0
         if args.mode == "load":
             todo = [

@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+nfz_waiting_times,PLS-015,NFZ Terminy Leczenia (listy oczekujących),NFZ waiting times (API Terminy Leczenia),Narodowy Fundusz Zdrowia (NFZ),cube,api,national-public,nfz_itl_api_terms,https://apinfz.nfz.gov.pl/app-itl-api-pcus/

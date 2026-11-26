@@ -1,0 +1,5 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+doctors_working,mz_health_bulletin,mz_health_bulletin:health_bulletin:persons:employed.doctors.count,"MZ statistical bulletin, MZ-88, 31 December, Poland and voivodeships",1,
+nurses_working,mz_health_bulletin,mz_health_bulletin:health_bulletin:persons:employed.nurses.count,"MZ statistical bulletin, MZ-88, 31 December, Poland and voivodeships",1,
+hospital_beds,mz_health_bulletin,mz_health_bulletin:health_bulletin:beds:hospitals.beds.count,"MZ statistical bulletin, MZ-29, general hospitals, Poland and voivodeships",1,
+hospital_inpatients,mz_health_bulletin,mz_health_bulletin:health_bulletin:cases:hospital_activity.inpatients.count,"MZ statistical bulletin, MZ-29, general hospitals, Poland and voivodeships",1,

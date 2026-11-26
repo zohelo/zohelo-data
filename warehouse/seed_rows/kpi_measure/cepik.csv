@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+vehicle_registrations,cepik,cepik:vehicle_registrations:vehicles,"CEPiK statistics workbooks, all vehicle types, Poland and voivodeships",1,

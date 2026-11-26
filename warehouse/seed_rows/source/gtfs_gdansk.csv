@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gtfs_gdansk,PL-ENV-029,ZTM Gdańsk rozkład jazdy GTFS,ZTM Gdańsk GTFS timetable,Zarząd Transportu Miejskiego w Gdańsku (TRISTAR),reference,file,subnational-public,cc_by_ztm_gdansk,https://ckan.multimediagdansk.pl/dataset/tristar

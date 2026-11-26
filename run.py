@@ -11,7 +11,8 @@ implemented and authorized:
   implemented  ingestion/to_landing/<source>/__init__.py (landing.inspect/extract/verify), or the
                shared pattern named by extraction.kind (bulk_file: ingestion/to_landing/patterns/)
                ingestion/to_bronze/<source>/__init__.py (bronze.*, landing.archive)
-               PLATFORM_ACTIVITIES below (silver_gold.build, gold.publish, serving.refresh_index)
+               PLATFORM_ACTIVITIES below (silver_gold.build, gold.publish, serving.refresh_index), and
+               gold.observations of source platform: the Pipeline runs it once per source (observation_sources)
                warehouse/entity/gold_<source>_build.sql (gold.observations: the source's per-block Gold
                build stage, run by warehouse/observations.py; docs/gold-coverage.md, D35)
   authorized   ingestion/sources/<source>.yaml "activities";
@@ -47,8 +48,8 @@ ORDER = (
     "archive.prune",
     "silver_gold.build",
     "gold.publish",
-    "gold.observations",
     "serving.refresh_index",
+    "gold.observations",
 )
 WRITES = {
     "landing.extract",
@@ -60,6 +61,12 @@ WRITES = {
     "gold.observations",
 }
 
+# The full dataflow of a source ends with Silver (orchestrator order of 25 Nov, #3133: R2 Data Catalog operations):
+# the model build, the published files, the per-block Gold load and the portal index are platform runs, scheduled
+# once a week in warehouse/warehouse.yaml (O46). Its name is kept so the declared schedules and run history still match.
+SOURCE_DATAFLOW = "full dataflow: landing → bronze → silver → gold → portal"
+MODELS_RUN = "silver/gold: build models"
+MODELS_AND_OBSERVATIONS_RUN = "silver/gold: build models, then gold observations"
 RUNS = {
     "landing: inspect": ["landing.inspect"],
     "landing: extract": ["landing.extract"],
@@ -68,7 +75,7 @@ RUNS = {
     "bronze: verify": ["bronze.verify"],
     "archive: move Bronze-loaded Landing": ["landing.archive"],
     "archive: apply retention": ["archive.prune"],
-    "full dataflow: landing → bronze → silver → gold → portal": [
+    SOURCE_DATAFLOW: [
         "landing.inspect",
         "landing.extract",
         "landing.verify",
@@ -76,11 +83,11 @@ RUNS = {
         "bronze.verify",
         "landing.archive",
         "archive.prune",
-        "silver_gold.build",
-        "gold.publish",
-        "gold.observations",
     ],
-    "silver/gold: build models": ["silver_gold.build", "gold.publish"],
+    # Platform: the changed-only model build of every source whose inputs changed since the last build, the
+    # published files, then the portal index; the weekly run (O46) also continues every source's per-block Gold load.
+    MODELS_RUN: ["silver_gold.build", "gold.publish", "serving.refresh_index"],
+    MODELS_AND_OBSERVATIONS_RUN: ["silver_gold.build", "gold.publish", "serving.refresh_index", "gold.observations"],
     "gold: publish": ["gold.publish"],
     "gold: observations": ["gold.observations"],
     "serving: refresh portal index": ["serving.refresh_index"],
@@ -125,6 +132,23 @@ def _build(p: Params) -> int:
     return build.main(p.filter)
 
 
+def _per_source(p: Params) -> int:
+    raise SystemExit(
+        "gold.observations of source platform runs once per source: the Pipeline job takes the sources from the "
+        "plan (observation_sources) and runs `run.py activity --source <source> --activity gold.observations`"
+    )
+
+
+def observation_sources(config: dict) -> list[str]:
+    """The sources whose per-block Gold load the platform run continues: a build stage and the authorization."""
+    return [
+        s
+        for s in sorted(config["sources"])
+        if "gold.observations" in authorized(config, s) and "gold.observations" in implemented(s)
+    ]
+
+
+# Activities of source `platform` only; a data source's run never contains them.
 PLATFORM_ACTIVITIES = {
     "silver_gold.build": _build,
     "gold.publish": _publish,
@@ -243,7 +267,7 @@ def _bulk_file():
 
 def implemented(source: str) -> dict:
     if source == "platform":
-        return PLATFORM_ACTIVITIES
+        return {**PLATFORM_ACTIVITIES, "gold.observations": _per_source}
     code = {}
     kind = ((yaml.safe_load((SOURCES / f"{source}.yaml").read_text()) or {}).get("extraction") or {}).get("kind")
     if kind == "bulk_file":  # common ingestion framework (docs/landing.md): no source package needed
@@ -291,32 +315,21 @@ def plan(source: str, run: str, config: dict) -> list[str]:
     if run not in RUNS:
         raise SystemExit(f"unknown run {run!r}")
     activities = list(RUNS[run])
-    # The source's full dataflow (owner direction 20 Oct, #875): after Landing and Bronze (and
-    # Silver, which entity sources write with Bronze), the changed-only model build carries what
-    # changed into Silver/Gold and the semantic layer, then the portal index. The model build is
-    # a platform activity, authorized in warehouse/warehouse.yaml.
-    full = source != "platform" and run.startswith("full dataflow")
-    for platform_activity in ("silver_gold.build", "gold.publish"):
-        if full and platform_activity not in authorized(config, "platform"):
-            activities.remove(platform_activity)
-    if full:  # a source's full dataflow is the steps that source has (GUS BDL: no landing.verify, archive.prune yet)
-        activities = [a for a in activities if a in PLATFORM_ACTIVITIES or a in authorized(config, source)]
-    platform_run = all(a in PLATFORM_ACTIVITIES for a in activities)
-    if platform_run != (source == "platform"):
-        raise SystemExit("silver/gold and serving runs use source 'platform'; landing/bronze runs use a data source")
+    if source != "platform" and run == SOURCE_DATAFLOW:
+        # A source's full dataflow is the steps that source has (GUS BDL: no landing.verify, archive.prune yet). It
+        # ends with Silver: Gold, the published files and the portal index are the platform's runs (#3133).
+        activities = [a for a in activities if a in authorized(config, source)]
+    if source == "platform" and not set(activities) <= set(implemented("platform")):
+        raise SystemExit("landing and bronze runs use a data source, not 'platform'")
+    if source != "platform" and set(activities) & set(PLATFORM_ACTIVITIES):
+        raise SystemExit("silver/gold, publish and serving runs use source 'platform'")
     code, allowed = implemented(source), authorized(config, source)
-    if source != "platform":  # platform activities inside a source run are authorized by the platform
-        code = {**code, **{a: PLATFORM_ACTIVITIES[a] for a in activities if a in PLATFORM_ACTIVITIES}}
-        allowed = allowed + [a for a in activities if a in PLATFORM_ACTIVITIES]
     refused = [a for a in activities if a not in code or a not in allowed]
     if refused:
         raise SystemExit(
             f"{source}: {', '.join(refused)} not available (implemented: {sorted(code)}; authorized: {allowed})"
         )
-    steps = sorted(activities, key=ORDER.index)
-    if source != "platform" and WRITES & set(steps):
-        steps.append("serving.refresh_index")
-    return steps
+    return sorted(activities, key=ORDER.index)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -360,17 +373,30 @@ def main(argv: list[str] | None = None) -> int:
         if not 1 <= args.parallel_jobs <= 8:
             parser.error("parallel jobs must be 1-8")
         steps = plan(args.source, args.run, config)
-        print(json.dumps({"activities": steps, "extract_matrix": list(range(args.parallel_jobs))}))
+        # The per-block Gold load: the source itself, or every source with one in a platform run.
+        observation = [] if "gold.observations" not in steps else [args.source]
+        if observation == ["platform"]:
+            observation = observation_sources(config) or ["platform"]
+        print(
+            json.dumps(
+                {
+                    "activities": steps,
+                    "extract_matrix": list(range(args.parallel_jobs)),
+                    "observation_sources": observation or ["none"],
+                }
+            )
+        )
         return 0
 
-    # Platform activities run inside a data-source run (portal index refresh after writes)
-    # or as a platform run; data-source activities must be authorized for that source.
-    if args.activity in PLATFORM_ACTIVITIES:
+    # Platform activities run only in a platform run; data-source activities must be authorized for that source.
+    if args.source == "platform":
         if args.activity not in authorized(config, "platform"):
             parser.error(f"{args.activity} is not authorized for platform")
-        func = PLATFORM_ACTIVITIES[args.activity]
+        if args.activity not in implemented("platform"):
+            parser.error(f"{args.activity} is not a platform activity")
+        func = implemented("platform")[args.activity]
     else:
-        if args.source == "platform" or args.source not in config["sources"]:
+        if args.source not in config["sources"]:
             parser.error(f"unknown data source {args.source!r}")
         if args.activity not in authorized(config, args.source):
             parser.error(f"{args.activity} is not authorized for {args.source} (ingestion/sources/{args.source}.yaml)")
@@ -381,8 +407,6 @@ def main(argv: list[str] | None = None) -> int:
     params = Params(
         args.filter, args.max_items, args.parallel_jobs, args.job_index, args.parallel_downloads, args.budget_minutes
     )
-    if args.activity == "silver_gold.build" and args.source != "platform":
-        params.filter = ""  # inside a source run: the changed-only build (a source filter is not a dbt selector)
     print(json.dumps({"pipeline": args.source, "activity": args.activity, **vars(params)}), flush=True)
     try:
         return int(func(params) or 0)
@@ -395,15 +419,34 @@ def main(argv: list[str] | None = None) -> int:
         _annotate_throttling(args.source, args.activity)
 
 
+RECEIPTS_REPORTED = 1000  # receipt reads in one activity at or above which the counts are annotated
+
+
 def _annotate_throttling(source: str, activity: str) -> None:
     """Storage requests R2 throttled in this activity (#2985): a notice when every one went through
-    after waiting, a warning when one was given up. Nothing when no request was throttled."""
+    after waiting, a warning when one was given up. Nothing when no request was throttled. Then the R2 Data
+    Catalog requests the activity sent, by kind, and the Landing receipts read from R2 and from memory, for an
+    activity that read many (#3133)."""
     r2 = sys.modules.get("ingestion.common.r2")
     report = r2.THROTTLE.report() if r2 else {}
     if report:
         from ingestion.common.report import annotate
 
         annotate("warning" if report["gave_up"] else "notice", f"{source} {activity} storage throttling", report)
+    calls = dict(sorted(r2.CATALOG_CALLS.items())) if r2 else {}
+    if calls:  # R2 Data Catalog requests of this process (#3133); DuckDB's own are not counted
+        from ingestion.common.report import annotate, step_summary
+
+        summary = {"total": sum(calls.values()), **calls}
+        annotate("notice", f"{source} {activity} catalog calls", summary)
+        step_summary(
+            f"## {source} {activity} · R2 Data Catalog calls\n\n```json\n{json.dumps(summary, indent=2)}\n```\n"
+        )
+    reads = dict(r2.RECEIPT_READS) if r2 else {}
+    if sum(reads.values()) >= RECEIPTS_REPORTED:  # Landing receipts read once per process (#3133)
+        from ingestion.common.report import annotate
+
+        annotate("notice", f"{source} {activity} receipt reads", reads)
 
 
 def _annotate_crash(source: str, activity: str, error: BaseException) -> None:

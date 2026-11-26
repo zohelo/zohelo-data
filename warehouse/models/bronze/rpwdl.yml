@@ -1,0 +1,25 @@
+version: 2
+sources:
+- name: rpwdl
+  description: >-
+    RPWDL register of healthcare providers and professional practices (register PLS-020), public register files
+    ("Pliki do pobrania"); allowlisted columns only, values as source text (the text NULL = empty).
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/rpwdl/
+    loaded_by: ingestion/to_bronze/rpwdl/
+    config: ingestion/sources/rpwdl.yaml
+  tables:
+  - name: rpwdl_providers
+    description: One row per podmioty.csv row (healthcare provider ledger) of the newest active and inactive ZIPs.
+  - name: rpwdl_establishments
+    description: One row per zaklady.csv row (zakład leczniczy, establishment) of the newest provider ZIPs.
+  - name: rpwdl_units
+    description: One row per jednostki.csv row (jednostka organizacyjna, organisational unit).
+  - name: rpwdl_cells
+    description: One row per komorki.csv row (komórka organizacyjna, organisational cell) with its bed counts.
+  - name: rpwdl_practices
+    description: One row per praktyki.csv row of the 16 practice ZIPs (8 practice registers x active / inactive).
+  - name: rpwdl_rejected_files
+    description: Files of rpwdl the Bronze decoder rejected, with the reason.

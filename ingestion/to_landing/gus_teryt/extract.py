@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GUS TERYT Landing: full files TERC, SIMC, ULIC and WMRODZ from the public eTERYT page.
 
-Route (docs/sources.md, TERYT): the public "pliki pełne" page of eTERYT serves each
+Route (docs/sources/gus_teryt.md): the public "pliki pełne" page of eTERYT serves each
 catalogue as a ZIP (XML + CSV) through an ASP.NET form postback; no account and no
 browser are needed (the SOAP service TERYT ws1 needs an account). One page load and
 one request per file, one at a time with a pause.

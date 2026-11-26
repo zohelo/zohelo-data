@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OpenData.org (BrightQuery) Landing: the Senzing-ready full snapshot from the public bucket.
 
-Route (docs/sources.md, OpenData): BrightQuery publishes OpenData.org snapshots in the public
+Route (docs/sources/opendata_org.md): BrightQuery publishes OpenData.org snapshots in the public
 Google Cloud Storage bucket ``bq-public-datastore`` under ``opendata/ODO-SENZING-<date>/full/``
 as one ZIP (2,496 newline-delimited Senzing JSON files: Organization/, PeopleBusiness/,
 Locations/). The bucket listing (GCS JSON API, no account) gives each object's size, MD5 and
