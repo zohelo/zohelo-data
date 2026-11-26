@@ -1,0 +1,38 @@
+version: 2
+models:
+  - name: knf_supervised_entity
+    description: >-
+      Entity table (organisations): one row per entry of the ESMA registers with home member state Poland (register
+      PLG-016, #2994, route 1 of KNF supervised entities), keyed by the ESMA id. LEI where the register gives one
+      (joins GLEIF by LEI; one LEI can sit on a firm's head office, its branches and its other authorisations;
+      entries without an LEI are kept and never matched by name), entity type, office type, status, valid_from
+      (authorisation or notification date), valid_to (withdrawal date). No addresses.
+    columns:
+      - name: entry_id
+        tests: [not_null, unique]
+      - name: entity_type_code
+        tests: [not_null]
+      - name: status
+        tests: [not_null]
+      - name: valid_from
+        tests: [not_null]
+  - name: poc_build_knf_entities
+    description: >-
+      Build stage - Polish entries of the ESMA registers, Poland: by status with entity type and office type as
+      breakdowns at the download day (register_entries, D, latest-only), and entries by year of authorisation
+      (authorisations, A) and of withdrawal (withdrawals, A), in total and by entity type. Only periods with an
+      entry have a row; the year of the download day is provisional.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || breakdown_json || '|' || date_key"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['D', 'A']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: value
+        tests: [not_null]
