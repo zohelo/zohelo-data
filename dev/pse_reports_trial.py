@@ -184,10 +184,11 @@ def analyse(path: str, dim, spot: dict) -> dict:
         "geography_keys": q(con, f"select list(distinct geography_key) from {g}")[0][0],
         "per_measure_rows_min_max_value_min_max": q(con, f"select measure_key, count(*), min(date_key), max(date_key), round(min(value), 3), round(max(value), 3) from {g} group by 1 order by 1"),
         "silver_days_left_out_per_measure": q(con, f"""
+            with m as (select measure_key, block_id, count(*) as n from {g} group by measure_key, block_id)
             select measure_key, case when block_id = 'rce_pln'
                 then (select count(distinct business_date) from r2.silver.pse_reports_rce_pln)
-                else (select count(distinct business_date) from r2.silver.pse_reports_his_wlk_cal) end - count(*)
-            from {g} group by all order by 1"""),
+                else (select count(distinct business_date) from r2.silver.pse_reports_his_wlk_cal) end - n
+            from m order by 1"""),
         "days_left_out_list": q(con, f"""
             select 'his' r, strftime(business_date, '%Y-%m-%d') d from (select distinct business_date from r2.silver.pse_reports_his_wlk_cal)
             where business_date not in (select date_key from {g} where block_id = 'his_wlk_cal' and measure_codes = 'wi:daily_mean')
