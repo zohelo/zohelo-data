@@ -127,7 +127,7 @@ source_version, raw_sha256`. Then:
 1. give the model the tag `gold_block` (`config(alias='build_<source>', tags=['gold_block'])`) and register
    it in the source's own macro file `warehouse/macros/sources/<source>.sql`: the block macros and
    `poc_source__<source>()` returning the model and its blocks (template in
-   [source-registration.md](source-registration.md)). Do not add lines to `warehouse/macros/poc_blocks.sql`;
+   [source-registration.md](source-registration.md)). Do not add a source's lines to `warehouse/macros/poc_blocks.sql`;
    `ops.repo_check` fails on a `poc_build_*` model without the tag or the registration. The Gold PR need not wait for the source's first scheduled
    run: until its Bronze/Silver tables exist the scheduled build declares the block waiting (run summary
    `waiting` and `empty_blocks`, `build_check` note `waiting: …`) and builds the facts from the other

@@ -37,7 +37,7 @@ v1 may switch to 64-bit hashes (design decision 4).
 
 ## The samples (activation list)
 
-`warehouse/macros/poc_blocks.sql` lists the blocks and the rules; change it to activate more.
+Each source's `warehouse/macros/sources/<source>.sql` lists its blocks and rules (D34); change it to activate more.
 
 | Source | Blocks | Sample rule |
 |---|---|---|

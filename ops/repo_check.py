@@ -326,8 +326,8 @@ def gold_list(files: list[Path]) -> list[str]:
 
 
 GOLD_BLOCK_TAG = re.compile(r"tags\s*=\s*\[[^\]]*['\"]gold_block['\"]")
-GOLD_BLOCK_LIST = re.compile(r"macro poc_legacy_block_models\(\).*?endmacro", re.S)
-GOLD_ACTIVATED = re.compile(r"macro poc_legacy_activated_blocks\(\).*?endmacro", re.S)
+# The shared block lists of macros/poc_blocks.sql, emptied into the sources' own files on 27 November; they stay gone.
+GOLD_SHARED_LISTS = re.compile(r"macro\s+(poc_legacy_block_models|poc_legacy_activated_blocks)\s*\(")
 GOLD_BLOCK_EXEMPT = {"poc_build_check"}  # reads the blocks; not a block
 # Per-source registration (docs/source-registration.md): warehouse/macros/sources/<source_system>.sql
 SOURCE_MACROS = Path("warehouse/macros/sources")
@@ -415,11 +415,11 @@ def value_ranges(files: list[Path]) -> list[str]:
 
 def gold_blocks(files: list[Path]) -> list[str]:
     """Every Gold build stage model (models/gold/poc_build_*.sql except poc_build_check) is tagged `gold_block`
-    and declared exactly once: registered by its source (poc_source__<source_system>() in
-    warehouse/macros/sources/<source_system>.sql) or, for sources older than D34, listed in
-    `poc_legacy_block_models()` (warehouse/macros/poc_blocks.sql); the tagged models are exactly the declared
-    ones, and each declared source_system has activated blocks. warehouse/changed.py lets a waiting block's
-    children build; poc_observations() unions only the declared blocks."""
+    and declared exactly once, registered by its source (poc_source__<source_system>() in
+    warehouse/macros/sources/<source_system>.sql); the tagged models are exactly the declared ones, and each
+    registration has activated blocks. The shared lists of macros/poc_blocks.sql (poc_legacy_block_models,
+    poc_legacy_activated_blocks) do not come back. warehouse/changed.py lets a waiting block's children build;
+    poc_observations() unions only the declared blocks."""
     stages, tagged = set(), set()
     for f in files:
         if f.parts[:3] != ("warehouse", "models", "gold") or f.suffix != ".sql" or not (ROOT / f).exists():
@@ -428,21 +428,19 @@ def gold_blocks(files: list[Path]) -> list[str]:
             stages.add(f.stem)
         if GOLD_BLOCK_TAG.search((ROOT / f).read_text()):
             tagged.add(f.stem)
-    macros = (ROOT / "warehouse/macros/poc_blocks.sql").read_text()
-    macro = GOLD_BLOCK_LIST.search(macros)
-    legacy = dict(re.findall(r"^\s*(\w+):(\w+)\s*$", macro.group(0), re.M)) if macro else {}
-    activated = GOLD_ACTIVATED.search(macros)
     registered, problems = registrations(files)
-    entries = dict(legacy)
+    for f in files:
+        if f.parts[:2] == ("warehouse", "macros") and f.suffix == ".sql" and (ROOT / f).exists():
+            problems += [
+                f"{f}: macro {name}: a Gold block is registered in {SOURCE_MACROS}/<source_system>.sql, not in a "
+                "shared list (docs/source-registration.md)"
+                for name in GOLD_SHARED_LISTS.findall((ROOT / f).read_text())
+            ]
+    entries: dict[str, str] = {}
     for source, entry in sorted(registered.items()):
         model = entry["block_model"]
         if model is None:
             continue
-        if source in legacy.values():
-            problems.append(
-                f"poc_source__{source}: {source} already has a Gold block in poc_legacy_block_models(); a source "
-                "is declared in one of the two places"
-            )
         if model in entries:
             problems.append(f"Gold block {model} is declared twice (poc_source__{source} and {entries[model]})")
         entries[model] = source
@@ -453,11 +451,6 @@ def gold_blocks(files: list[Path]) -> list[str]:
     problems += [f"{m} is a Gold build stage but not declared: {declare}" for m in stages - set(entries)]
     problems += [f"{m} is tagged gold_block but not declared: {declare}" for m in tagged - set(entries)]
     problems += [f"{m} is declared a Gold block but not tagged gold_block" for m in set(entries) - tagged]
-    problems += [
-        f"poc_legacy_activated_blocks(): no blocks of {source} ({m})"
-        for m, source in legacy.items()
-        if not activated or f"'{source}'" not in activated.group(0)
-    ]
     problems += scoped_metrics(files, entries)
     return sorted(problems)
 
