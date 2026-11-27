@@ -1,6 +1,6 @@
 # Senate of the Republic of Poland (`senat`)
 
-**Reviewing (register PLG-025, #482; route decision D42): code built, not scheduled.** www.senat.gov.pl is behind
+**Reviewing (register PLG-025, #482; route decision D43): code built, not scheduled.** www.senat.gov.pl is behind
 Cloudflare, which answered two of four Dev runs from GitHub runners with its bot check (HTTP 403 "Just a moment..." on
 `/robots.txt`); the extractor stops there and never works around it, so the weekly slot (Wednesday 19:20 UTC) waits for
 the owner's answer (register entry, first blocker). No API or feed. The one export, the vote results per term as

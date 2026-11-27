@@ -3,7 +3,7 @@ models:
   - name: senate_sitting_days
     description: >-
       Entity table (events): one row per sitting day of the Senate of the Republic of Poland, term XI (register
-      PLG-025, route D42), keyed by the Senate's sitting id and the day number; date_key = the day's date; status as
+      PLG-025, route D43), keyed by the Senate's sitting id and the day number; date_key = the day's date; status as
       printed, the votes its page lists. Planned sittings are not here.
     tests:
       - unique:

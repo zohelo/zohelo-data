@@ -1,4 +1,4 @@
-"""Strict parsers of the www.senat.gov.pl pages read for the Senate source (register PLG-025, decision D42).
+"""Strict parsers of the www.senat.gov.pl pages read for the Senate source (register PLG-025, decision D43).
 
 Used by Landing (which sitting days and votes exist) and by Bronze (rows). Every parser checks the page layout and
 raises ValueError with the reason when it differs from the one seen on 12 Nov 2026 (Dev probe 43326678967): a

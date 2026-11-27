@@ -1,4 +1,4 @@
-{# Senate of the Republic of Poland (register PLG-025, #482, route D42): Gold blocks sitting_days and votes
+{# Senate of the Republic of Poland (register PLG-025, #482, route D43): Gold blocks sitting_days and votes
    (models/gold/poc_build_senat.sql). D34 registration (docs/source-registration.md). #}
 {% macro poc_source__senat() %}
     {{ return({

@@ -1,4 +1,4 @@
-{# Senate of the Republic of Poland (register PLG-025, route D42): votes of term XI.
+{# Senate of the Republic of Poland (register PLG-025, route D43): votes of term XI.
    Grain: vote_id (the Senate's id in glosowanie-drukuj,<vote_id>.html); vote_number is the printed number, counted
    per sitting across its days. Source: bronze.senat_day_votes (the votes listed on each sitting day: number,
    subject, subtitle) with the day's date from silver.senat_sitting_days, and bronze.senat_vote_results (the totals

@@ -2,7 +2,7 @@ version: 2
 models:
   - name: senat_sitting_days
     description: >-
-      Senate of the Republic of Poland (register PLG-025, route D42), term XI: one row per sitting day. Grain:
+      Senate of the Republic of Poland (register PLG-025, route D43), term XI: one row per sitting day. Grain:
       sitting_id x day_number. Days of finished and running sittings as the sittings list shows them, day_date read
       from the printed dates (never guessed: an unread date fails the tests), status as printed, whether the day's
       votes page is landed and how many votes it lists. History and trial run: ingestion/sources/senat.yaml.
@@ -27,7 +27,7 @@ models:
         tests: [not_null]
   - name: senat_votes
     description: >-
-      Senate of the Republic of Poland (register PLG-025, route D42), term XI: one row per vote. Grain: vote_id
+      Senate of the Republic of Poland (register PLG-025, route D43), term XI: one row per vote. Grain: vote_id
       (also unique: sitting_id x vote_number). Subject and subtitle as printed on the sitting day's votes page, the
       day's date, the totals printed on the vote's page (empty while that page is not read, results_landed false).
     tests:
@@ -52,7 +52,7 @@ models:
         tests: [not_null]
   - name: senat_senators
     description: >-
-      Senate of the Republic of Poland (register PLG-025, route D42): one row per senator of term XI on the senators
+      Senate of the Republic of Poland (register PLG-025, route D43): one row per senator of term XI on the senators
       list. Grain: senator_id. Name as printed and, for a mandate that ended, its date; no photos, biographies or
       reasons.
     columns:

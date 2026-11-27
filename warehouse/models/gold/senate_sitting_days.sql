@@ -1,6 +1,6 @@
 {{ config(alias='senate_sitting_days') }}
 {# Gold entity table (register source, kpi false; docs/model.md "Fact kinds": events): one row per sitting day of the
-   Senate of the Republic of Poland, term XI (route D42), keyed by the Senate's own sitting id and the day number;
+   Senate of the Republic of Poland, term XI (route D43), keyed by the Senate's own sitting id and the day number;
    date_key = the day's date (joins dim_calendar). Planned sittings are not here. Counts by month and year are in
    gold.build_senat. Latest version only (policy #822/#845). #}
 select

@@ -1,4 +1,4 @@
-{# Senate of the Republic of Poland (register PLG-025, route D42): senators of term XI as the senators list shows
+{# Senate of the Republic of Poland (register PLG-025, route D43): senators of term XI as the senators list shows
    them. Grain: senator_id (the Senate's id in senator,<id>,11,<slug>.html). Name as printed and the date the
    mandate ended when the list prints one ('mandat wygasł 17.11.2024 r.' and similar annotations); the reason is not
    kept, nor photos or biographies (public office holders: name and role only). Source: bronze.senat_senators. #}

@@ -38,7 +38,7 @@ ingestion:
     with a print page per vote (/prace/posiedzenia/glosowanie-drukuj,<vote id>.html); senators at /sklad/senatorowie/senator,<id>,<term>,<slug>.html
     (102 links for term 11). The home page, the sittings page and the legislative-process page link no API, open-data page,
     XML, JSON, CSV or RSS. Request pattern: one connection, one request per second, term 11 only, never /gfx/ or /pdf/.
-    Built under decision D42 (#482): sittings list (7 pages), one votes page per sitting day, one print page per vote (the
+    Built under decision D43 (#482): sittings list (7 pages), one votes page per sitting day, one print page per vote (the
     day page has no totals), senators list; entity = one page, version = download time. Size: docs/sources/senat.md.'
   incremental: New sitting days only (the sittings page lists them); one request per second; senator pages once per month.
   identifiers: Term, sitting number, day, vote id; senator id.
@@ -64,7 +64,7 @@ research:
     daily), resources 2592577 (term XI) and 2592581 (term X), XML, modified 8 Sep 2026, both linking /gfx/senat/glosowania_wyniki/.
     The code (Landing, Bronze, Silver, Gold) is kept without a schedule (#482); the schedule comes with the answer.'
   - 'Route decided: polite crawl of public pages that robots.txt allows, following the orchestrator verdict on PR #2878
-    under the owner rule of 12 Nov 2026 (issue #2873); recorded as decision D42 in docs/decisions.md by the build pull
+    under the owner rule of 12 Nov 2026 (issue #2873); recorded as decision D43 in docs/decisions.md by the build pull
     request (#482), which the owner may overrule.'
   - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): www.senat.gov.pl answered 200
     on the home, sittings, votes and senators pages; bip.senat.gov.pl was not readable. Dev probe run 43288930412 (job 131429683337,

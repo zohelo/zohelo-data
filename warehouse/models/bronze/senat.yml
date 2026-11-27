@@ -3,7 +3,7 @@ version: 2
 sources:
 - name: senat
   description: >-
-    Senate of the Republic of Poland (register PLG-025), term XI pages of www.senat.gov.pl read under decision D42:
+    Senate of the Republic of Poland (register PLG-025), term XI pages of www.senat.gov.pl read under decision D43:
     sittings list, sitting-day votes pages, vote print pages, senators list. Text as printed; newest copy of each page.
   database: r2
   schema: bronze

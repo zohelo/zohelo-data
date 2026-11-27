@@ -1,4 +1,4 @@
-"""Senate of the Republic of Poland (register PLG-025): Landing activities, route authorized by decision D42.
+"""Senate of the Republic of Poland (register PLG-025): Landing activities, route authorized by decision D43.
 
 No API, export or feed exists: the route is a polite read of server-rendered public pages of www.senat.gov.pl that
 robots.txt allows, term XI only. One connection, one request at a time, at least 1.1 seconds after the previous

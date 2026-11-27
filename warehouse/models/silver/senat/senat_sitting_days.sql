@@ -1,4 +1,4 @@
-{# Senate of the Republic of Poland (register PLG-025, route D42): sitting days of term XI.
+{# Senate of the Republic of Poland (register PLG-025, route D43): sitting days of term XI.
    Grain: sitting_id x day_number (sitting_id = the Senate's internal id in its page addresses; sitting_number = the
    printed number of the sitting). Source: bronze.senat_sittings (the sittings list: the days with a votes page and
    the dates as printed, e.g. '4, 5 i 6 listopada 2026 r.') and bronze.senat_day_votes (votes listed per day).

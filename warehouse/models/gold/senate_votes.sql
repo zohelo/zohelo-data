@@ -1,6 +1,6 @@
 {{ config(alias='senate_votes') }}
 {# Gold entity table (register source, kpi false; docs/model.md "Fact kinds": events): one row per vote of the
-   Senate of the Republic of Poland, term XI (route D42), keyed by the Senate's vote id; date_key = the sitting day's
+   Senate of the Republic of Poland, term XI (route D43), keyed by the Senate's vote id; date_key = the sitting day's
    date. Subject and subtitle as printed (metadata only, no texts of bills), totals as printed on the vote's page
    (empty while that page is not read yet, results_landed false). Individual senators' votes are not kept. #}
 select

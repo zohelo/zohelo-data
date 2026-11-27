@@ -2,8 +2,8 @@ source_system: senat
 description: "Senate of the Republic of Poland (www.senat.gov.pl): term XI sittings, sitting days, votes and senators"
 
 # Extraction strategy (docs/landing.md). Register PLG-025. No API or feed; the vote results XML of dane.gov.pl
-# (dataset 4648, CC0) is under /gfx/, which robots.txt disallows, so it is not read (D42). The route is a polite read of
-# server-rendered public pages that robots.txt allows, authorized by decision D42 (docs/decisions.md): the sittings
+# (dataset 4648, CC0) is under /gfx/, which robots.txt disallows, so it is not read (D43). The route is a polite read of
+# server-rendered public pages that robots.txt allows, authorized by decision D43 (docs/decisions.md): the sittings
 # list (/prace/posiedzenia/, page,<n>.html), the votes page of each sitting day
 # (/prace/posiedzenia/przebieg,<id>,<day>,glosowania.html), the print page of each vote with its totals
 # (/prace/posiedzenia/glosowanie-drukuj,<vote id>.html; the day page carries no totals) and the senators list

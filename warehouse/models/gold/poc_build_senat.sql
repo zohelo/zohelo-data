@@ -1,5 +1,5 @@
 {{ config(alias='build_senat', tags=['gold_block']) }}
-{# Gold build stage: event counts of the Senate of the Republic of Poland, term XI (register PLG-025, route D42),
+{# Gold build stage: event counts of the Senate of the Republic of Poland, term XI (register PLG-025, route D43),
    Poland. Events of finished sittings only (status 'Zakończone'; a planned or running sitting is not counted):
    - block sitting_days: sitting days (silver.senat_sitting_days), dated by the day;
      senat:sitting_days:days:monthly (M) and senat:sitting_days:days:annual (A);
