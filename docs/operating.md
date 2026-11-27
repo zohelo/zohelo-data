@@ -9,6 +9,7 @@
 | **Dev · branch runs** (`dev.yml`) | one `dev/` script on a feature branch (trials, tests); deleted before merge. Also the merge gate: `check` and `check-portal` | trials: manual, never `main`; gate: label `merge:check` on a pull request |
 | **Deploy portal** (`deploy-portal.yml`) | build and deploy `portal/app` and `portal/worker` | push to `main` changing them, or manual |
 | **Branch cleanup** (`branch-cleanup.yml`) | deletes a merged pull request's branch; weekly sweep of merged branches | pull request merged, Monday, or manual |
+| **Batch labels** (`batch-labels.yml`, O47) | bilingual measure names through the Anthropic Message Batches API (`ops/measure_names.py`): step `submit` reads `gold.dim_measure` read-only and sends the batch; step `collect` validates the ended batch, writes `warehouse/seed_rows/measure_name/<source_system>.csv` and opens a pull request with the org bot app. Needs the secret `ANTHROPIC_API_KEY` | manual, `main` only |
 
 ## Activities
 

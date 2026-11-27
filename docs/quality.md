@@ -76,7 +76,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 | Rule | Check |
 |---|---|
-| Exactly the five workflows; actions pinned by full SHA with version comment; `runs-on` pinned | [auto] |
+| Exactly the six workflows (`WORKFLOWS` in repo_check; the sixth, `batch-labels.yml`, by O47); actions pinned by full SHA with version comment; `runs-on` pinned | [auto] |
 | Every workflow declares `permissions:`; none uses `write-all` or `read-all` | [auto] repo_check `workflows` |
 | Least privilege `permissions:` per job | [review] |
 | The Pipeline's `notify` job needs every other job and blanks every workflow-level secret | [auto] repo_check `workflows` |
@@ -94,7 +94,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 1. `check` job once per pull request, on the label `merge:check` (docs/flow.md, merge gate; from the owner's `dev.yml` change; until then the
    job runs compile, pyflakes, YAML parse, configuration, dbt parse): `python -m ops.repo_check` (root allowlist and file
-   rules, no `dev/`, five workflows with pinned actions, compile, ruff check + format,
+   rules, no `dev/`, the six workflows with pinned actions, compile, ruff check + format,
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
    Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.
 2. sqlfluff on the dbt models (14 Oct) and the offline `dbt compile` with a DuckDB parse of every compiled
