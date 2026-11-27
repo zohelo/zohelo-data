@@ -5,9 +5,10 @@ description: "GIOŚ surface-water monitoring (PMŚ): status classification of th
 # public ArcGIS MapServer services https://wody.gios.gov.pl/arcgis/rest/services/PJWP/Ocena_stanu_JCWP_<category>_2019_2024
 # (Map,Query,Data; 19 layers, 14,906 features, no water body in two services; Dev probes 45922872272, 45924431424). They
 # answer no pagination and at most 1,000 features a query, so ingestion/to_landing/gios_surface_water/ reads each
-# layer's object ids and lands the features in pages of 1,000 ids (objectIds, attributes only) through the shared bulk_file pattern, 3 s apart. Entity =
-# one page of one layer (<category>_<assessment>_p<nn>); version = download time; a page lands only when its SHA-256
-# changed. Restart unit: one page. The yearly physico-chemical workbooks of publication 367 are left out (docs/sources).
+# layer's object ids and lands the features in pages of 1,000 ids (objectIds, attributes only) through the shared
+# bulk_file pattern, 3 s apart. Entity = one page of one layer (<category>_<assessment>_p<nn>); version = download
+# time; a page lands only when its SHA-256 changed. Restart unit: one page. The yearly physico-chemical workbooks of
+# publication 367 are left out (docs/sources/gios_surface_water.md).
 extraction:
   initial: bulk
   production: snapshot                  # each page is the current state of its features
@@ -24,10 +25,10 @@ archive_policy:
 bronze: [bronze.gios_surface_water_features, bronze.gios_surface_water_rejected_files]
 silver: [silver.gios_surface_water_status]
 gold: [gold.build_gios_surface_water, gold.metrics_surface_water_good_status_share]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial TRIAL
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev probe 45924431424 and the trial (PR body)
   gios_surface_water_status: {rows: 22400}  # 14,906 water body x assessment rows in 19 layers
-  poc_build_gios_surface_water: {rows: 300}  # GOLD
-  poc_metrics_surface_water_good_status_share: {rows: 10}  # 1: Poland, 2019-2024
+  poc_build_gios_surface_water: {rows: 220}  # 145: 20 category x assessment totals, class counts and shares, 12 good
+  poc_metrics_surface_water_good_status_share: {rows: 10}  # 1: Poland, assessment 2019-2024
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a page
 # Refresh policy for all layers (D32): about 30 answers of under 200 kB, 14,906 rows, unchanged within a six-year

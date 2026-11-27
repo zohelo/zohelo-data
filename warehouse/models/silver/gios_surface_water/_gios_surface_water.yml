@@ -6,7 +6,7 @@ models:
       status class of each surface water body (JCWP) in each of the 19 layers of the PJWP ArcGIS services, water
       categories rivers, reservoirs, lakes, transitional, coastal; assessments ecological status, ecological potential,
       chemical status, overall status (monitoring) and overall status with statistical methods; classes, body status
-      and names as published. Dev trial TRIAL: ROWS rows. Grain: water_category x assessment x kod_jcwp.
+      and names as published. Dev probe 45924431424: 14,906 rows. Grain: water_category x assessment x kod_jcwp.
     tests:
       - unique:
           column_name: "water_category || '|' || assessment || '|' || kod_jcwp"

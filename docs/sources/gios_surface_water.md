@@ -49,7 +49,9 @@ Left out: the yearly physico-chemical results of publication 367 (84 XLSX workbo
 result services `Wyniki_pomiarow_chemicznych_i_fizykochemicznych_<year>`; they need their own Landing, Bronze and
 limit-of-quantification handling, beyond this first selection.
 
-Dev trial TRIAL.
+Counts (Dev probe 45924431424, 27 Nov 2026): 29 pages, 14,906 Silver rows, no water body in two services; Gold 145
+rows. Poland: 43 of 3,837 assessed bodies in good overall status (1.12 %; rivers 22 of 2,941, lakes 21 of 840),
+411 of 3,032 in good chemical status (13.56 %).
 
 Schedule: weekly, Thursday 05:35 UTC (O46; about 50 small requests; the assessment changes once per six-year cycle).
 Refresh full (D32). Terms: the portal's regulations (https://wody.gios.gov.pl/pjwp/api/terms_and_conditions: reuse in
