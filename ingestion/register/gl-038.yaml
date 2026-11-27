@@ -1,0 +1,43 @@
+id: GL-038
+name: UNECE Data Portal
+short_name: UNECE Data Portal
+provider: United Nations Economic Commission for Europe
+source_system: unece
+status: built
+family: A
+kpi: true
+geography: multicountry-Europe
+provider_type: international-public
+domains: [economy, gender, transport, forestry, sustainable-development]
+entities: [country, city, person-aggregate]
+granularity: Multidimensional table by country/city, socioeconomic classification and period.
+coverage: UNECE region, with emphasis on CIS and Central/Eastern Europe; table histories vary.
+access:
+  endpoint: https://w3.unece.org/PXWeb2015/api/v1/en/STAT
+  kind: api
+  interfaces: [HTML, PXWeb tables, download files]
+  auth: public
+  cost: free
+  limits: No numeric quota published; the PXWeb API answers bursts with HTTP 429 and very large queries with
+    403 (Dev probes 43093129692, 43094350928, 11 Nov 2026). PX files are not served; data only by POST.
+licence:
+  status: open-conditional
+  notes: 'Terms: UNECE Statistical Database copyright notice https://w3.unece.org/PXWeb/Static/Copyright_notice.html: "The data in the UNECE Statistical Database are available free of charge. Users are free to copy, reproduce and redistribute the data for both commercial and non-commercial purposes, provided UNECE is acknowledged as the source." Disclaimer: "UNECE does not take any responsibility for the use of the data." Attribution: "Source: UNECE Statistical Database."'
+updates: Economic indicators carried a 2026 restructuring notice; table schedules and discontinuations vary.
+ingestion:
+  history: Snapshot PXWeb table, metadata and source.
+  incremental: Reload changed tables after portal notices; no CDC.
+  identifiers: Database/table + geography + classification + period.
+modelling:
+  notes: Keep city, country and aggregate grains separate; rates, totals and indexes need measure-specific rules.
+  overlap: Compiles official national/international sources and overlaps Eurostat, OECD and UN SDG data.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Track database restructuring and discontinued series'
+  - 'Confirm PXWeb API contract'
+  references:
+  - https://w3.unece.org/PXWeb/en
+  - https://w3.unece.org/PXWeb/Static/Copyright_notice.html

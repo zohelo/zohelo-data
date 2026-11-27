@@ -1,0 +1,49 @@
+id: GL-001
+name: Eurostat Database and dissemination APIs
+short_name: Eurostat
+provider: Eurostat
+source_system: eurostat
+status: silver
+family: A
+kpi: true
+geography: multicountry-Europe
+provider_type: international-public
+domains: [economy, population, labour, trade, health, education, environment]
+entities: [country, region, person-aggregate, enterprise-aggregate]
+granularity: Dataset cube, often country/year, with sex, age, unit, activity and NUTS region.
+coverage: EU/EEA, candidates and partners; start varies. Only the latest version is held.
+access:
+  endpoint: https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
+  kind: bulk_file
+  interfaces: [HTML, REST API, SDMX 2.1, SDMX 3.0, JSON-stat, TSV]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://ec.europa.eu/eurostat/web/main/help/copyright-notice (Commission Decision 2011/833/EU;
+    CC BY 4.0 for EU-owned content). Attribution: "Source: Eurostat" plus the dataset code. Commercial and
+    non-commercial reuse and modification are allowed; modifications must be indicated. Exceptions (non-commercial
+    reuse only): data identified as belonging to sources other than Eurostat; publications co-owned by other
+    organisations; data for countries other than EU, EFTA and official acceding/candidate countries (remove before
+    commercial reuse); Swiss and Liechtenstein trade data from 1995 and Austrian CN8 trade data (Comext, DS-*, out of
+    scope); third-party material such as photos, and logos and trademarks, are not covered. Disclaimer: modified or
+    translated content must carry a disclaimer that Eurostat is not responsible for the changes (page wording for
+    translations: "The translation is the sole responsibility of the author or authors of the translation.").'
+updates: Portal checks for data/structure changes twice daily; frequency varies; prior versions are not retained.
+ingestion:
+  history: Snapshot dataflows and structures; preserve received-at and raw hash.
+  incremental: Re-read structures and replace affected periods/dataflows; no CDC claim.
+  identifiers: ESTAT dataflow/version + full SDMX key; map geo to ISO/NUTS by explicit codelists.
+modelling:
+  notes: Observation fact at full cube grain; units, status flags and seasonal adjustment are dimensions. Aggregates
+    and rates are non-additive.
+  overlap: Often republishes national and domain-agency inputs; keep source/flags and do not deduplicate by label.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers: []
+  references:
+  - https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
+  - https://ec.europa.eu/eurostat/web/main/help/copyright-notice

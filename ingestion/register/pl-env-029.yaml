@@ -1,0 +1,62 @@
+id: PL-ENV-029
+name: Gdańsk Open Data and GTFS/GTFS-Realtime feeds
+short_name: Gdańsk open data and GTFS
+provider: Gmina Miasta Gdańska / TRISTAR
+source_system: gtfs_gdansk
+status: built
+family: H
+kpi: false
+geography: Gdańsk, Poland
+provider_type: subnational-public
+domains: [municipal open data, public transport]
+entities: [municipal dataset, route, trip, stop, vehicle]
+granularity: Static GTFS of ZTM Gdańsk (agency, routes, stops, trips, stop_times, shapes, calendar_dates, feed_info); other
+  city datasets are out of scope.
+coverage: The feed covers the next 14 days (12-26 Nov 2026 on the probe day); no archive at the source.
+access:
+  endpoint: https://ckan.multimediagdansk.pl/dataset/tristar
+  kind: bulk_file
+  interfaces: [GTFS, ZIP, CKAN, GTFS-Realtime]
+  auth: Public download.
+  cost: Free public access.
+  limits: 'robots.txt: Crawl-delay 10 and Disallow for /api/, /revision/, /dataset/rate/ and /dataset/*/history, so the
+    CKAN API is not used; the fixed download URL is allowed.'
+licence:
+  status: open-conditional
+  notes: 'Terms: the dataset page https://ckan.multimediagdansk.pl/dataset/tristar and the GTFS resource page show the licence
+    "Creative Commons Attribution" without a version number (desk fetch 12 Nov 2026). The "Regulamin korzystania z danych"
+    (PDF resource 09cafa1b-604b-4408-ac48-5720319b72b7 of the same dataset; the fetch tool returned clauses cut at 125 characters):
+    "Dane publiczne dostępne w serwisie są materiałami urzędowymi i jako takie nie są chronione przez prawa autorskie.";
+    "Korzystanie z Repozytorium jest nieodpłatne."; the reuser must "zamieścić informacje o źródle danych podając nazwę:
+    Zarząd Transportu Miejskiego w Gdańsku" and "podać datę wytworzenia oraz pozyskania informacji publicznej."; "Podmiot
+    ponownie wykorzystujący te dane ma obowiązek dbać o ich aktualność."; ZTM "nie ponosi odpowiedzialności za nieaktualność
+    danych". Commercial reuse and modification are not restricted in the clauses read. Attribution: "Źródło danych: Zarząd
+    Transportu Miejskiego w Gdańsku, wytworzono <data>, pozyskano <data>". Re-read the full regulamin before publication.'
+updates: 'Daily: the file was last modified 12 Nov 2026 01:58 GMT; the catalogue says resources are refreshed once a day.'
+ingestion:
+  history: 'Bulk feature, one stable URL: https://ckan.multimediagdansk.pl/dataset/c24aa637-3619-4dc2-a171-a23eec8f2172/resource/30e783e4-2bec-4a7d-bb22-ee3e3b26ca96/download/gtfsgoogle.zip
+    (tested: 25,576,857 bytes, application/zip, Last-Modified and ETag present; 8 text files, 170 MB unzipped; 93 routes,
+    1,624 stops, 95,365 trips, 2,272,891 stop_times rows, 679,206 shape points; feed_info: "Zarząd Transportu Miejskiego
+    w Gdańsku", feed_end_date 20261126; calendar_dates 20261112-20261126). GTFS-Realtime endpoints exist but are live snapshots
+    without an archive: out of scope.'
+  incremental: Snapshot; version = Last-Modified. A weekly copy is enough for the selection below (the feed changes daily
+    and has no history, so a missed day is lost only for stop_times).
+  identifiers: feed version, route_id, stop_id, trip_id, service date.
+modelling:
+  notes: 'kpi false; low Gold value (one city). Smallest selection shared with PL-ENV-030 and PL-ENV-032 as one city-GTFS
+    family: agency, routes, stops, trips and calendar_dates; stop_times only as a count of departures per service day. Gold:
+    stop and route entity tables and one measure, scheduled trips per day per city. Effort M for the first city (shared
+    GTFS pattern), S for each further one.'
+  overlap: TRISTAR is producer-level; national catalogue entries may mirror it.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the GTFS file was downloaded
+    and read on a GitHub runner; the CKAN API was not called (robots.txt).'
+  - Full wording of the regulamin to be re-read before publication (clauses were read in fragments).
+  references:
+  - https://ckan.multimediagdansk.pl/dataset/tristar
+  - https://ckan.multimediagdansk.pl/dataset/tristar/resource/30e783e4-2bec-4a7d-bb22-ee3e3b26ca96
+  - https://ckan.multimediagdansk.pl/dataset/tristar/resource/09cafa1b-604b-4408-ac48-5720319b72b7

@@ -145,7 +145,7 @@ and stale merges of a shared file were a review finding.
   one is updated from `main` and its checks rerun before it merges (stale merges were a review finding), unless
   they go in one merge train.
 - **Merge trains** (introduced 12 November 2026): reviewed PRs that touch shared append-only files (for example
-  `ingestion/register.yaml`, `docs/decisions.md`) are combined into one train branch by a merge operator. The
+  `docs/decisions.md`) are combined into one train branch by a merge operator. The
   operator merges each PR's reviewed head SHA into the train, resolves the appends, runs the checks once on the
   train head and merges the train into `main` with a merge commit, so each contained PR's commits reach `main`
   and GitHub marks those PRs merged. A PR whose head changed after its review stays out of the train.

@@ -1,0 +1,54 @@
+id: PLS-004
+name: GUS thematic publications with downloadable statistical tables
+short_name: GUS publication tables
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_health
+status: built
+family: B
+kpi: true
+geography: Poland and regional Poland
+provider_type: national-public
+domains: [official statistics, demography, social conditions, health, education, culture, agriculture, tourism]
+entities: [country, territorial unit, person-aggregate, establishment-aggregate]
+granularity: Publication/table/cell; many releases include XLSX or ZIP tables, but grain varies.
+coverage: Long archive, publication-family dependent.
+access:
+  endpoint: https://stat.gov.pl/obszary-tematyczne/
+  kind: bulk_file
+  interfaces: [HTML, XLSX, ZIP, PDF, CSV]
+  auth: Public downloads without login.
+  cost: free
+  limits: No API quota; bulk archive crawling limits unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+    and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+    licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+    summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution: "Źródło:
+    GUS, <publication title> (<year>)" / "Source: Statistics Poland, <publication title> (<year>)".'
+updates: Release-calendar driven; corrections may replace files.
+ingestion:
+  history: Backfill a curated whitelist of publication families and retain original files/checksums.
+  incremental: Poll release pages/RSS; version files by publication date and checksum.
+  identifiers: Publication family + reference period + table/sheet/cell; map official territorial/classification codes.
+modelling:
+  notes: Parse only stable table families; retain workbook labels and footnotes alongside normalized facts.
+  overlap: Often the publication form of BDL/DBW observations; files are valuable for footnotes and dimensions
+    missing from portals.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Whitelist (#2451): this entry is built as the health family, source gus_health ("Zdrowie i ochrona zdrowia w
+    <year> r.", editions 2012-2024; Dev probe 45746829360): medical personnel and general hospitals by voivodeship.
+    Culture, cultural participation and tourism are their own entries (PLS-027, PLS-028, PLS-035); the census,
+    labour and prices tables are built elsewhere. Other health tables are in Bronze, not modelled.'
+  - 'Third-party material: the modelled tables name as source "dane Ministerstwa Zdrowia, Ministerstwa Spraw
+    Wewnętrznych i Administracji oraz GUS" (public administration data published by GUS); no NFZ or other
+    third-party tables are modelled.'
+  references:
+  - https://stat.gov.pl/obszary-tematyczne/
+  - https://stat.gov.pl/obszary-tematyczne/zdrowie/zdrowie/
+  - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/turystyka/turystyka-w-2024-r-%2C1%2C22.html
+  - https://stat.gov.pl/en/copyright/

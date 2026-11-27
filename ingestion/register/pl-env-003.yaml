@@ -1,0 +1,46 @@
+id: PL-ENV-003
+name: Baza Danych Obiektów Topograficznych BDOT10k
+short_name: GUGiK BDOT10k
+provider: GUGiK
+source_system: gugik_bdot10k
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [topography, buildings, transport, land cover]
+entities: [topographic feature, building, road, waterbody]
+granularity: Vector topographic objects at 1:10,000 database scope; packages by county, voivodeship or country.
+coverage: Current national packages; some archived editions are published, but systematic depth was not established.
+access:
+  endpoint: https://www.geoportal.gov.pl/pl/dane/baza-danych-obiektow-topograficznych-bdot10k/
+  kind: bulk_file
+  interfaces: [bulk-files, WMS-index, HTML]
+  auth: Public download. WMS GetFeatureInfo exposes package links; it is not the object database.
+  cost: Free.
+  limits: Unknown; no numeric quota was confirmed.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/baza-danych-obiektow-topograficznych-bdot10k/ states: "Baza BDOT10k
+    jest dostępna bezpłatnie i możliwa do dowolnego wykorzystania" and that since 31 July 2020 the release of BDOT10k data
+    lets everyone use them for any purpose ("uwolnienie danych BDOT10k powoduje, że dzisiaj każdy może w łatwy sposób wykorzystywać
+    te dane do dowolnych celów") (page read 11 Nov 2026 from a GitHub runner). No licence name and no attribution wording:
+    show "Źródło: GUGiK, BDOT10k" with the edition date; commercial reuse and modification are allowed by that sentence.'
+updates: Area packages update asynchronously.
+ingestion:
+  history: Download from the geoportal "Dane do pobrania" layer group "Topografia" > "Baza danych obiektów topograficznych"
+    (per powiat and per voivodeship GML/SHP packages) or the WFS/WMTS services; about 60 million objects nationwide (page
+    statement); several GB zipped (estimate, not measured).
+  incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
+  identifiers: Native object IDs, class codes, package geography and edition.
+modelling:
+  notes: Ingest GML/object files; use WMS only as discovery. Preserve EPSG/source CRS.
+  overlap: May overlap EGiB buildings and road datasets at different legal/generalization levels.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - Confirm application schema version and archive completeness per package.
+  references:
+  - https://www.geoportal.gov.pl/pl/dane/baza-danych-obiektow-topograficznych-bdot10k/

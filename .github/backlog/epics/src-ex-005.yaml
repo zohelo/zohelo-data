@@ -33,12 +33,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry EX-005 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry EX-005 in ingestion/register/ex-005.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://www.opendata.org/.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/ex-005.yaml
     steps:
     - Search the publisher pages (opendata.org and BrightQuery's OpenData pages) for a licence; record the URL found
       or 'no licence published'.
@@ -55,8 +55,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='EX-005'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/ex-005.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

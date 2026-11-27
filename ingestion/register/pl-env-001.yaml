@@ -1,0 +1,46 @@
+id: PL-ENV-001
+name: Państwowy Rejestr Granic (PRG)
+short_name: GUGiK PRG
+provider: Główny Urząd Geodezji i Kartografii (GUGiK)
+source_system: gugik_prg
+status: silver
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [administrative geography, geospatial]
+entities: [administrative unit, boundary]
+granularity: Official administrative units, boundaries and areas; exact schema varies by release.
+coverage: National snapshots; archive depth and effective-date fields require package inspection.
+access:
+  endpoint: https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
+  kind: bulk_file
+  interfaces: [bulk-files, WFS, WMS]
+  auth: Public download and network services.
+  cost: Free download.
+  limits: Unknown; no numeric quota was confirmed.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/ ("Dane PRG są dostępne bezpłatnie
+    i do dowolnego wykorzystania"; legal basis: Council of Ministers regulation of 16 July 2021 on the PRG, Dz.U. 2021
+    poz. 1373; no named licence and no required wording on the page). Attribution: "Źródło: GUGiK, PRG".'
+updates: Updated official register; release cadence not confirmed.
+ingestion:
+  history: 'PROPOSAL: capture available dated releases with source metadata.'
+  incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
+  identifiers: Use native unit identifiers plus edition/effective dates; geography joins must be vintage-aware.
+modelling:
+  notes: Store geometry history; retain source CRS and reproject with audit metadata.
+  overlap: Authoritative geography backbone; overlaps map layers and statistical geographies but is not an observation
+    series.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - Read the licence notice inside a downloaded PRG package (not readable from the agent session); the PRG page
+    states no conditions.
+  references:
+  - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl
+  - https://www.geoportal.gov.pl/pl/dane/
+  - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/

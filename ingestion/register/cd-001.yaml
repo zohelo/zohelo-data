@@ -1,0 +1,62 @@
+id: CD-001
+name: Marketstack Stock Data API
+short_name: Marketstack
+provider: APILayer / Idera
+status: reviewing
+family: I
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [financial-markets, corporate-filings]
+entities: [security, exchange, enterprise]
+granularity: Ticker-date bars; intraday availability, fundamentals and filings vary by plan and market.
+coverage: 'Plan-specific: free history is short; paid tiers advertise longer history. Exchange and field coverage must be
+  sampled.'
+access:
+  endpoint: https://marketstack.com/pricing
+  kind: api
+  interfaces: [API]
+  auth: Account and API key (free key for non-commercial use; paid plans for commercial use).
+  cost: mixed
+  limits: 'Free plan 100 requests a month and 1 year of history; Basic 10,000 requests a month ($9.99 a month), Professional
+    100,000, Business 500,000 (https://marketstack.com/pricing, 26 Nov 2026).'
+licence:
+  status: restricted
+  notes: 'Terms: https://marketstack.com/pricing (read by the runner 26 Nov 2026; https://marketstack.com/terms now
+    redirects to the Idera/APILayer legal index https://www.ideracorp.com/legal/APILayer, whose Master SaaS
+    Subscription Agreement link could not be opened by the probe). The Free plan ("$0 per month", "100 Requests / mo",
+    "1 Year History") is marked "Non-Commercial Use"; the paid plans from "$9.99 per month" are marked "Commercial
+    Use". "Stock market data provided by the marketstack API is licensed and sourced from multiple high-authority
+    market data providers around the world." No right to redistribute or publicly display the data is stated;
+    attribution sentence: none given. Not reusable for public display: stays internal.'
+updates: End-of-day or intraday/real-time by plan; corrections policy not documented on opened pages.
+ingestion:
+  history: 'PROPOSAL: backfill approved tickers by bounded date windows after entitlement review.'
+  incremental: 'PROPOSAL: poll recent sessions and restate a correction window; no CDC claim.'
+  identifiers: Provider ticker plus MIC/exchange, date/time; map to ISIN where supplied.
+modelling:
+  notes: Separate adjusted and raw price facts; corporate actions are events, not additive measures.
+  overlap: Overlaps exchanges, SEC filings and other aggregators; retain vendor/source lineage.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (paid licence): Marketstack sells share prices for commercial use only on paid plans (Basic from
+    $9.99 a month; the free plan is "Non-Commercial Use", 100 requests a month, one year of history) and resells
+    exchange data, so showing Warsaw prices publicly would still need GPW''s own licence (CD-005). Buy a Marketstack
+    plan for zohelo, or park CD-001? Recommendation: park; the lawful route for Polish share prices is GPW''s Market
+    Data License Agreement (the CD-005 question).'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a paid licence, which is an owner question, so the
+    entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+    dev/src_parked1_probe.py, 26 Nov 2026): https://marketstack.com/pricing HTTP 200 (plans and use classes quoted
+    in licence.notes); https://marketstack.com/terms redirects to https://www.ideracorp.com/legal/APILayer (HTTP
+    200); https://api.marketstack.com robots.txt answered 401 (key required), so no API call was made. Dev probe run
+    45880748620 (job 140119185484, same branch and script, argument `two`, 26 Nov 2026): the Idera General Website
+    Terms of Use and Marketplace Terms of Use (HTTP 200) govern the website and marketplace, not data reuse.'
+  - 'Earlier parking reason: paid commercial market-data API; the plan terms do not grant public redistribution of
+    quotes'
+  references:
+  - https://marketstack.com/pricing
+  - https://www.ideracorp.com/legal/APILayer
+  - https://www.ideracorp.com/Legal/APILayer/Marketplace-Terms-of-Use

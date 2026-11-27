@@ -1,0 +1,46 @@
+id: GL-008
+name: Worldwide Governance Indicators (WGI)
+short_name: World Bank WGI
+provider: World Bank
+source_system: world_bank_wgi
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [governance, institutions]
+entities: [country]
+granularity: Economy/year/governance dimension with estimate, standard error and source count.
+coverage: More than 200 economies since 1996; annual in recent years.
+access:
+  endpoint: https://www.worldbank.org/en/publication/worldwide-governance-indicators
+  kind: bulk_file
+  interfaces: [HTML, bulk-files]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0, https://datacatalog.worldbank.org/search/dataset/0038026 ("This dataset is licensed under
+    Creative Commons Attribution 4.0"; World Bank dataset terms https://www.worldbank.org/ext/en/legal/terms-conditions/datasets):
+    copy, modify and distribute for any purpose including commercial use; indicate changes; provided as is (the World
+    Bank disclaims all warranties). Attribution: "Source: The World Bank, Worldwide Governance Indicators (Kaufmann,
+    Kraay and Mastruzzi)". Indicate changes.'
+updates: Annual release can revise historical estimates because the model and sources change.
+ingestion:
+  history: Archive complete named releases with metadata and vintage.
+  incremental: Reload a named release or affected period after publication; no CDC.
+  identifiers: Use published economy and indicator IDs; preserve survey/round/vintage where applicable.
+modelling:
+  notes: Model observations at stated grain; retain uncertainty, status, unit, source and methodology fields.
+  overlap: WDI republishes WGI series; use one canonical lineage and retain uncertainty measures.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers: []
+  references:
+  - https://www.worldbank.org/en/publication/worldwide-governance-indicators
+  - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
+  - https://datacatalog.worldbank.org/search/dataset/0038026
+  - https://www.worldbank.org/ext/en/legal/terms-conditions/datasets

@@ -1,0 +1,61 @@
+id: PLS-025
+name: National examination results and reports
+short_name: CKE exam results
+provider: Centralna Komisja Egzaminacyjna (CKE)
+source_system: gus_exam_results
+status: built
+family: B
+kpi: true
+geography: Poland; school-location categories and regions, release-dependent
+provider_type: national-public
+domains: [education outcomes, examinations]
+entities: [candidate-aggregate, school-location aggregate, territorial unit, exam subject]
+granularity: Aggregate exam result/distribution by subject, location category and other published breakdowns; no pupil records.
+coverage: Eighth-grade exam archive on opened page covers 2019-2026.
+access:
+  endpoint: https://stat.gov.pl/obszary-tematyczne/edukacja/edukacja/srednie-wyniki-uczniow-na-egzaminie-osmoklasisty,18,1.html
+  kind: bulk_file
+  interfaces: [CSV, XLSX, fixed GUS page (also dane.gov.pl datasets 2585 and 2621)]
+  auth: None.
+  cost: free
+  limits: 'None published; one file per release. cke.gov.pl is not used: its robots.txt disallows every agent but Scrapy.'
+licence:
+  status: open-conditional
+  notes: 'Terms: the route read is GUS''s republication of the CKE results. GUS terms https://stat.gov.pl/en/copyright/
+    (PL https://stat.gov.pl/copyright): no objection to copying and printing data and pages, including own changes and summaries,
+    on condition that the source is given; no named licence on stat.gov.pl; commercial reuse not addressed; GUS is not liable
+    for users'' summaries or reworked text. dane.gov.pl lists the same GUS dataset "Średnie wyniki uczniów na egzaminie
+    ósmoklasisty" (dataset 2585) and "Średnie wyniki egzaminu maturalnego" (dataset 2621) under "CC BY 4.0" (API records
+    read by the runner 26 Nov 2026). The page names the data source: "Dane z zestawów informacyjnych Okręgowych Komisji
+    Egzaminacyjnych; opracowanie wyników badań - Główny Urząd Statystyczny; Urząd Statystyczny w Gdańsku". Attribution:
+    "Źródło: GUS na podstawie danych OKE, Średnie wyniki uczniów na egzaminie ósmoklasisty (<year>)".'
+updates: Annual preliminary and detailed releases; results may be staged.
+ingestion:
+  history: Backfill annual summary/distribution/location tables and retain release stage.
+  incremental: Poll annually; version preliminary versus final files.
+  identifiers: Exam year + exam/subject + breakdown + geography/location category.
+modelling:
+  notes: 'Smallest Gold selection: the mean eighth-grade exam result (percent of points) by subject and sex, Poland and
+    16 voivodeships, 2019-2025, from the GUS CSV (columns nazwa_zmiennej; kraj; wojewodztwo; przedmiot; plec; typ_informacji_z_jednostka_miary;
+    rok; wartosc; flaga — the flaga column carries the source''s markers); then the matura means (GUS publikacja,17). Powiat,
+    gmina and school results (CKE, OKE) stay out: their host refuses robots.'
+  overlap: GUS/SIO may carry education context, not identical assessment outcomes.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915): approved through GUS, an official republisher of the CKE/OKE results. Dev probe
+    run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): cke.gov.pl
+    robots.txt "User-agent: * Disallow: /" (only Scrapy allowed), so nothing was read there; mapa.wyniki.edu.pl is a JavaScript
+    shell; the GUS CSV answered HTTP 200 (343,749 bytes, semicolon-separated, header shown above, first rows 2019 Poland).
+    Dev probe run 45815140983 (job 139892828435, same branch, argument `two`, 26 Nov 2026): dane.gov.pl datasets 2585 and
+    2621 (GUS, CC BY 4.0) link the GUS pages publikacja,18 and publikacja,17.'
+  - 'Overlap: no published KPI covers exam results (the PISA KPIs are drafts of another concept).'
+  references:
+  - https://stat.gov.pl/obszary-tematyczne/edukacja/edukacja/srednie-wyniki-uczniow-na-egzaminie-osmoklasisty,18,1.html
+  - https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/5488/18/1/1/srednie_wyniki_uczniow_na_egzaminie_osmoklasisty.csv
+  - https://dane.gov.pl/pl/dataset/2585
+  - https://dane.gov.pl/pl/dataset/2621
+  - https://stat.gov.pl/copyright
+  - https://cke.gov.pl/egzamin-osmoklasisty/wyniki/

@@ -24,7 +24,7 @@ deliverables:
   - Register entry PLG-007 has licence.notes with the terms URL and attribution; status approved
   state: done
   notes:
-  - 'Evidence: licence #1750, register decision #1751 (ingestion/register.yaml status approved)'
+  - 'Evidence: licence #1750, register decision #1751 (ingestion/register/plg-007.yaml status approved)'
 - key: data/src-plg-007/development
   title: MF state budget · Development
   done_when:
@@ -45,7 +45,7 @@ deliverables:
       from Actions. Schedule (stage 4) comes later: monthly operative reports.'
     files:
     - create: ingestion/sources/mf_state_budget.yaml
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/plg-007.yaml
     - edit: .github/workflows/pipeline.yml
     - edit: docs/sources.md
     steps:
@@ -56,7 +56,7 @@ deliverables:
     - 'Files under extraction.bulk_file.files: one file: entity budget_execution_monthly, url_from {page: "https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne",
       pattern: "/attachment/"}, format raw, version last_modified. pick: first (the newest month is listed first; confirm
       from the Dev trial''s link list).'
-    - 'Add `source_system: mf_state_budget` to register entry PLG-007 in ingestion/register.yaml.'
+    - 'Add `source_system: mf_state_budget` to register entry PLG-007 in ingestion/register/plg-007.yaml.'
     - Add mf_state_budget to the `source` options list of the workflow_dispatch inputs in .github/workflows/pipeline.yml (alphabetical
       place).
     - 'docs/sources.md: a `mf_state_budget` section like world_bank_wdi''s (route, entity, version, restart unit).'

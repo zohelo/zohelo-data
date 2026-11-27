@@ -1,0 +1,50 @@
+id: PLG-008
+name: Treasury debt time series and monthly bulletin
+short_name: MF Treasury debt
+provider: Ministry of Finance
+source_system: mf_treasury_debt
+current: true
+status: built
+family: D
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [public debt, public finance]
+entities: [country, debt instrument]
+granularity: Treasury debt by instrument, domestic/foreign criterion and period.
+coverage: 'Workbook Zadluzenie_Skarbu_Panstwa.xlsx: six sheets (by instrument, holder, currency, actual maturity, duration and average maturity, maturity of Treasury securities), month ends from 2001-01; Dev probes 43084312730, 43085156243, 11 Nov 2026.'
+access:
+  endpoint: https://www.gov.pl/web/finanse/szeregiczasowe
+  kind: bulk_file
+  interfaces: [XLSX, PDF, HTML]
+  auth: public download
+  cost: free
+  limits: Unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+    (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+    attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+    consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+    The XLSX/PDF attachments carry no licence of their own; an attachment marked with other terms keeps them.
+    Attribution: "Źródło: Ministerstwo Finansów, Zadłużenie Skarbu Państwa – szeregi czasowe (<month>)" / "Source:
+    Ministry of Finance, State Treasury debt time series (<month>)".'
+updates: Monthly; preliminary and final values may differ.
+ingestion:
+  history: 'Full history in the one workbook (each release holds the whole series).'
+  incremental: 'Weekday re-download; written only when the SHA-256 changed; Bronze keeps the newest copy.'
+  identifiers: month + instrument + issuance market/currency + vintage
+modelling:
+  notes: Stocks are non-additive over time; retain value, share and change separately.
+  overlap: Do not add to public-finance-sector debt; scope differs.
+research:
+  priority: review-first
+  evidence: catalogue-only
+  connection: tested
+  blockers:
+  - 'Preliminary vs final values are not told apart in the workbook; Bronze keeps only the newest copy (older copies in the Archive for 90 days).'
+  references:
+  - https://www.gov.pl/web/finanse/szeregiczasowe
+  - https://www.gov.pl/attachment/cdea605f-3278-4a55-af7b-0162d548ea0f
+  - https://www.gov.pl/web/gov/prawa-autorskie

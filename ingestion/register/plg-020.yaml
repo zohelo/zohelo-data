@@ -1,0 +1,68 @@
+id: PLG-020
+name: Database of decisions of the President of UOKiK
+short_name: UOKiK decisions
+provider: Office of Competition and Consumer Protection (UOKiK)
+status: approved
+family: F
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [competition, consumer protection, enforcement]
+entities: [enterprise, government decision]
+granularity: Decision/document by case number, date, area and party.
+coverage: Historical coverage depends on collection; start not established.
+access:
+  endpoint: https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+  kind: api
+  interfaces: [JSON (Domino view), HTML, PDF]
+  auth: public
+  cost: free
+  limits: 'None published. decyzje.uokik.gov.pl has no robots.txt (HTTP 404). The main site uokik.gov.pl is another host:
+    its robots.txt (87 agents) allows generic agents and disallows ClaudeBot, anthropic-ai, GPTBot, CCBot and other AI crawlers
+    by name, so nothing is read from uokik.gov.pl. The decisions host timed out in the first probe and answered in the second.'
+licence:
+  status: unresolved
+  notes: 'Terms: not read. The entry page of the decisions host is a 393-byte frameset without terms; UOKiK''s terms would
+    be on uokik.gov.pl, which is not opened because its robots.txt disallows the Claude crawlers by name. Reuse is therefore
+    not stated as allowed: internal use only until the terms are quoted. Published decisions are redacted versions.'
+updates: Decision-driven; corrections and appeals may alter context. The entry page was last modified 12 Nov 2026; a decision
+  of 15 Dec 2025 (DOZIK-6/2025) was the newest seen in web search results.
+ingestion:
+  history: 'API route: the Lotus Domino view https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON&count=<n>&start=<position>
+    returns the index of decisions as JSON (tested with count=3: HTTP 200, application/json, 12 top-level categories; the
+    first has 18 children and 1,408 descendant entries). Full load: page through the view with start and count. PROPOSAL:
+    500 entries per request, one request per second; the number of entries and requests is measured at the build. Only the
+    index columns are stored; the decision PDFs (/bp/dec_prez.nsf/<view>/<unid>/$FILE/<name>.pdf) are not downloaded. Entity
+    = decision (view entry); version = snapshot date. Decisions from 2003 appear in search results.'
+  incremental: 'PROPOSAL: weekly snapshot of the view index; a new decision is a new view entry (@unid).'
+  identifiers: View entry id (@unid, @noteid); decision number (e.g. DOZIK-6/2025), date, department signature.
+modelling:
+  notes: 'kpi false. Smallest Gold selection: an entity table of decisions (number, date, department signature, category
+    as the view gives them) and the count of decisions per year and type, Poland only, no regional grain. Fines are in the
+    PDFs, not in the index (unverified), so no fines measure is proposed. Effort M.'
+  overlap: May overlap court judgments and UOKiK reports.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+    decyzje.uokik.gov.pl answered: robots.txt HTTP 404, entry page 200, the view WWW-wszystkie as JSON 200. In the first
+    probe (run 43282997907) the same host timed out, so the build uses long timeouts and reports a timeout instead of retrying
+    hard.'
+  - 'Owner question: the main UOKiK site uokik.gov.pl names ClaudeBot and anthropic-ai (with other AI crawlers) in its robots.txt,
+    while the decisions database sits on another host, decyzje.uokik.gov.pl, which has no robots.txt. The build would read
+    only the decisions host, with a scheduled program and not an AI crawler. Do you accept that, or do you read the robots
+    rule as UOKiK''s wish for all its hosts, in which case PLG-020 and PLG-021 wait for a reuse request to UOKiK?'
+  - 'Licence unresolved: UOKiK''s terms are not read (uokik.gov.pl names the Claude crawlers in robots.txt). Internal build
+    only.'
+  - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+    19:53 UTC): the view WWW-wszystkie is categorised, not flat: 12 top-level categories (subject areas; the first is "Jakość
+    paliw"), then the year, then one entry per decision whose single cell is an HTML fragment starting "Numer decyzji:".
+    The names of the other eleven categories were not read. Still not verified: the number of entries and whether every
+    decision type is in the view. The builder lists the categories first and parses the decision number, date and parties
+    from the HTML cell.'
+  references:
+  - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+  - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
+  - https://uokik.gov.pl/robots.txt

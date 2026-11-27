@@ -1,6 +1,6 @@
 # Source playbook
 
-The one path every source in `ingestion/register.yaml` follows (owner decision O36: every
+The one path every source in `ingestion/register/` follows (owner decision O36: every
 non-parked source is onboarded, scheduled and modelled through Gold):
 
 **research → Landing → Bronze → Silver → schedule → Gold → published.**

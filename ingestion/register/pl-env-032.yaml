@@ -1,0 +1,58 @@
+id: PL-ENV-032
+name: Wrocław Open Data public-transport schedules and vehicle positions
+short_name: Wrocław transport open data
+provider: Gmina Wrocław / Centrum Usług Informatycznych
+source_system: gtfs_wroclaw
+status: built
+family: H
+kpi: false
+geography: Wrocław, Poland
+provider_type: subnational-public
+domains: [public transport, municipal open data]
+entities: [route, trip, stop, vehicle]
+granularity: Static GTFS snapshots of Wrocław public transport (ZIP); vehicle positions are a separate live dataset.
+coverage: 'Timetable dataset published 19 Dec 2017; the listing keeps earlier snapshots (newest named 17 Oct 2026). Vehicle
+  positions: current state only.'
+access:
+  endpoint: https://open-data.cui.wroclaw.pl/hdb/metadane/13/
+  kind: bulk_file
+  interfaces: [GTFS, ZIP, CSV, JSON, portal]
+  auth: Public downloads.
+  cost: Free public access.
+  limits: None published. The portal moved to https://open-data.cui.wroclaw.pl/ (own software, no CKAN API; opendata.cui.wroclaw.pl
+    redirects there). The old catalogue under https://www.wroclaw.pl/open-data/ is disallowed by robots.txt and is not used.
+licence:
+  status: open
+  notes: 'Terms: the metadata page of the dataset "Rozkład jazdy transportu publicznego" (Urząd Miejski Wrocławia, Wydział
+    Transportu), https://open-data.cui.wroclaw.pl/hdb/metadane/13/, names the licence "CC0 1.0" (desk fetch 12 Nov 2026).
+    The portal licence list https://open-data.cui.wroclaw.pl/hdb/licencje/ includes CC0 1.0 next to CC BY 4.0 and non-commercial
+    variants, so the licence is per dataset. CC0 allows commercial reuse and modification without attribution. Attribution
+    used anyway: "Źródło: Otwarte Dane Wrocław, Rozkład jazdy transportu publicznego". The vehicle-position dataset (https://open-data.cui.wroclaw.pl/hdb/metadane/51/)
+    has its own licence field, not read.'
+updates: 'Metadata says "Co godzinę" and last update 12 Nov 2026, while the newest snapshot in the file list is dated 23
+  Oct 2026: the real rhythm is per timetable change. Vehicle positions every 10 minutes.'
+ingestion:
+  history: Bulk files listed on https://open-data.cui.wroclaw.pl/hdb/ft/6/ (newest first; e.g. "OtwartyWroclaw_rozklad_jazdy_GTFS_17102026",
+    11.3 MB, https://open-data.cui.wroclaw.pl/hdb/download/146/). The download id is per snapshot, so the listing page is
+    the entry. Listing and file URL come from the desk fetch; a GitHub runner reached the portal (200 on /hdb/metadane/51/
+    and the home page) but did not fetch the file.
+  incremental: Snapshot of the newest listed file; version = snapshot name (date in the name); weekly check.
+  identifiers: snapshot name, route_id, stop_id, trip_id, service date.
+modelling:
+  notes: kpi false; low Gold value (one city). Same city-GTFS selection and Gold use as PL-ENV-029 (stops, routes, scheduled
+    trips per day). Effort S after the shared pattern exists.
+  overlap: National catalogue may mirror the city’s GTFS resource.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): open-data.cui.wroclaw.pl answered
+    200 to a GitHub runner, but the GTFS listing and file were found by the desk fetch afterwards and are not yet fetched
+    from a runner: the Landing trial does it.'
+  - Read the licence field of the vehicle-position dataset only if it is ever wanted.
+  references:
+  - https://open-data.cui.wroclaw.pl/hdb/metadane/13/
+  - https://open-data.cui.wroclaw.pl/hdb/ft/6/
+  - https://open-data.cui.wroclaw.pl/hdb/licencje/
+  - https://open-data.cui.wroclaw.pl/hdb/metadane/51/

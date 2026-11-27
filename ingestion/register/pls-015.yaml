@@ -1,0 +1,56 @@
+id: PLS-015
+name: API Terminy Leczenia / Informator o Terminach Leczenia
+short_name: NFZ waiting times
+provider: Narodowy Fundusz Zdrowia (NFZ)
+source_system: nfz_waiting_times
+status: built
+family: B
+kpi: true
+geography: Poland; service location
+provider_type: national-public
+domains: [waiting times, healthcare access, providers]
+entities: [healthcare provider, service location, benefit, waiting-list aggregate]
+granularity: Benefit/provider/place/case record with first available date and month-end waiting-list count.
+coverage: Current data; v1.3 docs point to v1.4. History unknown.
+access:
+  endpoint: https://apinfz.nfz.gov.pl/app-itl-api-pcus/
+  kind: api
+  interfaces: [REST API, JSON, XML, Swagger]
+  auth: Public data API; no key described.
+  cost: free
+  limits: 10 requests/second per IP (terms v1.3 section III); v1.3 is marked obsolete, v1.4 is the live version.
+licence:
+  status: open-conditional
+  notes: 'Terms: API regulations (Regulamin) of "API Terminy Leczenia", statute page of the v1.4 API the extractor reads,
+    https://apinfz.nfz.gov.pl/app-itl-api-pcus/swagger-ui/statute.html (same clauses as v1.3 at https://api.nfz.gov.pl/app-itl-api/terms;
+    read by Dev run 43343151288), section II: users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone
+    jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads
+    users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change
+    the API and its terms. No licence name and no clause on commercial reuse; public display of the published values is
+    allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo
+    calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy
+    Fundusz Zdrowia, API Terminy Leczenia (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Waiting
+    Times API (https://api.nfz.gov.pl/)".'
+updates: Availability changes frequently; month-end counts coexist with point-in-time first dates.
+ingestion:
+  history: Begin dated snapshots after onboarding; no historical backfill claim.
+  incremental: Snapshot current records at agreed cadence and retain observed-at time; not CDC.
+  identifiers: Queue ID + provider/place/benefit/case; locality/street labels are not TERYT-certified.
+modelling:
+  notes: First date is a volatile snapshot; month-end counts must not be summed across duplicate places.
+  overlap: Overlaps NFZ contracts/providers but describes availability, not contracts or completed care.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Terms recorded for API v1.3 (https://api.nfz.gov.pl/app-itl-api/terms); v1.4 documentation (from 10 July 2026, https://apinfz.nfz.gov.pl/app-itl-api-pcus/)
+    has no /terms page: re-read the v1.4 terms before the first public use'
+  - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
+    values are shown unchanged'
+  - Define snapshot cadence
+  - Resolve provider/place identity
+  references:
+  - https://api.nfz.gov.pl/app-itl-api/
+  - https://api.nfz.gov.pl/app-itl-api/terms
+  - https://apinfz.nfz.gov.pl/app-itl-api-pcus/swagger/v1.4/swagger.json

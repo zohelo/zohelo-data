@@ -1,0 +1,49 @@
+id: PLG-002
+name: Balance of payments statistics
+short_name: NBP balance of payments
+provider: Narodowy Bank Polski (NBP)
+source_system: nbp_bop
+current: true
+status: built
+family: C
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [macroeconomics, external sector]
+entities: [country]
+granularity: 'Balance of payments items (current, capital and financial account, credits, debits, balances, by
+  functional category and sector) by month (bop_m) and quarter (bop_q), in million PLN, EUR and USD.'
+coverage: Monthly and quarterly from 2004 (Dev probe 43085930329, 11 Nov 2026).
+access:
+  endpoint: https://static.nbp.pl/dane/bilans-platniczy/bop_q.xlsx
+  kind: bulk_file
+  interfaces: [XLSX, PDF]
+  auth: public download
+  cost: free
+  limits: 'Two workbooks (~290 kB bop_m, ~340 kB bop_q) at fixed URLs; the nbp.pl pages linking them answer
+    automated clients with HTTP 403. Terms of Use §5(1): one request per file and run.'
+licence:
+  status: unresolved
+  notes: 'Terms: Terms of Use of the Narodowy Bank Polski Website,
+    https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf (personal use, source with a link to
+    www.nbp.pl; commercial reuse and redistribution not addressed). Attribution: "Źródło: NBP, www.nbp.pl".
+    Unresolved under the owner decision of 14 Oct 2026 (NBP data stays internal until NBP confirms reuse terms).'
+updates: Monthly BoP about six weeks after the month, quarterly BoP about three months after the quarter; revised
+  history (the whole workbook is replaced; Last-Modified 14 Oct 2026 bop_m, 30 Sep 2026 bop_q at the probe).
+ingestion:
+  history: Full history in each workbook; landed whole (bulk_file pattern), one version kept in Bronze.
+  incremental: Weekday re-download; written only when the SHA-256 changed.
+  identifiers: workbook + currency sheet + item (row label, block, section) + period
+modelling:
+  notes: Separate flows, balances, credits/debits; amounts only (no shares of GDP in the workbooks).
+  overlap: Overlaps Eurostat BOP_C6_Q / BOP_GDP6_Q; each source its own series (O31).
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - Confirm NBP reuse terms.
+  references:
+  - https://static.nbp.pl/dane/bilans-platniczy/bop_m.xlsx
+  - https://static.nbp.pl/dane/bilans-platniczy/bop_q.xlsx
+  - https://nbp.pl/en/statistic-and-financial-reporting/calendar/

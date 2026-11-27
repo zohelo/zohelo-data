@@ -786,9 +786,27 @@ REQUIRED = ("family", "kpi", "short_name")
 
 
 def register(files: list[Path]) -> list[str]:
-    """The source register (ingestion/register.yaml) and the source declarations agree."""
-    entries = yaml.safe_load((ROOT / "ingestion/register.yaml").read_text())["sources"]
-    problems, ids = [], [e.get("id") for e in entries]
+    """The source register (ingestion/register/<id lower>.yaml, one file per entry) and the declarations agree."""
+    from ingestion.common import register as source_register
+
+    problems = []
+    if (ROOT / "ingestion/register.yaml").exists():
+        problems.append(
+            "register: ingestion/register.yaml is retired (D42); each entry is its own file "
+            "ingestion/register/<id lower>.yaml"
+        )
+    entries = []
+    for path in source_register.files(ROOT):
+        entry = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(entry, dict):
+            problems.append(f"register: {path.relative_to(ROOT)}: one entry (a mapping) per file")
+            continue
+        if path.stem != str(entry.get("id", "")).lower():
+            problems.append(
+                f"register: {path.relative_to(ROOT)}: id {entry.get('id')!r}, the file is named {path.stem}"
+            )
+        entries.append(entry)
+    ids = [e.get("id") for e in entries]
     problems += [f"register: duplicate id {i}" for i in sorted({i for i in ids if ids.count(i) > 1})]
     problems += [
         f"register: {e.get('id')}: status {e.get('status')!r}" for e in entries if e.get("status") not in STATUSES

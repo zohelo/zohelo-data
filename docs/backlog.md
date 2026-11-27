@@ -50,7 +50,7 @@ zohelo-data only:
   stages.yaml                # the 11-stage source template (source Epics are generated from the register)
 ```
 
-Source Epics are generated from `ingestion/register.yaml` for every entry (owner O36, 11 Nov:
+Source Epics are generated from `ingestion/register/` (one file per entry) for every entry (owner O36, 11 Nov:
 data sources are the top priority and every source is onboarded through Gold, so every source keeps its issues;
 this reverses the current-phase rule of 10 Nov). For an entry without its own
 `epics/src-<id>.yaml` the Epic depends on the register status (owner, 28 Oct, #2230): `registered` or `reviewing` → only the stage-1 review Deliverable and its

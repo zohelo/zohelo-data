@@ -1,0 +1,72 @@
+id: CD-006
+name: Electronic Information Transmission System (ESPI)
+short_name: KNF ESPI
+provider: Polish Financial Supervision Authority (KNF)
+source_system: knf_espi
+status: built
+family: I
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [corporate-filings, financial-markets]
+entities: [issuer, filing, security]
+granularity: 'One row per issuer report in KNF''s public OAM list: issuer, date received, the form code of the title,
+  OAM document id, link to the report''s page (the title itself is not stored).'
+coverage: Regulated-market issuers (423 issuers and about 2,000 periodic reports in 2023, KNF supervision report); the depth
+  of the public OAM list is not measured yet.
+access:
+  endpoint: https://moam.knf.gov.pl/moam.nsf
+  kind: web
+  interfaces:
+  - HTML
+  auth: Public reading, no login. ESPI itself is a closed transmission system (issuers to KNF and on to the market operator
+    and news agencies); the public copy is KNF's OAM.
+  cost: free
+  limits: 'None documented; moam.knf.gov.pl has no robots.txt (404). Proposed pattern: the by-date list once a day, one
+    request at a time, a pause of a few seconds, identified user agent; no report files.'
+licence:
+  status: unresolved
+  notes: 'Terms: none stated for the OAM (https://moam.knf.gov.pl/moam.nsf, list page read by the runner 12 Nov 2026). https://intranet.knf.gov.pl/en/MARKET/OAM
+    (desk reading 12 Nov 2026) calls it "a centralised data system for the central storage of regulated information" and
+    links "Enter OAM" (moam.knf.gov.pl/moam.nsf); the KNF pages carry only "Copyrights © 2023 Komisja Nadzoru Finansowego";
+    the ESPI rules (https://www.knf.gov.pl/knf/pl/komponenty/img/Regulamin_korzystania_z_ESPI_66994.pdf, linked from https://www.knf.gov.pl/dla_rynku/espi)
+    govern issuers, not readers. Commercial reuse: not stated. Modification: not stated. Attribution sentence: none given
+    (working text: "Źródło: Komisja Nadzoru Finansowego, OAM"). Stays internal. Only issuer, form code, date, report id
+    and link are stored: no title (titles can name natural persons), no report text, no attachments.'
+updates: Event-driven, every day; the list showed "Liczba raportów za dzień 2026-11-12 wynosi 87" at 19:37 UTC. Corrections
+  arrive as new reports. From July 2027 the EU single access point (ESAP) is to be public (ESMA press release of 10 Jul
+  2026, desk reading).
+ingestion:
+  history: 'Web route: the public OAM list at https://moam.knf.gov.pl/moam.nsf (HTML, 14,916 bytes for the current day;
+    views by issuer, by date received and all, plus search). The URL pattern of the by-date view and the depth of history
+    are to be measured in the build trial with the same polite pattern.'
+  incremental: 'Daily: read the day''s list and the previous days still open; a report is new by its link. One row per report;
+    nothing is overwritten.'
+  identifiers: OAM document link (guid), issuer name, date received, report type prefix of the title (RB, RB-W, UNI-EN,
+    periodic types). LEI or ISIN are not in the list.
+modelling:
+  notes: 'kpi false. Smallest Gold selection: number of issuer reports per day and month for Poland, split by report type
+    (current, periodic), plus an issuer list; no voivodeship split in the source. Frequency: event data, aggregated to D
+    and M (separate measure keys). No values, so no suppression markers. Duplicates: a correction is a new report with its
+    own link; the same report also appears on gpw.pl (CD-007) and PAP (CD-008, parked), so count from one source only. No
+    overlap with published KPIs. Size: about 90 rows a day (measured on one day). Effort S.'
+  overlap: CD-007 lists the same ESPI reports on gpw.pl; CD-006 is the regulated-market source and CD-007 supplies only
+    EBI rows.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Route decision: D40 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+    public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
+    Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): http://moam.knf.gov.pl/moam.nsf
+    redirected to https and answered 200 (text/html, 14,916 bytes) with the day''s list of 87 reports (issuer, date, title,
+    file link); robots.txt 404; https://www.knf.gov.pl/dla_rynku/espi answered 200 and links only the issuer-side ESPI pages.'
+  - 'Not verified: the by-date and by-issuer URL patterns, how far back the list goes, any terms text on the OAM pages beyond
+    the list page.'
+  references:
+  - https://moam.knf.gov.pl/moam.nsf
+  - https://www.knf.gov.pl/dla_rynku/espi
+  - https://intranet.knf.gov.pl/en/MARKET/OAM
+  - https://www.esma.europa.eu/press-news/esma-news/esma-launches-data-collection-under-first-phase-esap

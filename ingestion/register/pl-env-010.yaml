@@ -1,0 +1,63 @@
+id: PL-ENV-010
+name: Portal Jakości Powietrza API
+short_name: GIOŚ air quality
+provider: Główny Inspektorat Ochrony Środowiska (GIOŚ)
+source_system: gios_air_quality
+status: built
+family: G
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [air quality, environment]
+entities: [monitoring station, sensor, observation]
+granularity: Station/sensor pollutant readings and indexes.
+coverage: 'Current operational data; the API keeps the last three days of hourly values (Dev probes of #2960), so its
+  history starts with the first daily pass. Verified values 2000 to 2025 from the yearly archive files (#3119).'
+access:
+  endpoint: https://powietrze.gios.gov.pl/pjp/content/api
+  kind: api
+  interfaces: [REST API, JSON-LD, OpenAPI]
+  auth: Public API.
+  cost: Free public access.
+  limits: 'Per the API page: current measurement data from the last full hour to 3 days back, 1500 requests per minute;
+    air quality index 1500 per minute; station and sensor lists with their own limits (page lists "limit 2 i 1500 żądań
+    na minutę"): confirm per endpoint in the dev trial.'
+licence:
+  status: open-conditional
+  notes: 'Terms: Regulamin of the portal https://powietrze.gios.gov.pl/pjp/content/terms_of_service (read 12 Nov 2026),
+    which the API page binds API users to ("Korzystając z API akceptują Państwo wszystkie warunki zawarte w Regulaminie
+    portalu."). Licence, section 3: "Wykorzystywanie opublikowanych danych jest możliwe w oparciu o Licencję Creative Commons
+    BY 4.0 – Uznanie autorstwa." Use is free of charge, and the materials may be "ponownie wykorzystywane w całości lub w
+    istotnej części" (section 2). Conditions, section 4: the re-user "zobowiązany jest w sposób czytelny i wyraźny wskazać
+    źródło pozyskania informacji" and the time the information was produced, and whether it is used in full or in part.
+    Modification, section 5: allowed with a notice ("użytkownik zobowiązany jest do zamieszczenia stosownej informacji o
+    przetworzeniu (zmianie)"). Commercial reuse: allowed under CC BY 4.0 (the Regulamin does not restrict it). GIOŚ accepts
+    no liability for processed information (section 6). Attribution (section 4): "Źródło danych: GIOŚ - EKOINFONET", with
+    the measurement time and a note when values are processed. GIOŚ warns current data are unverified and may change.
+    The Regulamin covers every material published on the site ("Korzystanie przez użytkowników z materiałów
+    opublikowanych w serwisie powietrze.gios.gov.pl jest bezpłatne"; "W serwisie udostępniane są również wyniki
+    pomiarów z manualnych stanowisk pomiarowych"), so also the yearly archive files on /pjp/archives (re-read 26 Nov
+    2026 by Dev probe 45750149567, #3119).'
+updates: Operational updates can be delayed by transmission outages and may be revised after verification.
+ingestion:
+  history: 'New API v1: https://api.gios.gov.pl/pjp-api/v1/rest/data/getData/{sensorId} (measurements), /aqindex/getIndex/{stationId},
+    station and sensor lists; the old /pjp-api/rest/ endpoints are withdrawn. Verified values (#3119): the yearly files
+    of https://powietrze.gios.gov.pl/pjp/archives (plain links /pjp/archives/downloadFile/<id>; no robots.txt; the
+    page''s reCAPTCHA guards only its own query export), "Wyniki pomiarów z <year> roku" 2000 to 2025 (ZIPs of 2.3 to
+    75 MB, one workbook per indicator and averaging time) and the station workbook; GIOŚ replaces a file under a new id
+    (Dev probes 45746079470, 45747293591, 45750149567, 45750793415, 45756304318). The API v1 archivalData services
+    (2 requests a minute) are not used.'
+  incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
+  identifiers: Station, sensor/parameter and observation timestamp.
+modelling:
+  notes: All API pollutant values are documented as µg/m³, including CO; preserve validation status and unit.
+  overlap: Do not mix provisional station readings with verified annual assessments without status.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Current data are not validated and may change (GIOŚ): keep snapshots and mark them provisional'
+  references:
+  - https://powietrze.gios.gov.pl/pjp/content/api
+  - https://powietrze.gios.gov.pl/pjp/content/terms_of_service

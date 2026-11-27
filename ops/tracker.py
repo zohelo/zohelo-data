@@ -446,8 +446,9 @@ def main(argv=None) -> int:
     gold_declared = len([n for n in shared_gold if n != "gold.coverage"])
     build = newest("Pipeline · platform · silver/gold: build")
     extra_snapshots = sum(max(0, t["snapshots"] - 1) for t in tables.values())
-    register = yaml.safe_load((ROOT / "ingestion" / "register.yaml").read_text()).get("sources", [])
-    not_onboarded = sum(1 for e in register if not e.get("source_system"))
+    from ingestion.common import register
+
+    not_onboarded = sum(1 for e in register.entries(ROOT) if not e.get("source_system"))
 
     lines = [
         "# Data availability tracker",
@@ -476,7 +477,7 @@ def main(argv=None) -> int:
         namespaces_line += " — ⚠️ scratch left: " + ", ".join(ns["scratch_namespaces"] + ns["scratch_folders"])
     lines += [
         "",
-        f"Plus **{not_onboarded} researched sources** in `ingestion/register.yaml` that are not onboarded yet.",
+        f"Plus **{not_onboarded} researched sources** in `ingestion/register/` that are not onboarded yet.",
         "",
         "## Platform",
         "",

@@ -1,0 +1,66 @@
+id: GL-032
+name: IP Statistics Data Center
+short_name: WIPO IP Statistics
+provider: World Intellectual Property Organization
+source_system: wipo_ip_stats
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [patents, trademarks, industrial-designs, innovation]
+entities: [country, ip-office, applicant-aggregate]
+granularity: Office/country/year/IP-right/indicator with filing, grant, registration, renewal and in-force measures.
+coverage: Worldwide latest and historical data; separate pre-1980 files and PCT 1985-1999 history are linked.
+access:
+  endpoint: https://www.wipo.int/en/web/ip-statistics
+  kind: bulk_file
+  interfaces: ['ZIP files linked from the IP statistics page: wipo-data-patent-indicators.zip, wipo-data-trademark-indicators.zip,
+      docs-en-wipo-data-design-indicators.zip, wipo_ip_historical_data.zip', ipc_technology.xlsx concordance]
+  auth: none
+  cost: free
+  limits: 'None published. robots.txt of www.wipo.int disallows only system paths (/o/, /c/, /do/ ...), not /documents/;
+    www3.wipo.int (the interactive Data Center) is disallowed for all agents ("Disallow: /") and is not used; webcms.wipo.int
+    timed out from the runner. The file links are on the page (their paths change with releases), so the extractor finds
+    them by name pattern.'
+licence:
+  status: restricted
+  notes: 'Terms: WIPO IP Statistics Data Center conditions of use https://www.wipo.int/en/web/ip-statistics/about (session
+    read, 26 Nov 2026): "By using WIPO''s statistical data, users agree not to republish or commercially re-sell WIPO''s statistical
+    datasets." and "In addition, when employing WIPO''s statistics data in any written work, users shall cite "WIPO Statistics
+    Database" as the source of the data."; "The accuracy of data remains under the responsibility of the offices." Commercial
+    reuse: no (re-selling forbidden); modification: not stated. Republishing the datasets is not allowed, so the data stay
+    internal (builder: licence.csv key `unresolved`); derived analysis citing the source is allowed. Attribution: "Source:
+    WIPO Statistics Database, <download date>."'
+updates: Annual reporting from IP offices; later surveys may revise historical figures.
+ingestion:
+  history: Archive downloads, glossary and classification/concordance version.
+  incremental: Replace changed annual tables; preserve release vintage.
+  identifiers: Office/country + right type + indicator + year; filing-office and applicant-origin are distinct.
+modelling:
+  notes: 'Applications, classes and designs can be different counting units; totals are not interchangeable. Smallest Gold
+    selection: patent applications and grants by office and by applicant origin for Poland (the Polish Patent Office and
+    Polish residents abroad), then all countries, from wipo-data-patent-indicators.zip; trademark and design indicators next;
+    the historical file (pre-1980 and PCT 1985-1999) last. Annual. Filing office and applicant origin are separate breakdowns,
+    never summed.'
+  overlap: Overlaps UNdata SYB 264 Patents (loaded, WIPO-sourced), EX-001 UPRP statistics (PR open), OECD and WDI innovation
+    indicators; WIPO harmonizes the office surveys.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2917): approved for internal build; the restricted licence keeps it off the public sites,
+    which does not stop a build (owner rule of 12 Nov 2026). Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): the page https://www.wipo.int/en/web/ip-statistics answered
+    with 6 XLSX and 5 ZIP links; HEAD wipo_ip_historical_data.zip 200 (425,299 bytes, Last-Modified 18 Jun 2024), docs-en-wipo-data-design-indicators.zip
+    200 (1,463,477 bytes, 21 Jun 2024), ipc_technology.xlsx 200 (45,518 bytes, 19 Mar 2026); the patent and trademark ZIPs
+    were listed but not sized. www3.wipo.int robots.txt disallows all agents.'
+  - 'Built (26 Nov 2026, #1262; docs/sources/wipo_ip_stats.md): Dev probes 45871388485 and 45872152431 opened the files.
+    The patent ZIP holds publications and grants by office, origin and technology field (no applications); the design
+    ZIP design counts by Locarno class; both 2000-2022, files of April and June 2024. The trademark ZIP (2.4 M rows per
+    file) is left out until an incremental design (D28).'
+  references:
+  - https://www.wipo.int/en/web/ip-statistics
+  - https://www.wipo.int/en/web/ip-statistics/about
+  - https://www.wipo.int/documents/d/ip-statistics/wipo-data-patent-indicators.zip
+  - https://www.wipo.int/en/web/terms-of-use

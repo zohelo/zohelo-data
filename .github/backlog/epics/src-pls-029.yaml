@@ -25,7 +25,7 @@ deliverables:
   - Register entry PLS-029 has licence.notes with the terms URL and attribution; status approved
   state: done
   notes:
-  - 'Evidence: licence #1726, register decision #1727 (ingestion/register.yaml status approved)'
+  - 'Evidence: licence #1726, register decision #1727 (ingestion/register/pls-029.yaml status approved)'
 - key: data/src-pls-029/development
   title: MRPiPS registered unemployment · Development
   done_when:
@@ -45,7 +45,7 @@ deliverables:
       proves them from Actions. Schedule (stage 4) comes later: monthly releases.'
     files:
     - create: ingestion/sources/mrpips_unemployment.yaml
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/pls-029.yaml
     - edit: .github/workflows/pipeline.yml
     - edit: docs/sources.md
     steps:
@@ -57,7 +57,7 @@ deliverables:
     - 'Files under extraction.bulk_file.files: one file: entity unemployment_monthly, url_from {page: "https://psz.praca.gov.pl/web/urzad-pracy/rynek-pracy/statystyki-i-analizy/bezrobocie-rejestrowane",
       pattern: "\\.xlsx?$"}, format raw, version last_modified. If that page returns 404 or no match, the Dev trial annotates
       the links of https://psz.praca.gov.pl/ instead; take the statistics page from that list and record it.'
-    - 'Add `source_system: mrpips_unemployment` to register entry PLS-029 in ingestion/register.yaml.'
+    - 'Add `source_system: mrpips_unemployment` to register entry PLS-029 in ingestion/register/pls-029.yaml.'
     - Add mrpips_unemployment to the `source` options list of the workflow_dispatch inputs in .github/workflows/pipeline.yml
       (alphabetical place).
     - 'docs/sources.md: a `mrpips_unemployment` section like world_bank_wdi''s (route, entity, version, restart unit).'

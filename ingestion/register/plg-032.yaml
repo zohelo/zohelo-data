@@ -1,0 +1,61 @@
+id: PLG-032
+name: Prison statistics
+short_name: Prison Service statistics
+provider: Prison Service (Służba Więzienna)
+status: reviewing
+family: F
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [corrections, justice statistics]
+entities: [prison institution, person-aggregate]
+granularity: Monthly/quarterly/annual aggregates on population, capacity and custody categories.
+coverage: Archive varies; recent annual files confirmed.
+access:
+  endpoint: https://sw.gov.pl/strona/Statystyka
+  kind: bulk_file
+  interfaces: [PDF, HTML]
+  auth: public download
+  cost: free
+  limits: None published. From a GitHub runner sw.gov.pl and www.sw.gov.pl fail TLS certificate verification; bip.sw.gov.pl
+    does not resolve.
+licence:
+  status: unresolved
+  notes: 'Terms: not read (the host was not reachable from the runner, and the desk fetch was refused by robots.txt on the
+    file path /sites/default/files/migrated-assets/). The one monthly report opened by the desk fetch (January 2019, PDF)
+    carries no reuse statement.'
+updates: Monthly statistical information about three weeks after the month (January 2019 dated 22 Feb 2019; a June 2026
+  file appears in web search results); annual tables.
+ingestion:
+  history: Files linked from https://sw.gov.pl/strona/statystyka-miesieczna and /statystyka-roczna; file URLs are hashes
+    (/sites/default/files/migrated-assets/assets/xx/xx/xx/<sha1>.pdf, older /assets/...), so the listing page is the only
+    stable entry. The files seen are PDF tables (33 pages for a month), also where the link text says xlsx. No API.
+  incremental: None until the owner question is answered.
+  identifiers: Report month or year; table number; prison-service district (16 districts, not voivodeships) or facility.
+modelling:
+  notes: 'With a route today: prison capacity and persons held, annual, Poland, from Eurostat crim_pris_cap through GL-001
+    (in Silver: 2,754 rows; data 2008-2024). From this source once it is reachable: prison population, capacity and occupancy
+    rate, monthly, Poland and the 16 prison-service districts (no TERYT); frequencies monthly and annual. Effort M (PDF
+    tables).'
+  overlap: May overlap ministry/GUS aggregates.
+research:
+  priority: review-next
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Owner question: the Prison Service site fails TLS certificate verification from GitHub runners on both hostnames (sw.gov.pl
+    and www.sw.gov.pl), TLS checks are never disabled, and dane.gov.pl does not answer runners. Eurostat crim_pris_cap,
+    which we load, gives prison capacity and persons held for Poland per year (2008-2024), but not the monthly figures or
+    the 16 prison-service districts. Do you want to write to the Prison Service (text drafted for you) asking it to repair
+    the certificate chain of sw.gov.pl or to send the monthly tables as files, or do you accept the annual Eurostat series
+    as the prison KPI and leave the monthly tables out?'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): CERTIFICATE_VERIFY_FAILED on
+    sw.gov.pl (robots.txt and every page). Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script
+    dev/src_dfh_fix_probe.py, 12 Nov 2026): the same error on www.sw.gov.pl; bip.sw.gov.pl: name not known; dane.gov.pl
+    and api.dane.gov.pl timed out (75 s); Silver holds crim_pris_cap (2,754 rows).'
+  - 'The data are PDF tables with hash-named URLs, and no reuse terms were read: licence unresolved.'
+  references:
+  - https://sw.gov.pl/strona/Statystyka
+  - https://sw.gov.pl/strona/statystyka-miesieczna
+  - https://sw.gov.pl/strona/statystyka-roczna
+  - https://ec.europa.eu/eurostat/databrowser/view/crim_pris_cap/default/table

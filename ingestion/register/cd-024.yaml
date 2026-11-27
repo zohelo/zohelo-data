@@ -1,0 +1,55 @@
+id: CD-024
+name: TikTok Commercial Content API
+short_name: TikTok Commercial Content API
+provider: TikTok
+status: reviewing
+family: J
+kpi: false
+geography: multicountry-Europe
+provider_type: commercial
+domains: [digital-advertising, social-media]
+entities: [advertisement, advertiser, targeting, creative]
+granularity: Commercial-content/ad records with advertiser, creative, targeting and impression information where available.
+coverage: Official page states current data availability is EU-focused and ads remain available for a defined post-run period.
+access:
+  endpoint: https://developers.tiktok.com/products/commercial-content-api/
+  kind: api
+  interfaces: [API]
+  auth: Developer account, application and app key; approval required.
+  cost: free
+  limits: Approved-app limits; no figures encoded.
+licence:
+  status: restricted
+  notes: 'Terms: https://developers.tiktok.com/products/commercial-content-api/ (read by the runner 27 Nov 2026, HTTP
+    200): ad data "will be accessible for the period when the advertisement is run and until one year since the
+    advertisement was last shown to any user"; "These APIs are made available globally and will include ads data from
+    EU to begin with"; access: "create a TikTok for Developers account using your official email address", then an
+    application form. The TikTok developer terms on www.tiktok.com and library.tiktok.com are disallowed to the probe
+    by robots.txt and were not read, so reuse terms are not known: stays internal.'
+updates: Ads appear/update with platform transparency records and have bounded retention.
+ingestion:
+  history: 'PROPOSAL: backfill approved EU ads by bounded dates after terms review.'
+  incremental: 'PROPOSAL: poll recent ads and retain observed status within allowed period.'
+  identifiers: Ad, advertiser and creative IDs; target labels are not audience census data.
+modelling:
+  notes: Ad-flight facts plus creative dimension; metrics are platform-reported.
+  overlap: Overlaps EU transparency repositories and social ad libraries.
+research:
+  priority: review-next
+  evidence: tested
+  connection: not-tested
+  blockers:
+  - 'Owner question (account and application): the Commercial Content API needs a TikTok for Developers account
+    registered with the owner''s official e-mail and an approved application; its developer terms could not be read
+    (robots.txt). Apply for access for zohelo (ad counts for Poland and the EU), or park CD-024? Recommendation: park.
+    The eight social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017 to CD-024''); none
+    offers official statistics for Poland, and each needs an account, an application or a paid plan.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was the developer terms and an application, an owner
+    question, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe,
+    script dev/src_parked2_probe.py, 27 Nov 2026): the product page HTTP 200 (quoted);
+    https://www.tiktok.com/legal/page/global/tik-tok-developer-terms-of-service/en and https://library.tiktok.com/ads
+    robots.txt disallow; https://open.tiktokapis.com/v2/research/adlib/ad/query/ without a token HTTP 403 (expected).'
+  - 'Earlier parking reason: bounded by developer terms for ad transparency; creative rights stay with advertisers'
+  references:
+  - https://developers.tiktok.com/products/commercial-content-api/
+  - https://www.tiktok.com/legal/page/global/tik-tok-developer-terms-of-service/en

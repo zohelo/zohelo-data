@@ -1,0 +1,47 @@
+id: PLS-028
+name: Uczestnictwo ludności w kulturze
+short_name: GUS cultural participation
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_culture_participation
+status: built
+family: B
+kpi: true
+geography: Poland; demographic breakdowns
+provider_type: national-public
+domains: [cultural participation, household survey, media use]
+entities: [person-aggregate, household-aggregate, activity]
+granularity: Survey estimate by cultural activity and demographic/household category; precision tables are published.
+coverage: Periodic survey; 2024 edition published with XLSX tables; earlier editions require inventory.
+access:
+  endpoint: https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/uczestnictwo-ludnosci-w-kulturze-w-2024-r-%2C6%2C4.html
+  kind: bulk_file
+  interfaces: [XLSX, PDF, HTML]
+  auth: Public downloads.
+  cost: free
+  limits: No API quota.
+licence:
+  status: open-conditional
+  notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+    and printing data and pages, including own changes and summaries, on condition that the source is given; no
+    named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+    users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+    "Źródło: GUS, Uczestnictwo ludności w kulturze w <year> r." / "Source: Statistics Poland, Participation of the
+    population in culture in <year>".'
+updates: Periodic, not annual; revision policy unknown.
+ingestion:
+  history: Load each survey edition with methodology and precision workbook.
+  incremental: Poll for new survey editions/corrections.
+  identifiers: Survey year + activity/indicator + demographic category.
+modelling:
+  notes: Weighted survey estimates; percentages are non-additive and comparisons require consistent questionnaire/universe.
+  overlap: Complements administrative counts of culture institutions and attendance; does not represent ticketed
+    visits directly.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Curated tables only: visiting museums in Poland, using a library, attending theatre (% of persons 15+, Poland, by sex) of the 2019 and 2024 editions; the precision workbook is not landed. Comparability across questionnaires not verified.'
+  references:
+  - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/uczestnictwo-ludnosci-w-kulturze-w-2024-r-%2C6%2C4.html
+  - https://stat.gov.pl/en/copyright/

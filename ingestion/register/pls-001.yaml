@@ -1,0 +1,42 @@
+id: PLS-001
+name: Bank Danych Lokalnych (BDL)
+short_name: GUS BDL
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_bdl
+status: silver
+family: B
+kpi: true
+geography: local-to-national Poland
+provider_type: national-public
+domains: [official statistics, society, economy]
+entities: [territorial unit, person-aggregate]
+granularity: Indicator-variable-year at administrative/NUTS levels; some series reach statistical locality.
+coverage: From 1995; annual and short-period series, variable-dependent.
+access:
+  endpoint: https://api.stat.gov.pl/Home/BdlApi
+  kind: web
+  interfaces: [REST API, JSON, XML]
+  auth: Anonymous public API; optional registration provides higher quotas and an X-ClientId key.
+  cost: free
+  limits: 'Anonymous: 5/s, 100/15m, 1,000/12h, 10,000/7d; registered: 10/s, 500/15m, 5,000/12h, 50,000/7d.'
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0, https://api.stat.gov.pl/Home/BdlApi (licence text https://creativecommons.org/licenses/by/4.0/).
+    Attribution: "Źródło: GUS, Bank Danych Lokalnych" / "Source: Statistics Poland, Local Data Bank" plus the variable
+    id.'
+updates: Continually expanded, updated and corrected.
+ingestion:
+  history: Snapshot metadata and all selected observations by variable or unit; retain attributes.
+  incremental: Poll metadata and recent years; changed values are revisions, not CDC.
+  identifiers: BDL variable ID + year + BDL unit ID + attribute; map unit IDs through TERYT/NUTS vintages.
+modelling:
+  notes: Unit-variable-year fact with attribute flag; dimensions for units, subjects and measures. Ratios are
+    non-additive.
+  overlap: Overlaps DBW, STRATEG, censuses and sector portals; compare definitions before deduplication.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - Design a territory-vintage policy
+  references: ['https://api.stat.gov.pl/Home/BdlApi']

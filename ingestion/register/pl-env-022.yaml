@@ -1,0 +1,65 @@
+id: PL-ENV-022
+name: Generalny Pomiar Ruchu (GPR)
+short_name: GDDKiA traffic census (GPR)
+provider: Generalna Dyrekcja Dróg Krajowych i Autostrad (GDDKiA)
+source_system: gddkia_gpr
+status: built
+family: H
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [road traffic, transport]
+entities: [road section, traffic count, vehicle class]
+granularity: Average daily traffic (SDRR, with SDRDR and SDRL variants) per measured section of national and voivodeship
+  roads, by vehicle class.
+coverage: Editions every five years; 2020/21 and 2025 have result files on gov.pl; 2015 and earlier are on the archive site
+  (not reachable from runners).
+access:
+  endpoint: https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-2025
+  kind: bulk_file
+  interfaces: [XLSX, XLS, SHP, PDF, HTML]
+  auth: public download
+  cost: free
+  limits: None published. Attachments are https://www.gov.pl/attachment/<uuid>.
+licence:
+  status: unresolved
+  notes: 'Terms: the GPR pages state no licence for the result files (probe 12 Nov 2026; the only "źródło" match on the
+    2025 page is its camera privacy notice). gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (read by the
+    probe): "Korzystanie przez użytkowników z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga zgody Ministra
+    Cyfryzacji. W serwisie zamieszczane są także utwory, co do których prawa autorskie przysługują osobom trzecim. Ich wykorzystanie
+    przez internautów wymaga zgody właścicieli tych materiałów."; page footer: "Treści tekstowe publikowane w serwisie (z
+    wyłączeniem treści audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych
+    samych warunkach 4.0 (CC BY-SA 4.0)." The footer names text content, not attached data files. The same wording was recorded
+    as open-conditional for PLG-007, PLG-008, PLG-009 and PLS-034; here it stays unresolved until the owner confirms that
+    reading. Attribution if used: "Źródło: GDDKiA, Generalny Pomiar Ruchu 2025".'
+updates: Every five years; GPR 2025 results were published in stages to 30 Sep 2026 (publication PDF Last-Modified 1 Oct
+  2026).
+ingestion:
+  history: 'Bulk files linked from one page per edition: https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-2025 (54 attachments:
+    XLSX with a PDF twin for the section list and for SDRR, SDRDR and SDRL of national roads, the same for voivodeship roads,
+    a SHP ZIP, syntheses and maps) and https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-20202021 (33 attachments, XLS
+    with PDF twins). Attachment UUIDs change when a file is replaced, so the edition page is the entry; pick links labelled
+    XLSX or XLS (the probe opened a PDF twin by mistake, so the sheet layout is not inspected).'
+  incremental: Snapshot per edition; version = Last-Modified; errata replace a file (2020/21 had an erratum for 21 sections).
+  identifiers: Edition, road number, section number and chainage, voivodeship, vehicle class.
+modelling:
+  notes: 'Smallest Gold selection: SDRR of motor vehicles on national roads and on voivodeship roads, editions 2020/21 and
+    2025. New KPI: average daily traffic (vehicles per day), Poland and voivodeships (length-weighted mean of sections),
+    heavy-vehicle share as a second measure. Sections have no TERYT; voivodeship comes from the file. Effort M (layouts
+    differ by edition and road type; the 2020/21 files are .xls).'
+  overlap: Not comparable to real-time traffic feeds without temporal aggregation and method alignment.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Owner question (one answer for PL-ENV-022 and for any other gov.pl attachment without its own licence): gov.pl says
+    "Korzystanie przez użytkowników z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga zgody Ministra Cyfryzacji"
+    and licenses only its text content as CC BY-SA 4.0. PLG-007, PLG-008, PLG-009 and PLS-034 were recorded as open-conditional
+    on that wording. Should GPR follow them (publishable with attribution), or stay unresolved and internal?'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): both edition pages and their
+    attachments answered 200 to a GitHub runner; XLSX layout not inspected.'
+  references:
+  - https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-2025
+  - https://www.gov.pl/web/gddkia/generalny-pomiar-ruchu-20202021
+  - https://www.gov.pl/web/gov/prawa-autorskie

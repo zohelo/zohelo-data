@@ -1,0 +1,45 @@
+id: PL-ENV-031
+name: Kraków KMK GTFS and GTFS-Realtime feeds
+short_name: Kraków GTFS
+provider: Zarząd Transportu Publicznego w Krakowie / Miasto Kraków
+source_system: gtfs_krakow
+status: built
+family: H
+kpi: false
+geography: Kraków metropolitan service area, Poland
+provider_type: subnational-public
+domains: [public transport, municipal open data]
+entities: [route, trip, stop, vehicle, alert]
+granularity: Static GTFS ZIPs and realtime service alerts, trip updates and vehicle positions for published feed groups.
+coverage: Current feeds; no official historical archive documented.
+access:
+  endpoint: https://gtfs.ztp.krakow.pl/
+  kind: bulk_file
+  interfaces: [GTFS ZIP]
+  auth: Public direct files and city portal listing.
+  cost: Free public access.
+  limits: Unknown; no numeric quota was confirmed.
+licence:
+  status: unresolved
+  notes: 'Terms: the feed page https://gtfs.ztp.krakow.pl/ lists only the three ZIP files and states no licence (page read
+    11 Nov 2026 from a GitHub runner); the Kraków open-data portal terms were not read, so the licence is unresolved (internal
+    only) until the ZTP Kraków or portal terms are quoted.'
+updates: Portal marks dataset daily; realtime files are current snapshots.
+ingestion:
+  history: 'Three static GTFS feeds at https://gtfs.ztp.krakow.pl/: GTFS_KRK_A.zip (buses), GTFS_KRK_M.zip, GTFS_KRK_T.zip
+    (trams); small (low MB, estimate). Keep each file per run: the feed has no history.'
+  incremental: Poll daily with checksum; new file = new timetable version.
+  identifiers: GTFS/RT IDs, feed group, service date and entity timestamp.
+modelling:
+  notes: Preserve agency/feed namespace and Europe/Warsaw service-time semantics.
+  overlap: City portal aggregates the producer files; avoid duplicate ingestion.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Licence unresolved: no terms on the feed page; read the Kraków open-data portal terms'
+  - Add real-time GTFS-RT only if the portal terms allow
+  references:
+  - https://gtfs.ztp.krakow.pl/
+  - https://otwartedane.um.krakow.pl/zbiory-danych/komunikacja-miejska-w-krakowie-kmk

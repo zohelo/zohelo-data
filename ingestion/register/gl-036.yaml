@@ -1,0 +1,93 @@
+id: GL-036
+name: Climate Data Store (CDS)
+short_name: Copernicus Climate Data Store
+source_system: cckp_era5
+provider: Copernicus Climate Change Service / ECMWF
+status: built
+family: G
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [climate, weather, reanalysis, projections]
+entities: [grid-cell, station, country-derived]
+granularity: 'Route chosen: ERA5 0.25-degree reanalysis aggregated by the World Bank Climate Change Knowledge Portal (CCKP)
+  to countries (ISO3) and first-level sub-national units, per variable and month (also seasonal and annual). The CDS itself
+  serves gridded fields (dataset/grid/level/variable/time/member).'
+coverage: 'CCKP ERA5 country series: monthly 1950-01 to 2024-12 (900 values for Poland, Dev probe run 43831903004); 246
+  countries and territories in one all-countries answer. CDS ERA5-Land monthly: 1950 to 2026-10 (catalogue, 12 Nov 2026).'
+access:
+  endpoint: https://datacatalogapi.worldbank.org/ddhxext/v3/cckp/era5-x0.25_timeseries_tas_timeseries_monthly_1950-2025_mean_historical_era5_x0.25_mean/all_countries?_format=json
+  kind: api
+  interfaces: [REST API, JSON, XLS, NetCDF on S3]
+  auth: none
+  cost: free
+  limits: 'None published on the pages read. The World Bank data-catalogue API answered HTTP 429 to the first metadata
+    request of the probe (datacatalogapi.worldbank.org/ddhxext/DatasetView), so pace requests: one at a time, several
+    seconds apart, bounded retries honouring Retry-After. A full load is about 2 variables x 2 aggregations x (1 all-countries
+    request + 1 sub-national request for Poland) = 8 requests.'
+licence:
+  status: open-conditional
+  notes: 'Terms: CCKP download page https://climateknowledgeportal.worldbank.org/download-data, section "Terms of Use"
+    (Dev probe 45810479823, 26 Nov 2026), linking the World Bank Dataset Terms https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
+    (now redirected to https://www.worldbank.org/ext/en/legal/terms-conditions): "CCKP data is disseminated by the World
+    Bank under its Open Data policy." ... "Unless specifically labeled otherwise, these Datasets are provided to you under
+    a Creative Commons Attribution 4.0 International License (CC BY 4.0), with the additional terms below." The addition
+    is a mandatory dispute procedure (non-binding mediation, then UNCITRAL arbitration). Attribution format stated: "The
+    World Bank: Dataset name: Data source (if known)"; used: "The World Bank: Climate Change Knowledge Portal, Observed
+    Climate Data ERA5 0.25 degree: Copernicus Climate Change Service (C3S) ERA5". Commercial reuse and modification:
+    allowed with attribution (CC BY 4.0). The World Bank Data Catalog page of the dataset (0065626, desk fetch 16 Nov 2026)
+    says the same: "License: Creative Commons Attribution 4.0". Upstream ERA5 is CC BY 4.0 in the CDS since 2 July 2025
+    (ECMWF announcement, https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464),
+    attribution "Generated using Copernicus Climate Change Service information <year>" and the disclaimer that neither
+    the European Commission nor ECMWF is responsible for any use made of the information.'
+updates: 'CCKP: not stated; the ERA5 country series ended at 2024-12 on 16 Nov 2026 (README of the AWS collection still
+  says 1950-2022), so roughly a yearly update with a lag of up to two years. Check monthly whether a newer period path
+  (for example 1950-2025) answers; the period is part of the dataset id. CDS ERA5-Land monthly: "Monthly with a delay of
+  2-3 months relatively to the actual date".'
+ingestion:
+  history: 'API, tested (Dev probe run 43831903004, job 133178972022, branch test/src-r13-probe, script dev/src_r13_probe.py,
+    16 Nov 2026): https://cckpapi.worldbank.org/cckp/v1/era5-x0.25_timeseries_tas_timeseries_monthly_1950-2024_mean_historical_era5_x0.25_mean/POL?_format=json
+    answered 200 JSON (14,044 bytes; {"metadata": {"apiVersion": "v1", "status": "success"}, "data": {"POL": {"1950-01":
+    "-6.84", ...}}}, last value 2024-12 = 2.46 degC); the same id with `pr` (precipitation, 14,427 bytes) and the annual
+    aggregation answered too; `all_countries` in place of POL returned 246 geographies in 3,492,157 bytes. The sub-national
+    code tried (POL.2593) returned an empty data object: the codes of the 16 voivodeships are not known yet (the portal
+    documents the form USA.2593214). CCKP''s download page documents the same ids under https://datacatalogapi.worldbank.org/ddhxext/v3/cckp/<id>/<geocode>?_format=json
+    (not tried). The gridded NetCDF collection is in the public S3 bucket wbg-cckp (listing answered; the ERA5 file paths
+    were not resolved). Smallest load: monthly mean air temperature (tas) and precipitation (pr), 1950 to the newest
+    year, all countries plus the voivodeships of Poland: about 8 requests, under 10 MB (3.5 MB per all-countries monthly answer, measured).'
+  incremental: Entity = dataset id x geography request (the id carries variable, aggregation and period), version = the
+    period in the id (1950-2024) plus download time. Snapshot replaced whole when a newer period id answers (refresh full,
+    small source). The CDS route stays documented below for native ERA5-Land monthly fields if a token is ever provided.
+  identifiers: CCKP dataset id (collection, variable, product, aggregation, period, statistic, scenario) + ISO3 or CCKP
+    sub-national code + period (YYYY-MM).
+modelling:
+  notes: 'Values are as published by CCKP (tas in degC and pr in mm, units to confirm from the CCKP metadata), area means over land computed by the World
+    Bank; no suppression markers seen (empty data object for an unknown code; missing months to be checked as absent keys,
+    never 0). Smallest Gold selection: monthly and annual mean air temperature and precipitation total for Poland (and
+    the voivodeships once their codes are found), with EU countries from the all-countries answer, as new draft KPIs in
+    environment.climate; the anomaly against 1991-2020 as a metric. Frequencies: M and A are separate measure_keys.
+    Projections (CMIP6) are not observations and are out of scope.'
+  overlap: No KPI of kpi.csv is published here yet. IMGW station archives (PL-ENV-009) are the national observations; Eurostat
+    heating and cooling degree days derive from the same reanalysis; raw reanalysis is not an official country observation.
+    World Bank WDI (loaded) carries no monthly climate series.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Resolved (Dev probes 45809457989, 45810479823, 26 Nov 2026): robots.txt of cckpapi.worldbank.org still answers HTTP
+    500 (RFC 9309: full disallow), so the extractor reads the same ids from the documented host
+    datacatalogapi.worldbank.org/ddhxext/v3/cckp/ (robots.txt 404 = no rules; same values, numbers instead of strings).
+    The voivodeship codes are POL.1982370-POL.1982385 in CCKP''s geonames.json (download page, "Spatial Unit''s Names and
+    Codes"), mapped to TERC by a stated code list; several codes go in one request, comma-separated. geonames.json is
+    not read at run time: its host''s robots.txt answered HTTP 403 to two of three Dev runners (not worked around); each
+    read checks that the answers hold exactly the stated codes.
+    The newer period id 1950-2025 answers (1950-2026 is empty); the extractor uses the newest one that answers.'
+  - 'Does not block this route: native ERA5-Land monthly fields from the CDS would need a free ECMWF account and personal
+    token that only the owner can create (the former owner question); not needed for country and voivodeship series.'
+  references:
+  - https://climateknowledgeportal.worldbank.org/download-data
+  - https://datacatalog.worldbank.org/search/dataset/0065626/climate-change-knowledge-portal-observed-climate-data-era5-0-25-degree
+  - https://worldbank.github.io/climateknowledgeportal/README.html
+  - https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-monthly-means?tab=overview
+  - https://forum.ecmwf.int/t/cc-by-licence-to-replace-licence-to-use-copernicus-products-on-02-july-2025/13464

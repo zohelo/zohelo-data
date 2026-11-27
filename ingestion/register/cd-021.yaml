@@ -1,0 +1,56 @@
+id: CD-021
+name: LinkedIn Community Management API
+short_name: LinkedIn API
+provider: LinkedIn / Microsoft
+status: reviewing
+family: J
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [professional-social-media, marketing]
+entities: [organization-page, authorized-member, post, comment, reaction]
+granularity: Organization-page content, followers, roles, activity and analytics within approved products.
+coverage: Current authorized organization/member scope; no general member or public-network archive.
+access:
+  endpoint: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview
+  kind: api
+  interfaces: [API]
+  auth: Registered legal organization, app review, OAuth and page/member authorization.
+  cost: unknown
+  limits: Product/permission specific.
+licence:
+  status: restricted
+  notes: 'Terms: https://legal.linkedin.com/api-terms-of-use (read by the runner 27 Nov 2026, HTTP 200, "Last revised
+    on December 13th, 2022") and the Marketing API terms https://www.linkedin.com/legal/l/marketing-api-terms (HTTP
+    200). The API terms bind "Applications" registered by a developer acting for an entity and list conditions such as
+    "your Application DOES NOT rely on access to the APIs as a fundamental aspect of your business"; the Community
+    Management app review page says to "Read the LinkedIn Marketing API Terms" and asks for a screen recording of the
+    application before access. No republication right is stated: stays internal.'
+updates: Current platform state and notifications where supported.
+ingestion:
+  history: 'PROPOSAL: ingest only pages administered by consenting customers.'
+  incremental: 'PROPOSAL: poll authorized resources and process permission revocation.'
+  identifiers: Organization URN, member URN and content URN; avoid cross-person inference.
+modelling:
+  notes: Tenant-separated owner-authorized data; time-varying metrics need observations.
+  overlap: May overlap company websites and social-listening tools, with different rights.
+research:
+  priority: conditional
+  evidence: tested
+  connection: not-tested
+  blockers:
+  - 'Owner question (account and app review): the Community Management API serves only organisation pages that the
+    app''s users administer, after LinkedIn''s app review of a registered organisation. Register a LinkedIn app for
+    zohelo and pass the review, or park CD-021? Recommendation: park. The eight social-platform APIs CD-017 to CD-024
+    can be answered in one reply (''park CD-017 to CD-024''); none offers official statistics for Poland, and each
+    needs an account, an application or a paid plan.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was restricted approved-use access, an account question,
+    so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+    dev/src_parked2_probe.py, 27 Nov 2026): the API terms, Marketing API terms, Community Management overview and app
+    review pages HTTP 200 (quoted).'
+  - 'Earlier parking reason: restricted to approved use cases and authorised roles; no public-data route'
+  references:
+  - https://legal.linkedin.com/api-terms-of-use
+  - https://www.linkedin.com/legal/l/marketing-api-terms
+  - https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview
+  - https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review
