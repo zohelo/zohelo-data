@@ -6,8 +6,8 @@ occupations: each block has a tab of the same colour at its left edge with the c
 ("DEFICYT", "RÓWNOWAGA", "NADWYŻKA"). The page's content and the Form XObjects it draws are walked once
 (``drawing``): filled shapes with their colour and box, and every text show operation with its own start point
 (text matrix tracked through Tm, Td, TD, T* and the graphics state), font and resources, in drawing order. The same
-text drawn twice at the same place (an overprinted tab label) is read once; text that a filled shape drawn after it
-covers is not printed and is left out (``visible``). Then:
+text drawn twice at the same place (an overprinted tab label) is read once, as the copy drawn last; text that a
+filled shape drawn after it covers is not printed and is left out (``visible``). Then:
 
 - blocks: filled shapes at least half the page wide and 12 pt high that hold no other such shape (a page background
   holds the blocks). A block without a label joins the labelled block of its colour that it overlaps (a tab drawn in
@@ -25,9 +25,9 @@ covers is not printed and is left out (``visible``). Then:
   the same column of the same block.
 
 An occupation printed again in the same block is returned with ``repeat_of_item`` (the first one's item number).
-Anything else rejects the page (``ValueError`` with the reason): a block with two tabs or text but no label, rotated
-text taken by two blocks, a line in the band of the blocks but in none of them, an occupation in two categories, a
-continuation without a line above it. Nothing is guessed from position alone.
+Anything else rejects the page (``ValueError`` with the reason): a block with two tabs, text but no label, or text and
+a tab without a label, rotated text taken by two blocks, a line in the band of the blocks but in none of them, an
+occupation in two categories, a continuation without a line above it. Nothing is guessed from position alone.
 """
 
 from __future__ import annotations
@@ -105,10 +105,10 @@ def drawing(page, reader) -> tuple[list[dict], list[dict]]:
     _walk(page.get_contents(), page.get("/Resources"), reader, [1.0, 0, 0, 1.0, 0, 0], "g:0", shapes, texts, 0)
     for n, item in enumerate(sorted(shapes + texts, key=lambda i: i["seq"])):
         item["seq"] = n
-    once: dict[tuple, dict] = {}  # text drawn twice in place (an overprinted tab label) is read once
-    for t in texts:
-        once.setdefault((round(t["x"], 1), round(t["y"], 1), t["rotated"], repr(t["args"])), t)
-    return shapes, list(once.values())
+    once: dict[tuple, dict] = {}  # text drawn twice in place (an overprinted tab label) is read once: the copy drawn
+    for t in texts:  # last, on top (śląskie 2022 draws its DEFICYT label under its tab, then again above it)
+        once[(round(t["x"], 1), round(t["y"], 1), t["rotated"], repr(t["args"]))] = t
+    return shapes, sorted(once.values(), key=lambda t: t["seq"])
 
 
 def _walk(contents, resources, reader, cm, fill, shapes, texts, depth) -> None:
@@ -357,6 +357,8 @@ def _name_blocks(page, reader, blocks, shapes, glyphs, lines) -> list[tuple[dict
         label = decode(page, reader, [[glyphs[i] for i in held]], rotated=True)[0] if held else ""
         if not label:
             if any(_inside(b, line["x"], line["y"]) for line in lines):
+                if tabs:  # a category block whose label is not read is never taken for a header or footer box
+                    raise ValueError(f"block {b['colour']} at y {b['y0']:.0f}-{b['y1']:.0f} has a tab without a label")
                 unlabelled.append(b)
             continue  # no label and no text: decoration
         taken += held

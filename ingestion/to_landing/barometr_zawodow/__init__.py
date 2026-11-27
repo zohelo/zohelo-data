@@ -6,6 +6,7 @@ of the country or the voivodeship (``url_from``); Landing, receipts and versions
 This module adds what the declaration cannot say:
 
 - the year in the link pattern (``{year}``): a page that links another year's file is not taken;
+- exactly one poster per page: a page with two matching links is an error for that file, never the first one taken;
 - format ``pdf``: an HTML answer with status 200 is not landed (the declaration allows only raw for PDFs);
 - the next year's page as optional: the edition for year N is published in December of N-1 or January of N, while
   ``expand_years`` stops at the current year; a page without the files yet is a notice, not a failure;
@@ -50,6 +51,20 @@ def _with_year(spec: dict[str, Any], year: int) -> dict[str, Any]:
     return {**spec, "url_from": url_from, "format": "pdf"}
 
 
+def _one_link(page_links):
+    """The page's links, failing when more than one poster matches (the shared pattern would take the first)."""
+
+    def checked(spec, *args, **kwargs):
+        from ingestion.to_landing.patterns import bulk_file
+
+        links = page_links(spec, *args, **kwargs)
+        if len(links) > 1:
+            raise bulk_file.PermanentError(f"{len(links)} posters match on {spec['url_from']['page']}: {links}")
+        return links
+
+    return checked
+
+
 def _paced(request):
     """The request, PAUSE_SECONDS after the previous one."""
 
@@ -73,6 +88,7 @@ def _run(mode: str, landing_root: str = "01_landing", today: datetime | None = N
     saved = {name: getattr(bulk_file, name) for name in ("page_links", "probe", "download")}
     for name, request in saved.items():
         setattr(bulk_file, name, _paced(request))
+    bulk_file.page_links = _one_link(bulk_file.page_links)
     try:
         return bulk_file.main(SOURCE, mode, landing_root=landing_root, specs=chosen)
     finally:
