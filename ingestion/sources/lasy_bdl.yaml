@@ -1,0 +1,48 @@
+source_system: lasy_bdl
+description: "Lasy Państwowe Bank Danych o Lasach (BDL) — forest districts (nadleśnictwa) and regional directorates (RDLP), GeoServer WFS"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-018. The Forest Data Bank publishes its layers through a public
+# GeoServer WFS 2.0 (https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows; no robots.txt, no published limits, CountDefault
+# 1,000,000, ImplementsResultPaging TRUE). One GetFeature per feature type in application/json (GeoJSON in the native
+# EPSG:2180, every attribute), declared as files of the shared bulk_file pattern (no extractor code); the type names are
+# percent-encoded by requests (UTF-8). Dev probe 45896744643 on test/3301-lasy-bdl (26 Nov 2026): capabilities list
+# BDL:Leśnictwa, BDL:Nadleśnictwa, BDL:RDLP and 17 per-RDLP stand layers (wydzielenia); resultType=hits 5,259 / 429 / 17;
+# one request answered the whole layer: districts 49.5 MB in 10.9 s, RDLP 11.4 MB in 10.5 s. Forest ranges (128 MB) and
+# the stand layers (36,000-244,000 features each) are left out (docs/sources/lasy_bdl.md). The server answers HEAD by
+# building the whole response, so landing.inspect asks with a streamed GET (probe: get), as pig_midas does.
+# Entity = one feature type; the WFS gives no version (a_year is the data year), so version = download time, and a copy
+# lands only when its SHA-256 changed. GeoServer stamps each answer with the request time ("timeStamp"), so two reads of
+# an unchanged layer differ (trial 45898596886): reduce: lasy_bdl (ingestion/to_landing/lasy_bdl/) removes that one
+# member before Landing; the rest lands byte for byte. Restart unit: one layer.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - {entity: districts, url: "https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=BDL:Nadleśnictwa&outputFormat=application/json", format: json, version: ingested, read_timeout: 600, probe: get, reduce: lasy_bdl}
+      - {entity: regions, url: "https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=BDL:RDLP&outputFormat=application/json", format: json, version: ingested, read_timeout: 600, probe: get, reduce: lasy_bdl}
+  initial: bulk
+  production: snapshot                    # each response is the whole current layer
+  incremental_policy: changed_since_last  # SHA-256 of the response (the WFS sends no Last-Modified)
+  schedule: # UTC; the organisation of the State Forests changes a few times a year (a_year = 2026 on every feature); a register snapshot a month is enough (O46): the 21st at 04:05, two requests, one at a time
+    - {cron: "5 4 21 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/lasy_bdl/
+# GeoJSON stored zstd-compressed in the Archive (the geometry stays there only). Newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.lasy_bdl_features, bronze.lasy_bdl_rejected_files]
+silver: [silver.lasy_bdl_districts, silver.lasy_bdl_regions]
+gold: [gold.build_lasy_bdl]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the Dev trial of the final code
+  lasy_bdl_districts: {rows: 650}  # 429
+  lasy_bdl_regions: {rows: 26}  # 17
+  poc_build_lasy_bdl: {rows: 750}  # 497 = count and area for Poland, 16 voivodeships and 17 RDLP (68) + 429 districts
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy (D32): two responses of 11-50 MB, 446 features, no changed-since filter in the WFS; each response is
+# the whole layer, so a new copy replaces its entity and Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3301"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
