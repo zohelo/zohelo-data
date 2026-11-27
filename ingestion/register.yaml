@@ -1045,8 +1045,9 @@ sources:
 - id: GL-020
   name: WTO Stats
   short_name: WTO Stats
+  source_system: wto_stats
   provider: World Trade Organization
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
