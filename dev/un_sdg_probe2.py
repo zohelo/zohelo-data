@@ -1,14 +1,14 @@
-"""Second read-only probe for GL-018 (#3316): the order of the bulk CSV links on the database archive page, and the
-current release's CSV ZIP (2026_Q3.1_AllData_After_20260930_CSV.zip) downloaded to the runner's disk (not R2) and
-profiled with DuckDB. GET to unstats.un.org only, one request at a time, pauses, identifying User-Agent.
-Everything is printed to the job log; compact notices. Deleted before merge (never on the PR branch).
+"""Probe 4 for GL-018 (#3316): robots.txt of unstats.un.org (Accept */*), and in the current release's CSV ZIP
+(2026_Q3.1_AllData_After_20260930_CSV.zip, downloaded to the runner's disk, not R2): the values under the missing-value
+observation statuses and nature N, the period range, censored values. GET to unstats.un.org only, one request at a
+time, pauses, identifying User-Agent. Deleted before merge (never on the PR branch).
 """
 
 from __future__ import annotations
 
 import json
-import re
 import time
+import urllib.robotparser
 import zipfile
 
 import duckdb
@@ -32,87 +32,46 @@ def note(title: str, data) -> None:
 
 
 def main() -> int:
-    page = S.get(f"{HOST}/sdgs/indicators/database/archive", timeout=(20, 120), headers={"Accept": "text/html"})
-    order = re.findall(r'href="([^"]+_CSV\.zip)"', page.text)
-    note("sdg probe3 archive order", {"first5": order[:5], "last5": order[-5:], "n": len(order),
-                                      "after_files_in_page_order": [x.rsplit("/", 1)[-1] for x in order
-                                                                    if "_AllData_After_" in x][:6]})
+    r = S.get(f"{HOST}/robots.txt", timeout=(20, 60), headers={"Accept": "*/*"})
+    parser = urllib.robotparser.RobotFileParser()
+    parser.parse(r.text.splitlines())
+    note("sdg probe4 robots", {"st": r.status_code, "ct": r.headers.get("content-type"), "text": r.text[:1500],
+                               "archive_allowed": parser.can_fetch(UA, f"{HOST}/sdgs/indicators/database/archive"),
+                               "zip_allowed": parser.can_fetch(UA, URL),
+                               "api_allowed": parser.can_fetch(UA, f"{HOST}/SDGAPI/v1/sdg/Series/List")})
     time.sleep(3)
-    start = time.monotonic()
-    path = "/tmp/sdg_newest.zip"
-    with S.get(URL, timeout=(20, 900), stream=True) as r, open(path, "wb") as f:
-        info = {"st": r.status_code, "headers": {k: r.headers.get(k) for k in ("content-length", "last-modified", "etag")}}
-        for chunk in r.iter_content(1 << 20):
+    with S.get(URL, timeout=(20, 900), stream=True) as resp, open("/tmp/sdg.zip", "wb") as f:
+        for chunk in resp.iter_content(1 << 20):
             f.write(chunk)
-    info["minutes"] = round((time.monotonic() - start) / 60, 2)
-    with zipfile.ZipFile(path) as z:
-        info["members"] = [(m.filename, m.file_size, m.date_time) for m in z.infolist()]
-        member = max(z.infolist(), key=lambda m: m.file_size)
+    with zipfile.ZipFile("/tmp/sdg.zip") as z:
+        member = z.infolist()[0]
         z.extract(member, "/tmp/sdg")
-        csv = f"/tmp/sdg/{member.filename}"
-    raw = open(csv, "rb").read(3000)
-    info["bom"] = raw[:3].hex()
-    info["head"] = raw[:1500].decode("utf-8", "replace")
-    try:
-        raw.decode("utf-8")
-        info["utf8_head"] = True
-    except UnicodeDecodeError as exc:
-        info["utf8_head"] = str(exc)
-    note("sdg probe3 file", info)
     con = duckdb.connect()
-    try:
-        con.execute(f"create table t as select * from read_csv('{csv}', all_varchar=true, header=true)")
-        enc = "utf-8"
-    except duckdb.Error as exc:
-        note("sdg probe3 utf8 read failed", {"error": str(exc)[:1500]})
-        con.execute(f"create table t as select * from read_csv('{csv}', all_varchar=true, header=true, encoding='latin-1')")
-        enc = "latin-1"
-    cols = [r[0] for r in con.execute("describe t").fetchall()]
+    con.execute(f"""create table e as select * from read_csv('/tmp/sdg/{member.filename}', all_varchar=true,
+                    header=true) where "GeoAreaCode" in {EU}""")
 
     def q(s):
         return con.execute(s).fetchall()
 
-    prof = {"encoding": enc, "columns": cols, "rows": q("select count(*) from t")[0][0]}
-    prof["areas"] = q('select count(distinct "GeoAreaCode") from t')[0][0]
-    prof["series"] = q('select count(distinct "SeriesCode") from t')[0][0]
-    prof["releases"] = q('select "Release", count(*) from t group by 1') if "Release" in cols else None
-    con.execute(f'create table e as select * from t where "GeoAreaCode" in {EU}')
-    prof["rows_eu27"] = q("select count(*) from e")[0][0]
-    prof["series_eu27"] = q('select count(distinct "SeriesCode") from e')[0][0]
-    prof["rows_pl"] = q("""select count(*) from e where "GeoAreaCode" = '616'""")[0][0]
-    note("sdg probe3 counts", prof)
-    attrs = {"Nature", "Units", "UnitMultiplier", "Observation Status"}
-    dims = [c for c in cols[cols.index("ObservationID") + 1:] if c not in attrs]
-    keys = ", ".join(['"SeriesCode"', '"GeoAreaCode"', '"TimePeriod"', *[f'"{c}"' for c in dims]])
-    small = {"dims": len(dims)}
-    for c in ("Nature", "Units", "Observation Status", "Time_Detail", "BasePeriod", "ValueType", "Reporting Type",
-              "Location", "Sex", "isDSDSeries", "ReleaseStatus", "ReleaseName"):
-        small[c] = q(f'select "{c}", count(*) from e group by 1 order by 2 desc limit 30')
-    small["value_non_numeric"] = q("""select "Value", count(*) from e where not regexp_full_match(coalesce("Value", ''),
-        '-?[0-9]+(\\.[0-9]+)?([eE][-+]?[0-9]+)?') group by 1 order by 2 desc limit 25""")
-    small["value_zero"] = q("""select count(*) from e where try_cast("Value" as double) = 0""")
-    small["timeperiod_shape"] = q("""select regexp_replace("TimePeriod", '[0-9]', '9', 'g'), count(*) from e group by 1""")
-    small["td_ne_tp"] = q("""select count(*), count(distinct "SeriesCode") from e where "Time_Detail" <> "TimePeriod" """)
-    small["td_sample"] = q("""select "Time_Detail", "TimePeriod", count(*) from e where "Time_Detail" <> "TimePeriod"
-        group by all order by 3 desc limit 12""")
-    small["obsid_rows_gt1"] = q('select count(*), max(n) from (select count(*) n from e group by "ObservationID" having n > 1)')
-    rest = ", ".join(f'"{c}"' for c in cols if c not in ("column00", "ID", "Goal", "Target", "Indicator"))
-    small["obsid_differing_outside_gti"] = q(f'select count(*) from (select "ObservationID" from (select distinct {rest} '
-                                             f'from e) group by 1 having count(*) > 1)')
-    small["dup_key_after_obsid"] = q(f'select count(*), sum(n) from (select count(*) n from (select distinct '
-                                     f'"ObservationID", {keys} from e) group by {keys} having n > 1)')
-    small["dup_key_sample"] = q(f'select "SeriesCode", "GeoAreaCode", "TimePeriod", list(distinct "Value"), '
-                                f'list(distinct "Time_Detail"), list(distinct "Source")[:2] from e group by {keys} '
-                                f'having count(distinct "ObservationID") > 1 limit 8')
-    small["dup_key_series"] = q(f'select "SeriesCode", count(*) from (select "SeriesCode" from e group by {keys} '
-                                f'having count(distinct "ObservationID") > 1) group by 1 order by 2 desc limit 20')
-    small["units_per_series_max"] = q('select max(n) from (select "SeriesCode", count(distinct "Units") n from e group by 1)')
-    note("sdg probe3 eu profile", small)
-    con.execute("copy e to '/tmp/e.parquet' (format parquet, compression zstd)")
-    con.execute("copy t to '/tmp/t.parquet' (format parquet, compression zstd)")
-    import os
-
-    note("sdg probe3 parquet sizes", {"eu27": os.path.getsize("/tmp/e.parquet"), "world": os.path.getsize("/tmp/t.parquet")})
+    out = {
+        "status_values": q("""select "Observation Status", case when "Value" = 'NaN' then 'NaN' when try_cast("Value" as double) = 0
+            then 'zero' when try_cast("Value" as double) is not null then 'number' else 'text' end, count(*) from e group by all order by all"""),
+        "nature_values": q("""select "Nature", case when "Value" = 'NaN' then 'NaN' when try_cast("Value" as double) = 0
+            then 'zero' when try_cast("Value" as double) is not null then 'number' else 'text' end, count(*) from e group by all order by all"""),
+        "nature_N_series": q("""select "SeriesCode", count(*), list(distinct "Value")[:5] from e where "Nature" = 'N' group by 1 order by 2 desc limit 10"""),
+        "status_OQM_series": q("""select "Observation Status", "SeriesCode", count(*), list(distinct "Value")[:5] from e
+            where "Observation Status" in ('M', 'O', 'Q') group by all order by 3 desc limit 12"""),
+        "period_range": q('select min("TimePeriod"), max("TimePeriod") from e'),
+        "periods_after_2025": q("""select "TimePeriod", count(*), count(distinct "SeriesCode"), list(distinct "SeriesCode")[:8] from e
+            where "TimePeriod" > '2025' group by 1 order by 1"""),
+        "nan_series": q("""select count(distinct "SeriesCode") from e where "Value" = 'NaN'"""),
+        "censored_series": q("""select "SeriesCode", "Value", count(*) from e where "ValueType" = 'String' group by all order by 3 desc limit 8"""),
+        "women_parl": q("""select "SeriesCode", "SeriesDescription", "Units", "GeoAreaCode", "TimePeriod", "Value", "Sex", "Nature", "Source"
+            from e where "SeriesCode" = 'SG_GEN_PARL' and "GeoAreaCode" = '616' order by "TimePeriod" desc limit 4"""),
+        "women_parl_counts": q("""select count(*), count(distinct "GeoAreaCode"), min("TimePeriod"), max("TimePeriod"), min(try_cast("Value" as double)),
+            max(try_cast("Value" as double)) from e where "SeriesCode" = 'SG_GEN_PARL'"""),
+    }
+    note("sdg probe4 values", out)
     return 0
 
 
