@@ -10936,7 +10936,8 @@ sources:
   name: Open Patent Services (OPS)
   short_name: EPO Open Patent Services
   provider: European Patent Organisation (EPO)
-  status: approved
+  source_system: epo_statistics
+  status: built
   family: J
   kpi: false
   geography: multicountry
