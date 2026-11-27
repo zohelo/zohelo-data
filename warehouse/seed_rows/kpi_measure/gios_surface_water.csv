@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+surface_water_good_status_share,gios_surface_water,gios_surface_water:status:%:all.overall_status.good,"GIOŚ PMŚ status assessment 2019-2024 (monitoring), surface water bodies of the five categories in good overall status of the assessed bodies",1,
