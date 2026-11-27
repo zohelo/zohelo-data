@@ -32,7 +32,8 @@ with obs as (
         and not isnan(s.value_pln)
         and not isinf(s.value_pln)
         and s.period_date is not null
-        and s.period_date <= coalesce(try_cast(left(s.source_version, 10) as date), s.period_date)
+        -- source_version is the download time, 20261112T150548Z (gov.pl sends no Last-Modified)
+        and s.period_date <= coalesce(cast(try_strptime(left(s.source_version, 8), '%Y%m%d') as date), s.period_date)
 )
 
 select

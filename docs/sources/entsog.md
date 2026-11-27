@@ -70,3 +70,9 @@ of v1 and v2.
 interruptible capacities, GCV, interruptions), other period types (hour, month), the TP Archives before the API
 window (2013–2020), other operators (Yamal system operator PL-TSO-0001, storage and LNG operators, neighbouring
 TSOs), GAZ-SYSTEM's own SWI tables, and conversion of kWh to m³ or TWh (D33: units as published).
+
+**Gold, full coverage (#3350).** Every daily value per point and direction of `silver.entsog_physical_flow` by rule in
+`gold.entsog_*` (`gold.observations`, D35; rule in [gold-coverage.md](../gold-coverage.md)), the point as the breakdown;
+records without a value and running values are not loaded. Dev trial 45970453492: 73,786 rows (97,546 Silver records,
+23,760 without a value), 38 series, 0 duplicates by series_key × date_key; every curated daily total equals the sum of
+its points.

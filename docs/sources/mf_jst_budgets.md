@@ -12,3 +12,8 @@ expenditure, result and liabilities by unit type (KPIs `local_gov_revenue`, `loc
 `local_gov_balance`, `local_gov_debt`, draft). Weekly schedule (Wednesday). Licence: gov.pl terms (official
 materials). The per-unit report databases (Rb27S, Rb28S, … ZIPs, 2001-2026, one row per unit and budget class) are a
 separate, larger scope.
+
+**Gold, full coverage (#3350).** Every value of `silver.mf_jst_budget_summary` by rule in `gold.mf_jst_budgets_*`
+(`gold.observations`, D35; rule in [gold-coverage.md](../gold-coverage.md)): every item of each unit type's DW and ZN
+workbook, plan and executed, Q, unit type as the breakdown. Dev trial 45970453492: 22,522 rows = Silver, 1,411 series,
+334 measures, 0 duplicates by series_key × date_key; every row of the curated block found.
