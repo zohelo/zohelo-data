@@ -3,7 +3,9 @@
    the EU27 members (ISO alpha-3 → poc_map_geography section unesco_uis), annual. Tertiary attainment is one measure
    with a sex breakdown: EA.5T8.AG25T99 = both sexes (sex T, is_total), the .F and .M variants = F and M,
    breakdown_json {"sex": ...}. measure_key unesco_uis:<entity>:<unit>:<base indicator>. Qualifiers UIS_EST and
-   NAT_EST (UIS or national estimate) → observation status estimated, else ok. Values as published. #}
+   NAT_EST (UIS or national estimate) → observation status estimated, else ok. Values as published. A cell with
+   magnitude NA (not applicable) is not built: the API sends 0 in its value field, which is no value (69 EU27 cells
+   of tertiary attainment in the Dev trial of #3314). #}
 with blocks as ({{ poc_unesco_uis_blocks() }}),
 
 eu27 as ({{ poc_m49_eu27() }}),
@@ -54,4 +56,4 @@ select
     s.raw_sha256
 from shaped as s
 inner join geo_map as g on s.geo_unit = g.source_code
-where s.value is not null and s.sex_code is not null
+where s.value is not null and s.sex_code is not null and coalesce(s.magnitude, '') <> 'NA'

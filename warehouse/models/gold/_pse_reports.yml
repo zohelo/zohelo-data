@@ -1,0 +1,31 @@
+version: 2
+models:
+  - name: poc_build_pse_reports
+    description: >-
+      Build stage — PSE Reports API v2 (register PL-ENV-019): daily observations for Poland, frequency D only. Block
+      rce_pln: market energy price RCE, daily mean of the 15-minute values (PLN/MWh as published). Block his_wlk_cal:
+      power demand, wind and photovoltaic generation, daily means of the 15-minute values (MW as published). Only days
+      complete for the measure (every period of the local day with a value); incomplete days are left out, never
+      partially averaged.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null, {accepted_values: {arguments: {values: [
+          'pse_reports:rce_pln:PLN/MWh:rce_pln:daily_mean', 'pse_reports:his_wlk_cal:MW:demand:daily_mean',
+          'pse_reports:his_wlk_cal:MW:wi:daily_mean', 'pse_reports:his_wlk_cal:MW:pv:daily_mean']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: [PL]}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_electricity_price_rce
+    description: Metrics view of the draft KPI electricity_price_rce (PSE market energy price RCE, daily mean, Poland).
+  - name: poc_metrics_electricity_demand
+    description: Metrics view of the draft KPI electricity_demand (PSE power demand of the national power system, daily mean).
+  - name: poc_metrics_wind_generation
+    description: Metrics view of the draft KPI wind_generation (PSE wind generation, daily mean, Poland).
+  - name: poc_metrics_pv_generation
+    description: Metrics view of the draft KPI pv_generation (PSE photovoltaic generation, daily mean, Poland).

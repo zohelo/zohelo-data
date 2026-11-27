@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: gis_sanitary
+  description: Główny Inspektorat Sanitarny, Stan sanitarny kraju / Raport z działań PIS (register PLS-018), one PDF per year
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gis_sanitary/
+    loaded_by: ingestion/to_bronze/gis_sanitary/
+    config: ingestion/sources/gis_sanitary.yaml
+  tables:
+  - name: gis_sanitary_cells
+    description: >-
+      One row per value cell of the table "Jakość zdrowotna środków spożywczych" read from the PDF text layer
+      (samples examined and per cent disqualified, all, domestic, imported and EU foodstuffs, one row per printed
+      year): cell text as printed, table title, page, row and column position, row label (year) and column header;
+      newest copy of each edition, partitioned by entity.
+  - name: gis_sanitary_rejected_files
+    description: Edition files of gis_sanitary the Bronze decoder rejected, with the reason.

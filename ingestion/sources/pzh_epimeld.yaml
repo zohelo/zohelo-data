@@ -1,0 +1,39 @@
+source_system: pzh_epimeld
+description: "NIZP PZH-PIB EPIMELD — annual bulletins \"Choroby zakaźne i zatrucia w Polsce\": cases and incidence by disease, Poland and voivodeships, PDF (register PLS-019)"
+
+# Extraction strategy (docs/landing.md). Register PLS-019. Bulk feature: the fixed EPIMELD index
+# https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html (robots.txt 404) links one PDF per annual bulletin,
+# <year>/Ch_<year>.pdf (1999-2025 on 26 Nov 2026), plus partial updates Ch_<year>a.pdf to 2013. No XLSX, CSV or API.
+# ingestion/to_landing/pzh_epimeld/ reads the index and lands the bulletins from 2006 through the bulk_file pattern.
+# Entity = one bulletin (ch_<year>), version = Last-Modified, written only when the SHA-256 changed; a held bulletin is
+# downloaded again only when its Last-Modified is newer. The updates (Ch_<year>a) are not landed: they reprint single
+# changed rows without the table headers. Restart unit: one bulletin. Bronze reads the PDF text layer (pypdf);
+# Silver keeps each year's value from the newest bulletin that prints it (warehouse/models/silver/pzh_epimeld/).
+# Dev probe 45895471866 (26 Nov 2026): index 200, 104 PDF links, 20 bulletins 2006-2025 of 0.9-2.4 MB; Dev trial
+# 45909237330: 20 files, 23,659,650 bytes, 39,585 Bronze rows, 0 rejected.
+extraction:
+  initial: bulk
+  production: snapshot                  # each PDF is its bulletin as published; a corrected file replaces it
+  incremental_policy: changed_since_last  # new bulletins; Last-Modified, then SHA-256
+  schedule: # UTC; one bulletin a year, published October to December of the next year (Ch_2025 on 3 Nov 2026); the
+    # index changes a few times a year: a monthly check on the 13th (the run ends with Bronze; Gold on Sundays, O46)
+    - {cron: "50 8 13 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/pzh_epimeld/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.pzh_epimeld_rows, bronze.pzh_epimeld_rejected_files]
+silver: [silver.pzh_epimeld_cases]
+gold: [gold.build_pzh_epimeld]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  pzh_epimeld_cases: {rows: 52000}  # 34,269: 266 diseases, Poland 2005-2025, voivodeships 2006-2025 (Dev 45909237330)
+  poc_build_pzh_epimeld: {rows: 103000}  # 68,376: cases and the non-null incidence of each Silver row (45909237330)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a bulletin
+# Refresh policy for all layers (D32): about 20 PDFs of 1-2.5 MB, one new a year, a few tens of thousands of rows;
+# small, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #443"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

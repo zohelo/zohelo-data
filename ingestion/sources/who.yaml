@@ -33,7 +33,11 @@ archive_policy:
   prune: report
 bronze: [bronze.who_observations, bronze.who_rejected_files]
 silver: [silver.who_observations]
-gold: [gold.build_who]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series and area of silver.who_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table who_observations.
+gold: [gold.build_who,
+       gold.who_observations, gold.who_series, gold.who_measures, gold.who_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   who_observations: {rows: 40000}  # 25,872: 2 indicators × ~4,300 area-years × 3 sexes (Dev trial 43159213097)
   poc_build_who: {rows: 6000}  # 3,696: 28 areas × 22 years × 3 sexes × 2 indicators (Dev trial 43159213097)
@@ -43,4 +47,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # once a year; a new copy replaces its entity and Silver is rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2408"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

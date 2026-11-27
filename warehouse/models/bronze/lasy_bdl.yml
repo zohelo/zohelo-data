@@ -1,0 +1,20 @@
+version: 2
+sources:
+- name: lasy_bdl
+  description: Lasy Państwowe Bank Danych o Lasach forest districts and regional directorates (register PL-ENV-018), WFS GetFeature
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/lasy_bdl/
+    loaded_by: ingestion/to_bronze/lasy_bdl/
+    config: ingestion/sources/lasy_bdl.yaml
+  tables:
+  - name: lasy_bdl_features
+    description: >-
+      One row per feature of the newest application/json response of each of the two BDL WFS layers (entities
+      districts = BDL:Nadleśnictwa, regions = BDL:RDLP): the GeoServer feature id, every property as the text of its
+      JSON value (columns of the other layer NULL), the planar area in EPSG:2180 (m²), centroid and point on the surface
+      (EPSG:4326 degrees) computed from the geometry, which is not stored; the feature's position in the response and
+      provenance; partitioned by entity.
+  - name: lasy_bdl_rejected_files
+    description: Responses of lasy_bdl the Bronze decoder rejected, with the reason.
