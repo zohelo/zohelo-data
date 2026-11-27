@@ -56,7 +56,11 @@ archive_policy:
   prune: report
 bronze: [bronze.owid_values, bronze.owid_charts, bronze.owid_rejected_files]
 silver: [silver.owid_observations, silver.owid_charts]
-gold: [gold.build_owid, gold.metrics_co2_consumption_per_capita, gold.metrics_electoral_democracy_index]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.owid_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table owid_observations.
+gold: [gold.build_owid, gold.metrics_co2_consumption_per_capita, gold.metrics_electoral_democracy_index,
+       gold.owid_observations, gold.owid_series, gold.owid_measures, gold.owid_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   owid_observations: {rows: 90000}  # Dev run 43343148738: 60,594 Silver rows, 39,344 Gold rows (4,185 + 20,925 + 14,234)
   owid_charts: {rows: 20}
@@ -69,4 +73,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # when the chart is revised, no changed-since filter; small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2982"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
