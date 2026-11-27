@@ -8,7 +8,8 @@ occupations: each block has a tab of the same colour at its left edge with the c
 (text matrix tracked through Tm, Td, TD, T* and the graphics state), font and resources. Then:
 
 - blocks: filled shapes at least half the page wide and 12 pt high that hold no other such shape (a page background
-  holds the blocks); a block with neither a label nor a line of text in it is decoration and is left out;
+  holds the blocks); a block without a label is left out when it holds no text or lies above or below all labelled
+  blocks (a header or footer box);
 - labels: the tab is a shape of the block's colour that starts left of the block, is narrower than half of it and
   overlaps it vertically; the label is the rotated text inside the tab. A block without such a tab takes the rotated
   text printed left of it within its height. Rotated text that no block takes is allowed only inside a tab whose
@@ -32,6 +33,7 @@ from typing import Any
 import unicodedata
 
 TITLE = re.compile(r"^Barometr zawodów (20\d\d)$")
+LETTER = re.compile(r"[^\W\d_]")
 AREA = re.compile(r"^(Polska|województwo\s+\S.*)$")
 FILL_OPS = {"f", "f*", "F", "B", "B*", "b", "b*"}
 COLOUR_OPS = {"k", "rg", "g", "sc", "scn"}
@@ -294,6 +296,7 @@ def _tabs(block: dict, shapes: list[dict]) -> list[dict]:
 def _name_blocks(page, reader, blocks, shapes, glyphs, lines) -> list[tuple[dict, str]]:
     """Each block's label (see the module text); blocks without label and text are left out."""
     named: list[tuple[dict, str]] = []
+    unlabelled: list[dict] = []
     taken: list[int] = []
     for b in blocks:
         tabs = _tabs(b, shapes)
@@ -307,11 +310,16 @@ def _name_blocks(page, reader, blocks, shapes, glyphs, lines) -> list[tuple[dict
             ]
         label = decode(page, reader, [[glyphs[i] for i in held]], rotated=True)[0] if held else ""
         if not label:
-            if not any(_inside(b, line["x"], line["y"]) for line in lines):
-                continue  # decoration: no label, no text
-            raise ValueError(f"block {b['colour']} at y {b['y0']:.0f}-{b['y1']:.0f} has text but no label")
+            if any(_inside(b, line["x"], line["y"]) for line in lines):
+                unlabelled.append(b)
+            continue  # no label and no text: decoration
         taken += held
         named.append((b, label))
+    if named:  # a box with text but no label is allowed only above or below the labelled blocks (header, footer)
+        top, bottom = max(b["y1"] for b, _ in named), min(b["y0"] for b, _ in named)
+        for b in unlabelled:
+            if bottom + 0.5 < b["y1"] and b["y0"] < top - 0.5:
+                raise ValueError(f"block {b['colour']} at y {b['y0']:.0f}-{b['y1']:.0f} has text but no label")
     colours = {b["colour"] for b, _ in named}
     unused_tabs = [s for s in shapes if s["colour"] not in colours and s["x1"] - s["x0"] < 200]
     for i, g in enumerate(glyphs):
@@ -352,6 +360,8 @@ def parse(page, reader) -> dict[str, Any] | None:
     bottom = min(b["y0"] for b, _ in named)
     for line in lines:
         if any(abs(line["y"] - h["y"]) < LINE_TOLERANCE for h in areas) or TITLE.match(line["text"]):
+            continue
+        if not LETTER.search(line["text"]):  # a stray "." or ".." (2022 posters): no occupation
             continue
         holders = [(b, name) for b, name in named if _inside(b, line["x"], line["y"])]
         if not holders:
