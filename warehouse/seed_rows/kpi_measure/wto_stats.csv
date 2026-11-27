@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+exports_services,wto_stats,wto_stats:batis:USD_MN:X.S.final,"OECD-WTO BaTIS BPM6, total services exports of Poland to the World, final value, US$ million",1,
+imports_services,wto_stats,wto_stats:batis:USD_MN:M.S.final,"OECD-WTO BaTIS BPM6, total services imports of Poland from the World, final value, US$ million",1,
