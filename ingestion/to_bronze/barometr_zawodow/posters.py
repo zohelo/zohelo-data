@@ -5,8 +5,9 @@ assessed for that area, in one coloured block per forecast category. The categor
 occupations: each block has a tab of the same colour at its left edge with the category's name as rotated text
 ("DEFICYT", "RÓWNOWAGA", "NADWYŻKA"). The page's content and the Form XObjects it draws are walked once
 (``drawing``): filled shapes with their colour and box, and every text show operation with its own start point
-(text matrix tracked through Tm, Td, TD, T* and the graphics state), font and resources, in drawing order. Text that
-a filled shape drawn after it covers is not printed and is left out (``visible``). Then:
+(text matrix tracked through Tm, Td, TD, T* and the graphics state), font and resources, in drawing order. The same
+text drawn twice at the same place (an overprinted tab label) is read once; text that a filled shape drawn after it
+covers is not printed and is left out (``visible``). Then:
 
 - blocks: filled shapes at least half the page wide and 12 pt high that hold no other such shape (a page background
   holds the blocks). A block without a label joins the labelled block of its colour that it overlaps (a tab drawn in
@@ -37,6 +38,7 @@ from typing import Any
 import unicodedata
 
 INNER_HYPHEN = re.compile(r"(?<=\w) ?- ?(?=[a-ząćęłńóśźż])")
+SPLIT_LIGATURE = re.compile(r"(f[il]) (?=[a-ząćęłńóśźż])")  # "Grafi cy", "fi zyczni": the ligature glyph's gap
 LONE_DIACRITIC = re.compile(r"(?<!\w)([ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]) (?=[a-ząćęłńóśźż])")
 TITLE = re.compile(r"^Barometr zawodów (20\d\d)$")
 LETTER = re.compile(r"[^\W\d_]")
@@ -53,9 +55,11 @@ BASE, GAP = 10000.0, 1000.0  # where each line piece is placed for decoding (one
 def clean(text: str) -> str:
     """NFKC (the ligatures "ﬁ", "ﬂ" of the posters' fonts become "fi", "fl"), one space between words, the hyphens
     U+2010 and U+2011 as "-" without spaces inside a word ("społeczno ‐ekonomicznych"), and a diacritic letter drawn
-    as its own glyph joined to its word ("ś ląskie": no Polish word is a lone ś, ł, ż ...)."""
+    as its own glyph joined to its word ("ś ląskie": no Polish word is a lone ś, ł, ż ...), a split ligature joined
+    ("Grafi cy", "fi zyczni": no Polish word ends in fi or fl), no space before a comma."""
     text = " ".join(unicodedata.normalize("NFKC", text).replace("\u2010", "-").replace("\u2011", "-").split())
     text = INNER_HYPHEN.sub("-", text)
+    text = SPLIT_LIGATURE.sub(r"\1", text).replace(" ,", ",")
     return LONE_DIACRITIC.sub(r"\1", text)
 
 
@@ -101,7 +105,10 @@ def drawing(page, reader) -> tuple[list[dict], list[dict]]:
     _walk(page.get_contents(), page.get("/Resources"), reader, [1.0, 0, 0, 1.0, 0, 0], "g:0", shapes, texts, 0)
     for n, item in enumerate(sorted(shapes + texts, key=lambda i: i["seq"])):
         item["seq"] = n
-    return shapes, texts
+    once: dict[tuple, dict] = {}  # text drawn twice in place (an overprinted tab label) is read once
+    for t in texts:
+        once.setdefault((round(t["x"], 1), round(t["y"], 1), t["rotated"], repr(t["args"])), t)
+    return shapes, list(once.values())
 
 
 def _walk(contents, resources, reader, cm, fill, shapes, texts, depth) -> None:
