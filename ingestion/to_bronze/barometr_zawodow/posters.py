@@ -5,23 +5,27 @@ assessed for that area, in one coloured block per forecast category. The categor
 occupations: each block has a tab of the same colour at its left edge with the category's name as rotated text
 ("DEFICYT", "RÓWNOWAGA", "NADWYŻKA"). The page's content and the Form XObjects it draws are walked once
 (``drawing``): filled shapes with their colour and box, and every text show operation with its own start point
-(text matrix tracked through Tm, Td, TD, T* and the graphics state), font and resources. Then:
+(text matrix tracked through Tm, Td, TD, T* and the graphics state), font and resources, in drawing order. Text that
+a filled shape drawn after it covers is not printed and is left out (``visible``). Then:
 
 - blocks: filled shapes at least half the page wide and 12 pt high that hold no other such shape (a page background
-  holds the blocks); a block without a label is left out when it holds no text or lies above or below all labelled
-  blocks (a header or footer box);
+  holds the blocks). A block without a label joins the labelled block of its colour that it overlaps (a tab drawn in
+  one path with the top of its block, 2023); otherwise it is left out when it holds no text, is white, or lies above
+  or below all labelled blocks (a header or footer box);
 - labels: the tab is a shape of the block's colour that starts left of the block, is narrower than half of it and
   overlaps it vertically; the label is the rotated text inside the tab. A block without such a tab takes the rotated
   text printed left of it within its height. Rotated text that no block takes is allowed only inside a tab whose
-  colour is no block's colour (the tab of a category the poster does not use, drawn under a white box in 2022);
+  colour is no block's colour (the tab of a category the poster does not use, 2022), or when it repeats the label
+  of a labelled block (printed a second time beside its tab, 2022);
 - lines: horizontal show operations of one printed line (same y) are split into columns at the column positions
   (an x where many lines start, at least COLUMN_GAP from another column) and each piece is decoded on its own by
   pypdf with the real gaps between its operations, so spaces come out as printed and two columns never join;
 - occupations: the lines inside a block; a line that starts with a lower-case letter continues the line above it in
   the same column of the same block.
 
+An occupation printed again in the same block is returned with ``repeat_of_item`` (the first one's item number).
 Anything else rejects the page (``ValueError`` with the reason): a block with two tabs or text but no label, rotated
-text taken by two blocks, a line in the band of the blocks but in none of them, the same occupation twice, a
+text taken by two blocks, a line in the band of the blocks but in none of them, an occupation in two categories, a
 continuation without a line above it. Nothing is guessed from position alone.
 """
 
@@ -38,6 +42,7 @@ AREA = re.compile(r"^(Polska|województwo\s+\S.*)$")
 FILL_OPS = {"f", "f*", "F", "B", "B*", "b", "b*"}
 COLOUR_OPS = {"k", "rg", "g", "sc", "scn"}
 SHOW_OPS = {"Tj", "TJ", "'", '"'}
+WHITE = {"k:0.0,0.0,0.0,0.0", "rg:1.0,1.0,1.0", "g:1.0", "scn:1.0,1.0,1.0", "sc:1.0,1.0,1.0"}
 LINE_TOLERANCE = 1.5  # pt: operations of one printed line differ in y by less than this
 COLUMN_GAP = 50  # pt: occupation columns are 140-360 pt apart
 BASE, GAP = 10000.0, 1000.0  # where each line piece is placed for decoding (one piece per y)
@@ -88,6 +93,8 @@ def drawing(page, reader) -> tuple[list[dict], list[dict]]:
     shapes: list[dict] = []
     texts: list[dict] = []
     _walk(page.get_contents(), page.get("/Resources"), reader, [1.0, 0, 0, 1.0, 0, 0], "g:0", shapes, texts, 0)
+    for n, item in enumerate(sorted(shapes + texts, key=lambda i: i["seq"])):
+        item["seq"] = n
     return shapes, texts
 
 
@@ -121,7 +128,16 @@ def _walk(contents, resources, reader, cm, fill, shapes, texts, depth) -> None:
         elif op in FILL_OPS:
             if path:
                 xs, ys = [p[0] for p in path], [p[1] for p in path]
-                shapes.append({"x0": min(xs), "x1": max(xs), "y0": min(ys), "y1": max(ys), "colour": fill})
+                shapes.append(
+                    {
+                        "x0": min(xs),
+                        "x1": max(xs),
+                        "y0": min(ys),
+                        "y1": max(ys),
+                        "colour": fill,
+                        "seq": _seq(shapes, texts),
+                    }
+                )
             path = []
         elif op in ("n", "S", "s"):
             path = []
@@ -163,8 +179,21 @@ def _walk(contents, resources, reader, cm, fill, shapes, texts, depth) -> None:
                     "op": b"TJ" if op == "TJ" else b"Tj",
                     "args": [_raw(args[-1])],
                     "resources": resources,
+                    "seq": _seq(shapes, texts),
                 }
             )
+
+
+def _seq(shapes: list[dict], texts: list[dict]) -> float:
+    """Drawing order: a running number across the page and its Form XObjects."""
+    return float(len(shapes) + len(texts))
+
+
+def visible(shapes: list[dict], texts: list[dict]) -> tuple[list[dict], int]:
+    """The text operations no filled shape drawn after them covers (text under a later box is not printed), and the
+    number of hidden ones."""
+    out = [t for t in texts if not any(s["seq"] > t["seq"] and _inside(s, t["x"], t["y"], pad=-0.5) for s in shapes)]
+    return out, len(texts) - len(out)
 
 
 def decode(page, reader, pieces: list[list[dict]], rotated: bool = False) -> list[str]:
@@ -280,6 +309,10 @@ def _contains(outer: dict, inner: dict) -> bool:
     )
 
 
+def _overlaps(a: dict, b: dict) -> bool:
+    return a["x0"] < b["x1"] and b["x0"] < a["x1"] and a["y0"] < b["y1"] and b["y0"] < a["y1"]
+
+
 def _tabs(block: dict, shapes: list[dict]) -> list[dict]:
     return [
         t
@@ -315,18 +348,26 @@ def _name_blocks(page, reader, blocks, shapes, glyphs, lines) -> list[tuple[dict
             continue  # no label and no text: decoration
         taken += held
         named.append((b, label))
-    if named:  # a box with text but no label is allowed only above or below the labelled blocks (header, footer)
+    if named:
         top, bottom = max(b["y1"] for b, _ in named), min(b["y0"] for b, _ in named)
         for b in unlabelled:
-            if bottom + 0.5 < b["y1"] and b["y0"] < top - 0.5:
+            joins = [name for o, name in named if o["colour"] == b["colour"] and _overlaps(o, b)]
+            if len(set(joins)) == 1:  # a piece of a labelled block drawn as its own path (its tab merged into it)
+                named.append((b, joins[0]))
+            elif b["colour"] in WHITE or b["y1"] <= bottom + 0.5 or b["y0"] >= top - 0.5:
+                continue  # a white box, or a header or footer box above or below the labelled blocks
+            else:
                 raise ValueError(f"block {b['colour']} at y {b['y0']:.0f}-{b['y1']:.0f} has text but no label")
     colours = {b["colour"] for b, _ in named}
     unused_tabs = [s for s in shapes if s["colour"] not in colours and s["x1"] - s["x0"] < 200]
     for i, g in enumerate(glyphs):
         if taken.count(i) > 1:
             raise ValueError("rotated text taken by two category blocks")
-        if i not in taken and not any(_inside(t, g["x"], g["y"], pad=2) for t in unused_tabs):
-            raise ValueError(f"rotated text at x {g['x']:.0f}, y {g['y']:.0f} lies in no category tab")
+        if i in taken or any(_inside(t, g["x"], g["y"], pad=2) for t in unused_tabs):
+            continue
+        if decode(page, reader, [[g]], rotated=True)[0] in {name for _, name in named}:
+            continue  # a block's label printed a second time beside its tab (2022)
+        raise ValueError(f"rotated text at x {g['x']:.0f}, y {g['y']:.0f} lies in no category tab")
     return named
 
 
@@ -335,6 +376,7 @@ def parse(page, reader) -> dict[str, Any] | None:
     is no poster (no "Barometr zawodów <year>" title together with an area line). ValueError on a poster page that
     does not read cleanly."""
     shapes, texts = drawing(page, reader)
+    texts, hidden = visible(shapes, texts)
     whole = lines_of(page, reader, texts, split=False)  # the header lines, never cut at a column
     titles = [m.group(1) for m in (TITLE.match(line["text"]) for line in whole) if m]
     areas = [line for line in whole if AREA.match(line["text"])]
@@ -368,8 +410,8 @@ def parse(page, reader) -> dict[str, Any] | None:
             if bottom < line["y"] < top:  # in the band of the blocks but in none: never dropped silently
                 raise ValueError(f"line in no category block: {line['text'][:60]!r}")
             continue  # header, footer and logo text above or below the blocks
-        if len(holders) != 1:
-            raise ValueError(f"line {line['text'][:60]!r} lies in {len(holders)} category blocks")
+        if len({name for _, name in holders}) != 1:
+            raise ValueError(f"line {line['text'][:60]!r} lies in blocks of {len(holders)} categories")
         block, name = holders[0]
         key = (id(block), round(line["x"]))
         if line["text"][0].islower():
@@ -380,11 +422,13 @@ def parse(page, reader) -> dict[str, Any] | None:
             continue
         last_in_column[key] = len(rows)
         rows.append((name, line["text"]))
-    seen: set[str] = set()
-    for _, occupation in rows:
-        if occupation in seen:
-            raise ValueError(f"occupation printed twice on one poster: {occupation[:60]!r}")
-        seen.add(occupation)
+    seen: dict[str, tuple[int, str]] = {}
+    repeats: list[int | None] = []
+    for item, (name, occupation) in enumerate(rows, 1):
+        if occupation in seen and seen[occupation][1] != name:
+            raise ValueError(f"occupation printed in two categories on one poster: {occupation[:60]!r}")
+        repeats.append(seen[occupation][0] if occupation in seen else None)  # the same line again, same block
+        seen.setdefault(occupation, (item, name))
     if not rows:
         raise ValueError("poster page without an occupation inside a category block")
     return {
@@ -392,4 +436,6 @@ def parse(page, reader) -> dict[str, Any] | None:
         "area": areas[0]["text"],
         "categories": [name for _, name in sorted(named, key=lambda bn: -bn[0]["y1"])],
         "rows": rows,
+        "repeat_of_item": repeats,
+        "hidden_text": hidden,
     }

@@ -5,7 +5,9 @@ Each file is one poster (posters.py): the national poster (entity plakat_<year>:
 voivodeship page NN (plakat_p<NN>_<year>). One Bronze row per occupation printed on it: forecast year and area as
 printed in the poster's header, the category label of the block the occupation is printed in (as printed, e.g.
 "DEFICYT"), the labels of all blocks of the poster top to bottom, and the occupation name as printed (wrapped lines
-joined, ligatures resolved).
+joined, ligatures resolved). An occupation printed again in the same block is a row of its own with repeat_of_item
+set (łódzkie 2021 prints "Administratorzy stron internetowych" twice); one printed in two categories rejects the
+file.
 
 A file is rejected whole (bronze.barometr_zawodow_rejected_files, with the reason) when a poster page does not read
 cleanly (posters.py), the poster's year differs from the entity's year, the national file holds another poster than
@@ -35,6 +37,7 @@ COLUMNS = [
     ("poster_categories", "VARCHAR"),  # labels of all blocks of the poster, top to bottom, "|"-separated
     ("item_number", "BIGINT"),  # occupations in reading order on the page (block by block, line by line), from 1
     ("occupation_name", "VARCHAR"),  # as printed, wrapped lines joined with one space
+    ("repeat_of_item", "BIGINT"),  # item_number of the same occupation printed earlier in the same block, else null
     ("raw_sha256", "VARCHAR"),
     ("source_version", "VARCHAR"),
     ("ingested_at", "TIMESTAMPTZ"),
@@ -76,7 +79,9 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
             raise ValueError(f"area {poster['area']!r} printed on pages {areas[poster['area']]} and {number}")
         areas[poster["area"]] = number
         categories = "|".join(poster["categories"])
-        for item, (category, occupation) in enumerate(poster["rows"], 1):
+        for item, ((category, occupation), repeat) in enumerate(
+            zip(poster["rows"], poster["repeat_of_item"], strict=True), 1
+        ):
             rows.append(
                 {
                     **base,
@@ -87,6 +92,7 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
                     "poster_categories": categories,
                     "item_number": item,
                     "occupation_name": occupation,
+                    "repeat_of_item": repeat,
                     "source_row_number": len(rows) + 1,
                 }
             )
