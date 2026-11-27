@@ -9,12 +9,10 @@
    - gios_surface_water:status:%:<category>.<assessment>: the share of each class in the assessed bodies (breakdown
      status_class);
    - gios_surface_water:status:%:<category>.<chemical_status|overall_status>.good: the share of bodies in good status
-     (is_total), only where the layer publishes two classes, good and below good (GOOD); another class fails the build.
+     (is_total), only where the layer publishes two classes, good and below good; a third class fails the build.
    The overall status with statistical methods (an estimate for unmonitored bodies) stays in Silver. The assessment
    covers six years: one annual row, date_key = 2024-01-01 (the first day of the final year), period_label '2019-2024';
    one frequency per measure. A body counted twice in one category x assessment fails the build. #}
-{% set good = {'chemical_status': 'stan chemiczny dobry', 'overall_status': 'dobry stan wód'} %}
-{% set below = {'chemical_status': 'stan chemiczny poniżej dobrego', 'overall_status': 'zły stan wód'} %}
 with status as (
     select
         water_category,
@@ -59,10 +57,8 @@ totals as (
                 then error('build_gios_surface_water: a water body twice in ' || water_category || ' ' || assessment)
             else count(*)
         end as bodies,
-        count(*) filter (where status_class = case assessment
-            {% for k, v in good.items() %}when '{{ k }}' then '{{ v }}' {% endfor %}end) as good,
-        count(*) filter (where status_class not in (
-            {% for k in good %}'{{ good[k] }}', '{{ below[k] }}'{{ ', ' if not loop.last }}{% endfor %})) as other,
+        count(*) filter (where status_class in ('stan chemiczny dobry', 'dobry stan wód')) as good,
+        count(*) filter (where status_class in ('stan chemiczny poniżej dobrego', 'zły stan wód')) as below_good,
         max(source_version) as source_version,
         max(raw_sha256) as raw_sha256
     from assessed
@@ -100,7 +96,7 @@ measures as (
         '{}' as breakdown_json,
         true as is_total,
         case
-            when other > 0 then error('build_gios_surface_water: a class other than good or below good in ' || assessment)
+            when good + below_good <> bodies then error('build_gios_surface_water: a third class in ' || assessment)
             else 100.0 * good / bodies
         end as value
     from totals
