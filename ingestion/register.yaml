@@ -6797,7 +6797,8 @@ sources:
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
   short_name: GIOŚ surface water
   provider: GIOŚ
-  status: approved
+  source_system: gios_surface_water
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6967,7 +6968,8 @@ sources:
   name: Hydroportal / water-management spatial data
   short_name: Wody Polskie Hydroportal
   provider: Państwowe Gospodarstwo Wodne Wody Polskie
-  status: approved
+  source_system: wody_polskie_apgw
+  status: built
   family: G
   kpi: false
   geography: Poland
