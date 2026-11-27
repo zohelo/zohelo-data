@@ -11521,8 +11521,9 @@ sources:
   name: 'NBP calendars: MPC meetings and statistics publications'
   short_name: NBP calendars
   provider: Narodowy Bank Polski (NBP)
+  source_system: sdds_calendar
   current: true
-  status: approved
+  status: built
   family: J
   kpi: false
   geography: Poland
@@ -11607,8 +11608,9 @@ sources:
   name: Ministry of Finance publication calendar
   short_name: MF calendar
   provider: Ministerstwo Finansów
+  source_system: sdds_calendar
   current: true
-  status: approved
+  status: built
   family: J
   kpi: false
   geography: Poland
