@@ -81,26 +81,38 @@ def main() -> int:
     prof["series_eu27"] = q('select count(distinct "SeriesCode") from e')[0][0]
     prof["rows_pl"] = q("""select count(*) from e where "GeoAreaCode" = '616'""")[0][0]
     note("sdg probe3 counts", prof)
-    cols_prof = {c: q(f'select count(distinct "{c}"), count(*) filter (where "{c}" is null), '
-                      f'count(*) filter (where "{c}" = \'NA\') from e')[0] for c in cols}
-    note("sdg probe3 columns eu (distinct, null, NA)", cols_prof)
-    dims = [c for c in cols if c.startswith("[")]
-    keycols = ['"SeriesCode"', '"GeoAreaCode"', '"TimePeriod"', *[f'"{c}"' for c in dims
-                                                                   if c not in ("[Nature]", "[Units]")]]
-    small = {}
-    for c in ("[Nature]", "[Units]", "[Reporting Type]", "[Observation Status]", "Time_Detail", "TimeCoverage",
-              "BasePeriod", "Status", "Release"):
-        if c in cols:
-            small[c] = q(f'select "{c}", count(*) from e group by 1 order by 2 desc limit 25')
+    attrs = {"Nature", "Units", "UnitMultiplier", "Observation Status"}
+    dims = [c for c in cols[cols.index("ObservationID") + 1:] if c not in attrs]
+    keys = ", ".join(['"SeriesCode"', '"GeoAreaCode"', '"TimePeriod"', *[f'"{c}"' for c in dims]])
+    small = {"dims": len(dims)}
+    for c in ("Nature", "Units", "Observation Status", "Time_Detail", "BasePeriod", "ValueType", "Reporting Type",
+              "Location", "Sex", "isDSDSeries", "ReleaseStatus", "ReleaseName"):
+        small[c] = q(f'select "{c}", count(*) from e group by 1 order by 2 desc limit 30')
     small["value_non_numeric"] = q("""select "Value", count(*) from e where not regexp_full_match(coalesce("Value", ''),
         '-?[0-9]+(\\.[0-9]+)?([eE][-+]?[0-9]+)?') group by 1 order by 2 desc limit 25""")
+    small["value_zero"] = q("""select count(*) from e where try_cast("Value" as double) = 0""")
     small["timeperiod_shape"] = q("""select regexp_replace("TimePeriod", '[0-9]', '9', 'g'), count(*) from e group by 1""")
-    small["dup_key_rows"] = q(f"select count(*), sum(n) from (select count(*) n from e group by {', '.join(keycols)} having n > 1)")
-    small["dup_key_with_indicator"] = q(f'select count(*) from (select count(*) n from e group by {", ".join(keycols)}, "Indicator" having n > 1)')
-    small["dup_key_distinct_values"] = q(f'select count(*) from (select count(distinct "Value") n from e group by {", ".join(keycols)} having n > 1)')
-    small["dup_key_distinct_values_sample"] = q(f'select "SeriesCode", "GeoAreaCode", "TimePeriod", list(distinct "Value"), list(distinct "Indicator"), list(distinct "Time_Detail") from e group by {", ".join(keycols)} having count(distinct "Value") > 1 limit 8')
-    small["units_per_series_max"] = q('select max(n) from (select "SeriesCode", count(distinct "[Units]") n from e group by 1)')
+    small["td_ne_tp"] = q("""select count(*), count(distinct "SeriesCode") from e where "Time_Detail" <> "TimePeriod" """)
+    small["td_sample"] = q("""select "Time_Detail", "TimePeriod", count(*) from e where "Time_Detail" <> "TimePeriod"
+        group by all order by 3 desc limit 12""")
+    small["obsid_rows_gt1"] = q('select count(*), max(n) from (select count(*) n from e group by "ObservationID" having n > 1)')
+    rest = ", ".join(f'"{c}"' for c in cols if c not in ("column00", "ID", "Goal", "Target", "Indicator"))
+    small["obsid_differing_outside_gti"] = q(f'select count(*) from (select "ObservationID" from (select distinct {rest} '
+                                             f'from e) group by 1 having count(*) > 1)')
+    small["dup_key_after_obsid"] = q(f'select count(*), sum(n) from (select count(*) n from (select distinct '
+                                     f'"ObservationID", {keys} from e) group by {keys} having n > 1)')
+    small["dup_key_sample"] = q(f'select "SeriesCode", "GeoAreaCode", "TimePeriod", list(distinct "Value"), '
+                                f'list(distinct "Time_Detail"), list(distinct "Source")[:2] from e group by {keys} '
+                                f'having count(distinct "ObservationID") > 1 limit 8')
+    small["dup_key_series"] = q(f'select "SeriesCode", count(*) from (select "SeriesCode" from e group by {keys} '
+                                f'having count(distinct "ObservationID") > 1) group by 1 order by 2 desc limit 20')
+    small["units_per_series_max"] = q('select max(n) from (select "SeriesCode", count(distinct "Units") n from e group by 1)')
     note("sdg probe3 eu profile", small)
+    con.execute("copy e to '/tmp/e.parquet' (format parquet, compression zstd)")
+    con.execute("copy t to '/tmp/t.parquet' (format parquet, compression zstd)")
+    import os
+
+    note("sdg probe3 parquet sizes", {"eu27": os.path.getsize("/tmp/e.parquet"), "world": os.path.getsize("/tmp/t.parquet")})
     return 0
 
 
