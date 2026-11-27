@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+surface_water_good_status_share,poland,A,surface_water_good_status_share,gios_surface_water,status,gios_surface_water:status:%:all.overall_status.good,A,PL,,rate,up,ready,"One value per six-year assessment (2019-2024, dated 2024); Poland only (the status layers carry no area code)"

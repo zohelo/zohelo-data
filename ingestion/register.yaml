@@ -6796,7 +6796,8 @@ sources:
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
   short_name: GIOŚ surface water
   provider: GIOŚ
-  status: approved
+  source_system: gios_surface_water
+  status: built
   family: G
   kpi: true
   geography: Poland

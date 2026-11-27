@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gios_surface_water,PL-ENV-011,Państwowy Monitoring Środowiska - ocena stanu jednolitych części wód powierzchniowych (GIOŚ),State Environmental Monitoring - status of surface water bodies (GIOŚ),Główny Inspektorat Ochrony Środowiska (GIOŚ),cube,api,national-public,cc_by_4_0_gios_surface_water,https://wody.gios.gov.pl/pjwp/publication/367

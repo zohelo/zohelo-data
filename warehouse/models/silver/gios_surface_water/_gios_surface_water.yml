@@ -1,0 +1,40 @@
+version: 2
+models:
+  - name: gios_surface_water_status
+    description: >-
+      GIOŚ surface-water status assessment 2019-2024 (register PL-ENV-011; licence cc_by_4_0_gios_surface_water): the
+      status class of each surface water body (JCWP) in each of the 19 layers of the PJWP ArcGIS services, water
+      categories rivers, reservoirs, lakes, transitional, coastal; assessments ecological status, ecological potential,
+      chemical status, overall status (monitoring) and overall status with statistical methods; classes, body status
+      and names as published. Dev probe 45924431424: 14,906 rows. Grain: water_category x assessment x kod_jcwp.
+    tests:
+      - unique:
+          column_name: "water_category || '|' || assessment || '|' || kod_jcwp"
+    columns:
+      - name: water_category
+        tests: [not_null, {accepted_values: {arguments: {values: [rivers, reservoirs, lakes, transitional, coastal]}}}]
+      - name: assessment
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [ecological_status, ecological_potential, chemical_status, overall_status,
+                         overall_status_statistical]
+      - name: kod_jcwp
+        tests: [not_null]
+      - name: status_class
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [bardzo dobry stan ekologiczny, dobry stan ekologiczny, umiarkowany stan ekologiczny,
+                         słaby stan ekologiczny, zły stan ekologiczny, maksymalny potencjał ekologiczny,
+                         dobry potencjał ekologiczny, umiarkowany potencjał ekologiczny, słaby potencjał ekologiczny,
+                         zły potencjał ekologiczny, stan chemiczny dobry, stan chemiczny poniżej dobrego, dobry stan wód,
+                         zły stan wód]
+      - name: water_body_status
+        tests: [not_null, {accepted_values: {arguments: {values: [NAT, SZCW, SCW]}}}]
+      - name: fid
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
