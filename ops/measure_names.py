@@ -14,7 +14,8 @@ results (every sent measure_key answered exactly once, a tool call with the expe
 90 characters, ``unclear`` a boolean) and writes ``warehouse/seed_rows/measure_name/<source_system>.csv``
 (measure_key,name_pl,name_en,unclear; D36 folder pattern). Rows already in a file and not in this batch stay.
 A report for the job summary and the pull request body goes to ``--out``. Exit code 0 when every measure passed,
-1 when some did not (their rows are left out and listed), 2 for bad arguments or a missing secret.
+1 when some did not (their rows are left out and listed), 2 for bad arguments, a missing secret or any
+unexpected error (an API error, a bad manifest): the workflow then opens no pull request, whatever was written.
 
 Args: ``submit --scope activated|all --model <id> --out DIR``; ``collect --manifest FILE --out DIR``.
 """
@@ -28,6 +29,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import traceback
 
 from ingestion.common.report import annotate, step_summary
 
@@ -377,7 +379,14 @@ def main(argv=None) -> int:
     c.add_argument("--out", required=True)
     c.add_argument("--seed-folder", default=str(SEED_FOLDER))
     args = parser.parse_args(argv)
-    return submit(args) if args.step == "submit" else collect(args)
+    if args.step == "submit":
+        return submit(args)
+    try:
+        return collect(args)
+    except Exception as exc:  # exit 1 ("some measures left out") opens a pull request; an unplanned error must not
+        traceback.print_exc()
+        annotate("error", "collect failed", f"{type(exc).__name__}: {exc}")
+        return 2
 
 
 if __name__ == "__main__":

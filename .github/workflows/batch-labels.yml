@@ -55,18 +55,13 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+    # Secrets are given only to the steps that use them, not to checkout, setup-python or the installs.
     env:
       PYTHONPATH: .
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      # Read-only credentials: gold.dim_measure is attached READ_ONLY.
-      STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN }}
-      STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY }}
-      STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY }}
-      STORAGE_LAKEHOUSE_CATALOG_URL: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_URL }}
-      STORAGE_LAKEHOUSE_CATALOG_NAME: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_NAME }}
-      STORAGE_ENDPOINT_URL: ${{ vars.STORAGE_ENDPOINT_URL }}
     steps:
       - name: Secret present
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "::error title=ANTHROPIC_API_KEY missing::The repository secret ANTHROPIC_API_KEY is not set. The owner adds it (Settings, Secrets and variables, Actions); this workflow cannot run without it."
@@ -92,6 +87,14 @@ jobs:
         env:
           SCOPE: ${{ inputs.scope }}
           MODEL: ${{ inputs.model }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Read-only credentials: gold.dim_measure is attached READ_ONLY.
+          STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN }}
+          STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY }}
+          STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY }}
+          STORAGE_LAKEHOUSE_CATALOG_URL: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_URL }}
+          STORAGE_LAKEHOUSE_CATALOG_NAME: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_NAME }}
+          STORAGE_ENDPOINT_URL: ${{ vars.STORAGE_ENDPOINT_URL }}
         run: |
           set -euo pipefail
           if ! printf '%s' "$MODEL" | grep -Eq '^[a-z0-9][a-z0-9.-]{2,63}$'; then
@@ -116,13 +119,15 @@ jobs:
     permissions:
       contents: read
       actions: read  # finds and downloads the manifest artifact of the submit run
+    # ANTHROPIC_API_KEY is given only to the steps that use it, not to checkout, setup-python or the installs.
     env:
       PYTHONPATH: .
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       BATCH_ID: ${{ inputs.batch_id }}
       ISSUE: ${{ inputs.issue }}
     steps:
       - name: Secret and inputs
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "::error title=ANTHROPIC_API_KEY missing::The repository secret ANTHROPIC_API_KEY is not set. The owner adds it (Settings, Secrets and variables, Actions); this workflow cannot run without it."
@@ -159,9 +164,14 @@ jobs:
           set -euo pipefail
           query="per_page=100"
           [ -n "$BATCH_ID" ] && query="$query&name=measure-names-$BATCH_ID"
-          # Newest first; expired artifacts (older than 29 days) cannot be collected any more.
-          id=$(gh api "repos/$REPO/actions/artifacts?$query" \
-            --jq '[.artifacts[] | select(.name | startswith("measure-names-")) | select(.expired | not)][0].id // empty')
+          # Newest first, page by page until a manifest turns up (Dev runs add many other artifacts); expired
+          # artifacts (older than 29 days) cannot be collected any more. At most 50 pages (5,000 artifacts).
+          id=""
+          for page in $(seq 1 50); do
+            gh api "repos/$REPO/actions/artifacts?$query&page=$page" > /tmp/artifacts.json
+            id=$(jq -r '[.artifacts[] | select(.name | startswith("measure-names-")) | select(.expired | not)][0].id // empty' /tmp/artifacts.json)
+            if [ -n "$id" ] || [ "$(jq '.artifacts | length' /tmp/artifacts.json)" -lt 100 ]; then break; fi
+          done
           if [ -z "$id" ]; then
             echo "::error title=no manifest::no artifact measure-names-${BATCH_ID:-*} from a submit run (or it expired): run step submit first" >&2
             exit 1
@@ -172,12 +182,19 @@ jobs:
           echo "::notice title=manifest::$(jq -c '{batch_id, model, scope, created_at, measures, requests}' /tmp/measure-names/in/manifest.json)"
       - name: ops/measure_names.py collect
         id: collect
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -uo pipefail
           python -m ops.measure_names collect --manifest /tmp/measure-names/in/manifest.json --out /tmp/measure-names/out
           status=$?
-          # 0 every measure passed, 1 some did not (left out and listed), 2 bad input, 3 batch not ended.
+          # 0 every measure passed, 1 some did not (left out and listed), 2 bad input or an unexpected error,
+          # 3 batch not ended. Only 0 and 1 go on to the pull request, and only with the report written.
           if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then exit "$status"; fi
+          if [ ! -s /tmp/measure-names/out/report.md ]; then
+            echo "::error title=measure names::collect ended $status without its report; no pull request" >&2
+            exit 2
+          fi
           echo "problems=$status" >> "$GITHUB_OUTPUT"
           if [ -z "$(git status --porcelain -- warehouse/seed_rows/measure_name)" ]; then
             echo "::warning title=measure names::no row changed; no pull request"
@@ -216,7 +233,7 @@ jobs:
           git push -q "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$branch"
           {
             printf 'Lane: structure\n\nCloses #%s\n\n' "$ISSUE"
-            printf 'Written by [batch-labels.yml run](%s) (step collect). Seed rows only: no model reads `warehouse/seed_rows/measure_name/` yet (the data-model change is a separate pull request).\n\n' "$RUN_URL"
+            printf 'Written by [batch-labels.yml run](%s) (step collect). Seed rows only: the model `gold.measure_name` reads `warehouse/seed_rows/measure_name/`; nothing joins it to `dim_measure` yet (a separate pull request).\n\n' "$RUN_URL"
             cat /tmp/measure-names/out/report.md
           } > /tmp/measure-names/body.md
           head -c 60000 /tmp/measure-names/body.md > /tmp/measure-names/body-cut.md
