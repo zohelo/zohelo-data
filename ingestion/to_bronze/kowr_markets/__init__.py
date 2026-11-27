@@ -96,8 +96,11 @@ FOB_HEADER = re.compile(r"Towar Jedn\. ?miary .*?(\d{1,2}\.\d{2}\.\d{4}).*zł/t(
 # "Średni kurs NBP z dnia 21.10.2026 r.: EUR = 4,3716 zł." (FOB), "1 EUR = 4,3695 PLN (wg EBC - 22.10.2026 r.)" (EU)
 RATE = re.compile(r"EUR ?= ?(\d[,.]\d{2,4}) ?(?:zł|PLN)")
 SOURCE_LINE = re.compile(r"Źródło: (.+)")
-# "12-18.10.2026 r.", "9-15.11.2026", "07-13.07.25", "27.03 - 2.04.2023", "30.06-06.07.25", "18-31.12.2023"
-PERIOD = re.compile(r"(\d{1,2})(?:\.(\d{2}))? ?- ?(\d{1,2})\.(\d{2})\.(\d{2}|\d{4})(?: r\.)?")
+# "12-18.10.2026 r.", "9-15.11.2026", "07-13.07.25", "27.03 - 2.04.2023", "30.06-06.07.25", "18-31.12.2023",
+# "30.12.2024 - 05.01.2025", "29.12.2025 r. - 04.01.2026 r."
+PERIOD = re.compile(
+    r"(\d{1,2})(?:\.(\d{2}))?(?:\.(\d{2}|\d{4}))?(?: r\.)? ?- ?(\d{1,2})\.(\d{2})\.(\d{2}|\d{4})(?: r\.)?"
+)
 EXCHANGE_ROW = re.compile(
     rf"([a-ząćęłńóśźż ]+?) ({GROUPED}) ({GROUPED}) ({GROUPED}) ({CHANGE.pattern}) "
     rf"({CHANGE.pattern}) ({CHANGE.pattern})"
@@ -122,11 +125,12 @@ def period_of(text: str, end: date, where: str) -> tuple[str, str, str]:
     match = PERIOD.fullmatch(text.strip())
     if not match:
         raise Layout(f"{where}: period {text!r} not read")
-    d1, m1, d2, m2, y2 = match.groups()
+    d1, m1, y1, d2, m2, y2 = match.groups()
     year = int(y2) + (2000 if len(y2) == 2 else 0)
     try:
         last = date(year, int(m2), int(d2))
-        first = date(year - (int(m1 or m2) > int(m2)), int(m1 or m2), int(d1))
+        start_year = int(y1) + (2000 if len(y1) == 2 else 0) if y1 else year - (int(m1 or m2) > int(m2))
+        first = date(start_year, int(m1 or m2), int(d1))
     except ValueError as exc:
         raise Layout(f"{where}: period {text!r}: {exc}") from exc
     if (
