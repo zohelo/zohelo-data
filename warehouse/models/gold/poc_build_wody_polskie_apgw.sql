@@ -55,7 +55,22 @@ district_names as (
 ),
 
 surface_counts as (
-    -- Poland in total and by district
+    -- Poland in total
+    select
+        plan_cycle,
+        edition_year,
+        category as code,
+        'PL' as geo_code,
+        cast(null as varchar) as district,
+        count(*) as bodies,
+        count(area_km2) as with_area,
+        sum(area_km2) as area,
+        max(source_version) as source_version,
+        max(raw_sha256) as raw_sha256
+    from surface_all
+    group by plan_cycle, edition_year, category
+    union all
+    -- Poland by river basin district (not_null in Silver: every body has one)
     select
         plan_cycle,
         edition_year,
@@ -68,9 +83,7 @@ surface_counts as (
         max(source_version) as source_version,
         max(raw_sha256) as raw_sha256
     from surface_all
-    group by grouping sets (
-        (plan_cycle, edition_year, category), (plan_cycle, edition_year, category, river_basin_district_code)
-    )
+    group by plan_cycle, edition_year, category, river_basin_district_code
     union all
     -- each voivodeship the body's published list names
     select
@@ -95,6 +108,20 @@ groundwater_counts as (
         edition_year,
         'groundwater' as code,
         'PL' as geo_code,
+        cast(null as varchar) as district,
+        count(*) as bodies,
+        count(area_km2) as with_area,
+        sum(area_km2) as area,
+        max(source_version) as source_version,
+        max(raw_sha256) as raw_sha256
+    from groundwater
+    group by plan_cycle, edition_year
+    union all
+    select
+        plan_cycle,
+        edition_year,
+        'groundwater' as code,
+        'PL' as geo_code,
         river_basin_district_code as district,
         count(*) as bodies,
         count(area_km2) as with_area,
@@ -102,9 +129,15 @@ groundwater_counts as (
         max(source_version) as source_version,
         max(raw_sha256) as raw_sha256
     from groundwater
-    group by grouping sets (
-        (plan_cycle, edition_year), (plan_cycle, edition_year, river_basin_district_code)
-    )
+    group by plan_cycle, edition_year, river_basin_district_code
+),
+
+geo_map as (
+    select
+        source_code,
+        geography_key
+    from {{ ref('poc_map_geography') }}
+    where source_system = 'wody_polskie_apgw'
 ),
 
 measures as (
@@ -149,12 +182,10 @@ select
         when m.measure_codes = 'groundwater_area'
             then 'Area of the groundwater bodies (JCWPd) of the river basin management plan, as published'
         when m.unit_code = 'km2'
-            then 'Area of the ' || m.code
-                || ' surface water bodies (JCWP) of the river basin management plan, as published'
+            then concat('Area of the ', m.code, ' surface water bodies (JCWP) of the plan, as published')
         when m.code = 'all'
             then 'Surface water bodies (JCWP) of the river basin management plan, wholly or partly in the area'
-        else 'Surface water bodies (JCWP) of the river basin management plan, ' || m.code
-            || ' category, wholly or partly in the area'
+        else concat('Surface water bodies (JCWP) of the plan, ', m.code, ' category, wholly or partly in the area')
     end as measure_name,
     m.measure_codes,
     m.unit_code,
@@ -179,11 +210,5 @@ select
     m.source_version,
     m.raw_sha256
 from measures as m
-left join (
-    select
-        source_code,
-        geography_key
-    from {{ ref('poc_map_geography') }}
-    where source_system = 'wody_polskie_apgw'
-) as g on m.geo_code = g.source_code
+left join geo_map as g on m.geo_code = g.source_code
 left join district_names as d on m.plan_cycle = d.plan_cycle and m.district = d.unit_code

@@ -90,12 +90,13 @@ areas as (
         max(value) filter (where field = 'eu_kod') as eu_code,
         max(value) filter (where field = 'pow_jcwp') as area_km2
     from attributes
-    where layer in (
-        'Jednolite_Części_Wód_Powierzchniowych_Jeziornych',
-        'Jednolite_Części_Wód_Powierzchniowych_Przejściowych',
-        'Jednolite_Części_Wód_Powierzchniowych_Przybrzeżnych',
-        'Jednolite_Części_Wód_Powierzchniowych_Zbiornikowych'
-    )
+    where
+        layer in (
+            'Jednolite_Części_Wód_Powierzchniowych_Jeziornych',
+            'Jednolite_Części_Wód_Powierzchniowych_Przejściowych',
+            'Jednolite_Części_Wód_Powierzchniowych_Przybrzeżnych',
+            'Jednolite_Części_Wód_Powierzchniowych_Zbiornikowych'
+        )
     group by entity, layer, feature_number
 ),
 
