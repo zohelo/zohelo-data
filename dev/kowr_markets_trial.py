@@ -286,6 +286,8 @@ def diagnose(rej, arrow) -> None:
                     labels = [(f[0].strip()[:20], round(f[1]), round(f[2])) for f in frags[i]
                               if f[0].strip()[:6] in ("Cena w", "Pszeni", "Jęczmi", "Kukury", "Polska", "Austri")]
                     print(f"  positions page {i + 1}: {labels}", flush=True)
+                if "krajach UE" in t and "values for" in error:
+                    print(f"  all fragments page {i + 1}: {[(f[0].strip()[:14], round(f[1]), round(f[2])) for f in frags[i]]}", flush=True)
 
 
 def bronze_profile(con) -> dict:
@@ -374,14 +376,18 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
         "eu": {"rows": one(con, f"select count(*) from {eu}"),
                "weeks(min,max,n)": rows(con, f"select min(report_week), max(report_week), count(distinct report_week) from {eu}"),
                "flags": rows(con, f"select coalesce(value_flag, 'value'), count(*) from {eu} group by 1 order by 1"),
-               "dup_grain": one(con, f"select count(*) from (select commodity_code, country_name, report_week from {eu} group by all having count(*) > 1)"),
+               "dup_grain": one(con, f"select count(*) from (select commodity_code, country_name, period_start from {eu} group by all having count(*) > 1)"),
+               "periods(n,two_week,not_report_week)": rows(con, f"select count(distinct period_start), count(distinct period_start) filter (where period_end - period_start = 13), "
+                                                               f"count(distinct period_start) filter (where period_start <> report_week) from {eu}"),
                "null_keys": one(con, f"select count(*) from {eu} where commodity_code is null or country_name is null or report_week is null"),
                "value(min,max)": rows(con, f"select min(value), max(value) from {eu}"),
                "poland_values": one(con, f"select count(value) from {eu} where country_name = 'Polska'")},
         "exchange": {"rows": one(con, f"select count(*) from {ex}"),
                      "weeks(min,max,n)": rows(con, f"select min(report_week), max(report_week), count(distinct report_week) from {ex}"),
                      "by_good(good,rows,avg_values)": rows(con, f"select commodity_name, count(*), count(price_avg) from {ex} group by 1 order by 1"),
-                     "dup_grain": one(con, f"select count(*) from (select commodity_name, report_week from {ex} group by all having count(*) > 1)"),
+                     "dup_grain": one(con, f"select count(*) from (select commodity_name, period_start from {ex} group by all having count(*) > 1)"),
+                     "flags": rows(con, f"select coalesce(value_flag, 'value'), count(*) from {ex} group by 1"),
+                     "no_stated_source": one(con, f"select count(*) from {ex} where stated_source is null"),
                      "avg(min,max)": rows(con, f"select min(price_avg), max(price_avg) from {ex}")},
     }
     g: dict = {"rows": one(con, f"select count(*) from {b}")}
