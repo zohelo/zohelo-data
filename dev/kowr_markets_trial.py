@@ -414,7 +414,8 @@ def build(arrow, work: Path) -> tuple[dict, dict, dict, dict, list[str]]:
     spots = {
         "gold_fob(date,codes,geo,value)": rows(con, f"select period_label, measure_codes, geography_key, value from {b} "
                                                     f"where period_label in ('2023-03-29', '2025-07-02', '2026-10-21', '2026-11-19') order by 1, 2"),
-        "silver_fob_dash_2026-10-21": rows(con, f"select commodity_code, market_code, value_text from {fob} where quote_date = '2026-10-21' and value is null"),
+        "silver_fob_null_2026-10-21": rows(con, f"select commodity_code, market_code, value_flag from {fob} where quote_date = '2026-10-21' and value is null"),
+        "silver_fob_flagged": rows(con, f"select quote_date, commodity_code, market_code, value_flag from {fob} where value_flag = 'zl_t_mismatch' order by 1", 30),
         "eu_poland(week,commodity,value)": rows(con, f"select report_week, commodity_code, value from {eu} where country_name = 'Polska' "
                                                      f"and report_week in ('2023-03-20', '2025-06-23', '2026-10-12', '2026-11-09') order by 1, 2"),
         "eu_eu_average(week,commodity,value)": rows(con, f"select report_week, commodity_code, value from {eu} where country_name = 'Średnio w UE' "
