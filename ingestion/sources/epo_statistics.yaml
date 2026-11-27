@@ -31,8 +31,8 @@ bronze: [bronze.epo_statistics_cells, bronze.epo_statistics_rejected_files]
 silver: [silver.epo_statistics_counts]
 gold: [gold.build_epo_statistics]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the PR's Dev trial
-  epo_statistics_counts: {rows: 60000}  # measured in the trial; each new edition adds about as many rows again
-  poc_build_epo_statistics: {rows: 55000}  # measured in the trial
+  epo_statistics_counts: {rows: 58000}  # 38,445 (2025 edition; each new edition adds about as many again: raise it then)
+  poc_build_epo_statistics: {rows: 56000}  # 36,995 (newest edition per year; grows by about 3,700 a year)
 
 bronze_latest_only: true   # policy #822/#845: newest copy per entity; every edition is its own entity
 # Refresh policy for all layers (D32): seven workbooks of 20-130 KB a year, about 45,000 cells per edition; small,
