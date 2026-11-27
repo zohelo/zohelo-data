@@ -36,7 +36,9 @@ select
     try_cast(unit_mult as integer) as unit_mult,
     freq,
     time_period,
-    case when regexp_full_match(time_period, '(19|20)[0-9]{2}(\.0)?') then cast(left(time_period, 4) as integer) end as year,
+    case
+        when regexp_full_match(time_period, '(19|20)[0-9]{2}(\.0)?') then cast(left(time_period, 4) as integer)
+    end as year,
     case
         when regexp_full_match(obs_value, '-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?') then cast(obs_value as double)
     end as value,
