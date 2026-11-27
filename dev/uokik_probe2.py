@@ -44,13 +44,21 @@ def dane() -> dict:
     for inst in out["institutions"]:
         if "konkurencji" not in str(inst[1]).lower():
             continue
-        r = S.get(
-            f"https://api.dane.gov.pl/1.4/institutions/{inst[0]}/datasets", params={"per_page": 100}, timeout=(20, 60)
-        )
-        for d in r.json().get("data", []):
-            a = d.get("attributes", {})
-            out["datasets"].append([d.get("id"), str(a.get("title"))[:80], str(a.get("modified"))[:10]])
-        time.sleep(2)
+        for page in range(1, 6):
+            r = S.get(
+                f"https://api.dane.gov.pl/1.4/institutions/{inst[0]}/datasets",
+                params={"per_page": 100, "page": page},
+                timeout=(20, 60),
+            )
+            data = r.json().get("data", [])
+            for d in data:
+                a = d.get("attributes", {})
+                out["datasets"].append([d.get("id"), str(a.get("title"))[:80], str(a.get("modified"))[:10]])
+            time.sleep(2)
+            if len(data) < 100:
+                break
+    out["datasets_total"] = len(out["datasets"])
+    out["datasets"] = [d for d in out["datasets"] if any(w in d[1].lower() for w in ("decyz", "koncentr", "kar"))]
     return out
 
 
