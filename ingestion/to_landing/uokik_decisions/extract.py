@@ -51,10 +51,10 @@ KEPT_LABELS = {  # label in the cell -> field; the values of every other label a
     "Data decyzji:": "decision_date",
     "Data wydania:": "decision_date",
 }
-# A kept value must have this closed shape, else the category fails: no free words can ride along into Landing (#3330
-# review). Number = department or branch signature (capitals, at most one lower-case "i" as in DOZiK, an optional digit),
-# a dash or space, then digit groups joined by / - or . and optional capital initials (RKR-1/2020, RWA 12/2015,
-# DKK2-421-12/19/AI). No lower-case word, no second space-separated word: a party's name cannot match.
+# A kept value must have this closed shape, else the category fails: no free words can ride along into Landing
+# (#3330 review). Number = department or branch signature (capitals, at most one lower-case "i" as in DOZiK, an
+# optional digit), a dash or space, then digit groups joined by / - or . and optional capital initials (RKR-1/2020,
+# RWA 12/2015, DKK2-421-12/19/AI). No lower-case word, no second space-separated word: a party's name cannot match.
 VALID = {
     "decision_number": re.compile(
         r"^[A-ZĄĆĘŁŃÓŚŹŻ]{1,5}(?:i[A-ZĄĆĘŁŃÓŚŹŻ]{1,3})?\d?(?: ?[-–] ?| )\d{1,5}(?:[-/.]\d{1,5}){0,4}(?:/[A-Z]{1,4})?$"
