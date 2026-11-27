@@ -73,6 +73,6 @@ TSOs), GAZ-SYSTEM's own SWI tables, and conversion of kWh to m³ or TWh (D33: un
 
 **Gold, full coverage (#3350).** Every daily value per point and direction of `silver.entsog_physical_flow` by rule in
 `gold.entsog_*` (`gold.observations`, D35; rule in [gold-coverage.md](../gold-coverage.md)), the point as the breakdown;
-records without a value and running values are not loaded. Dev trial 45970453492: 73,786 rows (97,546 Silver records,
+records without a value and running values are not loaded. Dev trial 45971075181: 73,786 rows (97,546 Silver records,
 23,760 without a value), 38 series, 0 duplicates by series_key × date_key; every curated daily total equals the sum of
 its points.
