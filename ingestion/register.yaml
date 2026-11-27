@@ -5256,7 +5256,8 @@ sources:
   name: KNF Public Warning List
   short_name: KNF public warning list
   provider: Polish Financial Supervision Authority (KNF)
-  status: approved
+  source_system: knf_warnings
+  status: built
   family: E
   kpi: false
   geography: Poland
