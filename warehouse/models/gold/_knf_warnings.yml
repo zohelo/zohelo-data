@@ -1,0 +1,38 @@
+version: 2
+models:
+  - name: knf_warning
+    description: >-
+      Entity table (register entries): one row per entry of the newest copy of the KNF public warning list (register
+      PLG-019), keyed by section_key x lp (the list's own numbering, valid for that copy); date_key = the copy's
+      download date. Legal-basis section, identifier kind, KRS numbers (the only identifier kept), prosecutor's office
+      and level, whether a final ruling is mentioned. Notifications of a suspected offence, not findings; no names, no
+      free text. Terms unresolved: internal only.
+    tests:
+      - unique:
+          column_name: "section_key || '|' || lp"
+    columns:
+      - name: section_key
+        tests: [not_null]
+      - name: lp
+        tests: [not_null]
+      - name: identifier_kind
+        tests: [not_null]
+  - name: poc_build_knf_warnings
+    description: >-
+      Build stage - entries on the KNF public warning list per copy of the list (frequency D at the download date,
+      Poland): in total, by legal basis, by level of the prosecutor's office, by kind of identifier, and those
+      mentioning a final ruling. One measure_key per breakdown; a date has rows only when the list changed.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || breakdown_json || '|' || date_key"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['D']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: value
+        tests: [not_null]

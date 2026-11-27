@@ -1,0 +1,42 @@
+version: 2
+models:
+  - name: knf_warnings_entries
+    description: >-
+      KNF public warning list (register PLG-019), from bronze.knf_warnings_entries: every landed copy of the list page
+      (accumulating snapshot). Grain: source_version x section_key x lp (the entry's number in its legal-basis
+      section). Section title and key, identifier kind, KRS numbers, prosecutor's office as listed and its level,
+      whether a final ruling is mentioned. Entries are notifications of a suspected offence, not findings; no names
+      and no free text. Completeness: tests/knf_warnings_entries_complete.sql.
+    tests:
+      - unique:
+          column_name: "source_version || '|' || section_key || '|' || lp"
+    columns:
+      - name: source_version
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: section_key
+        tests: [not_null]
+      - name: section_title
+        tests: [not_null]
+      - name: lp
+        tests: [not_null]
+      - name: identifier_kind
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['krs', 'nip_regon', 'not_registered_pl', 'no_data', 'other']
+      - name: prosecutor_office
+        tests: [not_null]
+      - name: prosecutor_level
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['krajowa', 'regionalna', 'okregowa', 'rejonowa', 'other']
+      - name: final_ruling_mentioned
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the copy (lineage to Landing/Archive).
+        tests: [not_null]
