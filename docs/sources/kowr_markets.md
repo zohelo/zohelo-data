@@ -32,7 +32,12 @@ from the text positions (its heading row lies above it), because the text layer 
 A single FOB row or EU cell whose converted price disagrees with its EUR price (FOB: NBP rate, ±1 % + 1 zł; EU: ECB
 rate, ±1 % + 2 zł; Polska is not checked, its PLN price is ZSRIR's), or an exchange row whose average lies outside its
 minimum and maximum, is kept with a `kontrola` cell, and Silver loads no price from it (which of the two is wrong cannot
-be told; Black Sea barley in most reports of mid-2024 to 2025).
+be told; both barley rows of 16 reports of July to December 2024). Rejected in Dev trial 45920665418 (27 Nov 2026):
+30 of 179 reports. An EU price row with 26 or 27 values for 28 columns (14: a cell left blank, so the columns cannot
+be aligned), a table printed as an image or left out (14: no FOB, EU or exchange title, no country list, no FOB
+header), an EU table without its period (2), an exchange period with the wrong year ("20-26.01.2024" in the report of
+20-26.01.2025) and an EU block whose PLN prices disagree in 11 columns (one each). Their weeks are missing in every
+table; the reports themselves stay in Landing and the Archive.
 
 **Silver.** Only the published prices: the changes in % and the converted PLN prices are KOWR's derivations and are
 not kept. "-" (brak danych) and, in the EU table, "0" (printed for a member state without a report) keep the value
