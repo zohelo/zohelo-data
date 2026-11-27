@@ -36,7 +36,11 @@ archive_policy:
   prune: report
 bronze: [bronze.unesco_uis_observations, bronze.unesco_uis_rejected_files]
 silver: [silver.unesco_uis_observations]
-gold: [gold.build_unesco_uis]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.unesco_uis_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table unesco_uis_observations.
+gold: [gold.build_unesco_uis,
+       gold.unesco_uis_observations, gold.unesco_uis_series, gold.unesco_uis_measures, gold.unesco_uis_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   unesco_uis_observations: {rows: 16000}  # 10,689 (Dev trial 43159213097)
   poc_build_unesco_uis: {rows: 4500}  # 2,869: 27 EU members (Dev trial 43159213097)
@@ -46,4 +50,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # replaces its entity and Silver is rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2411"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
