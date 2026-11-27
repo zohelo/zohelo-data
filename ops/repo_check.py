@@ -1289,6 +1289,12 @@ SEED_ROW_OWNER = {
     "kpi_v2_map": "source_key",
     "unit_map": "source_system",
 }
+# Optional trailing columns of a list kept per source: a file may leave them out (its rows then have none), so a
+# column added to the published contract does not fail the source pull requests opened before it. A file that has
+# the column has it at the end of the header, as _shared.csv does.
+SEED_ROWS_OPTIONAL = {
+    "unit": ["symbol_en"],  # #2556: English symbol where `symbol` is a Polish word or abbreviation
+}
 # Rows of _shared.csv when each list was split: the file holds the rows from before the split and takes no new
 # ones (two pull requests appending to it would conflict again). Lower a number when rows leave the file.
 SEED_ROWS_SHARED = {
@@ -1401,11 +1407,22 @@ def seed_rows_problems(name: str, texts: dict[str, str], sources: set[str], mode
                 value = tuple(row[i] for i in at_key)
                 if keys.setdefault(value, stem) != stem:
                     problems.append(f"{where}: {', '.join(value)} is also in {folder}/{keys[value]}.csv")
+        if name == "unit" and "symbol_en" in table[0]:
+            at_symbol, at_en = table[0].index("symbol"), table[0].index("symbol_en")
+            problems += [
+                f"{where} row {number}: symbol {row[at_symbol]!r} is a Polish abbreviation; give symbol_en (#2556)"
+                for number, row in enumerate(table[1:], start=2)
+                if row[at_symbol].endswith(".") and not row[at_en]
+            ]
+    optional = SEED_ROWS_OPTIONAL.get(name, [])
     first = headers.get(seed_rows.SHARED) or next(iter(headers.values()), [])
+    base = [column for column in first if column not in optional]
     problems += [
-        f"{folder}/{stem}.csv: the header differs from the other files of the list ({','.join(first)})"
+        f"{folder}/{stem}.csv: the header differs from the other files of the list ({','.join(first)}"
+        + (f"; {', '.join(optional)} may be left out" if optional else "")
+        + ")"
         for stem, header in headers.items()
-        if header != first
+        if header[: len(base)] != base or any(column not in optional for column in header[len(base) :])
     ]
     return problems
 

@@ -222,7 +222,8 @@ wrong number of fields, a last line without a line break (what a union merge can
 rows per source, the same for each file, and: a file that is neither `_shared.csv` nor named after a declared
 source; more rows in `_shared.csv` than at the split (`SEED_ROWS_SHARED` in `ops/repo_check.py`); a row of
 `source`, `kpi_measure`, `kpi_v2_map` or `unit_map` in another source's file; a key on two rows across the
-files; a header that differs from the other files; a folder without its model, or a model that does not read the
+files; a header that differs from the other files (an optional trailing column of `SEED_ROWS_OPTIONAL`, such as
+`unit` `symbol_en`, may be left out; a `unit` file that has it needs it on every symbol ending in `.`); a folder without its model, or a model that does not read the
 folder or does not name it in its config meta; a seed CSV put back next to its folder.
 
 ## Rebuilds

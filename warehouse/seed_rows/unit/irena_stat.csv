@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-mw,MW,megawatts,megawaty,false,mw,1
-gwh,GWh,gigawatt-hours,gigawatogodziny,false,kwh,1000000
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+mw,MW,megawatts,megawaty,false,mw,1,
+gwh,GWh,gigawatt-hours,gigawatogodziny,false,kwh,1000000,
