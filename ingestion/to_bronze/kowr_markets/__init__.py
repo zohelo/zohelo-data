@@ -212,7 +212,7 @@ def fob(lines: list[str]) -> tuple[tuple[str, str, str], str, list[tuple[str, st
             and pln not in ("-", "")
             and abs(number(price) * nbp - number(pln)) > number(pln) / 100 + 1
         ):
-            # the producer's zł/t column disagrees with its EUR price (Black Sea barley, 27 reports of 2024-2025):
+            # the producer's zł/t column disagrees with its EUR price (feed barley, 32 rows from July 2024):
             # which one is wrong cannot be told, so the row is marked and Silver loads no price from it
             cells.append((group, market, "kontrola", f"{price} EUR/t x {nbp} <> {pln} zł/t"))
     if {g for g, _ in seen} != set(FOB_MARKETS):
