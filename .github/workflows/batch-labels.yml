@@ -102,6 +102,8 @@ jobs:
           curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
           test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          # The claims a federation rule matches (payload only, no signature: not a usable credential).
+          python3 -c 'import base64,json,os,sys; p=open(os.environ["ANTHROPIC_IDENTITY_TOKEN_FILE"]).read().split(".")[1]; c=json.loads(base64.urlsafe_b64decode(p+"="*(-len(p)%4))); print(json.dumps({k:c.get(k) for k in ("iss","aud","sub","ref","event_name","repository","repository_owner","repository_owner_id","workflow_ref")}))' || true
       - name: ops/measure_names.py submit
         id: submit
         env:
@@ -198,6 +200,8 @@ jobs:
           curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
           test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          # The claims a federation rule matches (payload only, no signature: not a usable credential).
+          python3 -c 'import base64,json,os,sys; p=open(os.environ["ANTHROPIC_IDENTITY_TOKEN_FILE"]).read().split(".")[1]; c=json.loads(base64.urlsafe_b64decode(p+"="*(-len(p)%4))); print(json.dumps({k:c.get(k) for k in ("iss","aud","sub","ref","event_name","repository","repository_owner","repository_owner_id","workflow_ref")}))' || true
       - name: ops/measure_names.py collect
         id: collect
         run: |
