@@ -33,11 +33,29 @@ code_rows as (
     group by sheet_name, row_number
 ),
 
-economies as (select code, label from code_rows where sheet_name = 'economies'),
+economies as (
+    select
+        code,
+        label
+    from code_rows
+    where sheet_name = 'economies'
+),
 
-items as (select code, label from code_rows where sheet_name = 'service items'),
+items as (
+    select
+        code,
+        label
+    from code_rows
+    where sheet_name = 'service items'
+),
 
-methods as (select code, label from code_rows where sheet_name = 'methodology codes')
+methods as (
+    select
+        code,
+        label
+    from code_rows
+    where sheet_name = 'methodology codes'
+)
 
 select
     b.entity,
