@@ -74,8 +74,8 @@ itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
 UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, World Bank Findex, ICP and WGI, NBP balance of
-payments, UN WPP, UNESCO UIS, World Bank EdStats and GEM, OWID, WHO and the Ministry of Finance's public
-debt, Treasury debt and state budget so far) declares them in the
+payments, UN WPP, UNESCO UIS, World Bank EdStats and GEM, OWID, WHO, the Ministry of Finance's public
+debt, Treasury debt, state budget and local-government budget summaries, and ENTSOG gas flows so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
 build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
 builds them all, so they share one stage). The block's Silver files are the
@@ -271,6 +271,16 @@ one. It is retried when its recipe changes.
   states it, at its month, M) and `plan` (the budget act, A). A main line printed twice is two series (Silver's
   occurrence), never one picked row. Poland only (`PL`). KRUS, the fourth source of `poc_build_public_finance`, is
   whole in that curated stage and has no per-block tables.
+- **Ministry of Finance local-government budget summaries.**
+  `mf_jst_budgets:mf_jst_budget_summary:pln:<plan|executed|total>:<section>:<item label>[#<occurrence>]@Q`: every item
+  of the DW (revenue, expenditure, financing) and ZN (liabilities, receivables) workbooks of each quarter; `plan` (the
+  plan after changes) and `executed` (from January to the quarter's end, as published, never differenced) for DW,
+  `total` (the stock at the quarter's end) for ZN. The unit type is the breakdown (`{"unit_type": …}`; `jst`, all
+  units, is the total series). Poland only (`PL`), PLN as published.
+- **ENTSOG physical gas flows.** `entsog:entsog_physical_flow:kWh/d:<entry|exit>@D`: every point and direction of
+  GAZ-SYSTEM per gas day, the point as the breakdown (`{"point": <pointKey>}`, labelled with the point's newest
+  name), no total series: the totals and point groups, with their completeness rule, stay in `build_entsog`. Area by
+  the operator's row of the map (`PL-TSO-0002` → `PL`).
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -350,6 +360,12 @@ rule-based build stages apply the rules the curated stages already apply:
   number (`b.d.`, `-`) is no row; a value that is not a finite number is not loaded, nor a period end after the day
   of the workbook's version (a projection; none today), nor two period ends of one measure in one period (both stay
   out; none today). No flags (`ok`).
+- MF local-government budget summaries: Silver keeps numbers only (a cell `#` is no row); a value that is not a
+  finite number is not loaded, nor a quarter after the workbook's version (none today). No flags (`ok`).
+- ENTSOG: a record without a value (`isNA` or empty) is no row, nor a value that is not a finite number, nor a running
+  value (last updated before its gas day ended), unless the day ended more than 7 days before the newest update in
+  the table (the curated stage's rule, anchored on the data so that the same files give the same rows). Confirmed
+  `ok`, Provisional `provisional`. Two records of one point, direction and gas day reject the block.
 - FAOSTAT: a cell flagged `M` (missing value) is not loaded whatever number it carries; a projection (a year
   after the year of the file's version) is not loaded; flags E and I `estimated`, B `break`, P `provisional`, A
   and X `ok`, any other flag `flagged`. World Bank IDS: a year after the last actual year (the newest year of

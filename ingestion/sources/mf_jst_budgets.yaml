@@ -24,7 +24,10 @@ archive_policy:
   prune: report
 bronze: [bronze.mf_jst_budgets_cells, bronze.mf_jst_budgets_rejected_files]
 silver: [silver.mf_jst_budget_summary]
-gold: [gold.build_mf_jst_budgets]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.mf_jst_budget_summary by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table mf_jst_budget_summary.
+gold: [gold.build_mf_jst_budgets, gold.mf_jst_budgets_observations, gold.mf_jst_budgets_series,
+       gold.mf_jst_budgets_measures, gold.mf_jst_budgets_geography, gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   mf_jst_budget_summary: {rows: 32000}  # 21,263 rows, 2022 Q1 - 2026 Q1 (Dev trial 43162316724)
   poc_build_mf_jst_budgets: {rows: 650}  # 408 rows (Dev trial 43162316724)
@@ -33,4 +36,8 @@ bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): about 20 workbooks of a few hundred cells a quarter; small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2494"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
