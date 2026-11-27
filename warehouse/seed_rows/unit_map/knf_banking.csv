@@ -2,3 +2,4 @@ source_system,unit_code,measure_key_pattern,unit_key
 knf_banking,pln,,pln
 knf_banking,persons,,persons
 knf_banking,share,,share
+knf_banking,number,,number

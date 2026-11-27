@@ -428,6 +428,14 @@ SOURCES["entsog"] = {
     "lookups": _area_map("entsog"),
     "keyed_by": ("geo_map",),
 }
+# KNF monthly banking-sector data (every item of every sheet and bank group of the current workbook; national
+# figures, geography PL, no lookup): one Silver dbt table, every series by rule; the curated build_knf_banking (seven
+# items) stays the KPI layer.
+SOURCES["knf_banking"] = {
+    "tables": {"knf_banking_series": (("silver", "knf_banking_series"), "gold_knf_banking_build")},
+    "lookups": {},
+    "keyed_by": (),
+}
 SOURCES["world_bank_wgi"] = {
     "tables": {"wgi_observations": (("silver", "wgi_observations"), "gold_world_bank_wgi_build")},
     "lookups": {

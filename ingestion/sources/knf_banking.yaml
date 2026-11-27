@@ -37,7 +37,10 @@ archive_policy:
   prune: report   # each version is the whole series; a revision of past months replaces them
 bronze: [bronze.knf_banking_cells, bronze.knf_banking_rejected_files]
 silver: [silver.knf_banking_series]
-gold: [gold.build_knf_banking]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.knf_banking_series by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table knf_banking_series.
+gold: [gold.build_knf_banking, gold.knf_banking_observations, gold.knf_banking_series,
+       gold.knf_banking_measures, gold.knf_banking_geography, gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   knf_banking_series: {rows: 300000}  # 193,909 measured (Dev trial 45763173227): 13 sheets, January 2018 to September 2026
   poc_build_knf_banking: {rows: 3500}  # 2,307 measured: 7 measures, the sector and up to three bank groups
@@ -47,4 +50,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2871"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
