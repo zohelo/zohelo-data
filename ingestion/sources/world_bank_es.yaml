@@ -1,0 +1,50 @@
+source_system: world_bank_es
+description: "World Bank Enterprise Surveys: published indicators by economy and survey year (firm-level survey estimates), from the World Bank Data360 dataset WB_ES as one bulk CSV (register GL-010)"
+
+# Extraction strategy (docs/landing.md). Register GL-010. Bulk first, as ITU DataHub (GL-031) on the same platform:
+# the Data360 file folder holds the whole dataset in one file, WB_ES.csv (606,309,542 bytes, Last-Modified 19 Nov
+# 2026; Dev probe 45924752018, 27 Nov 2026), SDMX-CSV with labels (STRUCTURE … OBS_CONF, then a *_LABEL column per
+# code), 1,195,422 rows, 561 indicators, 181 economies, survey years 2006-2026. So kind bulk_file and no extractor
+# code. The register's route, the Data360 REST API (/data360/data?DATABASE_ID=WB_ES, 1,000 observations a page,
+# about 1,200 pages), is not used: the file is one request instead of 1,200, and the API's paging repeated rows of
+# ITU_DH in a full read (itu_datahub.yaml). The microdata portal (login, Data Access Protocol) is never used.
+# Entity = the dataset file; version = its Last-Modified; a copy is written only when the SHA-256 changed.
+# Restart unit: the file.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: wb_es   # every WB_ES indicator, all economies and survey years, SDMX-CSV with labels
+        url: https://data360files.worldbank.org/data360-data/data/WB_ES/WB_ES.csv
+        format: raw
+        version: last_modified
+  initial: bulk
+  production: snapshot                    # the file is the complete dataset of one Data360 update
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: # UTC; Enterprise Surveys publish one economy at a time, a few a month, with no release calendar (the
+    # Data360 copy was last updated 19 Nov 2026); a monthly check on the 24th. The run ends with Bronze; the platform's
+    # weekly Sunday run builds Silver and Gold (O46).
+    - {cron: "25 6 24 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/world_bank_es/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.world_bank_es_observations, bronze.world_bank_es_rejected_files]
+silver: [silver.world_bank_es_observations]
+gold: [gold.build_world_bank_es, gold.metrics_firms_bribery_incidence, gold.metrics_firms_finance_constraint,
+       gold.metrics_operating_licence_days]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45932158707 (27 Nov 2026), 1.5 x
+  world_bank_es_observations: {rows: 1800000, exception: "#3315"}  # 1,195,422: every row of WB_ES.csv; #822 exception recorded on #3315 (D32: one file replaced whole by each Data360 update, no changed-since; rebuilt only when Bronze changes, monthly at most; review 2027-11-27)
+  poc_build_world_bank_es: {rows: 105000}  # 70,029: every all-firms total of the 191 WB_ES_T_* indicators, 181 economies (TWN without a Gold country, _X), 2006-2026
+  poc_metrics_firms_bribery_incidence: {rows: 720}  # 470: WB_ES_T_GRAFT3 totals, 180 economies, 2006-2026
+  poc_metrics_firms_finance_constraint: {rows: 720}  # 470: WB_ES_T_FIN16 totals, 180 economies, 2006-2026
+  poc_metrics_operating_licence_days: {rows: 720}  # 468: WB_ES_T_BUS2 totals, 180 economies, 2006-2026
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one file of about 606 MB and some 1.2 million rows, replaced whole by each
+# Data360 update with no changed-since and no smaller unit to replace; rebuilt in full when the file changed.
+refresh: {mode: full, decided: "D32 + #3315"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
