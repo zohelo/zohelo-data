@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+wheat_export_price_fob,kowr_markets,kowr_markets:fob_export_prices:EUR_T:wheat.rouen,"KOWR weekly grain report, export prices FOB, milling wheat, Rouen",1,
