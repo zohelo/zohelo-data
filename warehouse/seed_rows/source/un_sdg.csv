@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+un_sdg,GL-018,Globalna baza wskaźników celów zrównoważonego rozwoju ONZ (SDG),UN Global SDG Indicators Database,United Nations Statistics Division (UN DESA),cube,file,international-public,unresolved,https://unstats.un.org/sdgs/dataportal
