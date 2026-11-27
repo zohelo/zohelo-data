@@ -7,8 +7,10 @@ name: Batch labels · measure names
 #   collect reads that manifest (the newest one, or the one of input batch_id), stops while the batch has not
 #           ended, validates the results, writes warehouse/seed_rows/measure_name/<source_system>.csv and opens a
 #           pull request with the org bot app (a pull request opened by GITHUB_TOKEN would start no check).
-# Needs the repository secret ANTHROPIC_API_KEY (added by the owner); both steps fail with a clear message
-# without it. anthropic is installed here only, from ops/measure_names.requirements.txt (hashes), not
+# Authenticates with Workload Identity Federation (no stored key): each job exchanges GitHub's OIDC token for a
+# short-lived Anthropic token. Needs the variables ANTHROPIC_FEDERATION_RULE_ID, ANTHROPIC_ORGANIZATION_ID,
+# ANTHROPIC_SERVICE_ACCOUNT_ID and ANTHROPIC_WORKSPACE_ID (owner, org level); the federation rule accepts only
+# manual runs from main of this repository. Both steps fail with a clear message without them. anthropic is installed here only, from ops/measure_names.requirements.txt (hashes), not
 # from requirements.txt. No schedule, no push trigger.
 
 on:
@@ -55,9 +57,14 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      id-token: write  # GitHub OIDC token for Workload Identity Federation
     env:
       PYTHONPATH: .
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+      ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
       # Read-only credentials: gold.dim_measure is attached READ_ONLY.
       STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN }}
       STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY }}
@@ -66,12 +73,14 @@ jobs:
       STORAGE_LAKEHOUSE_CATALOG_NAME: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_NAME }}
       STORAGE_ENDPOINT_URL: ${{ vars.STORAGE_ENDPOINT_URL }}
     steps:
-      - name: Secret present
+      - name: Federation variables present
         run: |
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error title=ANTHROPIC_API_KEY missing::The repository secret ANTHROPIC_API_KEY is not set. The owner adds it (Settings, Secrets and variables, Actions); this workflow cannot run without it."
-            exit 1
-          fi
+          for v in ANTHROPIC_FEDERATION_RULE_ID ANTHROPIC_ORGANIZATION_ID ANTHROPIC_SERVICE_ACCOUNT_ID ANTHROPIC_WORKSPACE_ID; do
+            if [ -z "${!v}" ]; then
+              echo "::error title=$v missing::The variable $v is not set (Settings, Secrets and variables, Actions, Variables); this workflow cannot authenticate without it."
+              exit 1
+            fi
+          done
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
@@ -87,6 +96,12 @@ jobs:
           set -euo pipefail
           python -m pip install --require-hashes -r requirements.txt
           python -m pip install --require-hashes -r ops/measure_names.requirements.txt
+      - name: Fetch the GitHub OIDC token (Workload Identity Federation)
+        run: |
+          set -euo pipefail
+          curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
       - name: ops/measure_names.py submit
         id: submit
         env:
@@ -116,18 +131,25 @@ jobs:
     permissions:
       contents: read
       actions: read  # finds and downloads the manifest artifact of the submit run
+      id-token: write  # GitHub OIDC token for Workload Identity Federation
     env:
       PYTHONPATH: .
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+      ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
       BATCH_ID: ${{ inputs.batch_id }}
       ISSUE: ${{ inputs.issue }}
     steps:
-      - name: Secret and inputs
+      - name: Federation variables and inputs
         run: |
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error title=ANTHROPIC_API_KEY missing::The repository secret ANTHROPIC_API_KEY is not set. The owner adds it (Settings, Secrets and variables, Actions); this workflow cannot run without it."
-            exit 1
-          fi
+          for v in ANTHROPIC_FEDERATION_RULE_ID ANTHROPIC_ORGANIZATION_ID ANTHROPIC_SERVICE_ACCOUNT_ID ANTHROPIC_WORKSPACE_ID; do
+            if [ -z "${!v}" ]; then
+              echo "::error title=$v missing::The variable $v is not set (Settings, Secrets and variables, Actions, Variables); this workflow cannot authenticate without it."
+              exit 1
+            fi
+          done
           if ! printf '%s' "$ISSUE" | grep -Eq '^[0-9]+$'; then
             echo "::error title=issue::collect needs input issue: the number of the open Task the pull request closes" >&2
             exit 2
@@ -170,6 +192,12 @@ jobs:
           gh api "repos/$REPO/actions/artifacts/$id/zip" > /tmp/measure-names/manifest.zip
           unzip -q -o /tmp/measure-names/manifest.zip -d /tmp/measure-names/in
           echo "::notice title=manifest::$(jq -c '{batch_id, model, scope, created_at, measures, requests}' /tmp/measure-names/in/manifest.json)"
+      - name: Fetch the GitHub OIDC token (Workload Identity Federation)
+        run: |
+          set -euo pipefail
+          curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
       - name: ops/measure_names.py collect
         id: collect
         run: |
