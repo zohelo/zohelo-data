@@ -50,7 +50,9 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.label.name == 'merge:check'
     name: ${{ github.event.label.name == 'merge:check' && 'check' || 'gate-skipped' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    # Quality rules took 351-568 s on the runner when sqlfluff linted every model (Bug #3336); it now lints only
+    # changed models, but a change to the macros or lint settings still lints all ~540 (about 9 min, 2 CPUs).
+    timeout-minutes: 20
     permissions:
       contents: read
       issues: read

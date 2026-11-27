@@ -170,9 +170,49 @@ def alert_job() -> list[str]:
 SQLFLUFF = "sqlfluff==4.4.0"  # pinned here so the workflow does not change when the version does
 
 
+# A change to any of these can change how every model lints, so it lints all of them.
+SQLFLUFF_ALL = ("warehouse/macros/", "pyproject.toml", "ops/repo_check.py", ".sqlfluff", ".sqlfluffignore")
+
+
+def changed_paths() -> list[str] | None:
+    """Paths changed against the merge base with the pull request's base branch (GITHUB_BASE_REF in the check job,
+    main locally): committed, uncommitted and untracked. None when there is no base to compare with."""
+    base = f"origin/{os.environ.get('GITHUB_BASE_REF') or 'main'}"
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+
+    merge_base = git("merge-base", base, "HEAD")
+    if merge_base.returncode:
+        return None
+    diff = git("diff", "--name-only", "--no-renames", merge_base.stdout.strip())
+    new = git("ls-files", "--others", "--exclude-standard")
+    if diff.returncode or new.returncode:
+        return None
+    return sorted(set(diff.stdout.splitlines()) | set(new.stdout.splitlines()))
+
+
+def sqlfluff_targets(changed: list[str] | None) -> list[str]:
+    """What sqlfluff lints: the models a change adds or edits, or all of warehouse/models when the change touches the
+    lint settings, the macros or this check (SQLFLUFF_ALL), or when there is no base to compare with. The models on
+    the base branch passed the same check when they merged (the `check` job gates every merge), and the jinja
+    templater compiles every macro again for each file, which made linting all ~540 models take most of the check's
+    10 minutes (Bug #3336)."""
+    if changed is None or any(path.startswith(SQLFLUFF_ALL) for path in changed):
+        return ["warehouse/models"]
+    return [p for p in changed if p.startswith("warehouse/models/") and p.endswith(".sql") and (ROOT / p).exists()]
+
+
 def sqlfluff() -> list[str]:
-    """dbt models pass sqlfluff (settings in pyproject.toml), with the pinned version."""
+    """dbt models pass sqlfluff (settings in pyproject.toml), with the pinned version: the models the change adds or
+    edits (sqlfluff_targets)."""
     from importlib import metadata
+
+    targets = sqlfluff_targets(changed_paths())
+    scope = "every model" if targets == ["warehouse/models"] else f"{len(targets)} changed models"
+    print(f"     sqlfluff lints {scope}", flush=True)
+    if not targets:
+        return []
 
     try:
         installed = metadata.version("sqlfluff")
@@ -184,9 +224,7 @@ def sqlfluff() -> list[str]:
         )
         if result.returncode:
             return [f"could not install {SQLFLUFF}: {result.stderr.strip()[-500:]}"]
-    return tool(
-        [sys.executable, "-m", "sqlfluff", "lint", "warehouse/models", "--processes", "2", "--disable-progress-bar"]
-    )
+    return tool([sys.executable, "-m", "sqlfluff", "lint", *targets, "--processes", "2", "--disable-progress-bar"])
 
 
 def tool(command: list[str]) -> list[str]:
