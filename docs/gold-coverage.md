@@ -74,7 +74,7 @@ itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
 UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, World Bank Findex, ICP and WGI, NBP balance of
-payments and UN WPP so far) declares them in the
+payments, UN WPP, UNESCO UIS, World Bank EdStats and GEM, OWID and WHO so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
 build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
 builds them all, so they share one stage). The block's Silver files are the
@@ -239,6 +239,23 @@ one. It is retried when its recipe changes.
   the EU (EU: 27) group, World); the UN's other groups stay `_X` with their code. The age-group table is left out:
   its columns are sums and ratios Silver computes from the published five-year groups (which stay in Bronze), not
   series WPP publishes.
+- **UNESCO UIS.** `unesco_uis:unesco_uis_observations:<unit>:<base indicator>@A`, as the curated stage: GERD as % of GDP
+  (`pct_gdp`) and tertiary attainment 25+ (`pct`); the `.F` and `.M` indicators are the sex breakdown of their base
+  indicator (`{"sex": "T|F|M"}`). Countries by ISO alpha-3; the UIS, SDG, MDG, World Bank and UNESCO groupings stay `_X`
+  with their code.
+- **World Bank EdStats.** `world_bank_edstats:edstats_pisa:score:<base indicator>@A`: one measure per PISA subject, the
+  `.FE` and `.MA` indicators its sex breakdown, as the curated stage. The OECD average (`OED`) stays `_X`.
+- **World Bank GEM.** `world_bank_gem:gem_observations:<unit>:<series code>@<A|Q|M>`: a series code is one measure
+  whole and each frequency GEM publishes it at is a measure of its own (the curated stage keeps one); units as the
+  curated stage names them per series.
+- **OWID.** `owid:owid_observations:<unit>:<chart>@A`: a chart's one value column is one measure, units as the curated
+  stage. An entity without a code (OWID's continents, Maddison regions, states before German and Italian
+  unification) keeps its published name as the source code; it and OWID's other `OWID_…` codes stay `_X`.
+- **WHO.** `who:who_observations:years:<indicator code>@A`: life expectancy (WHOSIS_000001) and healthy life
+  expectancy (WHOSIS_000002) at birth, the sexes their breakdown (`{"sex": "T|F|M"}`); the point estimate only, the
+  bounds stay in Silver, as the curated stage. Areas `<type>:<M49 code>`: COUNTRY and the two territory types by
+  their M49 code through ISO 3166-1 numeric → alpha-3 (`gold_who_map.sql`, the list `gold_iso3166_numeric.sql` that
+  UNdata's map reads too); WHO regions and World Bank income groups stay `_X` with their code, GLOBAL:1 is the World.
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -305,6 +322,15 @@ rule-based build stages apply the rules the curated stages already apply:
   outside the period grid is not loaded (it fails Silver's tests); the newest period of each workbook is
   `provisional` (NBP revises it with the next release), every earlier one `ok`, as in the curated stage. UN WPP:
   the projections (years from 2024 in the 2024 revision) are not loaded, nor an empty cell; no flags (`ok`).
+- UNESCO UIS: magnitude `NA` (not applicable; the API sends 0 in the value field) is not loaded; magnitude `NIL` (nil
+  or negligible) is loaded as published with status `flagged`; qualifiers `UIS_EST` and `NAT_EST` give `estimated`
+  as in the curated stage, any other qualifier `flagged`. World Bank EdStats: no flags today; a flag gives `flagged`.
+  World Bank GEM: a period that had not ended on the day of the file's version is not loaded (the annual rows of the
+  current year are an average or a sum of the months so far); no flags (`ok`). OWID: years before 1800 (Maddison
+  from year 1, V-Dem from 1789) are not loaded, nor an exact 0 in the consumption-based CO2 chart (a missing value,
+  the curated stage's rule); no flags (`ok`).
+- WHO: a row without a value, a row not in state `PUBLISHED`, a period that is not a year and a year after the year
+  of the file's version (a projection; none today) are not loaded; no flags (`ok`).
 - FAOSTAT: a cell flagged `M` (missing value) is not loaded whatever number it carries; a projection (a year
   after the year of the file's version) is not loaded; flags E and I `estimated`, B `break`, P `provisional`, A
   and X `ok`, any other flag `flagged`. World Bank IDS: a year after the last actual year (the newest year of

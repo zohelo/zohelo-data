@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+lasy_bdl,PL-ENV-018,Bank Danych o Lasach: nadleśnictwa i RDLP,Forest Data Bank: forest districts and regional directorates,Lasy Państwowe (Bank Danych o Lasach),registry,api,national-public,unresolved,https://www.bdl.lasy.gov.pl/portal/uslugi-ogc

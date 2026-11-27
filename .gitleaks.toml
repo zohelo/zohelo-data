@@ -17,3 +17,8 @@ paths = [
   # dbt build output (ignored by git), when scanning a working tree
   '''^warehouse/target/''',
 ]
+# unit codes of warehouse/seed_rows/unit*.csv quoted in SQL match the generic API-key rule (checked 27 Nov 2026,
+# #3322: OWID's unit code for GDP per capita in international-$ of 2011, no secret)
+regexes = [
+  '''^intl_usd_2011_per_person$''',
+]
