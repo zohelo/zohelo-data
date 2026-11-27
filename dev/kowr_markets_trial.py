@@ -448,6 +448,7 @@ def licence() -> dict:
 def main(argv: list[str]) -> int:
     del argv
     status = 0
+    cleanup()  # a cancelled earlier run may have left scratch objects
     try:
         land = landing()
         runs = land["runs"]
