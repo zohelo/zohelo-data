@@ -12,7 +12,9 @@ each page the exact bytes of the answer with a receipt after it. The server refu
 supported") but answers pages in OBJECTID order, and the same page read twice was byte-identical (Dev probe
 45898682643); so the parts are uploaded only after every page was read and checked (a FeatureCollection, OBJECTIDs
 strictly ascending across all pages, so none twice, and their number = the resultType=hits count read first), and not
-at all when every page equals the newest landed version's (unchanged: same SHA-256 of the pages).
+at all when every page equals the newest landed version's (unchanged: same SHA-256 of the pages). A page with fewer
+features than the hits count implies for it is read again after a long wait (SHORT_PAGE_WAITS, #3373) before the run
+fails.
 
 landing.inspect  hits vs the newest complete landed version: missing / stale (count changed) / unknown (same count, the
                  content is compared at extract); no writes
@@ -43,6 +45,10 @@ LANDING_ROOT = "01_landing"  # a Dev trial points it at a zz_dev_ scratch prefix
 USER_AGENT = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
 # 25,000 features are about 24 MB and took 27 s, as long as a page of 5,000 (Dev probe 45898682643): 14 pages in all.
 PAGE, PAUSE, RETRIES = 25000, 5.0, 4
+# Run 45936346524 (27 Nov 03:51 UTC) got the full hits count, then 14 valid but empty pages; a run 25 minutes later read
+# every page (#3373). A page holding fewer features than the hits count implies for it is read again after these waits
+# (seconds, about 21 minutes in all), one request at a time, before the run fails.
+SHORT_PAGE_WAITS = (60, 180, 420, 600)
 RECEIPT = re.compile(r"([0-9TZ]+)__([0-9TZ]+)__part-(\d{3})\.receipt\.json")
 
 
@@ -121,7 +127,7 @@ def land(client, bucket: str, s: requests.Session, matched: int, held: dict | No
     """Read every page, check them, then upload the parts with their receipts unless unchanged."""
     total = max(1, -(-matched // PAGE))
     with tempfile.TemporaryDirectory(prefix="zohelo-pig-boreholes-") as temporary:
-        pages, ids = [], []
+        pages, ids, short_pages = [], [], 0
         for index in range(total):
             if time.monotonic() > deadline:
                 raise RuntimeError(f"time budget spent after {index} of {total} pages; nothing landed")
@@ -133,15 +139,30 @@ def land(client, bucket: str, s: requests.Session, matched: int, held: dict | No
                 "COUNT": PAGE,
                 "STARTINDEX": index * PAGE,
             }
+            expected = min(PAGE, matched - index * PAGE)
             body = _get(s, params, path)
-            ids += check_page(path)
+            page_ids = check_page(path)
+            for wait in SHORT_PAGE_WAITS:
+                if len(page_ids) >= expected:
+                    break
+                print(f"page {index}: {len(page_ids)} of {expected} features; read again in {wait} s", flush=True)
+                short_pages += 1
+                time.sleep(wait)
+                body = _get(s, params, path)
+                page_ids = check_page(path)
+            if len(page_ids) < expected:
+                raise RuntimeError(
+                    f"page {index}: {len(page_ids)} of {expected} features after {len(SHORT_PAGE_WAITS) + 1} reads "
+                    f"(hits said {matched}); nothing landed"
+                )
+            ids += page_ids
             pages.append((path, params, sha256(body).hexdigest(), len(body)))
         ascending = all(a < b for a, b in pairwise(ids))
         if len(ids) != matched or not ascending:
             raise RuntimeError(f"{len(ids)} features read (OBJECTIDs ascending: {ascending}), hits said {matched}")
         combined = sha256("".join(p[2] for p in pages).encode()).hexdigest()
         if held and held["receipt"]["detail"].get("version_sha256") == combined:
-            return {"outcome": "unchanged", "features": matched, "parts": total}
+            return {"outcome": "unchanged", "features": matched, "parts": total, "short_page_reads": short_pages}
         ingested = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         for index, (path, params, digest, size) in enumerate(pages):
             key = f"{folder()}{ingested}__{ingested}__part-{index:03d}.json"
@@ -187,6 +208,7 @@ def land(client, bucket: str, s: requests.Session, matched: int, held: dict | No
         "features": matched,
         "parts": total,
         "bytes": sum(p[3] for p in pages),
+        "short_page_reads": short_pages,
     }
 
 
