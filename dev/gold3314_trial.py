@@ -14,6 +14,7 @@ python -m dev.gold3314_trial
 from __future__ import annotations
 
 import contextlib
+import sys
 import os
 import subprocess
 import tempfile
@@ -28,7 +29,7 @@ from ingestion.common.report import annotate
 from warehouse import observations as obs
 
 NS = "zz_dev_gold3314"
-SOURCES = ("unesco_uis", "world_bank_edstats", "world_bank_gem", "owid")
+SOURCES = tuple(sys.argv[1:]) or ("unesco_uis", "world_bank_edstats", "world_bank_gem", "owid")
 
 
 def connect():
@@ -112,7 +113,7 @@ def views(con, cat, source: str) -> dict:
 
 
 def one(con, sql: str):
-    return con.execute(sql).fetchone()
+    return con.execute(sql).fetchall()[0]
 
 
 def common(con) -> dict:
@@ -281,6 +282,30 @@ CHECKS = {
 }
 
 
+def uis_curated_na(cat) -> dict:
+    """The curated build_unesco_uis rows with value 0 against Silver's magnitude (the NA cells sent as 0)."""
+    con = duckdb.connect()
+    con.register("silver_uis", cat.load_table(("silver", "unesco_uis_observations")).scan().to_arrow())
+    con.register(
+        "cur_uis",
+        cat.load_table(("gold", "build_unesco_uis"))
+        .scan(selected_fields=("measure_key", "geography_source_code", "date_key", "sex_code", "value"))
+        .to_arrow(),
+    )
+    rows = con.execute(
+        """select coalesce(s.magnitude, '-'), count(*) from cur_uis as c
+           left join silver_uis as s on s.geo_unit = c.geography_source_code and make_date(s.year, 1, 1) = c.date_key
+             and s.value = 0 and s.entity = split_part(c.measure_key, ':', 2)
+             and s.indicator_id = case c.sex_code when 'F' then 'EA.5T8.AG25T99.F' when 'M' then 'EA.5T8.AG25T99.M'
+                                  else split_part(c.measure_key, ':', 4) end
+           where c.value = 0 group by 1 order by 1"""
+    ).fetchall()
+    eu_na = con.execute(
+        "select count(*) from silver_uis where magnitude = 'NA' and geo_unit in (select geography_source_code from cur_uis)"
+    ).fetchall()[0][0]
+    return {"curated_zero_rows_by_silver_magnitude": rows, "silver_na_rows_of_curated_areas": eu_na}
+
+
 def main() -> None:
     tmp = "/mnt/duckdb_tmp"
     try:
@@ -317,6 +342,11 @@ def main() -> None:
                 con.close()
             except Exception:
                 annotate("error", f"gold3314 trial: {source} failed", {"traceback": traceback.format_exc()[-3000:]})
+        if "owid" in SOURCES and len(SOURCES) == 1:
+            try:
+                annotate("notice", "gold3314 trial: build_unesco_uis NA cells", uis_curated_na(cat))
+            except Exception:
+                annotate("error", "gold3314 trial: uis check failed", {"traceback": traceback.format_exc()[-2000:]})
     finally:
         annotate("notice", "gold3314 trial: cleanup", cleanup(cat, client))
 
