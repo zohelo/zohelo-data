@@ -33,9 +33,9 @@ archive_policy:
 bronze: [bronze.wto_stats_batis, bronze.wto_stats_batis_codes, bronze.wto_stats_rejected_files]
 silver: [silver.wto_stats_services_trade]
 gold: [gold.build_wto_stats]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial TRIAL_RUN (27 Nov 2026), 1.5 x
-  wto_stats_services_trade: {rows: 790000}  # provisional
-  poc_build_wto_stats: {rows: 330000}  # provisional
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45935187389 (27 Nov 2026), 1.5 x
+  wto_stats_services_trade: {rows: 785000}  # 523,466: 261,082 PL reporter, 258,478 PL partner, 3,906 EU and WL reporter
+  poc_build_wto_stats: {rows: 330000}  # 218,972: PL x 203 partners x 13 items x 2 flows x 2 value kinds, 2005-2025
 
 bronze_latest_only: true   # policy #822/#845
 # Refresh policy for all layers (D32): one file replaced whole about once a year, no changed-since; the selection

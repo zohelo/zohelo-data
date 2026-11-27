@@ -6,7 +6,8 @@ models:
       services in millions of US dollars by reporter, partner, flow (X, M) and EBOPS 2010 service item, as published in
       the newest BaTIS BPM6 release on www.wto.org, for the rows with Poland as reporter or partner and the
       country-group reporters. Reported, final (with its methodology code) and balanced values side by side, never
-      combined. Grain: reporter_code x partner_code x flow x item_code x year.
+      combined. final_value_methodology_label is null for the three codes the codes workbook does not list (R_OECD,
+      E3, E4: 3,215 rows in Dev trial 45935187389). Grain: reporter_code x partner_code x flow x item_code x year.
     tests:
       - unique:
           column_name: "reporter_code || '|' || partner_code || '|' || flow || '|' || item_code || '|' || year"

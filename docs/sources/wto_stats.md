@@ -10,12 +10,13 @@ bulk CSV (3.1 GB, 52,096,926 rows: 202 reporters × 203 partners × exports and 
 Bronze (`ingestion/to_bronze/wto_stats/`): `bronze.wto_stats_batis` keeps the CSV rows with Poland as reporter or
 partner and those of the country-group reporters (World, EU, EU extra-trade), every value as text, DuckDB on the
 extracted CSV (the load annotation states rows read and kept); `bronze.wto_stats_batis_codes` keeps every cell of the
-codes workbook. An unknown member, CSV header or workbook header rejects the file. Silver:
+codes workbook (Dev trial 45935187389: 523,466 of 52,096,926 rows kept, 842 workbook cells). An unknown member, CSV header or workbook header rejects the file. Silver:
 `silver.wto_stats_services_trade` (grain reporter × partner × flow × item × year; reported, final and balanced values
-side by side, the final value's methodology code and label; labels from the workbook). Gold: `gold.build_wto_stats`,
+side by side, the final value's methodology code and label; labels from the workbook, which does not list the
+codes R_OECD, E3 and E4 that 3,215 rows carry). 2005-2025, release November2026. Gold: `gold.build_wto_stats`,
 block `batis`: Poland as reporter, every partner (breakdown; World `WL` is the total), total services and the twelve
 EBOPS main items, exports and imports, final and balanced values as separate measures, in millions of US dollars as
-published (`USD_MN` → `mln_usd`). Status: final values reported by the reporter (`R_*`) are `ok`, aggregated ones
+published (`USD_MN` → `mln_usd`; 218,972 rows, 52 measures, 203 partners). Status: final values reported by the reporter (`R_*`) are `ok`, aggregated ones
 (`A`) `flagged`, estimated or modelled ones and every balanced value `estimated`. KPIs: `exports_services` (next to
 UNCTAD) and `imports_services` (new, draft), final value with the World.
 
