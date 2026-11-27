@@ -1,0 +1,3 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+european_patent_applications,epo_statistics,epo_statistics:by_country:applications:applications,"EPO Technology Dashboard, European patent applications per country of residence of the first-named applicant, newest edition per year",1,
+european_patents_granted,epo_statistics,epo_statistics:by_country:patents:grants,"EPO Technology Dashboard, granted European patents per country of residence of the first-named patentee, newest edition per year",1,

@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: poc_build_epo_statistics
+    description: >-
+      Build stage — EPO patent statistics (register EX-004), EPO Technology Dashboard: European patent applications
+      and granted European patents by country of residence of the first-named applicant (and the world), by field of
+      technology (world), by field and country, and Poland's applications by NUTS 2 region; annual, 2016-2025 in the
+      2025 edition. Values and units as published; the newest edition per year; cells without a value are not loaded.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
