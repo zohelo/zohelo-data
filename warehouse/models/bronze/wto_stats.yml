@@ -1,0 +1,22 @@
+version: 2
+sources:
+- name: wto_stats
+  description: WTO Stats bulk files (register GL-020), OECD-WTO Balanced Trade in Services (BaTIS, BPM6) ZIP from www.wto.org
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/wto_stats/
+    loaded_by: ingestion/to_bronze/wto_stats/
+    config: ingestion/sources/wto_stats.yaml
+  tables:
+  - name: wto_stats_batis
+    description: >-
+      Rows of the BaTIS BPM6 bulk CSV of the newest copy of entity batis_bpm6, values as published text, column names
+      lower-cased, with the CSV member name (release): the rows with Poland as reporter or partner and the rows of the
+      country-group reporters (about 1 % of the 52 million rows); partitioned by entity.
+  - name: wto_stats_batis_codes
+    description: >-
+      Every non-empty cell of the BaTIS codes workbook in the same ZIP (sheets notes, economies, flow, service items,
+      type, methodology codes) as source text with sheet, row and column; partitioned by entity.
+  - name: wto_stats_rejected_files
+    description: Files of wto_stats the Bronze decoder rejected, with the reason.

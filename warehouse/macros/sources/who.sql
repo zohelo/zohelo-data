@@ -23,3 +23,21 @@ who as (
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
 )
 {% endmacro %}
+
+{# WHO data.who.int blocks (gold.build_who): one per indicator file; areas: EU27 members (M49, macro
+   poc_m49_eu27) and World (M49 1, GLOBAL). #}
+{% macro poc_who_blocks() %}
+    select * from (
+        values
+        ('life_expectancy', 'Life expectancy at birth (WHO)'),
+        ('hale', 'Healthy life expectancy at birth (WHO)')
+    ) as t (entity, block_name)
+{% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__who() %}
+    {{ return({
+        'block_model': 'poc_build_who',
+        'activated': "select 'who', entity, block_name from (" ~ poc_who_blocks() ~ ")",
+    }) }}
+{% endmacro %}

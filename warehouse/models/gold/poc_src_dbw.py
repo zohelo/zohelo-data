@@ -1,6 +1,6 @@
 """Gold PoC extraction stage: the activated GUS DBW blocks' rows (one Silver file per bulk
 file, partitioned by entity_id), planned with pyiceberg and streamed by DuckDB; see
-poc_src_eurostat.py. Keep the block list in step with macros/poc_blocks.sql (poc_dbw_blocks).
+poc_src_eurostat.py. Keep the block list in step with macros/sources/gus_dbw.sql (poc_dbw_blocks).
 REGIONAL blocks (poc_dbw_block_rules: regional) hold every powiat or gmina; only their rows for Poland and the
 voivodeships (territory in position 1, named in the block's own dictionary) are read, so a block of 0.8M rows
 stays at the size the facts need."""

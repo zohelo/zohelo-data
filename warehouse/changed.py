@@ -90,6 +90,7 @@ BUILT_FROM = "zohelo.built_from_ms"
 FINGERPRINT = "zohelo.build_fingerprint"
 # Code outside a model's own SQL that can change what it writes.
 SHARED_CODE = ("macros", "dimensions", "dbt_project.yml", "../requirements.txt")
+DOC_SUFFIXES = (".md",)  # documentation among the shared code (dimensions/README.md): in no fingerprint
 # Per-source macro files (D34): left out of the shared digest, fingerprinted with the models that use them.
 SOURCE_MACROS = "macros/sources"
 # Per-source value-range declarations, read by the data test metrics_value_range only (no model calls them): left out of
@@ -125,8 +126,6 @@ FILE_GROWTH_LIMIT = 64
 # Block-scoped metrics (#3204): the models, the one macro call each must be, and where a block names its sources.
 METRICS_PREFIX = "poc_metrics_"
 CONCEPT_CALL = re.compile(r"\bpoc_concept_metrics\(\s*'([a-z0-9_]+)'\s*\)")
-LEGACY_BLOCKS = "poc_legacy_block_models"  # macros/poc_blocks.sql: `model:source_system` per line
-LEGACY_ENTRY = re.compile(r"^\s*(\w+):(\w+)\s*$", re.M)
 SOURCE_REGISTRATION = "poc_source__"  # macros/sources/<source>.sql: {'block_model': ...}
 REGISTERED_MODEL = re.compile(r"['\"]block_model['\"]\s*:\s*['\"](\w+)['\"]")
 SOURCE_SYSTEMS = "source_systems"  # config meta of a block that emits more source_systems than it is declared for
@@ -164,15 +163,107 @@ def manifest(target: str = "prod") -> dict[str, Any]:
 
 
 def shared_digest() -> str:
-    """One digest of the code every model shares; the files under SOURCE_MACROS and VALUE_RANGES are not in it."""
+    """One digest of the code every model shares; the files under SOURCE_MACROS and VALUE_RANGES are not in it.
+    Each file enters as code_text(): an edit of comments or layout alone changes no fingerprint, so it rebuilds
+    nothing (before 27 November any byte did, and a comment fix rebuilt every model)."""
     digest = hashlib.sha256()
     apart = {(PROJECT / SOURCE_MACROS).resolve(), (PROJECT / VALUE_RANGES).resolve()}
     for name in SHARED_CODE:
         root = (PROJECT / name).resolve()
         for path in sorted(root.rglob("*") if root.is_dir() else [root]):
-            if path.is_file() and not apart & set(path.parents):
-                digest.update(str(path.relative_to(root.parent)).encode() + b"\0" + path.read_bytes() + b"\0")
+            if path.is_file() and not apart & set(path.parents) and path.suffix not in DOC_SUFFIXES:
+                digest.update(str(path.relative_to(root.parent)).encode() + b"\0" + code_text(path) + b"\0")
     return digest.hexdigest()
+
+
+def code_text(path: Path) -> bytes:
+    """What of a shared file can change what a model writes. SQL and Jinja (.sql): without Jinja comments and SQL
+    `--` comments, every run of white space outside quotes as one space; text inside '…' and "…" is kept as it is
+    (a value or a Jinja string). YAML: the parsed document (comments and layout drop out, key order stays).
+    requirements.txt: the lines without `#` comments and surrounding white space. Anything else, or a file the
+    reading does not fit (an unclosed quote or comment, YAML that does not parse), enters as its bytes."""
+    raw = path.read_bytes()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw
+    if path.suffix == ".sql":
+        sql = sql_code(text)
+        return raw if sql is None else sql.encode()
+    if path.suffix in (".yml", ".yaml"):
+        try:
+            return json.dumps(yaml.safe_load(text), default=str).encode()
+        except yaml.YAMLError:
+            return raw
+    if path.name == "requirements.txt":
+        lines = (re.sub(r"(^|\s)#.*$", "", line).strip() for line in text.splitlines())
+        return "\n".join(line for line in lines if line).encode()
+    return raw
+
+
+def sql_code(text: str) -> str | None:
+    """code_text() of SQL with Jinja, read as Jinja reads it first: a Jinja comment {# … #} goes, even inside a SQL
+    string; a tag {{ … }} or {% … %} stays, with white space runs outside its Jinja strings as one space. The text
+    between the tags is SQL: a `--` comment outside SQL quotes goes up to the line break (a tag inside it stays),
+    and white space runs outside SQL quotes become one space. None when a tag, a Jinja comment or a quote is not
+    closed."""
+    out: list[str] = []
+    i, n, quote, comment, space = 0, len(text), "", False, False
+
+    def put(piece: str) -> None:
+        nonlocal space
+        if space and out and not quote:
+            out.append(" ")
+        space = False
+        out.append(piece)
+
+    while i < n:
+        if text.startswith("{#", i):
+            end = text.find("#}", i + 2)
+            if end < 0:
+                return None
+            i, space = end + 2, space or not quote
+            continue
+        if text.startswith(("{{", "{%"), i):
+            close = "}}" if text[i + 1] == "{" else "%}"
+            tag, j, string, gap = [text[i : i + 2]], i + 2, "", False
+            while j < n and (string or not text.startswith(close, j)):
+                c = text[j]
+                if string:
+                    tag.append(text[j : j + 2] if c == "\\" else c)
+                    j += 2 if c == "\\" else 1
+                    string = "" if c == string else string
+                    continue
+                if c.isspace():
+                    gap, j = True, j + 1
+                    continue
+                if gap:
+                    tag.append(" ")
+                gap = False
+                string = c if c in "'\"" else ""
+                tag.append(c)
+                j += 1
+            if j >= n:
+                return None
+            put("".join(tag) + (" " if gap else "") + close)
+            i = j + 2
+            continue
+        c = text[i]
+        i += 1
+        if comment:
+            if c == "\n":
+                comment, space = False, True
+        elif quote:
+            out.append(c)
+            quote = "" if c == quote else quote
+        elif c == "-" and text.startswith("-", i):
+            comment, i = True, i + 1
+        elif c.isspace():
+            space = True
+        else:
+            put(c)
+            quote = c if c in "'\"" else ""
+    return None if quote else "".join(out)
 
 
 def source_macro_files(meta: dict[str, Any]) -> dict[str, list[str]]:
@@ -337,14 +428,12 @@ def models(meta: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def block_sources(meta: dict[str, Any]) -> dict[str, set[str]]:
     """source_system → the names of the Gold block models that emit it; pure (reads the manifest only).
 
-    From poc_legacy_block_models() (``model:source_system`` per line), each registration poc_source__<source>()
-    (its 'block_model') and the config meta ``source_systems`` of a block that emits other source_systems too
-    (poc_build_public_finance). A source under two blocks is returned with both (ops/repo_check.py forbids it)."""
+    From each registration poc_source__<source>() (its 'block_model') and the config meta ``source_systems`` of a
+    block that emits other source_systems too (poc_build_public_finance). A source under two blocks is returned
+    with both (ops/repo_check.py forbids it)."""
     project = meta["metadata"]["project_name"]
     macros = {m["name"]: m.get("macro_sql", "") for m in meta["macros"].values() if m["package_name"] == project}
     out: dict[str, set[str]] = {}
-    for model, source in LEGACY_ENTRY.findall(macros.get(LEGACY_BLOCKS, "")):
-        out.setdefault(source, set()).add(model)
     for name, sql in macros.items():
         found = REGISTERED_MODEL.search(sql) if name.startswith(SOURCE_REGISTRATION) else None
         if found:

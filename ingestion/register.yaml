@@ -925,8 +925,9 @@ sources:
 - id: GL-018
   name: Global SDG Indicators Database and API
   short_name: UN SDG Indicators
+  source_system: un_sdg
   provider: United Nations Statistics Division
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -936,9 +937,10 @@ sources:
   granularity: Indicator/series/geography/time with SDG disaggregations, nature/status and source attributes.
   coverage: Global reporting for the 2030 Agenda; time and country coverage vary by indicator.
   access:
-    endpoint: https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false
-    kind: api
-    interfaces: ['SDG API v1 (JSON: Goal/List, Series/List, Series/Data per series code)', Swagger, HTML]
+    endpoint: https://unstats.un.org/sdgs/indicators/database/archive
+    kind: bulk_file
+    interfaces: ['bulk CSV ZIP per release state on the database archive page (<release>_AllData_After_<date>_CSV.zip, newest
+        first)', 'SDG API v1 (JSON: Goal/List, Series/List, Series/Data per series code)', Swagger, HTML]
     auth: public
     cost: free
     limits: None published; one series at a time.
@@ -973,8 +975,11 @@ sources:
       https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?includechildren=false HTTP 200 (7,910 bytes JSON); Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
       https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false HTTP 200 (181,379 bytes JSON).'
     - 'Licence unresolved: internal only until UNSD states reuse terms for the database (non-blocking owner option: ask statistics@un.org).'
-    - 'Builder: page Series/Data per series code for Poland and EU geoAreaCodes; count the series and rows before scheduling.'
+    - 'Built (#3316, docs/sources/un_sdg.md): the release''s bulk CSV ZIP from the database archive page instead of the API
+      (713 Series/Data requests and 68 minutes for Poland and the EU, Dev probe 45924741004). Release 2026.Q3.G.01: 3,198,008
+      rows, 713 series, 406 areas; Bronze keeps every row, Silver and Gold the 27 EU countries (Poland among them).'
     references:
+    - https://unstats.un.org/sdgs/indicators/database/archive
     - https://unstats.un.org/SDGAPI/swagger/
     - https://unstats.un.org/sdgs/dataportal
     - https://www.un.org/en/about-us/terms-of-use
@@ -1040,8 +1045,9 @@ sources:
 - id: GL-020
   name: WTO Stats
   short_name: WTO Stats
+  source_system: wto_stats
   provider: World Trade Organization
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -3854,7 +3860,8 @@ sources:
   name: Barometr Zawodów
   short_name: Barometr Zawodów
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
-  status: approved
+  source_system: barometr_zawodow
+  status: built
   family: B
   kpi: true
   geography: powiat, voivodeship and Poland
@@ -3901,8 +3908,10 @@ sources:
       139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the home page links the national
       publication pages for 2016-2025; the table and map modules load their data by script (no address in custom.js, Dev probe
       run 45815892766 (job 139895407895, same branch, argument `three`, 26 Nov 2026)).'
-    - 'Builder: check that the report tables list every occupation with its category per voivodeship (the 2026 report was
-      read in part); the PDF text layer is the source, one file per year and region.'
+    - 'Built 26 Nov 2026 (#454): the national report has no occupation x voivodeship table; it reprints the 17 posters
+      (with hidden remnants of other posters on some pages, 2018-2023). The source is the posters: the national poster and
+      the poster of each voivodeship page (publication=province&province=<1-16>), each occupation in a coloured block per
+      category with the category name on the block''s tab (docs/sources/barometr_zawodow.md).'
     references:
     - https://barometrzawodow.pl/
     - https://barometrzawodow.pl/modul/publikacje?publication=national&year=2025
@@ -6798,7 +6807,8 @@ sources:
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
   short_name: GIOŚ surface water
   provider: GIOŚ
-  status: approved
+  source_system: gios_surface_water
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6968,7 +6978,8 @@ sources:
   name: Hydroportal / water-management spatial data
   short_name: Wody Polskie Hydroportal
   provider: Państwowe Gospodarstwo Wodne Wody Polskie
-  status: approved
+  source_system: wody_polskie_apgw
+  status: built
   family: G
   kpi: false
   geography: Poland

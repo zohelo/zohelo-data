@@ -65,9 +65,12 @@ example as (
   CTEs named `<source_system>_<x>`. It is placed right after `geo`, so it may read `geo` and any `ref()`,
   not the CTEs of other sources. Prefer static lists and `geo` (iso2, iso3, wb_code) over the
   source's own Silver table, so the shared model never waits for a new source.
-- Registered sources are placed in name order (in the geography map every source, closed by an empty branch;
-  in the block lists after the older ones): the compiled SQL depends on which sources exist, never on the order
-  pull requests were merged.
+- Registered sources are placed in name order (in the geography map closed by an empty branch; the activated
+  blocks under the column names `source_system, block_id, block_name`, so a select need not name them): the
+  compiled SQL depends on which sources exist, never on the order pull requests were merged.
+- A block that emits other source_systems too (`poc_build_public_finance`: mf_public_debt, mf_treasury_debt,
+  mf_state_budget, krus) is registered by one source, whose `activated` select lists every source's blocks, and
+  names the others in its config meta `source_systems` (`warehouse/changed.py`).
 
 How the macros are found: dbt gives a macro every project macro by name in `context`;
 `poc_registered(prefix)` lists those starting with `poc_source__` or `poc_geography__`. `ref()` calls inside
@@ -103,12 +106,16 @@ it cannot follow macros found by name; a full parse takes about five seconds.
   it), and `repo_check` now pairs that list with the calls in every `poc_geography__<source>()` as well as the
   model's own text; a call anywhere else in a source's macro file fails the check. The model writes no source's CTE
   any more: the registered CTEs, then one union of them closed by an empty branch (the compiled map has the same 95
-  CTEs, text unchanged, and the same 71 branches, now all in name order). Still shared: the `optional_parents` list
-  itself, for the rare source whose map must read its own Silver table (prefer static codes), and the Gold macros
-  of `poc_blocks.sql`. Moving the Gold macros is mechanical (cut the block macros, the list line, the CTE and the branch into
-  `macros/sources/<source>.sql`; a trial move of WHO changed only the position of its branches in the
-  compiled SQL) but reorders the unions, so the compiled SQL of the facts changes once. Do it in one pull
-  request when no source pull request is open.
+  CTEs, text unchanged, and the same 71 branches, now all in name order). Moved (27 November): the Gold blocks of
+  the 24 sources in `poc_legacy_block_models()` and `poc_legacy_activated_blocks()` of `poc_blocks.sql`, each
+  with the block lists its build model and geography macro read (`poc_eurostat_blocks`, `poc_oecd_areas`, …),
+  to `poc_source__<source>()` in `macros/sources/<source>.sql` (new files for nbp, mf_public_debt,
+  mf_biala_lista and mf_jst_budgets); the two shared lists are gone and `repo_check` fails if they come back. The
+  resolved block list holds the same 113 blocks and the activated list the same 352 rows; the unions of the five
+  facts, `poc_dim_series`, `poc_dim_measure`, `poc_dim_unit` and the two checks read the same blocks, now all in
+  name order (rows unchanged). `poc_blocks.sql` keeps only what every source shares: `poc_nuts_pl`,
+  `poc_woj_makroregion`, `poc_concepts`, `poc_observations` and its helpers. Still shared: the `optional_parents`
+  list itself, for the rare source whose map must read its own Silver table (prefer static codes).
 
 ## Value ranges
 
@@ -200,8 +207,8 @@ could not follow). `python -m ops.repo_check` (`seed files`) names each such fil
 `python -m ops.repo_check` (`configuration`) fails when a source is declared in one place and missing in
 another: a `bronze:` table that is no dbt source table; a Silver model in no source's `silver:` list; a
 Gold model in no `gold` list or a listed table that no model builds; a full-rebuild model without a
-ceiling, or with two; a `poc_build_*` model that is not tagged, or neither registered nor in the old list,
-or both; a source with a block in the old list and a registration; a value-range file not named after a declared source,
+ceiling, or with two; a `poc_build_*` model that is not tagged or not registered, or registered twice; the shared
+block lists `poc_legacy_block_models()` or `poc_legacy_activated_blocks()` put back; a value-range file not named after a declared source,
 defining another macro than `poc_value_range__<source>`, or such a macro outside `macros/value_range/` or called by
 a model; a registration that names no model or no
 blocks, sits in the wrong file or names an unknown source; a geography CTE that is not named after its
@@ -221,10 +228,14 @@ folder or does not name it in its config meta; a seed CSV put back next to its f
 ## Rebuilds
 
 `warehouse/changed.py` fingerprints every model with one digest of the code all models share: everything
-under `warehouse/macros/` except `macros/sources/` and `macros/value_range/`, `dimensions/`, `dbt_project.yml`
-and `requirements.txt`.
-A change there makes the next scheduled build rebuild every dbt model and seed once ("code changed"); so does
-a Gold pull request of a source that still adds lines to `macros/poc_blocks.sql`.
+under `warehouse/macros/` except `macros/sources/` and `macros/value_range/`, `dimensions/` (not its README),
+`dbt_project.yml` and `requirements.txt`.
+A change there makes the next scheduled build rebuild every dbt model and seed once ("code changed"). Since 27
+November the digest reads each file without its comments and layout (`code_text()`): in SQL and Jinja the Jinja
+comments and the `--` comments go and white space outside quotes counts as one space (text inside quotes is
+kept); YAML counts as its parsed document; `requirements.txt` without `#` comments. So a comment or
+re-indentation of a shared macro rebuilds nothing; a file that does not read cleanly (an unclosed quote) counts
+by its bytes, as before.
 
 The files under `macros/sources/` enter the fingerprint only of the models that use them
 (`source_macro_files()`): a model that calls a macro defined there gets that file, and a model that reaches
@@ -251,3 +262,7 @@ D36 alone: for each list, join the files of `warehouse/seed_rows/<list>/` into `
 (one header), delete the folder and the model, and move the list's tests back to `seeds/_seeds.yml` (with
 `column_types: {factor: "decimal(38,9)"}` for `unit` and every column of `unit_map` as `varchar`).
 `seed_rows.rows()` then reads the seed, so its callers do not change. The tables keep their names and rows.
+
+The move of 27 November (the 24 older Gold blocks to their sources' files, `code_text()` in the shared digest):
+revert its pull request. A source registered later is unaffected; no data changes; the next build rebuilds every
+model once more (the shared digest changes back).
