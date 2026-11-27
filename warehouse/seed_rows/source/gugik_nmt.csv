@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gugik_nmt,PL-ENV-005,"GUGiK NMT, NMPT i LIDAR (skorowidze)","GUGiK elevation sheet indexes (NMT, NMPT, LIDAR)",GUGiK,reference,api,national-public,free_use_gugik_nmt,https://www.geoportal.gov.pl/pl/dane/numeryczny-model-terenu-nmt/

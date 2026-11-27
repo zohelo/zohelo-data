@@ -3143,7 +3143,8 @@ sources:
   name: Raport – Stan Sanitarny Kraju
   short_name: GIS sanitary state report
   provider: Główny Inspektorat Sanitarny (GIS)
-  status: approved
+  source_system: gis_sanitary
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -3151,7 +3152,7 @@ sources:
   domains: [public health, sanitary inspection, food safety, environmental health]
   entities: [country, inspection-aggregate, establishment-aggregate, sample-aggregate]
   granularity: Annual report table/indicator aggregated from national, voivodeship, powiat and border sanitary inspectorates.
-  coverage: Annual report family; opened page confirms current family but full archive start not verified.
+  coverage: 'Annual reports 2006 to 2025 on the page (Dev probe 45894316074): Stan Sanitarny Kraju 2006-2023, Raport z działań PIS 2024 and 2025; built from 2012 (food-samples table, years 2010-2025).'
   access:
     endpoint: https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
     kind: bulk_file
@@ -3201,8 +3202,9 @@ sources:
 - id: PLS-019
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
   short_name: NIZP-PZH epidemiology bulletins
+  source_system: pzh_epimeld
   provider: Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)
-  status: approved
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, publication-dependent
@@ -3593,7 +3595,8 @@ sources:
   name: National examination results and reports
   short_name: CKE exam results
   provider: Centralna Komisja Egzaminacyjna (CKE)
-  status: approved
+  source_system: gus_exam_results
+  status: built
   family: B
   kpi: true
   geography: Poland; school-location categories and regions, release-dependent
@@ -6383,7 +6386,8 @@ sources:
   name: NMT, NMPT and airborne laser-scanning elevation products
   short_name: GUGiK elevation (NMT)
   provider: GUGiK
-  status: approved
+  source_system: gugik_nmt
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -7295,7 +7299,8 @@ sources:
   name: PSE Reports API v2 and market/system reports
   short_name: PSE reports
   provider: Polskie Sieci Elektroenergetyczne (PSE)
-  status: approved
+  source_system: pse_reports
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -7311,15 +7316,17 @@ sources:
     interfaces: [REST-API, OData-style JSON, HTML]
     auth: Public, no key.
     cost: Free.
-    limits: None published; the responses carry no rate-limit headers. The old API v1 was announced to close at the end of
-      2025.
+    limits: 'None published; the responses carry no rate-limit headers. Pages of 100 rows continued through nextLink ($after
+      cursor); $top, $skip and $count answer 400. robots.txt: none on api.raporty.pse.pl (404); raporty.pse.pl disallows its
+      own /api/ path, not used. The old API v1 was announced to close at the end of 2025.'
   licence:
     status: unresolved
     notes: 'Terms: none found. The PSE announcement https://www.pse.pl/-/najwazniejsze-dane-o-pracy-systemu-elektroenergetycznego-i-rynku-bilansujacego-w-nowej-odslonie
       (read 12 Nov 2026) offers "możliwość pobierania danych liczbowych czy wykorzystania API według potrzeb użytkownika"
       but states no licence, attribution wording, or rule on commercial reuse and modification; the pse.pl front page links
-      only a cookie policy and https://www.pse.pl/nota-prawna could not be opened. The source stays internal until PSE terms
-      are found. Attribution if used: "Źródło: PSE S.A., raporty.pse.pl".'
+      only a cookie policy and https://www.pse.pl/nota-prawna answers 404 (Dev probe 45790352597, 26 Nov 2026);
+      raporty.pse.pl is a single-page app whose page and script bundle name no terms or licence (Dev probe 45790863668).
+      The source stays internal until PSE terms are found. Attribution if used: "Źródło: PSE S.A., raporty.pse.pl".'
   updates: 'Daily and intraday: each row has publication_ts; day-ahead values such as RCE are published the day before, operational
     values after the day.'
   ingestion:
@@ -7328,17 +7335,20 @@ sources:
       rce-pln (balancing energy price, PLN/MWh: business_date, dtime, dtime_utc, period, rce_pln, publication_ts) 96 rows
       and about 25 KB a day; his-wlk-cal (demand, wi = wind, pv = photovoltaics, generating-unit groups jg*) 96 rows and about
       49 KB a day; no nextLink at this size. Full load = one request per entity and day from 2024-06-14: 882 days to 12 Nov
-      2026, so about 1,800 requests and 65 MB for the two entities, half an hour at one request a second. The entity catalogue
-      was not read (https://api.raporty.pse.pl/api/ answers 404); date-range filters and paging were not tested.'
-    incremental: 'Entity = report x business day, version = max publication_ts; daily request of yesterday and today and a
-      re-read of the last 7 days for corrections (delta, append_only by day with replacement of a re-published day). About
-      35,000 rows a year per entity: small source, refresh full.'
+      2026, so about 1,800 requests and 65 MB for the two entities, half an hour at one request a second. Dev probes
+      45790352597 and 45790863668 (test/2870-pse-probe, 26 Nov 2026): no entity catalogue (/api/ and /api/$metadata answer
+      404); a date-range filter (business_date ge ... and le ...) works but pages by 100 rows (nextLink), so a month costs
+      as many requests as its days; a DST day (92 or 100 rows) fits one page without nextLink; a repeated request returns
+      identical bytes; his-wlk-cal has one row (its last period) for 2024-06-13, left out.'
+    incremental: 'Entity = report x business day, version = max publication_ts_utc; weekly run lands the missing days up to
+      yesterday (Warsaw) and asks the newest 7 days again; unchanged bytes are not written (snapshot, changed_since_last).
+      About 35,000 rows a year per report: small source, refresh full (D32 + #2870).'
     identifiers: Report/dataset ID, business_date, dtime_utc, publication_ts.
   modelling:
     notes: 'Preserve Europe/Warsaw local time with the UTC column (DST days have 92 or 100 periods), settlement interval and
-      publication time. Grain: 15 minutes, Poland only (geography PL), PLN/MWh and MW. Smallest Gold selection, aggregated
-      to the day in Silver (fact_daily): average balancing energy price RCE (PLN/MWh), electricity demand, and wind and photovoltaic
-      generation with their share of demand, as new KPIs in environment.energy.'
+      publication time. Grain: 15 minutes, Poland only (geography PL), PLN/MWh and MW. Built (#2870): Silver at 15 minutes;
+      Gold build_pse_reports (fact_daily) holds daily means of complete days of the market energy price RCE (PLN/MWh) and
+      of demand, wind and photovoltaic generation (MW), draft KPIs in environment.energy; shares of demand not built.'
     overlap: No KPI of kpi.csv is published here yet. ENTSO-E Transparency and Eurostat/Ember carry the EU comparison for
       load and generation; URE price indicators (PL-ENV-020) are quarterly averages of a different market.
   research:
@@ -7347,7 +7357,6 @@ sources:
     connection: tested
     blockers:
     - 'PSE reuse terms not found: internal only until the owner or PSE confirms them.'
-    - Entity catalogue, date-range filters and paging not tested; inventory in the Landing trial.
     - History before 2024-06-14 (old reports) has no route in API v2.
     references:
     - https://api.raporty.pse.pl/
@@ -7356,7 +7365,8 @@ sources:
   name: Energy price indicators and small-renewable-installation reports
   short_name: URE energy prices
   provider: Urząd Regulacji Energetyki (URE)
-  status: approved
+  source_system: ure_prices
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -7364,9 +7374,10 @@ sources:
   domains: [electricity prices, renewable energy, regulation]
   entities: [market indicator, installation aggregate, technology]
   granularity: Quarterly/annual price indicators and annual aggregates for small renewable installations.
-  coverage: 'Average electricity price on the competitive market: yearly from 2008, quarterly from Q2 2015, newest Q2 2026
-    (table read 12 Nov 2026). Other indicators differ; small-installation reports are annual since 2016, with a definition
-    change from 2021.'
+  coverage: 'Built: average electricity price on the competitive market yearly 2008-2025 and quarterly 2015 Q2-2026 Q2 (page
+    7852), average household electricity price yearly 2012-2025 (page 7853), imported gas purchase prices quarterly, EU/EFTA
+    states 2013 Q3-2026 Q3 and other states 2023 Q1-2026 Q3 (page 7859); tables read 26 Nov 2026 (Dev probe 45790234209).
+    Small-installation reports are annual since 2016, with a definition change from 2021 (not built).'
   access:
     endpoint: https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
     kind: bulk_file
@@ -7380,7 +7391,8 @@ sources:
       and the privacy policy https://www.ure.gov.pl/pl/wolnytekst/5192,dok.html) state no licence, no attribution wording
       and nothing on reuse, commercial use or modification of the content; the footer has only privacy, accessibility, RSS
       and BIP links. The source stays internal. Attribution if used: "Źródło: Urząd Regulacji Energetyki, www.ure.gov.pl"
-      with the page''s modification date.'
+      with the page''s modification date. Dev probe 45790234209 (26 Nov 2026) read robots.txt (empty), both list pages, the
+      privacy policy and the two auction-rule pages linked there: no licence or reuse wording.'
   updates: 'Per indicator: quarterly prices are added to the same page after each quarter (page 7852: "Data modyfikacji: 25.09.2026"
     with Q2 2026), yearly values once a year.'
   ingestion:
@@ -7391,9 +7403,9 @@ sources:
       averages 10600, capacity charge 9165 and others) and the gas page https://www.ure.gov.pl/pl/paliwa-gazowe/ceny-wskazniki/7859
       (quarterly gas purchase prices). Under 1 MB in total. The small-installation report is a document on bip.ure.gov.pl,
       not a table (not included).'
-    incremental: Entity = indicator page, version = the page's modification date; fetch each page monthly and keep it when
-      the bytes change (snapshot, changed_since_last); the HTML table is parsed in Bronze and an unknown layout rejects the
-      file. Refresh full.
+    incremental: Entity = indicator page; Landing version = download time (no Last-Modified), the page's modification date
+      is kept in Bronze; fetched monthly and landed when the bytes without the request-time trailer change (snapshot,
+      changed_since_last); the HTML tables are parsed in Bronze and an unknown layout rejects the file. Refresh full.
     identifiers: Indicator name, period, unit, tariff/customer scope and report year.
   modelling:
     notes: 'Keep legal definition/version with each indicator; do not compare redefined installation classes without adjustment.
@@ -7407,7 +7419,8 @@ sources:
     connection: tested
     blockers:
     - 'URE reuse terms not found: internal only until the owner or URE confirms them.'
-    - Table layouts of the other nine indicator pages and of the gas page were not opened.
+    - 'Left out of the build: eight other electricity indicator pages (12418, 11063, 7851, 10600, 8425, 7854, 9165, 9962;
+      layouts in Dev probe 45790234209) and the small-installation reports; docs/sources/ure_prices.md.'
     references:
     - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
     - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html

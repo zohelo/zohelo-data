@@ -1,0 +1,67 @@
+version: 2
+models:
+  - name: pzh_epimeld_cases
+    description: >-
+      Registered cases of infectious diseases and poisonings and incidence per 100,000 population (live births for the
+      congenital diseases, children for the tables of children under 2 and aged 0-14), per year, disease (the bulletin's disease line, name and ICD-10 codes) and area (Poland
+      'PL', voivodeships by TERYT code), from the
+      per-disease voivodeship tables of NIZP PZH-PIB's annual bulletins "Choroby zakaźne i zatrucia w Polsce"
+      (register PLS-019; bronze.pzh_epimeld_rows). Grain: period_year x disease_key x area_code. Each value from the
+      newest bulletin that prints it (Poland's year Y from bulletin Y+1 when it exists; voivodeships from bulletin Y).
+      Rows whose cases are printed "-" (no case) are not loaded. History and counts: Dev trial (PR body).
+    tests:
+      - unique:
+          column_name: "cast(period_year as varchar) || '|' || disease_key || '|' || area_code"
+    columns:
+      - name: period_year
+        tests: [not_null]
+      - name: period_date
+        description: 1 January of the year.
+        tests: [not_null]
+      - name: disease_key
+        description: >-
+          The disease line without spaces, accents and punctuation (e.g. salmonelozy_ogolem_a02), plus ':reported' or
+          ':diagnosed' for the AIDS tables of reported or diagnosed cases.
+        tests: [not_null]
+      - name: disease_codes
+        description: ICD-10 codes in the disease line's last brackets, spaces removed (null for the food-poisoning
+          titles printed without codes).
+      - name: disease_label
+        description: The table title (disease name and codes) in the chosen bulletin, diacritics recombined.
+        tests: [not_null]
+      - name: area_code
+        description: "'PL' (the POLSKA row) or the TERYT voivodeship code (bulletin number x 2)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [PL, '02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32']
+      - name: cases
+        description: Registered cases in the year, as printed.
+        tests: [not_null]
+      - name: incidence_header
+        description: The incidence column's header as printed (the denominator).
+        tests: [not_null, {accepted_values: {arguments: {values: ['na 100 tys.', 'na 100 tys. urodzeń żywych']}}}]
+      - name: incidence_unit_code
+        description: >-
+          The incidence denominator: per_100k (population), per_100k_live_births, per_100k_children_under_2,
+          per_100k_children_0_14 (from the disease line where the header says only "na 100 tys.").
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [per_100k, per_100k_live_births, per_100k_children_under_2, per_100k_children_0_14]
+      - name: incidence_dropped
+        description: The block's POLSKA rows imply a denominator outside the band of incidence_unit_code; incidence null.
+        tests: [not_null]
+      - name: quarters_match
+        description: The row's printed quarters add up to its printed year (false = a misprint in the bulletin).
+      - name: preliminary
+        description: The bulletin's text says "wstępne" (preliminary data).
+        tests: [not_null]
+      - name: source_edition
+        description: The bulletin the value comes from (its year).
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of that PDF (lineage to Landing/Archive).
+        tests: [not_null]
