@@ -11,11 +11,11 @@ natural person; the entries are notifications of a suspected offence, not findin
 columns and every identifier other than a KRS number are never stored, also not in Landing or the Archive. Per entry
 only: the section (legal basis) and the entry's number in it (Lp.), the kind of identifier the KNF gives (KRS,
 NIP/REGON, not registered in Poland, no data, other), the KRS numbers (exactly ten digits after "KRS"), the
-prosecutor's office as listed (checked against a closed character set and the word "Prokurat") and whether the column
-"Wzmianki o prawomocnych orzeczeniach" mentions anything (not "-"). The entries read must equal the page's own
-"Liczba znalezionych ostrzeżeń". Entity = ``warning_list``; version = download time; a new copy is written only when
-the reduced document's SHA-256 changed (an accumulating snapshot: Bronze keeps every copy). Modes: inspect, load,
-verify.
+prosecutor's office (its name before any note in parentheses, checked against a closed character set; the cell must
+name a "Prokurat…") and whether the column "Wzmianki o prawomocnych orzeczeniach" mentions anything (not "-"). The
+entries read must equal the page's own "Liczba znalezionych ostrzeżeń". Entity = ``warning_list``; version =
+download time; a new copy is written only when the reduced document's SHA-256 changed (an accumulating snapshot:
+Bronze keeps every copy). Modes: inspect, load, verify.
 """
 
 from __future__ import annotations
@@ -52,7 +52,8 @@ KRS = re.compile(r"KRS\s*:?\s*(\d{10})(?!\d)")
 NIP_REGON = re.compile(r"(NIP|REGON)\s*:?\s*\d{9,10}(?!\d)")
 NOT_REGISTERED = {"podmiot nie jest zarejestrowany w Polsce", "podmioty nie są zarejestrowane w Polsce"}
 NO_DATA = {"brak danych"}
-OFFICE = re.compile(r"^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż0-9 .,;:()/„”\"'§–—-]{3,300}$")
+OFFICE_CHAR = re.compile(r"[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż0-9 .,;:/„”\"'§–—-]")
+OFFICE = re.compile(rf"^{OFFICE_CHAR.pattern}{{3,160}}$")
 IDENTIFIER_KINDS = ("krs", "nip_regon", "not_registered_pl", "no_data", "other")
 
 
@@ -195,9 +196,11 @@ def parse(body: bytes) -> dict[str, Any]:
                 raise Layout(f"section {position}, entry {n}: a number (Lp.) of unknown shape or repeated")
             numbers.add(int(lp_match.group(1)))
             kind, krs = identifier(text(cells[2]))
-            office = text(cells[3])
-            if not OFFICE.match(office) or "rokurat" not in office:
-                raise Layout(f"section {position}, entry {n}: prosecutor's office of unknown shape ({len(office)})")
+            listed = text(cells[3])
+            office = listed.split("(", 1)[0].strip(" ,;-–")  # the office's name; a note in parentheses is not kept
+            if not OFFICE.match(office) or "rokurat" not in listed:
+                odd = sorted({c for c in office if not OFFICE_CHAR.match(c)})
+                raise Layout(f"section {position}, entry {n}: office of unknown shape ({len(office)}, {odd})")
             ruling = text(cells[4])
             if not ruling:
                 raise Layout(f"section {position}, entry {n}: empty ruling column (the page writes '-' for none)")

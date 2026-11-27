@@ -17,7 +17,7 @@ sources:
       One row per entry of every landed copy (entity warning_list), values as text: section_key (legal basis, slug),
       section_position, section_title and section_entries (the section's heading and entry count on the page), lp
       (the entry's number in its section), identifier_kind (krs, nip_regon, not_registered_pl, no_data, other),
-      krs_numbers (ten-digit KRS numbers, space separated; no other identifier is kept), prosecutor_office as listed,
+      krs_numbers (ten-digit KRS numbers, space separated; no other identifier is kept), prosecutor_office (the office's name, without a note in parentheses),
       final_ruling_mentioned (true when the column "Wzmianki o prawomocnych orzeczeniach" is not "-"), stated_total
       (the page's "Liczba znalezionych ostrzeżeń"); provenance raw_sha256, source_version, ingested_at,
       source_row_number. No names, no free-text columns. Partitioned by entity.

@@ -15,15 +15,15 @@ Reduced before Landing (register build limits, data minimisation): an entry name
 person, and the entries are notifications of a suspected offence, not findings. Never stored, also not in Landing or
 the Archive: names, the free-text columns, NIP and REGON numbers. Kept per entry: the section key (the legal basis up
 to the first parenthesis, as a slug) and the section heading, Lp., the identifier kind (`krs`, `nip_regon`,
-`not_registered_pl`, `no_data`, `other`), the KRS numbers (exactly ten digits after "KRS"), the prosecutor's office as
-listed (closed character set, must name a "Prokurat…") and whether a final ruling is mentioned. The entries read must
+`not_registered_pl`, `no_data`, `other`), the KRS numbers (exactly ten digits after "KRS"), the prosecutor's office
+(its name before any note in parentheses, closed character set; the cell must name a "Prokurat…") and whether a final ruling is mentioned. The entries read must
 equal the stated total and Lp. must not repeat within a section.
 
 Entity = `warning_list`; version = download time; a copy is written only when the reduced document's SHA-256 changed.
 The page keeps only the current list, so the source is an accumulating snapshot: Bronze `bronze.knf_warnings_entries`
 loads every copy (shared loader, all versions; another document shape is rejected into
 `bronze.knf_warnings_rejected_files`), and history starts with the first copy. Silver `silver.knf_warnings_entries`
-(grain copy × section × Lp.) adds the download date, the office without its parenthesised note and the office level
+(grain copy × section × Lp.) adds the download date and the office level
 (krajowa, regionalna, okręgowa, rejonowa, other). Gold: entity table `gold.knf_warning` (newest copy, keyed by section
 × Lp.; KRS numbers link to KRS entity tables by number) and build stage `build_knf_warnings`, block `warning_list`:
 entries in total, by legal basis, by prosecutor level, by identifier kind, and those mentioning a final ruling; Poland,
