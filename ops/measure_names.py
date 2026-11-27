@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Bilingual measure names through the Message Batches API (owner request of 27 Nov 2026, decision O47).
 
-Run by the workflow ``batch-labels.yml``, not by Ops: that workflow alone has the ``ANTHROPIC_API_KEY`` secret
-and installs ``anthropic`` (pinned with hashes in ``ops/measure_names.requirements.txt``, not in requirements.txt).
+Run by the workflow ``batch-labels.yml``, not by Ops: that workflow alone authenticates by Workload Identity Federation
+(GitHub OIDC token, no stored key) and installs ``anthropic`` (pinned with hashes in
+``ops/measure_names.requirements.txt``, not in requirements.txt).
 
 ``submit``: reads ``gold.dim_measure`` read-only (the read credentials, ``READ_ONLY`` attach), keeps the measures
 with status ``activated`` or ``waiting`` (``--scope all``: every measure), sends them in chunks of 40 measures of
@@ -80,26 +81,39 @@ TOOL_SPEC = {
 }
 
 
-def api_key() -> str:
-    """The Anthropic API key, or exit 2 with a message saying who adds it."""
-    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if not key:
+FEDERATION_VARS = (
+    "ANTHROPIC_FEDERATION_RULE_ID",
+    "ANTHROPIC_ORGANIZATION_ID",
+    "ANTHROPIC_SERVICE_ACCOUNT_ID",
+    "ANTHROPIC_WORKSPACE_ID",
+    "ANTHROPIC_IDENTITY_TOKEN_FILE",
+)
+
+
+def federation_ready() -> None:
+    """Exit 2 with a message unless Workload Identity Federation is configured (no stored API key is used)."""
+    missing = [v for v in FEDERATION_VARS if not os.environ.get(v, "").strip()]
+    token_file = os.environ.get("ANTHROPIC_IDENTITY_TOKEN_FILE", "")
+    if not missing and not (os.path.isfile(token_file) and os.path.getsize(token_file) > 0):
+        missing.append("ANTHROPIC_IDENTITY_TOKEN_FILE (empty: the OIDC fetch step did not run)")
+    if missing:
         annotate(
             "error",
-            "ANTHROPIC_API_KEY missing",
-            "The repository secret ANTHROPIC_API_KEY is not set. The owner adds it (Settings → Secrets and "
-            "variables → Actions); batch-labels.yml cannot run without it.",
+            "Workload Identity Federation not configured",
+            "Missing: " + ", ".join(missing) + ". The owner sets the four ANTHROPIC_* variables (Settings → "
+            "Secrets and variables → Actions → Variables); batch-labels.yml fetches the OIDC token.",
         )
         sys.exit(2)
-    return key
 
 
 def client():
-    """An Anthropic client; ``anthropic`` is installed only by batch-labels.yml."""
-    key = api_key()
+    """An Anthropic client authenticated by Workload Identity Federation: the SDK reads the ANTHROPIC_* federation
+    variables and the GitHub OIDC token file and exchanges them for a short-lived token. ``anthropic`` is installed
+    only by batch-labels.yml."""
+    federation_ready()
     import anthropic
 
-    return anthropic.Anthropic(api_key=key, max_retries=5)
+    return anthropic.Anthropic(max_retries=5)
 
 
 def read_measures() -> list[dict]:
@@ -179,7 +193,7 @@ def build_requests(rows: list[dict], model: str) -> tuple[list[dict], dict]:
 
 def submit(args) -> int:
     """Send the batch; write the manifest and the job summary."""
-    api = client()  # fails first when the key is missing, before reading R2
+    api = client()  # fails first when federation is not configured, before reading R2
     rows = select(read_measures(), args.scope)
     if not rows:
         annotate("error", "measure names", {"scope": args.scope, "measures": 0})
