@@ -141,15 +141,19 @@ source declares both in its own file, `warehouse/macros/value_range/<source_syst
   text, written as SQL reads them (`'5e7'`, `'-0.5'`), so the compiled test shows them as written. The evidence for
   each bound goes into the comment, as before.
 - `models` lists the `poc_metrics_*` models of the source's KPIs. A model that several sources feed is listed by
-  each of them; the union reads it once. `'models': []` until the KPI's metrics model exists (the bound then waits,
-  as the documentation-only rows of the test file do).
-- The test reads the rows and models written in it first (the sources from before the split; edited in place, no
-  new rows or models), then each source's file in name order. It fails the parse on a malformed bound, a bound
-  declared twice by one source, or a model that is not `poc_metrics_*`.
+  each of them; the union reads it once. `'models': []` until the KPI's metrics model exists (the bound then waits:
+  documentation only).
+- The test reads each source's file in name order; it writes no bound or model itself. It fails the parse on a
+  malformed bound, a bound declared twice by one source, or a model that is not `poc_metrics_*`.
 - Moved on 16 November: the bounds and the single-source models of cie_sio, crossref, gugik_prng, gus_culture,
   gus_culture_participation, gus_nsp2021, gus_psr2020, gus_tourism, mrpips_social_assistance, ms_isws, owid,
   policja_statistics, radon, rpwdl, ted_notices and ulc_airports (the compiled test reads the same 116 bounds and 57 models, and returns the
-  same rows on the same data). The other sources' rows stay in the test file.
+  same rows on the same data). Moved on 27 November: the last 86 bounds written in the test, of 23 sources (bis, ecb,
+  eea, eurostat, faostat, gus_bdl, gus_dbw, ilostat, mrpips_unemployment, nbp, nbp_bop, nbp_interest_rates, un_wpp,
+  undata, undp_hdr, unece, unesco_uis, unhcr, who, world_bank_findex, world_bank_gem, world_bank_ids, world_bank_wdi),
+  each with its evidence comment, and the test's list of 32 shared metrics models, each now in the `models` of every
+  source with a bound for its KPI. The compiled test has the same 183 bound rows (same column types) and the same 104
+  union branches, now in the sources' order; the final select is unchanged, and no build fingerprint changed.
 - Counts and levels cannot be 0 (#2807): for the KPIs in the test's `positive_concepts` (population,
   population_projection, gdp_current_prices, gdp_per_capita, fx_rate) the lower bound is exclusive, whatever the
   source's bound says, so a 0 stored in place of a missing value fails. A 0 that the publisher itself prints goes into
@@ -274,3 +278,7 @@ D36 alone: for each list, join the files of `warehouse/seed_rows/<list>/` into `
 The move of 27 November (the 24 older Gold blocks to their sources' files, `code_text()` in the shared digest):
 revert its pull request. A source registered later is unaffected; no data changes; the next build rebuilds every
 model once more (the shared digest changes back).
+
+The value-range move of 27 November (the last bounds and the shared model list of `tests/metrics_value_range.sql` to
+`macros/value_range/<source>.sql`): revert its pull request, after carrying any later edit of those 23 files into
+the test's `values` and `shared_models`. Nothing rebuilds and no data changes.
