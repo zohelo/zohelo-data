@@ -28,7 +28,9 @@ and those rows differ only in goal, target and indicator, so Silver lists the in
 area × year × dimensions. `value` is the published number. `NaN` (no value; every row under nature N and observation
 status M, O or Q carries it) and censored values (`<2.5`, `<100`, `<0.5`, `<0.1`) keep `value` null with `value_kind`
 `no_value` or `below`, never 0. Units, nature (C, CA, E, G, M, N, NA), observation status and dimensions are kept as
-published.
+published. Size (Dev trial 45939006900, 27 Nov 2026): one Landing file of 68.2 MB, Bronze 3,198,008 rows in one
+Parquet file of 36 MB, Silver 442,595 rows (618 series, 1970-2026; Poland 17,193 rows, 514 series with a value), 19,009
+published zeros kept.
 
 Gold block `sdg_observations` (`poc_build_un_sdg`): one measure per series code,
 `un_sdg:sdg_observations:<Units>:<SeriesCode>` (each series has one unit), annual, with the dimensions as the breakdown.
@@ -38,7 +40,9 @@ period of several years (`Time_Detail` 2013-2017 under year 2017; 93 series), an
 Observation status B, D, E/I, U and P become break, definition_differs, estimated, low_reliability and provisional.
 Otherwise nature E, M and G (estimated, modelled, global monitoring data) are estimated, and C, CA and NA are ok. Units
 as published (D33); nine unit codes are mapped in `unit_map` (PERCENT, PER_100000_POP, PER_10000_POP, PER_100_POP,
-KMSQ, TONNES, CU_USD, CU_USD_M, CON_USD_M); the others stay unmapped and are reported. Draft KPI
+KMSQ, TONNES, CU_USD, CU_USD_M, CON_USD_M); the other 35 codes in Gold stay unmapped and are reported. Gold holds
+390,962 rows, 548 measures and 42,275 series in the trial, with all 27 areas matched and 0 duplicates by series × date.
+Draft KPI
 `women_in_parliament` (SG_GEN_PARL, indicator 5.5.1, IPU Parline), with its metrics model, value bound and v2 map row.
 
 Left out: the 379 other areas (other countries and the UN regional aggregates) stay in Bronze. They do not reach Silver

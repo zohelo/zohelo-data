@@ -6,7 +6,8 @@ models:
       and the other 26 EU countries in the newest release (bulk CSV of the database archive), one row per ObservationID
       with the indicators it is listed under, values as published (value null with value_kind 'no_value' for NaN and
       'below' for censored values such as '<2.5', never 0), units, nature, observation status and the disaggregation
-      dimensions as published. Grain: series_code x geo_area_code x time_period x dimensions.
+      dimensions as published. Grain: series_code x geo_area_code x time_period x dimensions. Release 2026.Q3.G.01
+      (Dev trial 45939006900): 442,595 rows, 618 series, 1970-2026.
     tests:
       - unique:
           column_name: "series_code || '|' || geo_area_code || '|' || time_period || '|' || dimensions"

@@ -38,10 +38,10 @@ archive_policy:
 bronze: [bronze.un_sdg_observations, bronze.un_sdg_rejected_files]
 silver: [silver.un_sdg_observations]
 gold: [gold.build_un_sdg, gold.metrics_women_in_parliament]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial (27 Nov 2026), 1.5 x
-  un_sdg_observations: {rows: 665000}  # 442,595: one row per ObservationID of Poland and the 27 EU countries (Dev probe 45935478568)
-  poc_build_un_sdg: {rows: 600000}  # trial
-  poc_metrics_women_in_parliament: {rows: 1100}  # 729 rows of SG_GEN_PARL, 27 countries, 2000-2026 (Dev probe 45935909818)
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45939006900 (27 Nov 2026), 1.5 x
+  un_sdg_observations: {rows: 665000}  # 442,595: one row per ObservationID of the 27 EU countries, release 2026.Q3.G.01
+  poc_build_un_sdg: {rows: 590000}  # 390,962 = Silver less 25,092 NaN, 1,191 censored and 25,350 multi-year rows
+  poc_metrics_women_in_parliament: {rows: 1100}  # 729: SG_GEN_PARL, 27 countries, 2000-2026
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one ZIP of about 68 MB replaced whole by each release (no changed-since); Bronze
