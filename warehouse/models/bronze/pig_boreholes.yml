@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: pig_boreholes
+  description: PIG-PIB CBDG boreholes (register PL-ENV-014), WFS GetFeature in GEOJSON pages
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/pig_boreholes/
+    loaded_by: ingestion/to_bronze/pig_boreholes/
+    config: ingestion/sources/pig_boreholes.yaml
+  tables:
+  - name: pig_boreholes_features
+    description: >-
+      One row per feature of each GEOJSON page of the newest download of the CBDG borehole layer
+      (cbdg_otwory:Otwory_wiertnicze_CBDG): every property as the text of its JSON value, the point's longitude and
+      latitude as text (EPSG:4326), the page (Landing part), the feature's position in the page and provenance;
+      partitioned by entity (boreholes).
+  - name: pig_boreholes_rejected_files
+    description: GEOJSON pages of pig_boreholes the Bronze decoder rejected, with the reason.

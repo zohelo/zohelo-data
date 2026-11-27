@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: poc_build_pig_boreholes
+    description: >-
+      Build stage — PIG-PIB CBDG boreholes snapshot counts (register PL-ENV-014): boreholes in the register, total and
+      by drilling purpose (Cel wiercenia as published, '_U' where none), Poland, the 16 voivodeships and the powiats
+      (borehole point in a PRG gmina boundary, codes from the gmina's TERYT code), one date = the download date
+      (frequency D): the register state on that date. Borehole names are not in Gold.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

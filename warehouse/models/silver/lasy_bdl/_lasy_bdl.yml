@@ -1,0 +1,70 @@
+version: 2
+models:
+  - name: lasy_bdl_districts
+    description: >-
+      Lasy Państwowe Bank Danych o Lasach (register PL-ENV-018; licence unresolved, internal): forest districts
+      (nadleśnictwa) of the newest download of the WFS layer BDL:Nadleśnictwa. Grain: district_code (RDLP code and the
+      district's code within it, region_code-inspectorate_code). Forest address, name (an organisational unit), data
+      year, planar area of the territorial range in EPSG:2180 (m², computed from the geometry: the layer has no area
+      attribute), centroid and point on the surface (EPSG:4326 degrees); snapshot_date = download date. Current state
+      only (the WFS keeps no history). Completeness: tests/lasy_bdl_districts_complete.sql. Trial run on the branch.
+    columns:
+      - name: district_code
+        tests: [unique, not_null]
+      - name: region_code
+        description: RDLP code (region_cd) as published.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17']
+      - name: inspectorate_code
+        tests: [not_null]
+      - name: forest_address
+        description: adress_forest as published (RR-NN- -  -      -    -); starts with region_code-inspectorate_code (checked).
+        tests: [not_null]
+      - name: name
+        tests: [not_null]
+      - name: data_year
+        tests: [not_null]
+      - name: area_m2
+        tests: [not_null]
+      - name: point_lon
+        description: Longitude of a point on the district's surface (always inside it); places the district in a voivodeship in Gold.
+        tests: [not_null]
+      - name: point_lat
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the WFS response (lineage to Landing/Archive).
+        tests: [not_null]
+  - name: lasy_bdl_regions
+    description: >-
+      Lasy Państwowe Bank Danych o Lasach (register PL-ENV-018; licence unresolved, internal): regional directorates of
+      the State Forests (RDLP) of the newest download of the WFS layer BDL:RDLP. Grain: region_code. Name as published
+      (upper case), data year, planar area of the territorial range in EPSG:2180 (m², computed from the geometry),
+      centroid and point on the surface (EPSG:4326 degrees); snapshot_date = download date.
+      Completeness: tests/lasy_bdl_regions_complete.sql. Trial run on the branch.
+    columns:
+      - name: region_code
+        tests:
+          - unique
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17']
+      - name: name
+        tests: [not_null]
+      - name: data_year
+        tests: [not_null]
+      - name: area_m2
+        tests: [not_null]
+      - name: point_lon
+        tests: [not_null]
+      - name: point_lat
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

@@ -198,7 +198,8 @@ def dbw_block(entity: str) -> str:
 # small tables the build stage reads (relation -> (namespace, table, columns, filter); the filter keeps
 # the rows of one source: a value of `source_system`, or (column, value); the column is then dropped).
 # Optional: `map_model` (a model run once per run over the lookups; its rows replace `geo_map`, so a
-# source can map its codes by rule and the build stage and the changed-map check read the same map),
+# source can map its codes by rule and the build stage and the changed-map check read the same map; `map_views`
+# names models created as views for it, view -> model: a shared code list such as gold_iso3166_numeric.sql),
 # `local_input` (the block's Silver files, and its files of the `with` tables, are downloaded once and
 # every step reads the local copy: one GET per file instead of range requests from each step),
 # `not_loaded` (a model that counts the Silver rows the build stage leaves out, by reason, for the run
@@ -415,6 +416,7 @@ SOURCES["undata"] = {
     },
     "keyed_by": ("geo_map",),
     "map_model": "gold_undata_map",  # M49 country codes through ISO 3166-1 (numeric -> alpha-3 -> country)
+    "map_views": {"iso3166_numeric": "gold_iso3166_numeric"},
 }
 # UNCTAD Data Hub: nine Silver dbt tables of one shape (macros/unctad.sql), each one block, all through one build
 # stage; every measure by rule. The curated build_unctad stays the KPI layer.
@@ -462,6 +464,21 @@ SOURCES["owid"] = {
 }
 
 
+# WHO data.who.int: one Silver dbt table (two indicator files), every series and area by rule; areas by M49 code
+# through ISO 3166-1 like UNdata (gold_who_map.sql: the curated map keys the EU27 members and World only). The
+# curated build_who (EU27 members and World) stays the KPI layer.
+SOURCES["who"] = {
+    "tables": {"who_observations": (("silver", "who_observations"), "gold_who_build")},
+    "lookups": {
+        **_area_map("who"),
+        "areas": ("gold", "dim_geography", ("geography_key", "iso3", "level_name"), None),
+    },
+    "keyed_by": ("geo_map",),
+    "map_model": "gold_who_map",
+    "map_views": {"iso3166_numeric": "gold_iso3166_numeric"},
+}
+
+
 def table_ids(source: str, namespace: str = "gold") -> dict[str, tuple[str, str]]:
     return {name: (namespace, f"{source}_{name}") for name in TABLES}
 
@@ -492,6 +509,8 @@ def export_lookups(cat, source: str, directory: Path) -> tuple[dict[str, str], d
         try:
             for name, path in paths.items():
                 con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{path.replace(chr(39), '')}')")
+            for name, model in spec.get("map_views", {}).items():
+                con.execute(f"CREATE VIEW {name} AS\n" + (MODELS / f"{model}.sql").read_text(encoding="utf-8"))
             data = con.sql((MODELS / f"{spec['map_model']}.sql").read_text(encoding="utf-8")).to_arrow_table()
         finally:
             con.close()
@@ -646,7 +665,7 @@ def model_digest(source: str) -> str:
     digest = sha256()
     spec = SOURCES[source]
     stages = sorted(set(build_stages(source).values()))
-    rules = (spec.get("map_model"), *spec.get("prepare", {}).values(), *stages)
+    rules = (spec.get("map_model"), *spec.get("map_views", {}).values(), *spec.get("prepare", {}).values(), *stages)
     for model in (*(m for m in rules if m), *(t["model"] for t in TABLES.values())):
         digest.update((MODELS / f"{model}.sql").read_bytes())
     return digest.hexdigest()[:12]

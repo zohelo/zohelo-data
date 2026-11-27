@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: gugik_egib_counts
+    description: >-
+      GUGiK KI EGiB aggregate WFS (register PL-ENV-006; licence unresolved, internal): register counts of parcels
+      (feature_type dzialki) and buildings (budynki) as the county EGiB services supplied them to the aggregate
+      service on the snapshot date (resultType=hits numberMatched), not a census. Grain: snapshot_date x
+      feature_type x scope x area_code; scope PL (every record of the service), voivodeship and powiat (records whose
+      identifier, ID_DZIALKI or ID_BUDYNKU, starts with the TERYT code; the 380 powiats of TERYT TERC).
+      snapshot_date = the date the round started; complete rounds only (17 parts), all rounds kept. Completeness: tests/gugik_egib_counts_complete.sql. Trial run in docs/sources/gugik_egib.md.
+    tests:
+      - unique:
+          column_name: "cast(snapshot_date as varchar) || '|' || feature_type || '|' || scope || '|' || area_code"
+    columns:
+      - name: snapshot_date
+        tests: [not_null]
+      - name: feature_type
+        tests: [not_null, {accepted_values: {arguments: {values: ['dzialki', 'budynki']}}}]
+      - name: scope
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL', 'voivodeship', 'powiat']}}}]
+      - name: area_code
+        description: PL, or the 2-digit voivodeship or 4-digit powiat TERYT code of the filter.
+        tests: [not_null]
+      - name: record_count
+        description: numberMatched as published; 0 when the county service supplied no record that day.
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the snapshot file (lineage to Landing/Archive).
+        tests: [not_null]
