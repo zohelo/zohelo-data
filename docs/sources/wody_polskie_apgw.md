@@ -57,6 +57,14 @@ to Poland). Left out: per-voivodeship areas and groundwater counts (no published
 intersection with PRG is not done), status and risk counts, programmes of measures, protected areas and catchments.
 No KPI (register `kpi: false`).
 
+Dev trial 45931064709 (27 Nov 2026): 1 file, 307,606,332 bytes (download 24 minutes); 174,704 Bronze rows from 11
+layers, 0 rejected, 48 layers listed; second Landing run downloaded nothing (HEAD current) and second Bronze run wrote
+nothing. Silver 4,240 JCWP (river 3,161 incl. 45 reservoirs, lake 1,068, transitional 7, coastal 4), 174 JCWPd, 43
+planning units; 43 tests, 0 failures. Markers `-909` / `-907` (e.g. overall status `-909` 1,073 times) kept as text.
+Gold 112 rows, 0 duplicates by series_key x date_key, every area matched. Poland, 2023: groundwater bodies 311,762.37
+km²; lakes 2,397.92 km² (largest Śniardwy, 110.45 km²), transitional 2,409.88 km², coastal 629.13 km²; surface water
+bodies by district: Wisła 2,251, Odra 1,722, Pregoła 187, Niemen 60, Łaba 8, Dunaj 5, Świeża 4, Dniestr 2, Banówka 1.
+
 Schedule: weekly, Tuesday 07:15 UTC (O46; one API request and one HEAD, no download when nothing changed; plans change in
 six-year cycles). Refresh full (D32). Archive: newest version plus 3 days (0.31 GB a version). Terms: dane.gov.pl
 dataset 599 states CC BY 4.0 (`license_name`); Wody Polskie's data-sharing page allows free commercial and
