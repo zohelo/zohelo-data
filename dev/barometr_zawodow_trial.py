@@ -92,6 +92,8 @@ def landing() -> dict:
     out: dict = {"runs": []}
     for n in (1, 2):
         CAPTURED.clear()
+        if n == 2 and landing_mod.specs.__name__ == "chosen":
+            break
         code = landing_mod._run("load", landing_root=SCRATCH)
         files = next((d for t, d in CAPTURED if t.endswith("landing load")), {}).get("files", [])
         outcomes: dict = {}
@@ -134,34 +136,32 @@ def bronze() -> tuple[dict, object]:
     return out, arrow
 
 
-def dump_rejected(rejected: list[dict]) -> None:
-    """For each rejected file: the failing page's shapes, rotated text and lines, to the job log only."""
+def dump_entities(entities: list[str], reasons: dict[str, str]) -> None:
+    """For each file: every poster page's wide shapes, rotated text pieces and lines, to the job log only."""
     from pypdf import PdfReader
 
     client, bucket = s3(), req("STORAGE_LANDING_BUCKET_NAME")
-    for r in rejected:
-        entity, error = r["entity"], r["error"]
+    for entity in entities:
         held = bulk_file.landed(client, bucket, bulk_file.prefix(SOURCE, entity, SCRATCH))
         if not held:
+            print(f"===== DUMP {entity}: not landed", flush=True)
             continue
         body = bulk_bronze.read_raw(client, bucket, SOURCE, held[-1])
         reader = PdfReader(io.BytesIO(body))
-        import re
-
-        found = re.search(r"page (\d+):", error)
-        number = int(found.group(1)) if found else 1
-        page = reader.pages[number - 1]
-        print(f"===== DUMP {entity} page {number}: {error}", flush=True)
-        shapes, glyphs = posters.drawing(page, reader)
-        big = [s for s in shapes if (s["x1"] - s["x0"]) * (s["y1"] - s["y0"]) > 300]
-        print("SHAPES", json.dumps([{k: (round(v, 1) if isinstance(v, float) else v) for k, v in s.items()}
-                                    for s in big][:60]), flush=True)
-        print("GLYPHS", json.dumps([{"x": round(g["x"], 1), "y": round(g["y"], 1)} for g in glyphs][:80]), flush=True)
-        if glyphs:
-            print("GLYPH TEXT", posters.decode_glyphs(page, reader, glyphs), flush=True)
-        lines = posters.lines_of(posters.text_chunks(page))
-        for line in lines[:220]:
-            print(f"LINE {line['x']:.1f} {line['y']:.1f} {line['text'][:100]}", flush=True)
+        for number, page in enumerate(reader.pages, 1):
+            print(f"===== DUMP {entity} page {number}: {reasons.get(entity, 'read')}", flush=True)
+            try:
+                shapes, texts = posters.drawing(page, reader)
+                print("MEDIABOX", page.mediabox, flush=True)
+                print("SHAPES", json.dumps([{k: (round(v, 1) if isinstance(v, float) else v) for k, v in s.items()}
+                                            for s in shapes if (s["x1"] - s["x0"]) * (s["y1"] - s["y0"]) > 300][:80]), flush=True)
+                for g in [t for t in texts if t["rotated"]]:
+                    text = posters.decode(page, reader, [[g]], rotated=True)[0]
+                    print(f"ROTATED {g['x']:.1f} {g['y']:.1f} {text!r}", flush=True)
+                for line in posters.lines_of(page, reader, texts):
+                    print(f"LINE {line['x']:.1f} {line['y']:.1f} {line['text'][:110]}", flush=True)
+            except Exception as exc:  # noqa: BLE001
+                print(f"DUMP FAILED {type(exc).__name__}: {exc}", flush=True)
 
 
 def bronze_profile(con) -> dict:
@@ -412,17 +412,27 @@ def cleanup() -> None:
 
 def main(argv: list[str]) -> int:
     mode = argv[0] if argv else "full"
+    only = argv[1].split(",") if mode == "diag" and len(argv) > 1 else []
+    if only:  # diag: land and load only these files, once each
+        every = landing_mod.specs
+
+        def chosen(today=None):
+            return [s for s in every(today) if s["entity"] in only]
+
+        landing_mod.specs = chosen
     status = 0
     try:
         land = landing()
-        r1, r2 = land["runs"]
+        r1, r2 = (land["runs"] * 2)[:2]
         landing_failed = (r1["not_landed"] or r2.get("outcomes", {}).get("landed_new") or r2.get("outcomes", {}).get("landed_changed")
                           or r2["landing_files_after"] != r1["landing_files_after"] or land["verify_exit"])
         note(f"{SOURCE} landing (twice), inspect, verify", land)
         b, arrow = bronze()
         note(f"{SOURCE} bronze (twice)", b)
         if b["rejected"]:
-            dump_rejected(b["rejected"])
+            dump_entities([r["entity"] for r in b["rejected"]], {r["entity"]: r["error"] for r in b["rejected"]})
+        if mode == "diag":
+            dump_entities([e for e in only if e not in {r["entity"] for r in b["rejected"]}], {})
         con = duckdb.connect()
         con.register("bronze", arrow)
         note(f"{SOURCE} bronze profile", bronze_profile(con))
