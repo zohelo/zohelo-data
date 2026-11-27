@@ -1,5 +1,8 @@
 {# World Bank Enterprise Surveys (GL-010, #3315): all-firms totals of every economy, the metrics filter applied to
-   build_world_bank_es (Dev trial TRIAL): BOUNDS_EVIDENCE #}
+   build_world_bank_es (Dev trial 45932158707): bribery incidence 0 % (Sweden 2024) to 70.49 % (Liberia 2009; Poland
+   2025 8.02); access to finance a major constraint 0 % (Kuwait 2025) to 74.97 % (Burkina Faso 2009; Poland 2025
+   24.82); days to obtain an operating licence 1.21 (Poland 2019) to 193.11 (Korea 2024; Poland 2025 2.94), bound one
+   year. #}
 {% macro poc_value_range__world_bank_es() %}
     {{ return({
         'bounds': [

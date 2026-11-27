@@ -35,12 +35,12 @@ bronze: [bronze.world_bank_es_observations, bronze.world_bank_es_rejected_files]
 silver: [silver.world_bank_es_observations]
 gold: [gold.build_world_bank_es, gold.metrics_firms_bribery_incidence, gold.metrics_firms_finance_constraint,
        gold.metrics_operating_licence_days]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial TRIAL (27 Nov 2026), 1.5 x
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45932158707 (27 Nov 2026), 1.5 x
   world_bank_es_observations: {rows: 1800000, exception: "#3315"}  # 1,195,422: every row of WB_ES.csv; #822 exception recorded on #3315 (D32: one file replaced whole by each Data360 update, no changed-since; rebuilt only when Bronze changes, monthly at most; review 2027-11-27)
-  poc_build_world_bank_es: {rows: 106000}  # GOLDROWS
-  poc_metrics_firms_bribery_incidence: {rows: 800}  # M1ROWS
-  poc_metrics_firms_finance_constraint: {rows: 800}  # M2ROWS
-  poc_metrics_operating_licence_days: {rows: 800}  # M3ROWS
+  poc_build_world_bank_es: {rows: 105000}  # 70,029: every all-firms total of the 191 WB_ES_T_* indicators, 181 economies (TWN without a Gold country, _X), 2006-2026
+  poc_metrics_firms_bribery_incidence: {rows: 720}  # 470: WB_ES_T_GRAFT3 totals, 180 economies, 2006-2026
+  poc_metrics_firms_finance_constraint: {rows: 720}  # 470: WB_ES_T_FIN16 totals, 180 economies, 2006-2026
+  poc_metrics_operating_licence_days: {rows: 720}  # 468: WB_ES_T_BUS2 totals, 180 economies, 2006-2026
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): one file of about 606 MB and some 1.2 million rows, replaced whole by each

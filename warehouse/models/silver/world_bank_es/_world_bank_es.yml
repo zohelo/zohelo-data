@@ -10,7 +10,7 @@ models:
       other firm characteristics such as exporter and ownership type (comp_breakdown_3); '_T' total, '_Z' not
       applicable. Values as published, never 0 for a missing number. Grain: indicator x ref_area x sex x age x
       urbanisation x comp_breakdown_1 x comp_breakdown_2 x comp_breakdown_3 x unit_measure x time_period. Dev trial
-      TRIAL: SILVERROWS rows, 561 indicators, 181 economies, survey years 2006-2026.
+      45932158707: 1,195,422 rows, 561 indicators, 181 economies, survey years 2006-2026.
     tests:
       - unique:
           column_name: "indicator || '|' || ref_area || '|' || sex || '|' || age || '|' || urbanisation || '|' || comp_breakdown_1 || '|' || comp_breakdown_2 || '|' || comp_breakdown_3 || '|' || unit_measure || '|' || time_period"
