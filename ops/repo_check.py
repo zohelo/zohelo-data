@@ -170,9 +170,78 @@ def alert_job() -> list[str]:
 SQLFLUFF = "sqlfluff==4.4.0"  # pinned here so the workflow does not change when the version does
 
 
+# A change to any of these can change how every model lints, so it lints all of them.
+SQLFLUFF_ALL = ("pyproject.toml", "ops/repo_check.py", ".sqlfluff", ".sqlfluffignore")
+MACRO_NAME = re.compile(r"\{%-?\s*macro\s+(\w+)")
+
+
+def changed_paths() -> tuple[str, list[str]] | None:
+    """The merge base with the pull request's base branch (GITHUB_BASE_REF in the check job, main locally) and the
+    paths changed against it: committed, uncommitted and untracked. None when there is no base to compare with."""
+    base = f"origin/{os.environ.get('GITHUB_BASE_REF') or 'main'}"
+    merge_base = git("merge-base", base, "HEAD")
+    if merge_base.returncode:
+        return None
+    diff = git("diff", "--name-only", "--no-renames", merge_base.stdout.strip())
+    new = git("ls-files", "--others", "--exclude-standard")
+    if diff.returncode or new.returncode:
+        return None
+    return merge_base.stdout.strip(), sorted(set(diff.stdout.splitlines()) | set(new.stdout.splitlines()))
+
+
+def git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+
+
+def macro_users(changed_macros: list[str], merge_base: str) -> set[str]:
+    """The models that call a macro of a changed macro file, directly or through other macros. A name defined in
+    the file now or at the merge base (a removed or renamed macro) counts; a mention of the name is a call."""
+    texts = {
+        f.relative_to(ROOT).as_posix(): f.read_text(encoding="utf-8") for f in ROOT.glob("warehouse/macros/**/*.sql")
+    }
+    names = set()
+    for path in changed_macros:
+        before = git("show", f"{merge_base}:{path}")
+        names |= set(MACRO_NAME.findall(texts.get(path, "") + (before.stdout if before.returncode == 0 else "")))
+    while names:
+        mention = re.compile(r"\b(?:" + "|".join(sorted(map(re.escape, names))) + r")\b")
+        more = {name for text in texts.values() if mention.search(text) for name in MACRO_NAME.findall(text)}
+        if more <= names:
+            break
+        names |= more
+    if not names:
+        return set()
+    return {
+        f.relative_to(ROOT).as_posix()
+        for f in ROOT.glob("warehouse/models/**/*.sql")
+        if mention.search(f.read_text(encoding="utf-8"))
+    }
+
+
+def sqlfluff_targets(changed: tuple[str, list[str]] | None) -> list[str]:
+    """What sqlfluff lints: the models a change adds or edits and the models that call a changed macro (macro_users);
+    all of warehouse/models when the change touches the lint settings or this check (SQLFLUFF_ALL), or when there is
+    no base to compare with. The other models passed the same check when they merged (the `check` job gates every
+    merge), and the jinja templater compiles every macro again for each file, which made linting all ~540 models
+    take most of the check's former 10 minutes (Bug #3336)."""
+    if changed is None or any(path.startswith(SQLFLUFF_ALL) for path in changed[1]):
+        return ["warehouse/models"]
+    merge_base, paths = changed
+    models = {p for p in paths if p.startswith("warehouse/models/") and p.endswith(".sql") and (ROOT / p).exists()}
+    macros = [p for p in paths if p.startswith("warehouse/macros/") and p.endswith(".sql")]
+    return sorted(models | macro_users(macros, merge_base))
+
+
 def sqlfluff() -> list[str]:
-    """dbt models pass sqlfluff (settings in pyproject.toml), with the pinned version."""
+    """dbt models pass sqlfluff (settings in pyproject.toml), with the pinned version: the models the change adds or
+    edits (sqlfluff_targets)."""
     from importlib import metadata
+
+    targets = sqlfluff_targets(changed_paths())
+    scope = "every model" if targets == ["warehouse/models"] else f"{len(targets)} changed models"
+    print(f"     sqlfluff lints {scope}", flush=True)
+    if not targets:
+        return []
 
     try:
         installed = metadata.version("sqlfluff")
@@ -184,9 +253,7 @@ def sqlfluff() -> list[str]:
         )
         if result.returncode:
             return [f"could not install {SQLFLUFF}: {result.stderr.strip()[-500:]}"]
-    return tool(
-        [sys.executable, "-m", "sqlfluff", "lint", "warehouse/models", "--processes", "2", "--disable-progress-bar"]
-    )
+    return tool([sys.executable, "-m", "sqlfluff", "lint", *targets, "--processes", "2", "--disable-progress-bar"])
 
 
 def tool(command: list[str]) -> list[str]:
