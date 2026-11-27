@@ -36,8 +36,10 @@ from warehouse import observations as obs
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = "zz_dev_knfg"
+SNS = "zz_dev_knfg_silver"  # the scratch Silver: gold.<source>_series would collide with knf_banking_series
 SOURCE = "knf_banking"
 TABLE = "knf_banking_series"
+LOCATIONS: list[str] = []  # the scratch Silver table's location: its files are removed after the drop
 MACROS = (ROOT / "warehouse/macros/xlsx_cells.sql").read_text()
 
 # the curated stage's seven items (poc_build_knf_banking.sql `selected`): measure_code -> (sheet, item_path)
@@ -94,6 +96,13 @@ def cleanup(cat, client) -> dict:
     gone = {"tables": 0, "objects": 0}
     errors = []
     for _ in range(3):
+        if (SNS,) in cat.list_namespaces():
+            for ident in cat.list_tables(SNS):
+                with contextlib.suppress(Exception):
+                    cat.drop_table(ident)
+                    gone["tables"] += 1
+            with contextlib.suppress(Exception):
+                cat.drop_namespace(SNS)
         listed = [t[1] for t in cat.list_tables(NS)] if (NS,) in cat.list_namespaces() else []
         if not listed:
             break
@@ -107,21 +116,29 @@ def cleanup(cat, client) -> dict:
     with contextlib.suppress(Exception):
         cat.drop_namespace(NS)
     bucket = req("STORAGE_LAKEHOUSE_BUCKET_NAME")
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=NS + "/"):
+    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=NS):
         keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
         if keys:
             client.delete_objects(Bucket=bucket, Delete={"Objects": keys, "Quiet": True})
             gone["objects"] += len(keys)
+    for location in LOCATIONS:  # the catalog-managed files of the scratch Silver table
+        loc_bucket, loc_prefix = location.removeprefix("s3://").split("/", 1)
+        for page in client.get_paginator("list_objects_v2").paginate(Bucket=loc_bucket, Prefix=loc_prefix.rstrip("/") + "/"):
+            keys = [{"Key": o["Key"]} for o in page.get("Contents", [])]
+            if keys:
+                client.delete_objects(Bucket=loc_bucket, Delete={"Objects": keys, "Quiet": True})
+                gone["objects"] += len(keys)
     left = sum(
         len(p.get("Contents", []))
-        for p in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=NS + "/")
+        for p in client.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=NS)
     )
     production = {t[1] for t in cat.list_tables("gold")}
     return {
         **gone,
         "objects_left": left,
-        "namespace_left": (NS,) in cat.list_namespaces(),
+        "namespace_left": (NS,) in cat.list_namespaces() or (SNS,) in cat.list_namespaces(),
         "drop_errors": errors[:5],
+        "silver_locations": LOCATIONS,
         "production_gold_tables_of_this_load": sorted(p for p in production if p.startswith(SOURCE + "_")),
     }
 
@@ -154,10 +171,11 @@ def build_silver(cat, con) -> dict:
     con.execute("create or replace table silver as " + sql)
     con.execute("create or replace table curated as " + render(ROOT / "warehouse/models/gold/poc_build_knf_banking.sql", tables))
     arrow = con.sql("select * from silver").to_arrow_table()
-    if (NS,) not in cat.list_namespaces():
-        cat.create_namespace(NS)
-    table = cat.create_table((NS, TABLE), schema=arrow.schema)
+    if (SNS,) not in cat.list_namespaces():
+        cat.create_namespace(SNS)
+    table = cat.create_table((SNS, TABLE), schema=arrow.schema)
     table.append(arrow)
+    LOCATIONS.append(table.location())
     return {
         "bronze_cells": cells.num_rows,
         "silver": one(
@@ -297,7 +315,7 @@ def main() -> None:
     before = cleanup(cat, client)
     obs.annotate = lambda *a, **k: None  # the trial writes its own compact annotations
     stage = obs.SOURCES[SOURCE]["tables"][TABLE][1]
-    obs.SOURCES[SOURCE]["tables"] = {TABLE: ((NS, TABLE), stage)}  # the scratch Silver; workers need only the stage
+    obs.SOURCES[SOURCE]["tables"] = {TABLE: ((SNS, TABLE), stage)}  # the scratch Silver; workers need only the stage
     try:
         con = duckdb.connect()
         con.execute("SET memory_limit = '8GB'")

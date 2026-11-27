@@ -75,7 +75,8 @@ itself; a table too large for one block is split by an entity column first.
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
 UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, World Bank Findex, ICP and WGI, NBP balance of
 payments, UN WPP, UNESCO UIS, World Bank EdStats and GEM, OWID, WHO, the Ministry of Finance's public
-debt, Treasury debt, state budget and local-government budget summaries, and ENTSOG gas flows so far) declares them in the
+debt, Treasury debt, state budget and local-government budget summaries, ENTSOG gas flows and KNF monthly banking-sector
+data so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
 build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
 builds them all, so they share one stage). The block's Silver files are the
@@ -281,6 +282,13 @@ one. It is retried when its recipe changes.
   GAZ-SYSTEM per gas day, the point as the breakdown (`{"point": <pointKey>}`, labelled with the point's newest
   name), no total series: the totals and point groups, with their completeness rule, stay in `build_entsog`. Area by
   the operator's row of the map (`PL-TSO-0002` → `PL`).
+- **KNF monthly banking-sector data.** `knf_banking:knf_banking_series:<pln|number|share>:<sheet>:<item path>@<M|Q>`:
+  every item of every sheet of the current workbook, the item identified by Silver's path of headings and parent
+  labels (never by row position), the frequency the block's own (quarterly where every date of the block is a quarter
+  end). Unit as the workbook states it: a cell under a `%` number format is a fraction as stored (`share`, 0.215 shown
+  as 21.5%, never multiplied by 100), any other cell the sheet's `Dane w` line (`zł` → `pln`, `sztukach` → `number`).
+  The bank group is the breakdown (`{"bank_group": …}`; `banking_sector`, the whole sector, is the total series).
+  Year-to-date items (profit and loss) as published, never differenced. Poland only (`PL`).
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -362,6 +370,8 @@ rule-based build stages apply the rules the curated stages already apply:
   out; none today). No flags (`ok`).
 - MF local-government budget summaries: Silver keeps numbers only (a cell `#` is no row); a value that is not a
   finite number is not loaded, nor a quarter after the workbook's version (none today). No flags (`ok`).
+- KNF monthly banking-sector data: Silver keeps numbers only (an empty cell is no row); a value that is not a finite
+  number is not loaded, nor a period end after the day of the download (a projection; none today). No flags (`ok`).
 - ENTSOG: a record without a value (`isNA` or empty) is no row, nor a value that is not a finite number, nor a running
   value (last updated before its gas day ended), unless the day ended more than 7 days before the newest update in
   the table (the curated stage's rule, anchored on the data so that the same files give the same rows). Confirmed
