@@ -1,7 +1,7 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-per_10k_population,/10 tys.,"per 10,000 population",na 10 tys. ludności,true,per_10k_population,1
-beds,łóżka,hospital beds,łóżka szpitalne,false,beds,1
-inpatient_cases,przyp.,inpatient cases,przypadki hospitalizacji,false,inpatient_cases,1
-cases_per_bed,przyp./łóżko,inpatient cases per bed,przypadki hospitalizacji na łóżko,true,cases_per_bed,1
-patient_days,osobodni,patient-days,osobodni,false,patient_days,1
-thousand_patient_days,tys. osobodni,thousand patient-days,tysiące osobodni,false,patient_days,1000
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+per_10k_population,/10 tys.,"per 10,000 population",na 10 tys. ludności,true,per_10k_population,1,"per 10,000"
+beds,łóżka,hospital beds,łóżka szpitalne,false,beds,1,beds
+inpatient_cases,przyp.,inpatient cases,przypadki hospitalizacji,false,inpatient_cases,1,cases
+cases_per_bed,przyp./łóżko,inpatient cases per bed,przypadki hospitalizacji na łóżko,true,cases_per_bed,1,cases/bed
+patient_days,osobodni,patient-days,osobodni,false,patient_days,1,patient-days
+thousand_patient_days,tys. osobodni,thousand patient-days,tysiące osobodni,false,patient_days,1000,thousand patient-days

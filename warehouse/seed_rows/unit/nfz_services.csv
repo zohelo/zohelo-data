@@ -1,4 +1,4 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-hospitalisations,hosp.,hospitalisations,hospitalizacje,false,hospitalisations,1
-hospitalisations_per_patient,hosp./pac.,hospitalisations per patient,hospitalizacje na pacjenta,true,hospitalisations_per_patient,1
-nfz_points,pkt,NFZ settlement points,punkty rozliczeniowe NFZ,false,nfz_points,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+hospitalisations,hosp.,hospitalisations,hospitalizacje,false,hospitalisations,1,hospitalisations
+hospitalisations_per_patient,hosp./pac.,hospitalisations per patient,hospitalizacje na pacjenta,true,hospitalisations_per_patient,1,hospitalisations/patient
+nfz_points,pkt,NFZ settlement points,punkty rozliczeniowe NFZ,false,nfz_points,1,points

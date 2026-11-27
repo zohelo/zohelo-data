@@ -1,2 +1,2 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-pln_per_mwh,zł/MWh,PLN per megawatt-hour,zł za megawatogodzinę,true,pln_per_mwh,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+pln_per_mwh,zł/MWh,PLN per megawatt-hour,zł za megawatogodzinę,true,pln_per_mwh,1,

@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-fte,etaty,full-time equivalent posts,etaty (pełne etaty),false,fte,1
-schools,szk.,schools and institutions,szkoły i placówki,false,schools,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+fte,etaty,full-time equivalent posts,etaty (pełne etaty),false,fte,1,FTE
+schools,szk.,schools and institutions,szkoły i placówki,false,schools,1,schools
