@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+epo_statistics,EX-004,Statystyki patentowe EPO (EPO Technology Dashboard),EPO patent statistics (EPO Technology Dashboard),Europejski Urząd Patentowy (European Patent Office),cube,file,international-public,unresolved,https://www.epo.org/en/about-us/statistics/data-download

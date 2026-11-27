@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: epo_statistics
+  description: EPO Technology Dashboard statistics workbooks (register EX-004), linked from www.epo.org/en/about-us/statistics/data-download
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/epo_statistics/
+    loaded_by: ingestion/to_bronze/epo_statistics/
+    config: ingestion/sources/epo_statistics.yaml
+  tables:
+  - name: epo_statistics_cells
+    description: >-
+      One row per non-empty cell (value as stored, sheet, row, column, number format) of the newest landed copy of each
+      selected workbook; entity = <table>_<edition>, so every edition keeps its own file; partitioned by entity.
+  - name: epo_statistics_rejected_files
+    description: Files of epo_statistics the Bronze decoder rejected (not an XLSX workbook, or sheets not the table's layout), with the reason.
