@@ -74,7 +74,8 @@ itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
 UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, World Bank Findex, ICP and WGI, NBP balance of
-payments, UN WPP, UNESCO UIS, World Bank EdStats and GEM, OWID and WHO so far) declares them in the
+payments, UN WPP, UNESCO UIS, World Bank EdStats and GEM, OWID, WHO and the Ministry of Finance's public
+debt, Treasury debt and state budget so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
 build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
 builds them all, so they share one stage). The block's Silver files are the
@@ -257,6 +258,20 @@ one. It is retried when its recipe changes.
   their M49 code through ISO 3166-1 numeric → alpha-3 (`gold_who_map.sql`, the list `gold_iso3166_numeric.sql` that
   UNdata's map reads too); WHO regions and World Bank income groups stay `_X` with their code, GLOBAL:1 is the World.
 
+- **Ministry of Finance public debt and State Treasury debt.** `mf_public_debt:public_debt:<unit>:<sheet>:<block
+  title>[#<n>]:<item label>[#<occurrence>]@<A|Q|M>` (`mf_treasury_debt:treasury_debt:…` alike): every sheet, block
+  (a header row) and item of the workbook as Silver reads it (macro `xlsx_wide_series`), labels as published; `#<n>`
+  only when a sheet has several blocks of one title, the occurrence only for a label repeated in a block. One
+  frequency per block from the months of its period ends (only December A, only quarter ends Q, else M; the figures
+  are stocks at the period end, so a 31 December value of a quarterly or monthly block is that block's point). Unit
+  as Silver names it: `mln_pln`, `ratio` (a fraction, 1 = 100 %; the curated stage's ×100 is not applied), `number`
+  (Treasury duration). Poland only (`PL`), no breakdowns.
+- **Ministry of Finance state budget.** `mf_state_budget:budget_execution:THS_PLN:<measure>:<line label>[#<occurrence>]@<M|A>`:
+  every line of table 1 of the newest report of each year; `execution_ytd` (from January to the month, as the report
+  states it, at its month, M) and `plan` (the budget act, A). A main line printed twice is two series (Silver's
+  occurrence), never one picked row. Poland only (`PL`). KRUS, the fourth source of `poc_build_public_finance`, is
+  whole in that curated stage and has no per-block tables.
+
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
 The curated build stages keep writing their hand keys, so nothing published is renamed. Moving a
@@ -331,6 +346,10 @@ rule-based build stages apply the rules the curated stages already apply:
   the curated stage's rule); no flags (`ok`).
 - WHO: a row without a value, a row not in state `PUBLISHED`, a period that is not a year and a year after the year
   of the file's version (a projection; none today) are not loaded; no flags (`ok`).
+- Ministry of Finance (public debt, Treasury debt, state budget): Silver keeps numbers only, so a cell without a
+  number (`b.d.`, `-`) is no row; a value that is not a finite number is not loaded, nor a period end after the day
+  of the workbook's version (a projection; none today), nor two period ends of one measure in one period (both stay
+  out; none today). No flags (`ok`).
 - FAOSTAT: a cell flagged `M` (missing value) is not loaded whatever number it carries; a projection (a year
   after the year of the file's version) is not loaded; flags E and I `estimated`, B `break`, P `provisional`, A
   and X `ok`, any other flag `flagged`. World Bank IDS: a year after the last actual year (the newest year of
