@@ -53,8 +53,9 @@ epo_statistics as (
     select
         'epo_statistics' as source_system,
         p.name_pl as source_code,
-        'TERC:' || p.woj_code || '00000' as geography_key
+        g.geography_key
     from ({{ poc_nuts_pl() }}) as p
+    inner join geo as g on p.woj_code = g.terc_code and g.level_name = 'wojewodztwo'
     where p.level_name = 'wojewodztwo' and length(p.nuts_code) = 4
 )
 {% endmacro %}
