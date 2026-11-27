@@ -11,7 +11,8 @@ PAUSE_SECONDS apart, long timeouts, at most RETRIES tries; a refusal, a timeout 
 A category is read from its own position in pages of PAGE_ENTRIES until an entry of the next category; the entries
 read must equal the category's ``@descendants`` (read once more, then fail). Reduced before Landing: the cell names the
 parties, and a party can be a natural person, so the cell is never stored; of each decision only the view's ``@unid``
-and ``@noteid``, the category, the year category and the values of KEPT_LABELS are kept, each checked against VALID.
+and ``@noteid``, the category, the year category and the decision number and date (KEPT_LABELS) are kept, each
+checked against the closed shapes of VALID.
 Entity = ``category_<slug>``; version = download time; written only when the SHA-256 changed. Every run reads every
 category, those without a copy first, then the oldest copies, within the time budget (restart unit: the category).
 Modes: inspect (one request, no writes), load, verify.
@@ -43,20 +44,22 @@ PAUSE_SECONDS = 1.0
 TIMEOUT = (45, 180)  # connect, read: the host timed out in one probe and refused the runner in others
 RETRIES = 3
 MAX_PAGES = 200  # pages of one category: beyond this is an error, never an endless loop
-FIELDS = ["unid", "noteid", "category", "year_category", "decision_number", "decision_date", "department"]
+FIELDS = ["unid", "noteid", "category", "year_category", "decision_number", "decision_date"]
 FIRST_LABEL = "Numer decyzji:"
 KEPT_LABELS = {  # label in the cell -> field; the values of every other label are never kept (unverified names)
     "Numer decyzji:": "decision_number",
     "Data decyzji:": "decision_date",
     "Data wydania:": "decision_date",
-    "Sygnatura:": "department",
-    "Departament:": "department",
-    "Komórka:": "department",
 }
-VALID = {  # a kept value must have this shape, else the category fails: no other text rides along into Landing
-    "decision_number": re.compile(r"^[A-ZĄĆĘŁŃÓŚŹŻ][A-Za-z0-9ĄĆĘŁŃÓŚŹŻ.\-/ ]{1,39}$"),
+# A kept value must have this closed shape, else the category fails: no free words can ride along into Landing (#3330
+# review). Number = department or branch signature (capitals, at most one lower-case "i" as in DOZiK, an optional digit),
+# a dash or space, then digit groups joined by / - or . and optional capital initials (RKR-1/2020, RWA 12/2015,
+# DKK2-421-12/19/AI). No lower-case word, no second space-separated word: a party's name cannot match.
+VALID = {
+    "decision_number": re.compile(
+        r"^[A-ZĄĆĘŁŃÓŚŹŻ]{1,5}(?:i[A-ZĄĆĘŁŃÓŚŹŻ]{1,3})?\d?(?: ?[-–] ?| )\d{1,5}(?:[-/.]\d{1,5}){0,4}(?:/[A-Z]{1,4})?$"
+    ),
     "decision_date": re.compile(r"^\d{1,4}[-./]\d{1,2}[-./]\d{1,4}$"),
-    "department": re.compile(r"^[A-Za-z0-9ĄĆĘŁŃÓŚŹŻąćęłńóśźż .,\-/()]{1,120}$"),
 }
 
 
@@ -119,7 +122,8 @@ def cells(entry: dict[str, Any]) -> list[str]:
 
 def reduce_cell(fragment: str, seen: Counter) -> dict[str, str]:
     """The kept labelled values of a decision's cell. A label is a text node starting with one of KEPT_LABELS, or any
-    text node of at most 40 characters ending with a colon; its value is the text up to the next label. Labels are
+    text node of at most 40 characters ending with a colon. A kept label's value is its inline text or the one text node
+    after it (a second unlabelled node is a Layout error); another label's text is skipped. Labels are
     counted in ``seen`` (never values)."""
     parts: list[list[str]] = []  # [label, value text, ...]
     for node in re.split(r"(?s)<[^>]*>", fragment):
@@ -131,6 +135,12 @@ def reduce_cell(fragment: str, seen: Counter) -> dict[str, str]:
             parts.append([known, node[len(known) :].strip()])
         elif node.endswith(":") and len(node) <= 40:
             parts.append([node, ""])
+        elif parts and parts[-1][0] in KEPT_LABELS:
+            # a kept label takes one value (inline or the next text node); a further unlabelled node is a layout the
+            # parser does not know, never appended to the kept value (it could be a party's name)
+            if any(parts[-1][1:]):
+                raise Layout(f"decision cell: unlabelled text after the value of {parts[-1][0]!r}")
+            parts[-1] = [parts[-1][0], node]
         elif parts:
             parts[-1].append(node)
         else:

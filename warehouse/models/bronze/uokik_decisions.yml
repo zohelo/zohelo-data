@@ -16,7 +16,7 @@ sources:
     description: >-
       One row per decision of the newest landed copy of each category (entity category_<slug>), values as text:
       unid and noteid (the view entry's @unid and @noteid), category (subject area as listed), year_category (the
-      view's year category), decision_number, decision_date and department as the cell labels them; descendants =
+      view's year category), decision_number and decision_date as the cell labels them (closed shapes; no free-text label is kept); descendants =
       the entries (years and decisions) the view states for the category; provenance raw_sha256, source_version,
       ingested_at, source_row_number. No party names (they can be natural persons), no PDFs. Partitioned by entity.
   - name: uokik_decisions_rejected_files

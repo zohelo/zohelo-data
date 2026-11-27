@@ -4,15 +4,16 @@ models:
     description: >-
       Entity table (documents): one row per decision of the President of UOKiK in the decisions database (register
       PLG-020; concentration decisions of PLG-021 flagged by is_concentration), keyed by the view entry's @unid;
-      date_key = the decision date. Number, department signature, subject-area category and year as the index gives
-      them; no party names (a party can be a natural person) and no enterprise identifiers (the index has none).
+      date_key = the decision date. Number, department signature and year as the index gives them, and every
+      subject-area category that lists the decision (categories, joined with " | "); two numbers, dates or years for
+      one unid fail the unique test; no party names (a party can be a natural person) and no enterprise identifiers (the index has none).
       Terms unresolved: internal only.
     columns:
       - name: unid
         tests: [not_null, unique]
       - name: decision_number
         tests: [not_null]
-      - name: category
+      - name: categories
         tests: [not_null]
   - name: poc_build_uokik_decisions
     description: >-

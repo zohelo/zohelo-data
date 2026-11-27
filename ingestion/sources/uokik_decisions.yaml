@@ -45,4 +45,7 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # in full.
 refresh: {mode: full, decided: "D32 + #3318"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# No activities until the owner answers the question in PLG-020's first blocker (#3330 review): the activities list on
+# main is the authorization (AGENTS.md), and no hand dispatch may reach the host before then. When answered yes:
+#   activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+activities: []

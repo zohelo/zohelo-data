@@ -4,13 +4,16 @@ models:
     description: >-
       Decisions of the President of UOKiK in the decisions database (register PLG-020; concentration decisions of
       PLG-021 flagged), from bronze.uokik_decisions_index (newest landed copy of each subject-area category of the view
-      WWW-wszystkie). Grain: unid (the view entry's @unid), one row per decision. Decision number, department
-      signature (letters that start the number) and the cell's department label, decision date, year, category, link
-      to the decision's page. No party names (a party can be a natural person), no PDFs. Completeness:
+      WWW-wszystkie). Grain: unid x category_key (the view entry's @unid in each subject-area category that lists it; a
+      categorised view lists a multi-category document once per category). Decision number, department signature
+      (letters that start the number), decision date, year, category, link to the decision's page. No party names (a party can be a natural person), no PDFs. Completeness:
       tests/uokik_decisions_complete.sql.
+    tests:
+      - unique:
+          column_name: "unid || '|' || category_key"
     columns:
       - name: unid
-        tests: [not_null, unique]
+        tests: [not_null]
       - name: decision_number
         tests: [not_null]
       - name: department_code
