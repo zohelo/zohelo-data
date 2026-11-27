@@ -1,0 +1,44 @@
+source_system: epo_statistics
+description: "European Patent Office — EPO Technology Dashboard statistics workbooks: European patent applications and granted patents by country of residence of the first-named applicant, field of technology and year, and by NUTS 2 region of Poland (multicountry, yearly editions)"
+
+# Extraction strategy (docs/landing.md). Register EX-004 (re-approved 26 Nov 2026 on this keyless route; Open Patent
+# Services is not used: it needs OAuth credentials and its robots.txt answered 403). Bulk feature: the statistics
+# data-download page https://www.epo.org/en/about-us/statistics/data-download links about 40 XLSX workbooks of the
+# current EPO Technology Dashboard edition on link.epo.org, file names ending "-epo-technology-dashboard-<edition>.xlsx"
+# (Dev probe 45924424161, 27 Nov 2026: 36 workbooks of the 2025 edition, 18-173 KB, status date 02-02-2026, no
+# Last-Modified). The page is read once per run and seven workbooks are matched by file name
+# (ingestion/to_landing/epo_statistics/, SELECTION), landed through the shared bulk_file pattern: applications and
+# grants per country of residence 2016-2025, per field of technology, per field and country for each year, and the
+# Poland workbook (its NUTS 2 sheet "Provinces"). Entity = <table>_<edition>, so every edition keeps its own files in
+# Landing, Bronze and Silver; editions overlap in years and Gold takes the newest edition per year. Version = download
+# time; a workbook lands only when its SHA-256 changed. Restart unit: one file. Bronze reads every cell with
+# ingestion/common/xlsx_cells.py. Dev trial 45930460266 (test/3320-epo-statistics-trial): 7 files, 386,557 bytes,
+# 41,963 Bronze cells, 0 rejected; second Landing and Bronze runs wrote nothing; Silver 38,445 rows (2016-2025),
+# Gold 36,995, 0 duplicate keys.
+extraction:
+  initial: bulk
+  production: snapshot                  # each workbook is a complete table of its edition
+  incremental_policy: changed_since_last  # SHA-256 (the server sends no Last-Modified or ETag)
+  schedule: # UTC; one edition a year (the 2025 edition carries the status date 2 Feb 2026 and was online in November);
+    # a yearly check in late April, after the EPO's spring release (Patent Index); the run ends with Silver, the
+    # platform's weekly Sunday run builds Gold (O46)
+    - {cron: "25 7 22 4 *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/epo_statistics/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}   # per entity, so every edition keeps its newest copy
+  prune: report
+bronze: [bronze.epo_statistics_cells, bronze.epo_statistics_rejected_files]
+silver: [silver.epo_statistics_counts]
+gold: [gold.build_epo_statistics]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the PR's Dev trial
+  epo_statistics_counts: {rows: 58000}  # 38,445 (2025 edition; each new edition adds about as many again: raise it then)
+  poc_build_epo_statistics: {rows: 56000}  # 36,995 (newest edition per year; grows by about 3,700 a year)
+
+bronze_latest_only: true   # policy #822/#845: newest copy per entity; every edition is its own entity
+# Refresh policy for all layers (D32): seven workbooks of 20-130 KB a year, about 45,000 cells per edition; small,
+# rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3320"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
