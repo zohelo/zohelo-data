@@ -21,7 +21,8 @@ country tables (ISO 3166-1 alpha-2 codes as published, 2016-2025), the field tab
 'Unclassified', all origins), the field x country tables (one sheet per year, 47 countries named in the header, 'Other
 countries', 'Total'; each year sheet keeps its own status date, e.g. 27 Jan 2020 for 2016) and the Poland workbook's
 NUTS 2 sheet "Provinces" (2024 and 2025). Counts as published; residual rows and columns kept. The test
-`warehouse/tests/epo_statistics_counts_complete.sql` checks that each table adds up to its totals.
+`warehouse/tests/epo_statistics_counts_complete.sql` checks that each table adds up to its totals. Dev trial 45930460266: 7 files (386,557 bytes), 41,963 Bronze
+cells, Silver 38,445 rows, Gold 36,995 rows, 0 duplicate keys; only MQ (Martinique, no Gold country) maps to `_X`.
 
 Gold `build_epo_statistics` (blocks `by_country`, `by_field`, `by_field_country`, `regions`, registered in
 `warehouse/macros/sources/epo_statistics.sql`): editions overlap in years, so the newest edition holding a year wins.

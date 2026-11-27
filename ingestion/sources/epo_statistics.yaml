@@ -12,7 +12,9 @@ description: "European Patent Office — EPO Technology Dashboard statistics wor
 # Poland workbook (its NUTS 2 sheet "Provinces"). Entity = <table>_<edition>, so every edition keeps its own files in
 # Landing, Bronze and Silver; editions overlap in years and Gold takes the newest edition per year. Version = download
 # time; a workbook lands only when its SHA-256 changed. Restart unit: one file. Bronze reads every cell with
-# ingestion/common/xlsx_cells.py.
+# ingestion/common/xlsx_cells.py. Dev trial 45930460266 (test/3320-epo-statistics-trial): 7 files, 386,557 bytes,
+# 41,963 Bronze cells, 0 rejected; second Landing and Bronze runs wrote nothing; Silver 38,445 rows (2016-2025),
+# Gold 36,995, 0 duplicate keys.
 extraction:
   initial: bulk
   production: snapshot                  # each workbook is a complete table of its edition
