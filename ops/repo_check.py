@@ -298,6 +298,31 @@ def configuration(files: list[Path]) -> list[str]:
     problems += value_ranges(files)
     problems += source_declarations(files)
     problems += optional_parents(files)
+    problems += sql_code_cases()
+    return problems
+
+
+def sql_code_cases() -> list[str]:
+    """warehouse/changed.py reads shared SQL without comments and layout (sql_code) for the build fingerprint; a pair
+    of texts that render different SQL but read the same would skip a needed rebuild and leave Gold stale. Asserts
+    the cases listed next to sql_code(): SQL_CODE_DIFFER read differently, SQL_CODE_SAME the same, SQL_CODE_NONE
+    as None (the file counts by its bytes)."""
+    from warehouse import changed
+
+    def reading(text: str) -> str:
+        code = changed.sql_code(text)
+        return "bytes:" + text if code is None else code
+
+    problems = []
+    for one, other in changed.SQL_CODE_DIFFER:
+        if reading(one) == reading(other):
+            problems.append(f"warehouse/changed.py: sql_code() reads {one!r} and {other!r} the same")
+    for one, other in changed.SQL_CODE_SAME:
+        if changed.sql_code(one) is None or changed.sql_code(one) != changed.sql_code(other):
+            problems.append(f"warehouse/changed.py: sql_code() reads {one!r} and {other!r} differently")
+    for text in changed.SQL_CODE_NONE:
+        if changed.sql_code(text) is not None:
+            problems.append(f"warehouse/changed.py: sql_code() must read {text!r} as None (count the bytes)")
     return problems
 
 

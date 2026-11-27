@@ -201,12 +201,93 @@ def code_text(path: Path) -> bytes:
     return raw
 
 
+def without_jinja_comments(text: str) -> str | None:
+    """The text as Jinja renders its comments: each {# … #} goes, even inside a SQL string, and so does the white
+    space a `-` marker strips ({#- the white space before, -#} the white space after; dbt sets neither trim_blocks
+    nor lstrip_blocks). White space that touches a comment stays, so `a{# c #}b` reads `ab` and `a {# c #}b` reads
+    `a b`. Tags {{ … }} and {% … %} are copied as they are (a {# inside a Jinja string is no comment). None when a
+    tag or a comment is not closed, or for a {% raw %} block, whose text Jinja does not read."""
+    out: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        if text.startswith("{#", i):
+            end = text.find("#}", i + 2)
+            if end < 0:
+                return None
+            body = i + 3 if text.startswith("-", i + 2) else i + 2
+            if body == i + 3:
+                while out and out[-1].isspace():
+                    out.pop()
+            i = end + 2
+            if end - 1 >= body and text[end - 1] == "-":
+                while i < n and text[i].isspace():
+                    i += 1
+            continue
+        if text.startswith(("{{", "{%"), i):
+            close = "}}" if text[i + 1] == "{" else "%}"
+            j, string = i + 2, ""
+            while j < n and (string or not text.startswith(close, j)):
+                c = text[j]
+                j += 2 if string and c == "\\" else 1
+                string = ("" if c == string else string) if string else (c if c in "'\"" else "")
+            if j >= n:
+                return None
+            tag = text[i : j + 2]
+            if close == "%}" and re.fullmatch(r"\{%[-+]?\s*raw\s*[-+]?%\}", tag):
+                return None
+            out.extend(tag)
+            i = j + 2
+            continue
+        out.append(text[i])
+        i += 1
+    return "".join(out)
+
+
+# sql_code() cases that ops/repo_check.py asserts (`configuration`, sql_code_cases): pairs that render different
+# SQL must read differently, and constructs the reading does not follow must read None (the file counts by bytes).
+# The first three pairs are the cases of the #3342 review; each pair read the same before this check existed.
+SQL_CODE_DIFFER = [
+    ("/* don't */ select 'a -- b' as x", "/* don't */ select 'a -- c' as x"),
+    ("select a{# c #}b", "select a b"),
+    ("select a {#- c -#} b", "select a b"),
+    ("select -{# c #}- x\nfrom t", "select - - x\nfrom t"),
+    ("select 'a''b' -- x\nfrom t", "select 'a''b' -- y\nfrom u"),
+]
+SQL_CODE_SAME = [
+    ("select a {# c #} b -- note\nfrom t", "select   a b\n\nfrom t -- other note"),
+    ("select a{# one #}b", "select a{# two #}b"),
+    ("{%- set x = 1 -%}\nselect {{ x }}", "{%- set x = 1 -%} select {{  x  }}"),
+]
+SQL_CODE_NONE = [
+    "/* don't */ select 'a -- b' as x",
+    "select E'it\\'s -- b' as x",
+    "select e'x' as x",
+    "select $$ don't $$ as x",
+    "select $t$ x $t$ as x",
+    "{% raw %}{{ x }}{% endraw %}",
+    "select 'open",
+    "select {{ x",
+    "select {# open",
+]
+
+
+def escape_string(text: str, at: int) -> bool:
+    """The quote at `at` opens an E'…' string: an E or e right before it that is not the end of a longer name."""
+    return at >= 1 and text[at - 1] in "eE" and not (at >= 2 and (text[at - 2].isalnum() or text[at - 2] == "_"))
+
+
 def sql_code(text: str) -> str | None:
-    """code_text() of SQL with Jinja, read as Jinja reads it first: a Jinja comment {# … #} goes, even inside a SQL
-    string; a tag {{ … }} or {% … %} stays, with white space runs outside its Jinja strings as one space. The text
-    between the tags is SQL: a `--` comment outside SQL quotes goes up to the line break (a tag inside it stays),
-    and white space runs outside SQL quotes become one space. None when a tag, a Jinja comment or a quote is not
-    closed."""
+    """code_text() of SQL with Jinja, read as Jinja reads it first: without_jinja_comments(); a tag {{ … }} or
+    {% … %} stays, with white space runs outside its Jinja strings as one space. The text between the tags is SQL:
+    a `--` comment outside SQL quotes goes up to the line break (a tag inside it stays), and white space runs
+    outside SQL quotes become one space. None (count the bytes) when a tag, a Jinja comment or a quote is not
+    closed, and for SQL whose quotes this reading does not follow: a /* */ comment, a $ outside quotes (dollar
+    quoting) and an E'…' string (backslash escapes); an apostrophe in any of them would flip the quote state and
+    make a real change read as a comment. Asserted cases: SQL_CODE_DIFFER, SQL_CODE_SAME, SQL_CODE_NONE."""
+    uncommented = without_jinja_comments(text)
+    if uncommented is None:
+        return None
+    text = uncommented
     out: list[str] = []
     i, n, quote, comment, space = 0, len(text), "", False, False
 
@@ -218,12 +299,6 @@ def sql_code(text: str) -> str | None:
         out.append(piece)
 
     while i < n:
-        if text.startswith("{#", i):
-            end = text.find("#}", i + 2)
-            if end < 0:
-                return None
-            i, space = end + 2, space or not quote
-            continue
         if text.startswith(("{{", "{%"), i):
             close = "}}" if text[i + 1] == "{" else "%}"
             tag, j, string, gap = [text[i : i + 2]], i + 2, "", False
@@ -258,6 +333,8 @@ def sql_code(text: str) -> str | None:
             quote = "" if c == quote else quote
         elif c == "-" and text.startswith("-", i):
             comment, i = True, i + 1
+        elif (c == "/" and text.startswith("*", i)) or c == "$" or (c == "'" and escape_string(text, i - 1)):
+            return None
         elif c.isspace():
             space = True
         else:
