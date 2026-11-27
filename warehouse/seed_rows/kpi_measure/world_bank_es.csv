@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+firms_bribery_incidence,world_bank_es,world_bank_es:wb_es:PT_F:WB_ES_T_GRAFT3,"Enterprise Surveys WB_ES_T_GRAFT3 (World Bank Data360 WB_ES), % of firms, all firms (sector, size and other breakdowns total)",1,
+firms_finance_constraint,world_bank_es,world_bank_es:wb_es:PT_F:WB_ES_T_FIN16,"Enterprise Surveys WB_ES_T_FIN16 (World Bank Data360 WB_ES), % of firms, all firms (sector, size and other breakdowns total)",1,
+operating_licence_days,world_bank_es,world_bank_es:wb_es:D:WB_ES_T_BUS2,"Enterprise Surveys WB_ES_T_BUS2 (World Bank Data360 WB_ES), days, all firms (sector, size and other breakdowns total)",1,

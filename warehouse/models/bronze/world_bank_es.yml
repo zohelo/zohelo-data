@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: world_bank_es
+  description: World Bank Enterprise Surveys indicators from World Bank Data360 (dataset WB_ES, register GL-010), one bulk CSV
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/world_bank_es/
+    loaded_by: ingestion/to_bronze/world_bank_es/
+    config: ingestion/sources/world_bank_es.yaml
+  tables:
+  - name: world_bank_es_observations
+    description: >-
+      One row per row of the newest copy of entity wb_es (WB_ES.csv): the 41 SDMX-CSV columns (codes, value,
+      attributes and their labels) as published text, names in lower case; partitioned by entity.
+  - name: world_bank_es_rejected_files
+    description: World Bank Enterprise Surveys Landing files the Bronze decoder rejected, with the reason.

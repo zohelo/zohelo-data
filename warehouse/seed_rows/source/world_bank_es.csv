@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+world_bank_es,GL-010,Badania przedsiębiorstw Banku Światowego (Enterprise Surveys): wskaźniki według gospodarek (Data360),World Bank Enterprise Surveys: indicators by economy (Data360),World Bank (Enterprise Surveys; Data360),cube,file,international-public,unresolved,https://data360.worldbank.org/en/dataset/WB_ES
