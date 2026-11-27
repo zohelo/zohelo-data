@@ -217,8 +217,8 @@ def check_jst(con) -> dict:
         "silver": one(
             con,
             "select count(*), count(*) filter (where value_pln is null or isnan(value_pln) or isinf(value_pln)), "
-            "count(*) filter (where period_date > try_cast(left(source_version, 10) as date)), "
-            "count(*) filter (where try_cast(left(source_version, 10) as date) is null), "
+            "count(*) filter (where period_date > try_strptime(left(source_version, 8), '%Y%m%d')), "
+            "count(*) filter (where try_strptime(left(source_version, 8), '%Y%m%d') is null), "
             "min(period_date)::varchar, max(period_date)::varchar, min(source_version), max(source_version) "
             "from silver",
         ),
