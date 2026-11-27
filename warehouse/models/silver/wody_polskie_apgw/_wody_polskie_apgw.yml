@@ -1,0 +1,120 @@
+version: 2
+models:
+  - name: wody_polskie_apgw_surface_water_bodies
+    description: >-
+      Wody Polskie surface water bodies (JCWP) of the update of the river basin management plans (register PL-ENV-013;
+      licence cc_by_4_0_wody_polskie_apgw, dane.gov.pl dataset 599): one row per plan cycle and JCWP code with the
+      published characterisation (name, type, river basin district and its code, water region, RZGW, RDOŚ,
+      voivodeships, powiats and gminas with TERYT codes, groundwater bodies, status and risk assessments, designation
+      natural / heavily modified / artificial) and the published area of the lake, transitional, coastal and
+      reservoir bodies (km²). History: the 2nd update (aPGW 2023, geodatabase of 15 Sep 2023) only.
+      Grain: plan_cycle x jcwp_code.
+    tests:
+      - unique:
+          column_name: "plan_cycle || '|' || jcwp_code"
+    columns:
+      - name: plan_cycle
+        tests: [not_null]
+      - name: edition_date
+        tests: [not_null]
+      - name: jcwp_code
+        tests: [not_null]
+      - name: category
+        tests: [not_null, {accepted_values: {arguments: {values: [river, lake, transitional, coastal]}}}]
+      - name: designation
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [naturalna część wód, silnie zmieniona część wód, sztuczna część wód]
+      - name: river_basin_district_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1000', '2000', '3000', '4000', '5000', '6000', '7000', '8000', '9000']
+      - name: risk_assessment
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [jcwp zagrożona nieosiągnięciem celów środowiskowych,
+                         jcwp niezagrożona nieosiągnięciem celów środowiskowych]
+      - name: chemical_status
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [stan chemiczny poniżej dobrego, stan chemiczny dobry, '-909']
+      - name: overall_status
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [zły stan wód, dobry stan wód, brak możliwości określenia stanu, '-909']
+      - name: change_since_previous_plan
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [bez zmian, zmieniona (scalone), zmieniona (rozdzielona), zmieniona (wydłużona),
+                         zmieniona (złączone i podzielone), nowowyznaczona, zmieniona (zredukowana), zmieniona,
+                         przywrócona, nowa]
+      - name: cross_border
+        tests: [not_null, {accepted_values: {arguments: {values: [TAK, NIE]}}}]
+      - name: voivodeship_codes
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]
+  - name: wody_polskie_apgw_groundwater_bodies
+    description: >-
+      Wody Polskie groundwater bodies (JCWPd) of the update of the river basin management plans (register PL-ENV-013):
+      one row per plan cycle and JCWPd code with number, EU code, published area (km²), the river basin district code
+      (from the code, guarded) and the published names of its districts, water regions, RZGW and water balance areas.
+      History: the 2nd update (aPGW 2023) only. Grain: plan_cycle x jcwpd_code.
+    tests:
+      - unique:
+          column_name: "plan_cycle || '|' || jcwpd_code"
+    columns:
+      - name: plan_cycle
+        tests: [not_null]
+      - name: edition_date
+        tests: [not_null]
+      - name: jcwpd_code
+        tests: [not_null]
+      - name: jcwpd_number
+        tests: [not_null]
+      - name: area_km2
+        tests: [not_null]
+      - name: river_basin_district_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1000', '2000', '3000', '4000', '5000', '6000', '7000', '8000', '9000']
+      - name: raw_sha256
+        tests: [not_null]
+  - name: wody_polskie_apgw_planning_units
+    description: >-
+      Wody Polskie planning units of the update of the river basin management plans (register PL-ENV-013): river basin
+      districts, water regions and RZGW areas, one row per plan cycle, unit kind and code (RBD_MS_CD, RB_MS_CD,
+      RZGW_MS_CD) with EU code, names, parent district or covered districts and regions, competent authorities and the
+      published area (km²). History: the 2nd update (aPGW 2023) only. Grain: plan_cycle x unit_kind x unit_code.
+    tests:
+      - unique:
+          column_name: "plan_cycle || '|' || unit_kind || '|' || unit_code"
+    columns:
+      - name: plan_cycle
+        tests: [not_null]
+      - name: edition_date
+        tests: [not_null]
+      - name: unit_kind
+        tests: [not_null, {accepted_values: {arguments: {values: [river_basin_district, water_region, rzgw]}}}]
+      - name: unit_code
+        tests: [not_null]
+      - name: name_pl
+        tests: [not_null]
+      - name: area_km2
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

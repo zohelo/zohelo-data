@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_wody_polskie_apgw
+    description: >-
+      Build stage — Wody Polskie water-management planning data (register PL-ENV-013), block water_bodies, annual
+      (date_key = 1 January of the plan cycle's edition year; 2023 for the 2nd update): reference-data counts of the
+      surface water bodies (JCWP) by category and of the groundwater bodies (JCWPd), and the sum of their published
+      areas (km²; lake, transitional, coastal and groundwater), for Poland by river basin district and, for the surface
+      counts, per voivodeship named in the body's published list (wholly or partly in the voivodeship). Licence
+      cc_by_4_0_wody_polskie_apgw.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

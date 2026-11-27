@@ -1,0 +1,42 @@
+source_system: wody_polskie_apgw
+description: "Wody Polskie water-management planning data: the spatial database of the update of the river basin management plans (aPGW, 2nd update, 2023 edition) from dane.gov.pl dataset 599: surface and groundwater bodies (JCWP, JCWPd), river basin districts, water regions and RZGW areas, attributes only"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-013. Bulk feature: Wody Polskie's File Geodatabase ZIP on
+# dane.gov.pl dataset 599 "Baza danych przestrzennych aktualizacji planów gospodarowania wodami" (CC BY 4.0, update
+# frequency "Nie dotyczy"): one resource per plan cycle, today Geobaza_2aPGW_ver_20230915.gdb.zip (307,606,332 bytes,
+# Last-Modified 20 Dec 2023, ETag "6582d525-1255b33c"; 59 layers; the download took 12 to 24 minutes from a runner,
+# Dev probe 45921328581, Dev trial 45931064709). The dataset's other two resources are the WMS and WFS view services
+# of the same plan (no file), not used. ingestion/to_landing/wody_polskie_apgw/ reads the resource list from the portal's public API once per
+# run, HEADs the geodatabase and downloads it through the shared bulk_file pattern only when it is not landed yet or
+# its URL, ETag or Last-Modified changed. Entity = the plan cycle's geodatabase (geobaza_<n>apgw); version =
+# Last-Modified. Restart unit: one file.
+extraction:
+  initial: bulk
+  production: snapshot                    # each geodatabase is the complete plan-cycle database
+  incremental_policy: changed_since_last  # URL, ETag or Last-Modified of the resource differ from the newest receipt
+  schedule: # UTC; the plans are updated in six-year cycles (2nd update adopted 2022/2023, file of 20 Dec 2023, the
+    # 3rd update is due for 2027), no release calendar; weekly check on Tuesdays 07:15 (O46: at most one run a week
+    # past Landing): one API request and one HEAD, no download when nothing changed
+    - {cron: "15 7 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/wody_polskie_apgw/
+# ZIP kept as exact bytes. Newest version plus 3 days of superseded ones (0.31 GB a version, as PRG and GLEIF).
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 3}
+  prune: report
+bronze: [bronze.wody_polskie_apgw_attributes, bronze.wody_polskie_apgw_rejected_files]
+silver: [silver.wody_polskie_apgw_surface_water_bodies, silver.wody_polskie_apgw_groundwater_bodies, silver.wody_polskie_apgw_planning_units]
+gold: [gold.build_wody_polskie_apgw]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45931064709 (#3313), about 1.5 x
+  wody_polskie_apgw_surface_water_bodies: {rows: 6400}  # 4,240 JCWP of the 2nd update
+  wody_polskie_apgw_groundwater_bodies: {rows: 260}  # 174 JCWPd
+  wody_polskie_apgw_planning_units: {rows: 65}  # 43: 9 river basin districts, 23 water regions, 11 RZGW areas
+  poc_build_wody_polskie_apgw: {rows: 170}  # 112: 10 measures, Poland (total and 9 districts) and 16 voivodeships
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of the geodatabase
+# Refresh policy for all layers (D32): one 307 MB file per six-year plan cycle, about 175,000 attribute rows in Bronze
+# and under 5,000 entities in Silver, no changed-since filter (a new version is a new file); small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3313"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
