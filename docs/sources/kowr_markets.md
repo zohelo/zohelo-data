@@ -56,5 +56,5 @@ purchases), and the meat, dairy and combined reports.
 **Licence.** gov.pl terms (https://www.gov.pl/web/gov/prawa-autorskie): text CC BY-SA 4.0, official materials free to
 use; the files carry no licence of their own. The tables are KOWR's compilations from third-party data (European
 Commission, ECB, NBP, the commodity exchanges), whose terms stay with their owners; each row keeps the stated source.
-`licence_key = gov_pl_terms_kowr`. **Schedule:** Tuesday 09:25 UTC (the grain report of week N appears on Monday of
+`licence_key = unresolved` (internal, licence gate): the three tables loaded are all stated as compiled from others' data, whose reuse terms were not read, so the gov.pl terms are not claimed for them. **Schedule:** Tuesday 09:25 UTC (the grain report of week N appears on Monday of
 week N+2); the run ends with Bronze, Silver and Gold are built on Sunday (O46).

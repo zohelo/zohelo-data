@@ -4063,6 +4063,7 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Owner question (27 Nov 2026, PR #3323; asked once): the loaded grain tables are KOWR compilations stated as based on European Commission data (EU purchase prices), KE/EBC/NBP data (FOB quotations) and the Polish commodity exchanges (exchange offers); gov.pl terms say tables taken from others keep their owners'' terms. May they be published under the gov.pl terms (or the Commission''s reuse notice), or must KOWR or the exchanges be asked? Until then `licence_key = unresolved` (internal).'
     - 'Re-review 26 Nov 2026 (Task #2917): approved for internal build. The old parking reason (PDF only, extraction untested)
       is technical (owner rule of 12 Nov 2026); the pipeline reads PDF text layers. Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): Rynek-zboz and Rynek-miesa each
       list 175 attachments (weekly reports back to 2023), raporty-tygodniowe 16 (the latest weeks of grain, meat, dairy and
