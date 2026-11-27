@@ -1,0 +1,46 @@
+id: GL-011
+name: International Comparison Program (ICP)
+short_name: World Bank ICP
+provider: World Bank
+source_system: world_bank_icp
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [prices, purchasing-power, national-accounts]
+entities: [country]
+granularity: Economy/reference-year/basic-heading or aggregate, depending release.
+coverage: Global comparison rounds; reference years and participating economies vary.
+access:
+  endpoint: https://www.worldbank.org/en/research/brief/international-comparison-program
+  kind: bulk_file
+  interfaces: [HTML, bulk-files]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0 per the Data Catalog record
+    https://datacatalog.worldbank.org/search/dataset/0066092/international-comparison-program-2021 (Public)
+    and the World Bank Terms of Use for Datasets
+    https://www.worldbank.org/ext/en/legal/terms-conditions/datasets; commercial reuse and modification
+    allowed; do not imply World Bank endorsement or use its name or logo; third-party conditions, where any,
+    are in the indicator metadata. Attribution: "The World Bank: International Comparison Program: <data
+    source>".'
+updates: Round-based benchmark releases with revisions; extrapolated PPP series are separate products.
+ingestion:
+  history: Archive complete named releases with metadata and vintage.
+  incremental: Reload a named release or affected period after publication; no CDC.
+  identifiers: Use published economy and indicator IDs; preserve survey/round/vintage where applicable.
+modelling:
+  notes: Model observations at stated grain; retain uncertainty, status, unit, source and methodology fields.
+  overlap: WDI republishes PPP results and extrapolations; never mix benchmark and extrapolated vintages silently.
+research:
+  priority: specialist
+  evidence: catalogue-only
+  connection: tested
+  blockers: []
+  references:
+  - https://www.worldbank.org/en/research/brief/international-comparison-program
+  - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets

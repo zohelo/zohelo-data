@@ -1,0 +1,57 @@
+id: CD-022
+name: Reddit Data API
+short_name: Reddit Data API
+provider: Reddit
+status: reviewing
+family: J
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [social-media, discussion]
+entities: [community, post, comment, user]
+granularity: Approved endpoints expose Reddit resources for an app use case; scope depends on developer documentation and
+  agreement.
+coverage: Current API resources are not documented as a complete durable historical archive.
+access:
+  endpoint: https://redditinc.com/policies/data-api-terms
+  kind: api
+  interfaces: [API]
+  auth: Registration, identification and OAuth/access information; separate agreement for commercial use.
+  cost: mixed
+  limits: Reddit may set and enforce limits; no number encoded.
+licence:
+  status: restricted
+  notes: 'Terms: https://redditinc.com/policies/data-api-terms and https://redditinc.com/policies/developer-terms
+    (both answered the runner HTTP 200 on 27 Nov 2026; the probe log kept only the first 20,000 characters of each
+    page, which hold the site navigation and version list, so no sentence is quoted from this review). The restriction
+    stands as recorded at registration: user content remains user-owned, the default licence permits limited app
+    display, and commercial use needs a separate agreement (unverified in this review). Not reusable for public
+    display: stays internal.'
+updates: Platform state changes; removals and termination require deletion handling.
+ingestion:
+  history: 'PROPOSAL: no commercial warehouse ingestion without separate agreement.'
+  incremental: 'PROPOSAL: approved API-client refresh plus removal processing.'
+  identifiers: Subreddit/post/comment/user IDs; deleted authors/content remain distinct states.
+modelling:
+  notes: Observed API state with removal flags; avoid inferred demographics.
+  overlap: Overlaps social vendors and public pages but API terms control API data.
+research:
+  priority: conditional
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Owner question (account and agreement): the Reddit Data API needs a registered app with OAuth credentials
+    (oauth.reddit.com is disallowed to the probe by robots.txt), and commercial use needs a separate agreement with
+    Reddit. Register an app and ask Reddit for a commercial agreement, or park CD-022? Recommendation: park. The eight
+    social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017 to CD-024''); none offers
+    official statistics for Poland, and each needs an account, an application or a paid plan.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was a terms and agreement restriction, an owner question,
+    so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+    dev/src_parked2_probe.py, 27 Nov 2026): the Data API terms and developer terms HTTP 200 (text not captured beyond
+    navigation, see licence.notes); support.reddithelp.com answered HTTP 403 and oauth.reddit.com robots.txt disallows
+    the probe (both recorded, not worked around).'
+  - 'Earlier parking reason: Reddit Data API terms: commercial use and research above limits need an agreement; user
+    content stays user-owned'
+  references:
+  - https://redditinc.com/policies/data-api-terms
+  - https://redditinc.com/policies/developer-terms

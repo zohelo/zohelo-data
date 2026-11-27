@@ -1,0 +1,65 @@
+id: PL-ENV-035
+name: Rejestr Urbanistyczny
+short_name: Rejestr Urbanistyczny
+provider: Ministerstwo Rozwoju i Technologii / GUGiK / local planning authorities
+status: reviewing
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [spatial planning, land use]
+entities: [planning act, spatial dataset, planning document]
+granularity: Published planning-document categories and related spatial layers; current machine-readable object coverage
+  varies by authority.
+coverage: Launched 1 July 2026. Transitional publication rules applied through September; offices have until 30 November
+  2026 to populate current spatial data.
+access:
+  endpoint: https://rejestr-urbanistyczny.gov.pl/published
+  kind: web
+  interfaces: [HTML, JavaScript application, WMS, WFS, CSW]
+  auth: Public and free register/services.
+  cost: Free.
+  limits: None published.
+licence:
+  status: unresolved
+  notes: 'Terms: free access is stated ("Rejestr Urbanistyczny jest bezpłatny i będzie regularnie aktualizowany przez jednostki
+    samorządu terytorialnego", https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-informacje; "Usługi
+    udostępniane w ramach Rejestru Urbanistycznego są bezpłatne", geoportal news; both read 12 Nov 2026), but no licence,
+    no attribution wording and nothing on commercial reuse or modification of the register data; the portal footer licence
+    (CC BY-SA 4.0) covers the page text only. Attribution if used: "Źródło: Rejestr Urbanistyczny, rejestr-urbanistyczny.gov.pl"
+    with the download date.'
+updates: Local authorities update the register; offices must publish the spatial data current on 1 October 2026 by 30 November
+  2026, so the content is incomplete until then. Further duties follow to 30 June 2029.
+ingestion:
+  history: No machine route confirmed. The register lists WMS, WFS (download of spatial data) and CSW network services,
+    but the catalogue https://rejestr-urbanistyczny.gov.pl/published is a JavaScript application (22,530 bytes, 21 characters
+    of text, no links or service addresses in HTML; Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+    12 Nov 2026)), which the pipeline does not support; the WFS addresses were not found on the gov.pl and geoportal pages.
+  incremental: 'PROPOSAL: inventory services/data after transition and snapshot by authority/layer/document.'
+  identifiers: TERYT of the authority plus the planning act identifier (APP) and document identifier.
+modelling:
+  notes: 'Separate legal document, spatial extent and service metadata. Do not infer national completeness during transition.
+    kpi false. Smallest Gold selection once a WFS address is known: per gmina (TERC) whether a general plan (plan ogólny)
+    is published and the share of its area covered by local plans (MPZP), as attributes of dim_geography.'
+  overlap: Overlaps local planning portals and GUGiK planning integration but becomes the central publication register;
+    GUS BDL has yearly MPZP coverage per gmina.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: the Rejestr Urbanistyczny portal now answers GitHub runners with a bot-protection page (even for robots.txt),
+    which we do not work around; the Ministry and Geoportal pages name only WMS services and no WFS or download address,
+    and no reuse terms beyond "Usługi udostępniane w ramach Rejestru Urbanistycznego są bezpłatne". GUS BDL, which we load,
+    has yearly MPZP coverage per gmina. Do you want to write to the Ministry of Development and Technology asking for a
+    download service (WFS or files) usable by automated clients and for the reuse terms, or do you accept the GUS BDL series
+    and leave the register out?'
+  - 'Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026):
+    rejestr-urbanistyczny.gov.pl answered a bot-protection page instead of robots.txt; https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-informacje
+    read (no service address). The register is complete only after 30 November 2026 ("Do 30 listopada 2026 r. dane w Rejestrze
+    Urbanistycznym mogą być jeszcze niepełne").'
+  references:
+  - https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-informacje
+  - https://www.geoportal.gov.pl/aktualnosci/nowe-uslugi-w-geoportalu-rejestr-urbanistyczny/
+  - https://rejestr-urbanistyczny.gov.pl/published
+  - https://www.gov.pl/web/zagospodarowanieprzestrzenne/rejestr-urbanistyczny-uruchomiony

@@ -1,0 +1,44 @@
+id: PL-ENV-004
+name: Ortofotomapa (ORTO)
+short_name: GUGiK orthophoto
+provider: GUGiK
+source_system: gugik_orto
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [imagery, land cover, geospatial]
+entities: [raster tile, survey area]
+granularity: Orthophoto raster; resolution, acquisition date and coverage vary by project.
+coverage: Footprint/index services expose years 1957–2026; raw availability varies by area and edition.
+access:
+  endpoint: https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/
+  kind: api
+  interfaces: [bulk-files, WMS, WMTS, WFS-index]
+  auth: Public viewing and download. WFS is an index/footprint, not imagery pixels.
+  cost: Free.
+  limits: Unknown; no numeric quota was confirmed.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/ states: "Ortofotomapa jest dostępna bezpłatnie
+    do pobrania i możliwa do dowolnego wykorzystania" (page read 11 Nov 2026 from a GitHub runner). No licence name or attribution
+    wording; show "Źródło: GUGiK, Ortofotomapa".'
+updates: Project/area refresh, not a single national cadence.
+ingestion:
+  history: 'Per-sheet GeoTIFF from the geoportal "Pobierz dane" module, WCS, or the WFS index (skorowidze) per year 1957-2026;
+    terabyte scale (estimate): stage 2 decides what to land (index and sheet metadata first).'
+  incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
+  identifiers: Footprint, acquisition year/date, resolution, sheet/package identifier.
+modelling:
+  notes: Store asset catalogue plus raster; separate acquisition from publication time and preserve CRS.
+  overlap: Complements satellite imagery and NMT; do not treat map tiles as archival rasters.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - Check package-level licensing, resolutions and cloud/season metadata.
+  references:
+  - https://www.geoportal.gov.pl/pl/dane/ortofotomapa-orto/
+  - https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WFS/Skorowidze

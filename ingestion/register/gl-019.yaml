@@ -1,0 +1,59 @@
+id: GL-019
+name: UN Comtrade
+short_name: UN Comtrade
+provider: United Nations Statistics Division
+status: reviewing
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [trade, goods, services]
+entities: [country-pair, commodity]
+granularity: Reporter/partner/flow/product/classification/period/trade-system and measure; confidentiality may
+  suppress detail.
+coverage: Global reported trade; history and services coverage vary by reporter, classification and frequency.
+access:
+  endpoint: https://comtradeplus.un.org/
+  kind: api
+  interfaces: [HTML, 'REST API (comtradeapi.un.org, subscription key)', bulk files (premium)]
+  auth: 'Subscription key from a UN Comtrade account for the API; bulk files for premium subscribers (comtradeplus.un.org:
+    "Premium subscribers get bulk files and higher limits")'
+  cost: free tier with a key; premium paid
+  limits: Per the subscription plan (help pages "Subscription Plans", "Acquiring API Subscription Keys"); not read in detail.
+licence:
+  status: unresolved
+  notes: 'Terms: not settled for the current site. The licence agreement recorded on 28 Oct 2026 (https://comtrade.un.org/licenseagreement.html,
+    s.5: "any copying, automated browsing or downloading, redistribution, publication, or commercial exploitation" needs
+    prior written UNSD permission) now answers HTTP 404 (runner, 26 Nov 2026). The help centre https://uncomtrade.org/docs/
+    lists "Policy on Comtrade Data Use" and "Re-dissemination of data" pages, which were not read in this run. Until they
+    are read the status is unresolved, and the old s.5 wording is the last known reading (no public display without UNSD
+    permission). Attribution if permitted: "Source: United Nations, UN Comtrade Database (comtradeplus.un.org)".'
+updates: Reporter revisions and classification changes occur; monthly/annual observations differ.
+ingestion:
+  history: Bulk by period/classification where licensed; archive raw release metadata.
+  incremental: Reload recent and revised reporter-period partitions.
+  identifiers: Reporter + partner + flow + classification edition + commodity + period; retain customs/transport metadata.
+modelling:
+  notes: Bilateral trade fact; never sum mirrored flows or overlapping commodity levels. Quantity units vary.
+  overlap: Overlaps Eurostat Comext, WTO and UNCTAD; asymmetries and methodological differences are expected.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: UN Comtrade serves its data only through an API that needs a subscription key from a UN Comtrade account
+    (bulk files only for paid premium subscribers), and its last known licence (s.5 of the former licence agreement) required
+    written UNSD permission for automated downloading, redistribution and publication; the current "Policy on Comtrade
+    Data Use" was not read. Do you want to create a free UN Comtrade account and API key for zohelo (and accept its data-use
+    policy), so that Poland''s goods trade by partner and HS chapter is loaded for internal use, or leave Comtrade out and
+    rely on UNCTAD (GL-021) and the WTO files (GL-020) for trade aggregates (Eurostat Comext is out of scope)?'
+  - 'Re-review 26 Nov 2026 (Task #2916): Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): comtradeplus.un.org answered
+    (5,195 characters: API documentation, bulk files and tariff-line files for premium subscribers); https://uncomtrade.org/docs/
+    answered (help centre); https://comtrade.un.org/licenseagreement.html HTTP 404. Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+    https://uncomtrade.org/docs/api-subscription-keys/ and /docs/bulk-files-2/ answered (their policy links listed, not
+    followed). Not parked: an account and key are an owner decision.'
+  - Design classification concordances
+  references:
+  - https://comtradeplus.un.org/
+  - https://comtradeapi.un.org/swagger/index.html
+  - https://comtrade.un.org/licenseagreement.html

@@ -1,0 +1,42 @@
+id: TP-006
+name: Forsal news feed (Atom)
+short_name: Forsal
+provider: INFOR PL S.A.
+source_system: news_feeds
+current: true
+status: silver
+family: J
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [news, media-monitoring]
+entities: [headline]
+granularity: 'One feed item: title, link, publication time (pl). Atom, 50 entries covering under a day; updated in ISO 8601 UTC.'
+coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+access:
+  endpoint: https://forsal.pl/.feed
+  kind: bulk_file
+  interfaces: [RSS, HTML]
+  auth: public
+  cost: free
+  limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+licence:
+  status: restricted
+  notes: 'robots.txt allows the feed. INFOR''s RSS page states no feed terms; articles carry "Materiał chroniony prawem autorskim - wszelkie prawa zastrzeżone. Dalsze rozpowszechnianie artykułu za zgodą wydawcy INFOR PL S.A." Headline and link only. Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+updates: Continuous; items roll over within hours to days.
+ingestion:
+  history: None beyond the feed window; accumulates from the first landing.
+  incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+  identifiers: canonical URL; guid where given
+modelling:
+  notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+  overlap: GDELT (CD-030) counts the same coverage; never add the two.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - Feed terms are the publisher's general terms; public display of headlines waits for the owner's review after the internal period (O32).
+  references:
+  - https://forsal.pl/.feed
+  - https://forsal.pl/

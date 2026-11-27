@@ -1,5 +1,5 @@
 # zohelo-data Areas, in display order (SPEC §4). Source family Areas parent the source Epics,
-# which are generated from ingestion/register.yaml and .github/backlog/stages.yaml; platform
+# which are generated from ingestion/register/ and .github/backlog/stages.yaml; platform
 # Areas parent the Epics in epics/*.yaml.
 areas:
   - key: data/src-a

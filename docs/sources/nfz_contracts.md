@@ -44,7 +44,7 @@ every agreement. Providers include natural persons (individual and group practic
 whose name and NIP/REGON are personal data, and the register entry gives no basis for storing them. Bronze checks
 that these attributes are present (an unknown layout still rejects the file) but stores none of them; Silver and Gold
 know a provider only by its NFZ provider code and branch. The exact Landing bytes keep them, as every Landing file
-keeps the source's bytes. Loading any of them needs an owner GDPR review first (as for REGON in `register.yaml` and
+keeps the source's bytes. Loading any of them needs an owner GDPR review first (as for REGON in `ingestion/register/` and
 `warehouse/dimensions/person.yaml`).
 
 **Amounts of 0.00.** NFZ publishes 0.00 as the amount of 54,239 agreements of 2019–2027 (Dev trial 43814206385;

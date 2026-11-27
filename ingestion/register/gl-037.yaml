@@ -1,0 +1,72 @@
+id: GL-037
+name: EEA Datahub
+short_name: EEA Datahub
+provider: European Environment Agency
+source_system: eea
+status: built
+family: G
+kpi: true
+geography: multicountry-Europe
+provider_type: international-public
+domains: [environment, climate, pollution, biodiversity, water]
+entities: [country, monitoring-site, facility, region]
+granularity: Dataset-specific; country aggregates, sites, facilities and geospatial features all occur.
+coverage: EEA network across 38 European countries; dataset histories vary.
+access:
+  endpoint: https://www.eea.europa.eu/en/datahub
+  kind: bulk_file
+  interfaces: [HTML, download files, CSV, SQLite, Microsoft Access, catalogue API, Discodata SQL API, geospatial services]
+  auth: public
+  cost: free
+  limits: None published. Discodata (https://discodata.eea.europa.eu/sql?query=...&p=<page>&nrOfHits=<rows>) returns JSON
+    pages, 100 rows by default, no stated maximum.
+licence:
+  status: open-conditional
+  notes: 'Terms: EEA legal notice https://www.eea.europa.eu/en/legal-notice (read 12 Nov 2026): EEA material is published
+    under CC BY 4.0 and "may be re-used without prior permission, free of charge, for commercial or non-commercial purposes
+    ... provided that the EEA is always acknowledged as the original source of the material", in each copy and without distorting
+    the original meaning; modification (adaptation) is allowed. "The above-mentioned permissions do not apply to content
+    supplied by third parties"; "The re-use of certain data may be subject to different conditions", marked on the item.
+    The EEA data policy (https://www.eea.europa.eu/en/datahub/eea-data-policy) adds: "Unless indicated otherwise, dataset
+    will be distributed under open standard license ODC-by license or similar" and "EEA data are provided ''as is'' to users
+    without warranty of any kind". The catalogue record of the greenhouse gas inventory states "License CC-BY 4.0 ... Copyright
+    holder: European Environment Agency (EEA)" and "No limitations to public access" (record of the April 2024 version).
+    Disclaimer: the EEA accepts no responsibility or liability; the information does not necessarily reflect the official
+    opinion of the EEA. Attribution: "Source: European Environment Agency (EEA), <dataset title>, <download date>."'
+updates: 'Per dataset. Greenhouse gas inventory (GovReg): yearly cycle with several versions a year (2026: ver. 1.0 17 April,
+  2.0 4 September, 2.1 2 October 2026).'
+ingestion:
+  history: 'Bulk per dataset version. First dataset: "GovReg: National emissions reported to the UNFCCC and to the EU under
+    the Governance Regulation" (series https://www.eea.europa.eu/en/datahub/datahubitem-view/3b7fe76c-524a-439a-bfd2-a6e4046302a2,
+    1985-2024, formats CSV, SQLite and Access, "Direct download"). Every version is its own catalogue record (2026 ver.
+    2.1: f6a252a6-1bde-43a8-9e6a-f58146fd691e), so the file URL changes per release; the stable entry is the series record,
+    read as JSON from https://sdi.eea.europa.eu/catalogue/srv/api/records/<id> (200, 43,925 bytes from a GitHub runner,
+    Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)). The 2024 version documents the
+    pattern: direct download https://sdi.eea.europa.eu/data/<version record id> and WebDAV folder https://sdi.eea.europa.eu/webdav/datastore/public/<dataset
+    folder>. The download of the 2026 version was not tested (the series id itself answers 400 on /data/); size not measured.'
+  incremental: Entity = dataset, version = the version record id and publication date; poll the series record monthly and
+    land the newest version (snapshot, changed_since_last); corrected versions replace the entity.
+  identifiers: 'EEA dataset ID + published feature/observation key; for the inventory: country code + sector (CRF) + pollutant
+    + year.'
+modelling:
+  notes: 'Do not combine facility emissions, site measurements and country indicators in one fact; retain units and QA flags.
+    Greenhouse gas inventory: grain country x CRF sector x gas x year, ISO 3166-1 alpha-2 country codes plus EU aggregates,
+    kt CO2 equivalent, annual from 1985/1990. Smallest Gold selection: total emissions with and without LULUCF and the main
+    sectors (energy, transport, industry, agriculture, waste) for Poland and all EU countries: a second source of the existing
+    KPI ghg_emissions (O31). Next datasets when wanted: Waterbase (water quality, stands in for PL-ENV-011), Natura 2000
+    and nationally designated areas (stand in for PL-ENV-017), air quality statistics.'
+  overlap: Publishes ghg_emissions (kpi.csv), which Eurostat and FAOSTAT also publish; overlaps Copernicus, national agencies
+    and EU reporting portals; identify the authoritative dataset owner.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - Dataset-level rights scan for every further dataset (item-specific and third-party conditions override CC BY).
+  references:
+  - https://www.eea.europa.eu/en/datahub
+  - https://www.eea.europa.eu/en/legal-notice
+  - https://www.eea.europa.eu/en/datahub/eea-data-policy
+  - https://www.eea.europa.eu/en/datahub/datahubitem-view/3b7fe76c-524a-439a-bfd2-a6e4046302a2
+  - https://sdi.eea.europa.eu/catalogue/srv/api/records/6331f651-8863-4656-a911-669f2a332a1e
+  - https://discodata.eea.europa.eu/Help.html

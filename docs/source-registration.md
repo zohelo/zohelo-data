@@ -21,6 +21,7 @@ code lists every source adds rows to followed on 13 November (D36, below).
 | `docs/sources.md` | `docs/sources/<source>.md` (the same section, as its own file) | – |
 | `warehouse/tests/metrics_value_range.sql`: a row of `bounds`, a branch of the `metrics` union | `warehouse/macros/value_range/<source>.sql`: `poc_value_range__<source>()` with the bounds and the metrics models | the test finds the macros by name (below, "Value ranges") |
 | `warehouse/seeds/source.csv`, `licence.csv`, `kpi.csv`, `kpi_measure.csv`, `kpi_v2_map.csv`, `unit.csv`, `unit_map.csv`, `unit_decimals.csv` | `warehouse/seed_rows/<list>/<source>.csv` (the list's header, then the source's rows; D36, below) | the model `warehouse/models/gold/seed_rows/<list>.sql` reads every CSV file of the folder; Python reads `warehouse/seed_rows.py` `rows()` |
+| `ingestion/register.yaml`: the source's entry in one list of every entry | `ingestion/register/<id lower>.yaml` (the entry as its own file; D42) | readers use `ingestion/common/register.py` `entries()` |
 
 `warehouse.yaml` keeps what belongs to no single source: conformed dimensions, facts, seeds, KPI metrics
 that read several sources, and their ceilings.

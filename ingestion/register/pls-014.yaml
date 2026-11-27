@@ -1,0 +1,52 @@
+id: PLS-014
+name: API Umowy NFZ
+short_name: NFZ contracts
+provider: Narodowy Fundusz Zdrowia (NFZ)
+source_system: nfz_contracts
+status: built
+family: B
+kpi: true
+geography: Poland; NFZ branch and provider
+provider_type: national-public
+domains: [healthcare contracts, providers, public spending]
+entities: [healthcare provider, contract, service product, NFZ branch]
+granularity: Agreement/plan/month at provider and contract-product level; data cover contracts by regional NFZ branches.
+coverage: Contracts from 2008 according to product terms.
+access:
+  endpoint: https://api.nfz.gov.pl/app-umw-api/
+  kind: api
+  interfaces: [REST API, JSON, XML, Swagger]
+  auth: Public API; no key specified.
+  cost: free
+  limits: 10 requests/second per IP (terms v1.2, section III).
+licence:
+  status: open-conditional
+  notes: 'Terms: API regulations (Regulamin) of "API Umowy NFZ" v1.2, https://api.nfz.gov.pl/app-umw-api/terms (section
+    II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the data ("Niedozwolone
+    jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party rights, misleads
+    users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches and may change
+    the API and its terms. No licence name and no clause on commercial reuse; public display of the published values is
+    allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled as a zohelo
+    calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution: "Źródło: Narodowy
+    Fundusz Zdrowia, API Umowy NFZ (https://api.nfz.gov.pl/)" / "Source: National Health Fund (NFZ), NFZ Contracts API (https://api.nfz.gov.pl/)".'
+updates: Live contract database; update/revision cadence unknown.
+ingestion:
+  history: Enumerate available years then snapshot agreements, plans, months, providers and dictionaries.
+  incremental: Poll current/recent years and diff; periodically reconcile prior-year amendments.
+  identifiers: Agreement ID + plan/month; provider identifiers and NFZ service/product dictionaries. Provider-name matching
+    is insufficient for REGON linkage.
+modelling:
+  notes: Contract ceilings/plans are not realized expenditure; keep amounts and settlement-unit quantities separate.
+  overlap: Overlaps RPWDL facility entities and NFZ utilization; contract presence does not equal service delivery.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
+    values are shown unchanged'
+  - Determine robust provider linkage
+  - Document amendment semantics
+  references:
+  - https://api.nfz.gov.pl/app-umw-api/
+  - https://api.nfz.gov.pl/app-umw-api/terms

@@ -1,0 +1,58 @@
+id: PL-ENV-025
+name: Rail Data Portal (Dane UTK)
+short_name: UTK rail data
+provider: Urząd Transportu Kolejowego (UTK)
+status: reviewing
+family: H
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [rail transport, passenger traffic, freight traffic]
+entities: [operator aggregate, station aggregate, region, rolling stock]
+granularity: Operational, passenger/freight, punctuality, station, regional and rolling-stock statistics at dataset-specific
+  grain.
+coverage: Portal series include recent years; earlier reports may remain in UTK archive.
+access:
+  endpoint: https://dane.utk.gov.pl/
+  kind: bulk_file
+  interfaces: [HTML, charts, bulk-files, PDF]
+  auth: Public portal.
+  cost: Free public access.
+  limits: None published. dane.utk.gov.pl and utk.gov.pl answer HTTP 403 to a GitHub runner (on robots.txt).
+licence:
+  status: unresolved
+  notes: 'Terms: not read. Both UTK hosts refused the runner (HTTP 403 on robots.txt) and the desk fetch could not open
+    them; the dane.gov.pl record 128 ("Przewozy pasażerskie - statystyka miesięczna, kwartalna, roczna") was not readable
+    (api.dane.gov.pl and dane.gov.pl timed out from the runner in both probes).'
+updates: Monthly, quarterly and annual depending on the series.
+ingestion:
+  history: 'Not established: the portal sections (/sts/przewozy-towarowe, /sts/sprawozdania-roczne and others) are known
+    from web search results only.'
+  incremental: None until the owner question is answered.
+  identifiers: Series, period, carrier or station where present.
+modelling:
+  notes: 'With a route today: rail passengers and goods for Poland per quarter from Eurostat rail_pa_quartal and rail_go_quartal
+    through GL-001 (in Silver: 6,750 rows each; data from 2004-Q1 to 2026-Q2), annual in rail_pa_total and rail_go_total
+    (Eurostat catalogue, to 2025). Only at UTK: monthly figures, punctuality and per-carrier data. From this source once
+    it is reachable: rail passengers, passenger-km, freight tonnes and tonne-km, punctuality, monthly, Poland. Effort M.'
+  overlap: UTK is the regulatory statistical source; operator/open-transit data have different scope.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Owner question: UTK refuses GitHub runners on both of its hosts (dane.utk.gov.pl and utk.gov.pl answer HTTP 403), which
+    we do not work around, and dane.gov.pl, where UTK also publishes (dataset 128), does not answer runners. Eurostat rail_pa_quartal
+    and rail_go_quartal, which we load, give passengers and goods for Poland per quarter (to 2026-Q2); monthly figures,
+    punctuality and per-carrier data exist only at UTK. Do you want to write to UTK (text drafted for you) asking for access
+    from GitHub-runner addresses or for the files with their reuse terms, or do you accept the quarterly Eurostat series
+    as the rail KPIs and leave the UTK portal out?'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): dane.utk.gov.pl HTTP 403 on robots.txt,
+    nothing else requested. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py,
+    12 Nov 2026): utk.gov.pl HTTP 403 on robots.txt; api.dane.gov.pl and dane.gov.pl timed out (75 s); Silver holds rail_pa_quartal
+    and rail_go_quartal (6,750 rows each).'
+  - 'Formats, file URLs and reuse terms of the portal are unread: licence unresolved.'
+  references:
+  - https://dane.utk.gov.pl/
+  - https://dane.gov.pl/pl/dataset/128,przewozy-pasazerskie-statystyka-miesieczna-kwartalna-roczna
+  - https://ec.europa.eu/eurostat/databrowser/view/rail_pa_quartal/default/table

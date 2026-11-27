@@ -1,0 +1,67 @@
+id: PL-ENV-023
+name: Road programme and infrastructure downloads (RPBDK/MOP)
+short_name: GDDKiA road downloads
+provider: GDDKiA
+source_system: gddkia_mop
+status: built
+family: H
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [road infrastructure, investment]
+entities: [road project, service area, road section]
+granularity: 'Three unrelated downloads: road-programme status (PDF), list of rest areas MOP (XLSX), road-obstruction feed
+  (XML with XSD on the archive site).'
+coverage: Current programme implementation and lists; archive depth unconfirmed.
+access:
+  endpoint: https://www.gov.pl/web/gddkia/dane-do-pobrania
+  kind: bulk_file
+  interfaces: [PDF, XLSX, XML, HTML]
+  auth: public download
+  cost: free
+  limits: None published. archiwum.gddkia.gov.pl (the road-obstruction feed) gave no answer to a GitHub runner in two probes
+    (timeouts of 20 s and 75 s); the gov.pl pages and attachments answer.
+licence:
+  status: unresolved
+  notes: 'Terms: the pages state no licence for the files (probe 12 Nov 2026). gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie
+    (read by the probe): "Korzystanie przez użytkowników z materiałów urzędowych opublikowanych w serwisie Gov.pl nie wymaga
+    zgody Ministra Cyfryzacji. W serwisie zamieszczane są także utwory, co do których prawa autorskie przysługują osobom
+    trzecim. Ich wykorzystanie przez internautów wymaga zgody właścicieli tych materiałów."; page footer: "Treści tekstowe
+    publikowane w serwisie (z wyłączeniem treści audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie
+    autorstwa - na tych samych warunkach 4.0 (CC BY-SA 4.0)." The footer names text content, not attached data files.'
+updates: Programme status PDF Last-Modified 4 Nov 2026; MOP table monthly (September 2026 edition, Last-Modified 26 Oct
+  2026); obstruction feed live.
+ingestion:
+  history: 'Bulk files on gov.pl, tested from a runner. https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop links one XLSX
+    "Tabela MOP istniejące" (September 2026 edition: 89,285 bytes, one sheet "Arkusz1", 424 rows, 35 columns: Lp., Oddział,
+    Województwo, Zarządca, Miejscowość, name of the rest area, current and target category, x, y, road class, road number,
+    chainage, direction, parking places and 17 amenity columns; Dev trial 45829412455, docs/sources/gddkia_mop.md). https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023
+    links the road-programme status as one PDF (1,121,256 bytes, 6 pages, with a text layer: 9,796 text operators, no page
+    images) plus contractor and legend PDFs. Attachment ids change per edition, so the two pages are the stable entries.
+    Not in this route: the road-obstruction XML feed on archiwum.gddkia.gov.pl, a live operational feed with no statistical
+    use. No XML of the road programme was found.'
+  incremental: Snapshot per file; version = Last-Modified of the attachment; monthly check of the two pages (the MOP table
+    is monthly).
+  identifiers: Road number, section name, MOP name and category.
+modelling:
+  notes: 'kpi false. Smallest Gold selection: an entity table of rest areas (MOP) and the count of rest areas per voivodeship
+    and category (voivodeship names in the file, mapped to TERYT). Second step: road-programme status per section from the
+    PDF text layer (road, section, stage) as an entity table; the PDF layout is read at the build. Road length itself comes
+    from GUS BDL and Eurostat through the onboarded sources. Effort S for the MOP table, M with the PDF.'
+  overlap: Complements GPR traffic counts; it describes assets/programmes, not traffic observations.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the three gov.pl pages and the
+    programme PDF answered 200 to a GitHub runner. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+    script dev/src_dfh_fix_probe.py, 12 Nov 2026): the MOP workbook was read (one sheet, columns as listed), the programme
+    PDF has a text layer, archiwum.gddkia.gov.pl timed out again (75 s).'
+  - Licence unresolved (gov.pl attachments; the gov.pl wording is the owner question recorded under PL-ENV-022). Internal
+    build only.
+  - 'The platform has no PDF table reader yet: the PDF step adds text-layer extraction (no OCR).'
+  references:
+  - https://www.gov.pl/web/gddkia/dane-do-pobrania
+  - https://www.gov.pl/web/gddkia/wykaz-parkingow-i-mop
+  - https://www.gov.pl/web/gddkia/biezaca-realizacja-pbdk-na-lata-2014-2023

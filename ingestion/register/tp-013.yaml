@@ -1,0 +1,67 @@
+id: TP-013
+name: Ministry of Finance publication calendar
+short_name: MF calendar
+provider: Ministerstwo Finansów
+source_system: sdds_calendar
+current: true
+status: built
+family: J
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [release-calendar, official-statistics]
+entities: [release]
+granularity: 'Budget execution and public debt publication dates: one expected release date per Ministry of Finance
+  data category and month, with the reference period in brackets (SDDS advance release calendar, fiscal sector).'
+coverage: 'The current calendar year plus January and February of the next (the fiscal table of the 2026 file runs to
+  "2 2027"; read 27 Nov 2026).'
+access:
+  endpoint: 'https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych'
+  kind: bulk_file
+  interfaces: [XLSX, HTML]
+  auth: none
+  cost: free
+  limits: 'Same file and limits as TP-012: robots.txt of stat.gov.pl allows all; one page GET and one XLSX GET (about
+    27 KB) per run; the link is read from the page at run time because the file name carries the update date.'
+licence:
+  status: open-conditional
+  notes: 'Terms: https://stat.gov.pl/copyright (read 27 Nov 2026; the file is GUS''s, so the GUS terms apply as for
+    TP-011, D23): "nie ma zastrzeżeń co do kopiowania plików i stron oraz dokonywania wydruków" and "w tym do własnych
+    opracowań, pod warunkiem, że będzie podane ich źródło"; no named licence. Attribution: "Źródło: GUS, SDDS
+    Kalendarz Upowszechniania Danych" (no exact wording prescribed). Commercial reuse: not stated. Modification: own
+    analyses allowed with the source given. Nothing is read from gov.pl for this entry.'
+updates: 'As TP-012: the file is replaced when dates change (Polish page "Ostatnia aktualizacja: 25.11.2026 r.");
+  every date is expected and "może ulec zmianie".'
+ingestion:
+  history: 'Current year''s file only; Bronze copies of each version are the history.'
+  incremental: 'One entity with TP-012 (snapshot, weekly with release_calendars, O46; version = download time; new
+    Landing file only when the SHA-256 changed; Bronze latest-only).'
+  identifiers: 'Table "Sektor podatkowo-budżetowy" + category label + month column; publisher MF for: "Operacje
+    szczebla centralnego sektora instytucji rządowych i samorządowych" (state budget execution, monthly, about the
+    20th), "Dług krajowy Skarbu Państwa" and "Dług zagraniczny Skarbu Państwa" (monthly), "Państwowy dług publiczny"
+    (quarterly). "Operacje sektora instytucji rządowych i samorządowych" has no dated cell in 2026.'
+modelling:
+  notes: 'Parsed with TP-012 (cell rules and slips there; in this table the June Treasury debt cells give the
+    period as "(04 2026)" in the Polish copy and "(03.26)" in the English one, so the Polish copy is read). The categories match loaded sources: mf_state_budget (PLG-007), mf_treasury_debt and
+    mf_public_debt (PLG-008/009), so a release row can link to their KPIs for the topic release bonus and
+    topics.json next_release.'
+  overlap: 'The manual seed warehouse/seeds/release_calendar.csv holds MF dates by hand today; the seed rows for these
+    categories can go once this entity is loaded.'
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 27 Nov 2026 (parked re-review, batch 6): the parking reason (www.gov.pl refusing runners) no longer
+    holds and was technical; the MF release dates are published by GUS in the SDDS advance release calendar. Dev
+    probe run 45955251368 (job 140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py, 27
+    Nov 2026): the calendar XLSX (see TP-012) has a fiscal-sector sheet with the four MF categories above, e.g.
+    "Dług krajowy Skarbu Państwa | 20.01.2026 (11 2025) | - | 02.03.2026 (12 2025) 20.03.2026 (01 2026) | …"; www.gov.pl
+    now answers the runner (robots.txt "User-agent: * Allow: /"; /web/finanse/zapowiedzi, /web/finanse/zadluzenie
+    and /web/finanse/dane-fiskalne-na-potrzeby-nadzoru-budzetowego-ue HTTP 200), but none of them names a
+    publication calendar or schedule (no "harmonogram" or "kalendarz" text or link). Effort S (with TP-012).'
+  - 'Earlier parking reason (10 Nov 2026): no reachable route without circumventing bot protection or a blocked host.'
+  references:
+  - https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych
+  - https://stat.gov.pl/copyright
+  - https://www.gov.pl/web/finanse/zapowiedzi

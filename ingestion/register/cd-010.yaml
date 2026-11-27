@@ -1,0 +1,65 @@
+id: CD-010
+name: TGE Market Data
+short_name: TGE market data
+provider: Towarowa Giełda Energii (TGE)
+status: reviewing
+family: I
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [energy-markets, financial-markets, commodities]
+entities: [market, contract, trade, quote]
+granularity: Trades and bid/offer depth for electricity, gas, property-right and financial-instrument products.
+coverage: Real-time, delayed and end-of-trading data; website also exposes selected historical tables.
+access:
+  endpoint: 'https://tge.pl/energia-elektryczna-rdn'
+  kind: bulk_file
+  interfaces: [feed, HTML, bulk-files]
+  auth: 'Public website for personal, information use; any other use needs a separate paid agreement with TGE (market data
+    distributed under GPW''s Market Data License Agreement).'
+  cost: mixed
+  limits: Agreement and product specific.
+licence:
+  status: restricted
+  notes: 'Terms: https://tge.pl/regulamin-uzytkowania-strony-internetowej (read by the runner 26 Nov 2026). § 1 ust. 3:
+    content, "w szczególności Publiczne Dane rynkowe TGE", is supplied "wyłącznie do użytku osobistego i w celach
+    informacyjnych"; § 5 ust. 3: "Jakiekolwiek inne wykorzystanie treści zamieszczonych na Stronie Internetowej, w
+    szczególności Publicznych Danych rynkowych TGE, poza celami i użytkiem wskazanych Regulaminie ... w tym między
+    innymi dystrybucja, reprodukcja, modyfikacja, wyświetlanie lub przesyłanie jest niedopuszczalne i stanowi
+    naruszenie praw TGE, chyba że uzgodniono inaczej w odrębnej i odpłatnej umowie z TGE"; § 5 ust. 4: TGE market data
+    and lists are databases protected under the Polish database act. GPW fee schedule from 1 Jan 2027: distribution of
+    "TGE - SPOT: DAM&IDM; DAMg&IDMg; PRM" 46,900 PLN a year; RES property rights forwards, FIM and RTRS "free of
+    charge (until further notice)". The old data policy PDF (registration reference) now answers TGE''s 404 page.
+    Attribution sentence: none given. Not reusable without an agreement: stays out.'
+updates: Real-time or delayed by product; selected archives are periodic.
+ingestion:
+  history: 'PROPOSAL: license named information products, then load contract-day facts.'
+  incremental: 'PROPOSAL: consume licensed stream/files and restate settlement windows.'
+  identifiers: Market, contract/product code, delivery period, trade timestamp.
+modelling:
+  notes: Separate order-book, trade, settlement and curve facts; delivery periods are non-additive.
+  overlap: May be distributed through GPW and vendors; keep TGE as origin.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (paid agreement): TGE''s website terms allow its public market data only "do użytku osobistego i
+    w celach informacyjnych"; distribution, reproduction or display needs "odrębnej i odpłatnej umowie z TGE"
+    (GPW''s 2027 fee schedule: 46,900 PLN a year for spot day-ahead and intraday data; property-rights forwards free
+    of charge until further notice, still under the agreement). Sign a market-data agreement with TGE for zohelo, or
+    park CD-010? Recommendation: park, or include it in the one letter to the GPW group proposed under CD-005;
+    Poland''s official electricity price indicators come from URE (PL-ENV-020) and PSE''s balancing price RCE
+    (PL-ENV-019), both approved.'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a TGE data licence, which is an owner question, so
+    the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+    dev/src_parked1_probe.py, 26 Nov 2026): https://tge.pl/energia-elektryczna-rdn HTTP 200 (day-ahead results with
+    archive tables); https://tge.pl/regulamin-uzytkowania-strony-internetowej HTTP 200 (quoted in licence.notes);
+    https://tge.pl/pub/TGE/polityka%20danych/2022_01_01_EN_Polityka_dotyczaca_danych_rynkowych.pdf and
+    https://tge.pl/dane-rynkowe answer TGE''s 404 page; robots.txt of tge.pl disallows only
+    /pub/NEWCONNECT/DI/EUROSNACK.'
+  - 'Earlier parking reason: exchange market data policy, real-time and redistributed uses are licensed'
+  references:
+  - https://tge.pl/energia-elektryczna-rdn
+  - https://tge.pl/regulamin-uzytkowania-strony-internetowej
+  - https://www.gpw.pl/pub/GPW/files/PDF/cennik/2027_01_01_WSE_Market_Data_License_Agreement_Fee_Schedule.pdf

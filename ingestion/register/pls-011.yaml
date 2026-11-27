@@ -1,0 +1,48 @@
+id: PLS-011
+name: Podstawowe dane statystyczne KRUS
+short_name: KRUS statistics
+provider: Kasa Rolniczego Ubezpieczenia Społecznego (KRUS)
+source_system: krus
+current: true
+status: built
+family: B
+kpi: true
+geography: Poland; regional detail varies
+provider_type: national-public
+domains: [farm social insurance, pensions, benefits, accidents]
+entities: [insured-person aggregate, beneficiary aggregate, territorial unit]
+granularity: Quarter/annual aggregate table for insured persons, beneficiaries or claims; finest geography varies.
+coverage: 'Sheet Świadczenia: average monthly beneficiaries and benefit by benefit type, quarters and years from I quarter 2020; series break from III quarter 2025 (survivors'' pensions include those paid with other pensions, footnote 2); Dev probes 43084312730, 43085156243, 11 Nov 2026.'
+access:
+  endpoint: https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
+  kind: bulk_file
+  interfaces: [HTML, PDF, XLSX]
+  auth: Public materials.
+  cost: free
+  limits: Unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use https://www.gov.pl/web/gov/warunki-korzystania):
+    text content of gov.pl is CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial
+    reuse and modification with attribution and share-alike; use of official materials (materiały urzędowe) published
+    on gov.pl needs no consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0
+    (not used). The XLSX statistics carry no licence of their own. Attribution: "Źródło: KRUS, <table title> (<period>)"
+    / "Source: KRUS (Agricultural Social Insurance Fund), <table title> (<period>)".'
+updates: Quarterly for some beneficiary statistics; other series annual.
+ingestion:
+  history: 'Full series since 2020 in the one workbook.'
+  incremental: 'Weekly re-download; written only when the SHA-256 changed; Bronze keeps the newest copy.'
+  identifiers: Topic + period + category + geography; KRUS population is distinct from ZUS.
+modelling:
+  notes: Model stocks and payments separately; keep eligibility/population definitions.
+  overlap: Complements ZUS; do not add without mutually exclusive population proof.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'The quarterly statistical information PDFs (51 tables, regional by voivodeship) have no stable listing and are not declared.'
+  references:
+  - https://www.gov.pl/web/krus/podstawowe-dane-statystyczne-z-zakresu-swiadczeniobiorcow
+  - https://www.gov.pl/web/gov/prawa-autorskie
+  - https://www.gov.pl/attachment/657d4965-e3c5-4d36-a321-32650b7df31d

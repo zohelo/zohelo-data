@@ -1,0 +1,81 @@
+id: CD-031
+name: Our World in Data Chart Data API
+short_name: Our World in Data
+provider: Global Change Data Lab
+source_system: owid
+status: built
+family: J
+kpi: true
+geography: worldwide
+provider_type: community-academic
+domains: [global-development, health, environment, economics]
+entities: [country, region, indicator]
+granularity: Indicator-geography-time observations with chart metadata and upstream source attribution.
+coverage: Dataset-specific; many series are long-run, but coverage follows each chart and upstream provider.
+access:
+  endpoint: https://owid-docs.readthedocs.io/projects/etl/api/chart-api/
+  kind: api
+  interfaces:
+  - API
+  - CSV
+  - JSON
+  - ZIP
+  auth: Public, no key.
+  cost: free
+  limits: None documented. CSV and ZIP can answer 403 "Data is non-redistributable" for some charts (chart API documentation).
+    ourworldindata.org robots.txt (47 characters) does not forbid /grapher/.
+licence:
+  status: unresolved
+  notes: 'Terms: https://ourworldindata.org/faqs (desk reading and runner, 12 Nov 2026): "Most of the data on Our World
+    in Data comes from third-party providers (such as the WHO, UN, and World Bank) and is subject to the license terms of
+    those providers."; "Data produced by us falls under our permissive CC BY license; you have permission to use, reproduce,
+    and distribute it, provided that you cite us."; "we ask you to always respect their license terms and cite them appropriately".
+    Site footer: "Our charts, articles, and data are licensed under CC BY, unless stated otherwise." The three charts selected
+    below are third-party data, so their terms are the producers'' (Global Carbon Budget, V-Dem, Maddison Project). OWID''s
+    indicator metadata names an origin licence for each (origins[].license, read on a runner in Dev run 43343148738, 13 Nov
+    2026: Global Carbon Project CC BY 4.0, Various sources (population) CC BY 4.0, V-Dem CC BY 4.0, Bolt and van Zanden
+    (Maddison Project Database 2023) CC BY 4.0), but that is OWID''s statement, not the producers'' own terms pages, which
+    were not read (review of #3001, 16 Nov 2026). Status unresolved: the source builds and stays internal (source.csv
+    licence_key unresolved, so no row reaches a published file). To resolve: quote the V-Dem, Global Carbon Budget and
+    Maddison Project terms pages with their URLs. Attribution sentence: the chart''s citationShort from <slug>.metadata.json,
+    for example "Global Carbon Budget (2026); Population based on various sources (2024) – with major processing by Our
+    World in Data". Rule for any further chart: read its origins and its producer''s terms first (examples of origins that
+    are not open: Corruption Perceptions Index, CC BY-ND 4.0; World Happiness Report, own data-sharing policy).'
+updates: 'Per chart: lastUpdated and nextUpdate in the metadata (for example consumption-based CO2 lastUpdated 2026-11-10,
+  nextUpdate 2027-11-10). Whole series are revised in place.'
+ingestion:
+  history: 'Fixed URLs per chart, tested: https://ourworldindata.org/grapher/<slug>.csv?csvType=full&useColumnShortNames=true
+    and https://ourworldindata.org/grapher/<slug>.metadata.json. Tested charts with Poland rows: consumption-co2-per-capita
+    (139,293 bytes, 4,780 rows, Poland 1990-2024), electoral-democracy-index (1,115,453 bytes, 34,228 rows, Poland 1789-2025),
+    gdp-per-capita-maddison-project-database (567,429 bytes, 21,586 rows, Poland 1400-2022), life-expectancy (605,252 bytes,
+    21,565 rows, Poland 1931-2023), human-development-index, happiness-cantril-ladder, ti-corruption-perception-index. Two
+    old slugs redirect (electoral-democracy, gdp-per-capita-maddison): use the final ones.'
+  incremental: Snapshot per chart; version = lastUpdated of the metadata (the CSV Last-Modified is the request time). Re-read
+    monthly and keep each version.
+  identifiers: Chart slug, column short name, entity code (ISO 3166-1 alpha-3, POL; OWID's own codes for regions), year.
+modelling:
+  notes: 'kpi true. Smallest Gold selection, Poland and all countries, annual, three charts whose data the platform has
+    from no direct source: consumption-co2-per-capita (Global Carbon Budget), electoral-democracy-index (V-Dem) and gdp-per-capita-maddison-project-database
+    (long-run GDP per person, international-$ in 2011 prices). Not selected: human-development-index (UNDP HDR is loaded
+    directly, GL-028), life-expectancy (overlaps the draft KPI life_expectancy from official sources), happiness and corruption
+    charts (origin licences do not allow free reuse). No voivodeship data. Frequency A only. Missing values: a missing year
+    is a missing row or an empty cell (the Maddison file has an annotations column that is empty in 21,558 rows; the V-Dem
+    file has 4,113 empty cells, its owid_region column included): never a zero. Duplicates: none within a file (entity,
+    year); revisions replace the series, lastUpdated tells versions apart. Overlap with published KPIs: gdp_per_capita is
+    published in national currency; the Maddison series has another unit and gets its own measure key. Size: about 1.8 MB
+    for the three charts (measured). Effort S.'
+  overlap: Republishes WHO, UN, World Bank, UNDP and research datasets; take a series from OWID only when the upstream is
+    not loaded directly.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): the FAQ page, seven chart CSV
+    files and seven metadata.json files answered 200; every CSV has rows for POL.'
+  - 'Licence unresolved: the producers'' own terms pages (V-Dem, Global Carbon Budget, Maddison Project) were not read;
+    OWID''s origin licences (CC BY 4.0, Dev run 43343148738) are a secondary statement (review of #3001).'
+  references:
+  - https://ourworldindata.org/faqs
+  - https://owid-docs.readthedocs.io/projects/etl/api/chart-api/
+  - https://owid-docs.readthedocs.io/projects/etl/architecture/metadata/reference/

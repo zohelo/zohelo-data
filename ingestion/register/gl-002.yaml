@@ -1,0 +1,53 @@
+id: GL-002
+name: Comext international trade in goods database
+short_name: Eurostat Comext
+provider: Eurostat
+status: parked
+family: A
+kpi: true
+geography: multicountry-Europe
+provider_type: international-public
+domains: [trade, goods, production]
+entities: [country, country-pair, commodity]
+granularity: Reporter/partner/product/flow/period/unit cube; detailed commodity grain varies by table and confidentiality.
+coverage: Recent and historical EU Member State trade plus some non-EU statistics; table-specific.
+access:
+  endpoint: https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
+  kind: api
+  interfaces: [HTML, REST API, SDMX 2.1, SDMX 3.0, TSV]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0, https://ec.europa.eu/eurostat/help/copyright-notice (re-use for commercial or
+    non-commercial purposes if the source is acknowledged and changes are indicated; modified or translated
+    content must state the changes and carry a disclaimer of Eurostat non-responsibility). Comext exceptions:
+    Swiss- and Liechtenstein-declared trade since 1995 and Austrian-declared CN8 data may not be sold; data
+    for countries outside the EU, EFTA and candidate countries may not be reused commercially. Attribution:
+    "Source: Eurostat (Comext)".'
+updates: Detailed trade is compiled monthly; revisions and confidential/suppressed cells require flags.
+ingestion:
+  history: Partition full extracts by dataset and period; archive codelists and raw vintages.
+  incremental: Reload recent periods and any changed older partitions after structure checks.
+  identifiers: Eurostat DS code + reporter/partner/flow/CN-HS code/period; classification edition is essential.
+modelling:
+  notes: Bilateral flow fact. Never sum overlapping product levels, EU aggregates, or mirrored reporter/partner
+    views.
+  overlap: Overlaps UN Comtrade, WTO and UNCTAD; values can differ by valuation, partner attribution, revisions
+    and confidentiality.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Out of scope: AGENTS.md excludes Eurostat Comext (DS-*) from the Eurostat authorization; reopen only on an owner decision.'
+  - 'Re-review 26 Nov 2026 (Task #2916): still parked, reason re-confirmed on main (AGENTS.md "Authorizations": "Comext
+    (DS-*) is out of scope"). Not a technical reason: an owner exclusion; no probe needed. Trade in goods for Poland reaches
+    us through UNCTAD (GL-021) and the WTO files (GL-020).'
+  - Commercial display: drop the excepted reporters and declarations first
+  - Plan commodity-classification bridges
+  references:
+  - https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction
+  - https://ec.europa.eu/eurostat/data/database
+  - https://ec.europa.eu/eurostat/web/main/help/copyright-notice

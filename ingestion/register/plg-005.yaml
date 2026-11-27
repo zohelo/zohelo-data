@@ -1,0 +1,71 @@
+id: PLG-005
+name: Banking and MFI balance-sheet statistics
+short_name: NBP banking statistics
+provider: Narodowy Bank Polski (NBP)
+status: reviewing
+family: C
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [banking, financial institutions]
+entities: [financial institution sector, country]
+granularity: Sector aggregate by item, counterparty, currency and period.
+coverage: Monthly from December 1996; December 1996 to February 2002 are estimates (statement on the assets-and-liabilities
+  page).
+access:
+  endpoint: https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/assets-and-liabilities-of-monetary-financial-institutions/
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF]
+  auth: public download
+  cost: free
+  limits: None published.
+licence:
+  status: unresolved
+  notes: 'Terms: Terms of Use of the Narodowy Bank Polski Website, https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf
+    (read 12 Nov 2026): saving files, copying pages in full or in part and printouts are allowed "for personal use" (§1(6));
+    "In the event of using materials derived from the NBP internet page, the user is required to state their source along
+    with a link to the website www.nbp.pl" (§1(8)); "Information and materials are for informational purposes only" (§4(1)).
+    Commercial reuse, redistribution and modification are not addressed. Attribution: "Źródło: NBP, www.nbp.pl" / "Source:
+    Narodowy Bank Polski, www.nbp.pl". Unresolved under the owner decision of 14 Oct 2026 (NBP data stays internal until
+    NBP confirms reuse terms; Task data/src-plg-001/review/ask-nbp, whose e-mail should name the monetary statistics too).'
+updates: Monthly, with the monetary statistics release (M3 about the 22nd-24th for the previous month, NBP calendar); the
+  page gives no separate date for these tables. Earlier months are revised in the same workbook.
+ingestion:
+  history: 'Bulk: the page offers two workbooks, "Assets and liabilities of monetary financial institutions (monthly data)"
+    and "Assets and liabilities of banks (monthly data)", plus the definitions of instrument categories and the sectoral
+    classification; the sister pages "Aggregated balance sheet of other MFIs" and "Consolidated balance sheet of MFIs" offer
+    one workbook each. Files are expected under https://static.nbp.pl/dane/monetarno-finansowa/ with stable names; the names
+    are unverified because the links are not in the static HTML (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+    12 Nov 2026): 0 file links found). On 16 Nov 2026 every nbp.pl page, /wp-json/wp/v2/pages and the sitemaps answered
+    the runner with a 5,996-byte bot-protection page (Dev probe run 43831903004, job 133178972022, branch test/src-r13-probe);
+    static.nbp.pl answered (robots.txt 404, no rules) and holds DKI-nal-zob.pdf, the methodology of these tables (web
+    search, 16 Nov 2026). File names are not guessed. Size not measured.'
+  incremental: Entity = workbook, version = Last-Modified; re-download monthly and replace (snapshot, changed_since_last);
+    refresh full. One declaration with PLG-004 (suggested source_system nbp_monetary).
+  identifiers: period + reporting sector + item + counterparty sector + currency + maturity + residency
+modelling:
+  notes: 'Store stocks, transactions and rates separately; universe changes affect comparability. Grain: item x counterparty
+    sector (ESA 2010) x instrument x currency x original maturity x residency x month, Poland only, PLN million. Smallest
+    Gold selection: loans to households (total, housing, consumer), loans to non-financial corporations, deposits of households
+    and of non-financial corporations (monthly stocks) as new KPIs in finance.money_banking.'
+  overlap: KNF prudential data (PLG-017) use a different purpose and universe. ECB BSI (GL-016) gives the euro-area comparison;
+    no KPI of kpi.csv is published here yet.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Owner question: nbp.pl now answers GitHub runners with a bot-protection page ("Pardon Our Interruption", 5,996
+    bytes, on every page, the WordPress content API and the sitemaps; Dev probe run 43831903004, 16 Nov 2026), which
+    we never work around, while the workbooks themselves sit on static.nbp.pl, which answers runners (nbp_bop and nbp_interest_rates
+    load from it). Will you open https://nbp.pl/statystyka-i-sprawozdawczosc/statystyka-monetarna-i-finansowa/ in your
+    browser and paste into issue #2997 the address behind each "Pobierz" (download) link of the pages "Podaż pieniądza
+    M3 i czynniki jego kreacji", "Pieniądz rezerwowy i czynniki jego kreacji", "Bilans NBP (ujęcie monetarne)", "Należności
+    i zobowiązania MIF / banków", "Skonsolidowany bilans MIF" and "Zagregowany bilans pozostałych MIF", or should the
+    NBP e-mail of PLG-001 also ask NBP for these file addresses?'
+  - Confirm NBP reuse terms (owner, with PLG-001); until then internal only.
+  - Inventory series breaks (estimates before March 2002, sector reclassifications).
+  references:
+  - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/
+  - https://nbp.pl/en/statistic-and-financial-reporting/monetary-and-financial-statistics/assets-and-liabilities-of-monetary-financial-institutions/
+  - https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf

@@ -1,0 +1,50 @@
+id: GL-022
+name: FAOSTAT
+short_name: FAOSTAT
+provider: Food and Agriculture Organization of the United Nations
+source_system: faostat
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [agriculture, food, forestry, emissions, prices, trade]
+entities: [country, commodity, country-pair]
+granularity: Domain-specific country/item/element/year observation; trade adds reporter/partner and flow.
+coverage: Global; histories and frequencies vary by domain, often annual.
+access:
+  endpoint: https://bulks-faostat.fao.org/production/datasets_E.json
+  kind: bulk_file
+  interfaces: [HTML, bulk-files, API]
+  auth: public
+  cost: free
+  limits: No numeric quota published; one request per domain zip and run. The bulk catalogue
+    https://bulks-faostat.fao.org/production/datasets_E.json lists every domain zip with size, rows and DateUpdate
+    (GT 20.6 MB zip, 2,498,428 rows; RL 3.0 MB, 421,850 rows; Dev probe 43099401602, 11 Nov 2026).
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0, FAO Statistical Database Terms of Use (confirmed 11 Nov 2026, Dev probe 43099401602:
+    "all datasets disseminated through FAO corporate statistical databases ... are licensed under the Creative
+    Commons Attribution-4.0 International licence (CC BY 4.0) ... as complemented by the Terms of Use"), https://www.fao.org/contact-us/terms/db-terms-of-use
+    (unless a dataset''s metadata says otherwise): access, download, copy, adapt and re-disseminate; do not use datasets
+    for or with the promotion of a commercial enterprise; do not imply FAO endorsement; do not misrepresent the data;
+    third-party datasets need their provider''s consent; provided without warranty. Attribution (required format):
+    "FAO. <year of last update>. FAOSTAT: <dataset>. Accessed on <DD Month YYYY>. <URL>. Licence: CC-BY-4.0."'
+updates: Domain release calendars and revisions vary; production and balance histories can be revised.
+ingestion:
+  history: Load domain bulk packages, metadata and flags by release.
+  incremental: Replace changed domain files or recent years; preserve earlier vintages.
+  identifiers: FAOSTAT domain + area/item/element/partner/year codes.
+modelling:
+  notes: Element and unit define measure; balances, indices and aggregates are not freely additive.
+  overlap: Overlaps WDI, UNdata, UN Comtrade and SDG custodial series; retain FAO flags and methods.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Exclude third-party datasets that need provider consent (population OA is UN WPP: not landed)'
+  references:
+  - https://www.fao.org/faostat/en/
+  - https://www.fao.org/contact-us/terms/en/
+  - https://www.fao.org/contact-us/terms/db-terms-of-use

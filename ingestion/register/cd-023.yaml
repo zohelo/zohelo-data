@@ -1,0 +1,54 @@
+id: CD-023
+name: TikTok Research API
+short_name: TikTok Research API
+provider: TikTok
+status: reviewing
+family: J
+kpi: false
+geography: multicountry
+provider_type: commercial
+domains: [social-media, research]
+entities: [public-account, video, comment, shop]
+granularity: Selected public account, content, comment and shop fields for approved research.
+coverage: Availability and geography follow the approved research product; not a commercial public archive.
+access:
+  endpoint: https://developers.tiktok.com/products/research-api/
+  kind: api
+  interfaces: [API]
+  auth: Application by qualifying independent noncommercial/public-interest researchers in supported regions.
+  cost: free
+  limits: Approved-project limits; no figures encoded.
+licence:
+  status: restricted
+  notes: 'Terms: https://developers.tiktok.com/products/research-api/ (read by the runner 27 Nov 2026, HTTP 200):
+    "Qualified researchers in the U.S., Europe, Canada, and Brazil can apply"; "To qualify for access, applicants must
+    ... Be located in an eligible region and be affiliated with an eligible organization: Academic institutions in the
+    U.S., EEA, UK, Canada, or Switzerland; or Not-for-profit and/or independent research institution, organization,
+    association, or body in the EU." The Research API terms on www.tiktok.com are disallowed to the probe by
+    robots.txt and were not read. Research-only: stays internal.'
+updates: Platform data updates; removals and approved access period apply.
+ingestion:
+  history: 'PROPOSAL: catalogue only unless an eligible study is approved.'
+  incremental: 'PROPOSAL: follow approved protocol; no independent commercial retention.'
+  identifiers: TikTok account/video/comment IDs and observation time.
+modelling:
+  notes: Research snapshot, not a population fact table.
+  overlap: Broader public-content purpose than owner APIs, but unavailable for routine commercial use.
+research:
+  priority: specialist
+  evidence: tested
+  connection: not-tested
+  blockers:
+  - 'Owner question (eligibility): only researchers affiliated with an academic institution or an EU not-for-profit
+    research body can apply; zohelo does not qualify on its own. Seek such an affiliation, or park CD-023?
+    Recommendation: park. The eight social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017
+    to CD-024''); none offers official statistics for Poland, and each needs an account, an application or a paid
+    plan.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was research-only access, an eligibility question, so the
+    entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+    dev/src_parked2_probe.py, 27 Nov 2026): the product page HTTP 200 (quoted);
+    https://www.tiktok.com/legal/page/global/terms-of-service-research-api/en robots.txt disallow (recorded).'
+  - 'Earlier parking reason: research-only, project-bound access; platform terms forbid reuse for products'
+  references:
+  - https://developers.tiktok.com/products/research-api/
+  - https://www.tiktok.com/legal/page/global/terms-of-service-research-api/en

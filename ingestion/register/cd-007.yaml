@@ -1,0 +1,73 @@
+id: CD-007
+name: Electronic Information Base (EBI)
+short_name: GPW EBI
+provider: Warsaw Stock Exchange (GPW)
+source_system: gpw_ebi
+status: built
+family: I
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [corporate-filings, financial-markets]
+entities: [issuer, filing, security]
+granularity: 'One row per EBI report in GPW''s public report list: time, category, report number, issuer with ISIN,
+  geru_id, link (the title is not stored).'
+coverage: NewConnect and Catalyst issuers; the list page shows the newest reports (10 to 12 Nov 2026 on the probe day);
+  the depth reachable through paging is not measured yet.
+access:
+  endpoint: https://www.gpw.pl/espi-ebi-reports
+  kind: web
+  interfaces:
+  - HTML
+  auth: Public reading, no login.
+  cost: free
+  limits: 'None documented; www.gpw.pl robots.txt (53 characters) does not forbid the list. https://www.gpw.pl/ebi answered
+    403 to the runner and is not used. Proposed pattern: the list once a day, one request at a time, a pause of a few seconds,
+    identified user agent; no attachments.'
+licence:
+  status: unresolved
+  notes: 'Terms: none stated for the report list; the site notice is https://www.gpw.pl/disclaimer. https://www.gpw.pl/disclaimer
+    (desk reading 12 Nov 2026; runner 200) holds only a liability notice and "2017 © Warsaw Stock Exchange". GPW resolution
+    646/2011 (https://www.gpw.pl/pub/files/PDF/regulacje/Uch_646_zal.pdf), §8, gives rights to the exchange only: "Giełdzie
+    przysługuje prawo do korzystania, przetwarzania i udostępniania raportów przekazanych jej przez emitentów."; §3 ust.
+    2: reports are "niezwłocznie publikowane na odpowiednich stronach internetowych administrowanych przez Giełdę". GPW''s
+    paid information-services rules do not mention issuer reports. Commercial reuse: not stated. Modification: not stated.
+    Attribution sentence: none given (working text: "Źródło: GPW, Elektroniczna Baza Informacji"). Stays internal. Only
+    issuer, ISIN, link, report id, report number, category and publication time are stored: no title (titles can name
+    natural persons).'
+updates: Event-driven, every day; corrections are separate reports with their own numbers.
+ingestion:
+  history: 'Web route: https://www.gpw.pl/espi-ebi-reports lists ESPI and EBI reports together (HTML, 107,890 bytes; rows
+    carry a detail link https://www.gpw.pl/espi-ebi-report?geru_id=<id>; the page loads further rows through an "ajaxindex"
+    request behind a "Show more" button). Keep rows of type EBI. Whether older rows can be read without JavaScript, and
+    how far back, is to be measured in the build trial.'
+  incremental: 'Daily: read the newest rows until the last known geru_id; one row per report, nothing overwritten.'
+  identifiers: geru_id (guid), EBI report number, issuer name and ISIN, publication time, category (current, quarterly,
+    half-year, annual).
+modelling:
+  notes: 'kpi false. Smallest Gold selection: number of EBI reports per day and month for Poland, split by category, plus
+    the issuer list with ISIN; no voivodeship split in the source. Frequency: event data, aggregated to D and M (separate
+    measure keys). No values, so no suppression markers. Duplicates: the same list also carries ESPI reports (source CD-006):
+    filter by type so a report is counted once. No overlap with published KPIs. Size: not measured per day (the page showed
+    the ten newest ids 500444 to 500453; KNF listed 87 ESPI reports on the same day). Effort S, M if paging needs the ajax
+    request.'
+  overlap: ESPI rows of the same list belong to CD-006 (KNF OAM); PAP Biznes (CD-008, parked) mirrors both.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Route decision: D40 in docs/decisions.md (16 Nov 2026, build pull request of #1486 and #1488): a polite read of the
+    public list pages only, following the orchestrator verdict on PR #2878 under the owner rule of 12 Nov 2026 (#2873).
+    Titles are not stored (they can name natural persons); the stored fields are in docs/sources/knf_espi.md and gpw_ebi.md.'
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.gpw.pl/espi-ebi-reports
+    answered 200 (107,890 bytes) with report rows and detail links (geru_id=500444 to 500453); https://www.gpw.pl/rss and
+    /disclaimer answered 200 (the RSS page is an HTML page, no report feed was confirmed); https://www.gpw.pl/ebi answered
+    403 Forbidden and is not used.'
+  - 'Not verified: the ajaxindex request parameters and history depth; report archives on newconnect.pl and gpwcatalyst.pl
+    (none found).'
+  references:
+  - https://www.gpw.pl/espi-ebi-reports
+  - https://www.gpw.pl/disclaimer
+  - https://www.gpw.pl/pub/files/PDF/regulacje/Uch_646_zal.pdf
+  - https://www.knf.gov.pl/dla_konsumenta/kampanie_informacyjne/obowiazki_emitentow

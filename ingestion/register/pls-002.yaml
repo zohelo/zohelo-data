@@ -1,0 +1,47 @@
+id: PLS-002
+name: Dziedzinowe Bazy Wiedzy (DBW) API
+short_name: GUS DBW
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_dbw
+status: silver
+family: B
+kpi: true
+geography: Poland with territorial and classification breakdowns
+provider_type: national-public
+domains: [economy, society, environment, agriculture, culture]
+entities: [territorial unit, classification member, person-aggregate]
+granularity: Long series with detailed classifications across 31 themes; geography varies by table.
+coverage: Modernised DBW launched with API in 2022; series history varies by table.
+access:
+  endpoint: https://api.stat.gov.pl/Home/DBWApi?lang=en
+  kind: api
+  interfaces: [REST API, JSON, Swagger/OpenAPI, HTML]
+  auth: API documentation indicates a client key workflow; exact anonymous access and current registration conditions
+    require confirmation.
+  cost: free
+  limits: Unknown from opened documentation; resolve before batch ingestion.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://stat.gov.pl/copyright (GUS allows copying and own analyses provided the source is given;
+    no named licence — the DBW API page states none, CC BY 4.0 is stated only for BDL; commercial reuse not addressed,
+    ask api-dbw@stat.gov.pl if needed). Attribution: "Źródło: GUS, Dziedzinowe Bazy Wiedzy" / "Source: Statistics
+    Poland, DBW" plus the indicator id.'
+updates: Scope is continually developed; refresh/revision timing is table-specific.
+ingestion:
+  history: Enumerate dictionaries/tables, then snapshot selected full histories.
+  incremental: Poll metadata/recent periods; diff values and dictionaries.
+  identifiers: DBW table/measure/classification member/territory/period; map territorial codes to TERYT where present.
+modelling:
+  notes: One fact per published cell plus status/unit dimensions; version classifications.
+  overlap: Substantial overlap with BDL and GUS publications, but DBW can offer deeper classifications and longer
+    national series.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Validate territorial code semantics'
+  references:
+  - https://api.stat.gov.pl/Home/DBWApi?lang=en
+  - https://stat.gov.pl/en/news/api-to-the-knowledge-databases%2C86%2C1.html
+  - https://stat.gov.pl/copyright

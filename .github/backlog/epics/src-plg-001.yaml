@@ -58,12 +58,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry PLG-001 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry PLG-001 in ingestion/register/plg-001.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://api.nbp.pl/en.html.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/plg-001.yaml
     steps:
     - Read NBP's answer in the closing comment of Task data/src-plg-001/review/ask-nbp.
     - 'Write licence.notes: ''Terms: NBP reply of <date> (<summary of what is allowed: publication on a website,
@@ -79,8 +79,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='PLG-001'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/plg-001.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

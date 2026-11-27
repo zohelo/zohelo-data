@@ -1,0 +1,66 @@
+id: PLG-029
+name: Election and referendum results data service
+short_name: PKW election results
+provider: National Electoral Commission (PKW) / National Electoral Office (KBW)
+source_system: pkw
+status: built
+family: F
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [elections]
+entities: [candidate, committee, polling district, municipality, constituency]
+granularity: Election results and turnout by voivodeship, powiat, gmina and polling district; one file family per election.
+coverage: Nationwide election/referendum data from 1990.
+access:
+  endpoint: https://wybory.gov.pl/
+  kind: bulk_file
+  interfaces: [ZIP, CSV, XLSX, HTML]
+  auth: public download
+  cost: free
+  limits: None published. robots.txt of pkw.gov.pl has no Disallow line; wybory.gov.pl serves an HTML page for /robots.txt;
+    danewyborcze.kbw.gov.pl has no robots.txt (404).
+licence:
+  status: unresolved
+  notes: 'Terms: none stated. The probe found no copyright, licence or re-use sentence on https://pkw.gov.pl/ or https://wybory.gov.pl/
+    (footer and legal links searched), and the desk fetch found none on the 2025 "dane w arkuszach" page. Internal use only
+    until PKW/KBW state terms. Attribution if used: "Źródło: Państwowa Komisja Wyborcza" with the election and the file
+    name. Candidate names are public election data; committee-member files (sklad_komisji_obwodowych) are personal data
+    and stay out.'
+updates: 'Per election: files appear with the official results and stay unchanged afterwards (Sejm 2023 files Last-Modified
+  23 Feb 2024).'
+ingestion:
+  history: 'Bulk feature, one site per election: https://wybory.gov.pl/<election>/ redirects to https://<election>.pkw.gov.pl/<election>/
+    (sejmsenat2023, pe2024, samorzad2024, prezydent2025, prezydent20200628 are linked from wybory.gov.pl). Files are /<election>/data/csv/<name>_csv.zip
+    (and <name>_xlsx.zip). The "dane w arkuszach" page is a JavaScript shell: the file names of each election come from
+    its script bundle (/<election>/j/<stamp>.min.js, module csv_links); pe2024 and prezydent2025 add a stamp from data/config.blob
+    (<name>_csv.<ts>.zip); samorzad2024 publishes the sejmik results as XLSX (data/csv/2024-sejmiki-po-<level>[-proc].xlsx).
+    A wrong name returns the HTML shell with status 200 (rejected as not a ZIP). Built (#486, Dev probes 43807885985, 43812026752,
+    43813029784): 25 area-level files of Sejm 2023, EP 2024, sejmiki 2024 and President 2025, docs/sources/pkw.md. Older
+    elections: https://danewyborcze.kbw.gov.pl/ (a static archive; its front page only redirects, content not inventoried).'
+  incremental: 'Static after each election: land once per election (snapshot), version = Last-Modified; add the next election
+    by hand when it is called.'
+  identifiers: Election id (site name), territorial code (TERYT, 6 digits without the gmina type digit), list or candidate number.
+modelling:
+  notes: 'Smallest Gold selection: voivodeship and gmina results files of Sejm 2023, EP 2024, voivodeship assemblies 2024
+    and president 2025. New KPIs: voter turnout (%) and vote share by list or candidate, Poland and voivodeships; new dimension:
+    election (type, date, round). Effort M.'
+  overlap: Sejm API covers activity, not election returns.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Owner question: PKW and KBW publish no reuse terms for the election result files, so the source stays internal (licence
+    unresolved). Do you want a reuse request sent to KBW (text drafted for you), or do you accept the files as official
+    materials with the attribution "Źródło: Państwowa Komisja Wyborcza"?'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): Sejm 2023 files fetched by HEAD
+    (application/zip); file names of the 2024 and 2025 elections not yet listed; danewyborcze.kbw.gov.pl content not inventoried.'
+  - 'TERYT confirmed (Dev probe 43807885985): gmina files carry a 6-digit code without the type digit (the CSV drops the
+    leading zero), powiat files WWPP00, voivodeship files a name (Sejm, EP, President) or WW0000 (sejmiki per-cent file).'
+  references:
+  - https://wybory.gov.pl/
+  - https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/pl/dane_w_arkuszach
+  - https://prezydent2025.pkw.gov.pl/prezydent2025/pl/dane_w_arkuszach
+  - https://danewyborcze.kbw.gov.pl/
+  - https://pkw.gov.pl/

@@ -440,7 +440,7 @@ deliverables:
     - edit: README.md
     steps:
     - 'Append a section ''## Copyright'' with exactly: ''Copyright © 2026 Radosław Utkała. All rights reserved.
-      Source data remain under their providers'' terms (see ingestion/register.yaml).'''
+      Source data remain under their providers'' terms (see ingestion/register/).'''
     acceptance:
     - README.md ends with the Copyright section
     verify:

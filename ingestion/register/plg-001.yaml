@@ -1,0 +1,40 @@
+id: PLG-001
+name: NBP Web API — exchange rates and gold prices
+short_name: NBP exchange rates and gold
+provider: Narodowy Bank Polski (NBP)
+source_system: nbp
+status: silver
+family: C
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [foreign exchange, commodities]
+entities: [currency, country]
+granularity: Quotation/table by currency and effective date; gold price by publication date.
+coverage: FX from 2002-01-02; gold from 2013-01-02.
+access:
+  endpoint: https://api.nbp.pl/en.html
+  kind: api
+  interfaces: [REST API, JSON, XML]
+  auth: public; no key documented
+  cost: free
+  limits: One request may span at most 93 days.
+licence:
+  status: unresolved
+  notes: Public retrieval is documented; commercial redistribution terms were not established.
+updates: Published on NBP quotation dates; revisions are not described.
+ingestion:
+  history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native
+    labels.'
+  incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as
+    source CDC.'
+  identifiers: table type + currency code + effective date; gold date
+modelling:
+  notes: Keep table A/B/C and buy/sell versus mid rates distinct.
+  overlap: Do not combine with market-vendor rates without source/fixing dimensions.
+research:
+  priority: existing
+  evidence: documented
+  connection: not-tested
+  blockers: [Confirm NBP reuse terms.]
+  references: ['https://api.nbp.pl/en.html']

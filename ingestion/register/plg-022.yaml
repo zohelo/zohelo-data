@@ -1,0 +1,52 @@
+id: PLG-022
+name: e-Zamówienia / BZP read API
+short_name: e-Zamówienia BZP
+provider: Public Procurement Office (UZP)
+source_system: uzp_bzp
+status: built
+family: D
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [public procurement]
+entities: [contracting authority, supplier, procurement notice]
+granularity: National procurement notice/statistics and procedure-plan records.
+coverage: Platform-era notices; history/legacy migration need confirmation.
+access:
+  endpoint: https://ezamowienia.gov.pl/pl/integracja/
+  kind: api
+  interfaces: [REST API (BZP WebService), JSON, HTML]
+  auth: 'BZP notice reading needs no access application and is free (API regulations): "Usługa Webservice jest bezpłatna
+    i dostępna jest pod adresem https://ezamowienia.gov.pl/mo-client-board/api/notices/".'
+  cost: free
+  limits: '30 requests a minute (the stated limit, #2981; not found in the instruction ZIP); the instruction (Załącznik
+    3): at most 500 notices a page (PageSize), one notice type per request, SearchAfter paging.'
+licence:
+  status: unresolved
+  notes: 'Terms: API regulations https://media.ezamowienia.gov.pl/pod/2023/01/Regulamin-korzystania-z-API.pdf (version of
+    24 Nov 2023): "W zakresie Webservice nie wymagane jest składanie wniosku dostępowego. Usługa Webservice jest bezpłatna"
+    (BZP read WebService needs no application and is free); other services need OAuth 2.0 client credentials. The regulations
+    matched no licence or attribution clause for the notice data: licence stays unresolved (internal only) until the platform
+    operator (UZP/MRiT) states reuse terms; notices are public procurement information. Submission APIs (MO, PP, MMiA) are
+    out of scope.'
+updates: Notice publication/correction events; publication is not award CDC.
+ingestion:
+  history: 'PROPOSAL: backfill only the BZP notice/statistics read API, which requires no integration procedure; exclude
+    submission/integration APIs.'
+  incremental: 'PROPOSAL: use documented publication/update filters and reconcile notice versions; a notice update is not
+    contract-award CDC.'
+  identifiers: notice ID + OCID/procedure ID + version + authority identifiers
+modelling:
+  notes: Separate plans, notices, results, changes and lots.
+  overlap: Overlaps TED for some notices; join by IDs, never sum notices as contracts.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Licence unresolved: no reuse or attribution text found; the notice data are public under the Public Procurement Law'
+  - Check the BZP WebService instruction (Załącznik 3, ZIP) for paging and update filters in the stage-2 dev trial
+  references:
+  - https://ezamowienia.gov.pl/pl/integracja/
+  - https://media.ezamowienia.gov.pl/pod/2023/01/Regulamin-korzystania-z-API.pdf
+  - https://media.ezamowienia.gov.pl/pod/2022/08/Zalacznik-3-Instrukcja-integracji-z-API-BZP.zip

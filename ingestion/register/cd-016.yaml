@@ -1,0 +1,66 @@
+id: CD-016
+name: OpenCorporates REST and Reconciliation APIs
+short_name: OpenCorporates
+provider: OpenCorporates
+status: reviewing
+family: I
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [business-register, entity-resolution, corporate-filings]
+entities: [enterprise, officer, filing, identifier]
+granularity: Jurisdiction-company number records, officers, filings, statements and provenance.
+coverage: Source-registry dependent; retrieved/updated timestamps do not guarantee full historical snapshots.
+access:
+  endpoint: https://api.opencorporates.com/documentation/API-Reference
+  kind: api
+  interfaces: [API, OpenRefine, JSON, XML]
+  auth: 'API key on every call: free share-alike keys only for Permitted Users (journalists, NGOs, academics); paid
+    non-share-alike keys otherwise.'
+  cost: mixed
+  limits: 'Essentials plan £2,250 a year: up to 500 API calls a month and 200 a day; larger plans and bulk delivery by quote
+    (https://opencorporates.com/pricing/, 26 Nov 2026).'
+licence:
+  status: restricted
+  notes: 'Terms: https://opencorporates.com/terms-of-use-2/ (read by the runner 26 Nov 2026;
+    https://opencorporates.com/terms-of-use/ redirects there): free access to the website is "for personal use only
+    and not for the benefit of a corporation or company"; "For the avoidance of doubt, financial institutions,
+    corporations, government departments and regulatory authorities are not Permitted Users"; "The OpenCorporates API
+    may be used only with an API key. API keys are available in two ways: free of charge to Permitted Users
+    (share-alike keys) and for a fee under our non-share-alike API terms"; "The OpenCorporates database is licensed
+    under the Open Database License". Enterprise API terms
+    (https://opencorporates.com/legal-information/enterprise-api-terms-of-service/): internal-use or
+    external-distribution licence by order form; attribution: "Powered by OpenCorporates" with the logo. Not reusable
+    without a key and its licence: stays internal.'
+updates: Registry-source dependent; update timestamps are available for some records.
+ingestion:
+  history: 'PROPOSAL: backfill only licensed jurisdictions/entities with provenance.'
+  incremental: 'PROPOSAL: use updated_at filters as polling hints plus reconciliation.'
+  identifiers: Jurisdiction code plus company number; map LEI using certified GLEIF files.
+modelling:
+  notes: Source-stamped statements, not a single truth row; officer names are not stable person IDs.
+  overlap: Aggregates national registries and overlaps GLEIF; retain original publisher/terms.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (key or paid licence): OpenCorporates gives free share-alike API keys only to Permitted Users
+    (journalists, NGOs, academics; "corporations" are excluded) who show they contribute back under an open licence,
+    and sells other keys from £2,250 a year (Essentials, 500 calls a month). Apply for a public-benefit share-alike
+    key for zohelo (ODbL share-alike would then apply to what we publish from it), buy a plan, or park CD-016?
+    Recommendation: park; Polish companies come from KRS (PLG-012, built), legal entities worldwide from GLEIF
+    (CD-015) and UK companies from Companies House (CD-014).'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a commercial licence, which is an owner question, so
+    the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+    dev/src_parked1_probe.py, 26 Nov 2026): https://opencorporates.com/terms-of-use-2/, the enterprise API terms,
+    https://opencorporates.com/pricing/ and https://opencorporates.com/legal-entity-data-principles HTTP 200 (quoted
+    in licence.notes and access.limits); https://opencorporates.com/info/licence answered 404; robots.txt of
+    api.opencorporates.com answered 401, so neither the API documentation nor an API call was requested.'
+  - 'Earlier parking reason: commercial API and database licence (ODbL share-alike for open-data projects, paid
+    otherwise)'
+  references:
+  - https://opencorporates.com/terms-of-use-2/
+  - https://opencorporates.com/legal-information/enterprise-api-terms-of-service/
+  - https://opencorporates.com/pricing/
+  - https://api.opencorporates.com/documentation/API-Reference

@@ -1,0 +1,50 @@
+id: PLG-007
+name: State budget acts and execution publications
+short_name: MF state budget
+provider: Ministry of Finance
+source_system: mf_state_budget
+current: true
+status: built
+family: D
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [public finance, budget]
+entities: [country, government unit]
+granularity: Budget year/classification line; monthly execution and annual plan documents.
+coverage: 'Table 1 of the monthly execution reports (sprawozdanie operatywne): cumulative revenue, expenditure, balance and financing by month, and the budget act, 2018 to the newest month (pages 2018–2026 list XLSX; 2010–2017 pages list none); Dev probes 43084312730, 43085156243, 11 Nov 2026.'
+access:
+  endpoint: https://www.gov.pl/web/finanse/budzet-panstwa
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF]
+  auth: public download
+  cost: free
+  limits: Unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+    (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+    attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+    consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+    The XLSX/PDF attachments carry no licence of their own; an attachment marked with other terms keeps them.
+    Attribution: "Źródło: Ministerstwo Finansów, <report title> (<period>)" / "Source: Ministry of Finance,
+    <report title> (<period>)".'
+updates: Monthly reports and annual acts; page modification time is not an observation date.
+ingestion:
+  history: 'The newest report of each year since 2018 (each repeats every month of its year so far): one entity per year (bulk_file years).'
+  incremental: 'Weekday re-download of each year page''s newest report; written only when the SHA-256 changed; the newest report of a year replaces the previous one (latest-only per entity).'
+  identifiers: year + report month + classification + measure
+modelling:
+  notes: Separate plan, amended plan, cumulative execution and flow.
+  overlap: Overlaps Sejm/ELI legal texts and portal mirrors.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Tables 2–20 (revenue and expenditure by part, section and voivode budgets; EU funds budget) are in Bronze but not modelled in Silver yet.'
+  references:
+  - https://www.gov.pl/web/finanse/budzet-panstwa
+  - https://www.gov.pl/web/finanse/sprawozdania-operatywne-miesieczne
+  - https://www.gov.pl/web/gov/prawa-autorskie

@@ -152,11 +152,11 @@ attribution is the publisher's own wording. `unresolved` = terms not established
 | free_use_prg | Free use (GUGiK PRG) | https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/ | Źródło: GUGiK, PRG | true | false |
 | cc0_gleif | CC0 1.0 (GLEIF) | https://www.gleif.org/en/meta/lei-data-terms-of-use | Source: GLEIF | true | false |
 | mf_flat_file | MF VAT list flat file (republication not stated) | https://www.podatki.gov.pl/vat/bezpieczna-transakcja/wykaz-podatnikow-vat/plik-plaski/ | Źródło: Ministerstwo Finansów, Wykaz podatników VAT | false | false |
-| unresolved | Terms not established | https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml | Source: see the source register | false | false |
+| unresolved | Terms not established | https://github.com/zohelo/zohelo-data/tree/main/ingestion/register | Source: see the source register | false | false |
 
 ## source.csv — columns source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
 
-The ten onboarded sources (`source_system` in ingestion/register.yaml). name_pl … block_kind are today's values of
+The ten onboarded sources (`source_system` in ingestion/register/). name_pl … block_kind are today's values of
 `warehouse/models/gold/poc_dim_source.sql`; register_id, provider_type and url (`access.endpoint`) from the register.
 
 | source_key | register_id | name_pl | name_en | publisher | family | block_kind | provider_type | licence_key | url |

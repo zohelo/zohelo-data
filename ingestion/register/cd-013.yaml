@@ -1,0 +1,80 @@
+id: CD-013
+name: ESEF annual financial reports via national OAMs
+short_name: ESEF annual reports
+provider: EU national Officially Appointed Mechanisms
+source_system: xbrl_filings
+status: built
+family: I
+kpi: false
+geography: multicountry-Europe
+provider_type: international-public
+domains: [corporate-filings, company-fundamentals]
+entities: [issuer, annual-report, reported-fact]
+granularity: Annual financial report package, usually XHTML with inline XBRL facts and issuer-specific extensions.
+coverage: 876 Polish filings of 326 issuers through the API, period ends 2020-12-31 to 2024-03-31, added 2021-06-08 to
+  2024-07-30 (Dev trial 43838478762); the repository says it is not complete.
+access:
+  endpoint: https://filings.xbrl.org/docs/api
+  kind: api
+  interfaces:
+  - API
+  - JSON
+  - ZIP
+  - iXBRL
+  auth: None. "Access to the API is provided free of charge." The provider asks for "a user agent that includes a contact
+    email address".
+  cost: free
+  limits: No rate limit stated; page size 30 by default, 1,000 at most; "we reserve the right to alter the API at any time,
+    including applying rate limits or withdrawing it completely" (https://filings.xbrl.org/docs/api, desk reading 12 Nov
+    2026). No robots.txt (404).
+licence:
+  status: unresolved
+  notes: 'Terms: https://filings.xbrl.org/docs/about (read by the runner 12 Nov 2026), section "Terms of use": "At present,
+    there are no restrictions on the ways that the data can be used." The same page ends "© 2021-23 XBRL All Rights Reserved."
+    No licence is named, and commercial reuse and modification are not addressed in words: commercial reuse not stated,
+    modification not stated, so the status is unresolved (the sentence may be accepted by the owner as permission: owner
+    question below). Attribution sentence: none given (working text: "Source: filings.xbrl.org (XBRL International), issuer
+    annual financial reports"). The Polish filings are collected from PAP Biznes (https://filings.xbrl.org/source), whose
+    own portal is CD-008 (restricted); the reports themselves are issuers'' documents. There is no official central repository
+    ("there is no official, central repository for ESEF filings", XBRL International, 20 May 2022). Stays internal.'
+updates: 'Continuous, with a peak each spring; yearly index files are "updated whenever new filings are processed" and carry
+  Last-Modified (filings-2025.json: Wed, 28 Oct 2026 20:53:02 GMT).'
+ingestion:
+  history: 'API: https://filings.xbrl.org/api/filings?filter[country]=PL (JSON:API; tested, one filing returned with period_end,
+    country, fxo_id, date_added, processed, sha256, package_url, json_url, error_count) and /api/entities; bulk index per
+    year https://filings.xbrl.org/indexes/filings-<YEAR>.json (tested, HEAD 200). Load the Polish filing list first; the
+    xBRL-JSON facts (json_url) only for the selected concepts.'
+  incremental: The yearly index files with If-Modified-Since, or the API filtered by country and sorted by date_added; a
+    filing is new by its fxo_id and sha256.
+  identifiers: fxo_id (LEI, period end, ESEF, country, sequence), entity LEI, sha256 of the package; the last path segment
+    numbers language versions and refilings.
+modelling:
+  notes: 'kpi false. Smallest Gold selection, Poland first: number of ESEF annual reports per reporting year for Poland,
+    then revenue and profit or loss from the xBRL-JSON of Polish filers as an entity-level table by LEI (joins GLEIF, CD-015).
+    No voivodeship split (a registered-office region would come from GLEIF). Frequency A only. No suppression markers; a
+    fact may be absent, and error_count and warning_count mark validation problems. Duplicates: one issuer and period can
+    have several filings (language versions, refilings) told apart by the last fxo_id segment: keep the newest per LEI and
+    period_end. No overlap with published KPIs. Size: about 877 Polish filings in the list, a few hundred KB of list JSON
+    (provider''s count, the API filter was tested with one row); the size of the JSON facts is not measured. Effort M.'
+  overlap: PAP Biznes (CD-008) is the origin of the Polish packages; issuer sites and the KNF OAM (CD-006) hold the same
+    reports as files.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (legal reading, does not stop the internal build): filings.xbrl.org says "At present, there are no restrictions
+    on the ways that the data can be used" but names no licence, and its Polish filings are collected from PAP Biznes. Accept
+    that sentence as permission to publish figures taken from Polish ESEF reports with the attribution "Source: filings.xbrl.org
+    (XBRL International), issuer annual financial reports", or keep CD-013 internal?'
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): the API filter for PL answered
+    200 (application/vnd.api+json, 1,502 bytes for one filing); /indexes/filings-2025.json answered 200 with Last-Modified;
+    /about.html redirected to /docs/about with the terms sentence quoted above; robots.txt 404.'
+  - 'Not verified: the count of Polish filings through the API (877 is the source-page figure), the years covered for Poland,
+    the size of a full load of facts, how a refiling is numbered.'
+  references:
+  - https://filings.xbrl.org/docs/api
+  - https://filings.xbrl.org/docs/about
+  - https://filings.xbrl.org/source
+  - https://www.xbrl.org/news/well-over-3000-esef-filings-at-filings-xbrl-org-where-are-they-coming-from-and-how-can-we-improve-access/
+  - https://www.esma.europa.eu/issuer-disclosure/electronic-reporting
