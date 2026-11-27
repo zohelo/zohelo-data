@@ -32,12 +32,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry PLS-002 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry PLS-002 in ingestion/register/pls-002.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. The terms were
       checked on 28 Oct 2026 (decision D23 in docs/decisions.md); this Task only writes them down.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/pls-002.yaml
     steps:
     - 'Terms are settled (architect, 28 Oct, decision D23): the DBW API page states no licence; https://stat.gov.pl/copyright
       allows copying and own analyses provided the source is given, with no named licence. Do not claim CC BY 4.0.'
@@ -55,8 +55,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='PLS-002'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/pls-002.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

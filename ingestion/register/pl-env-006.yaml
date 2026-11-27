@@ -1,0 +1,71 @@
+id: PL-ENV-006
+name: Krajowa Integracja Ewidencji Gruntów i Budynków (KI EGiB) aggregate WFS
+short_name: GUGiK KI EGiB
+provider: GUGiK with county cadastral authorities
+source_system: gugik_egib
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [cadastre, parcels, buildings]
+entities: [parcel, building, cadastral unit]
+granularity: Parcel/building geometries and attributes supplied by participating county WFS services.
+coverage: 2025 service aggregates 385 county WFS sources daily; coverage is only what each county supplies.
+access:
+  endpoint: https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza
+  kind: api
+  interfaces: [WFS 2.0.0, WMS, HTML]
+  auth: None; public aggregate WFS of the county EGiB services.
+  cost: free
+  limits: WFS returns 1,000 features per request by default (CountDefault); resultType=hits returns only the count, so per-county
+    counts need one request per county and feature type, one at a time.
+licence:
+  status: unresolved
+  notes: 'Terms: the EGiB page https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/ (read again by the
+    runner 26 Nov 2026) states no licence and no free-reuse sentence for the aggregated data; the WFS capabilities say Fees
+    "none" and AccessConstraints "none" (26 Nov 2026). Commercial reuse and modification are not addressed, so the licence
+    is unresolved and the source stays internal (licence gate). Attribution if used: "Źródło: GUGiK, Krajowa Integracja
+    Ewidencji Gruntów" with the download date.'
+updates: '"Usługa ta pobiera w cyklu codziennym dane z powiatowych usług pobierania WFS EGiB" (daily pull from the county
+  services); county registers change continuously.'
+ingestion:
+  history: 'Two routes. (1) Bulk: the geoportal module "Pobierz dane" ("Dane do pobrania" > "Dane powiatowe") gives parcels
+    and buildings for the country, a voivodeship or a county as GeoParquet or GPKG; the file URLs are produced inside the
+    map application and were not found in HTML. (2) WFS 2.0 with the feature types ms:dzialki and ms:budynki, 1,000 features
+    per page (capabilities 200, 17,245 bytes from a GitHub runner, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+    12 Nov 2026)). Object counts and bytes not measured; the country has tens of millions of parcels (estimate).'
+  incremental: 'PROPOSAL: source-specific snapshots by county; no trustworthy national change feed.'
+  identifiers: Parcel identifier, building identifier, TERYT/cadastral unit and source county.
+modelling:
+  notes: 'Smallest Gold selection: the number of parcels (ms:dzialki) and buildings (ms:budynki) per county (powiat, TERYT)
+    and for Poland, read with resultType=hits, one snapshot per run date; no geometry is stored, so the storage question
+    of the old parking reason does not arise. Feeds a land-and-buildings measure of dim_geography at powiat level. The count
+    is what the county services supply on the day (completeness differs by county), so it is labelled as a register count,
+    not a census.'
+  overlap: Overlaps BDOT10k buildings and county cadastral systems; do not treat as identical.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915): approved for internal build. The old parking reason (no Gold use, full copy above
+    the free tier) no longer holds: counts per county need no copy. Dev probe run 45813307617 (job 139886485577, branch
+    test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): GetCapabilities HTTP 200 (17,245 bytes, "Zbiorcza
+    usługa EGiB"); GetFeature resultType=hits gives numberMatched 38,924,231 for ms:dzialki and 17,657,662 for ms:budynki
+    for the whole service.'
+  - 'County attribute (Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)): DescribeFeatureType
+    lists no county field. ms:dzialki has ID_DZIALKI, NUMER_DZIALKI, NUMER_OBREBU, NUMER_JEDNOSTKI, NAZWA_OBREBU, NAZWA_GMINY,
+    POLE_EWIDENYJNE, KLASOUZYTKI_EGIB, GRUPA_REJESTROWA, DATA; ms:budynki has ID_BUDYNKU, RODZAJ, KONDYGNACJE_NADZIEMNE,
+    KONDYGNACJE_PODZIEMNE. NUMER_JEDNOSTKI carries the cadastral unit (gmina TERYT with type, e.g. "301908_4"), whose first
+    four digits are the powiat; ID_BUDYNKU starts with the same unit code. Builder, route (1): resultType=hits with a
+    fes:PropertyIsLike filter NUMER_JEDNOSTKI = "<powiat TERYT>%" (ID_BUDYNKU for buildings), one powiat at a time; test
+    on one powiat first that the filtered hits finish and match. Fallback (2) if the aggregate service does not answer filtered
+    hits: the county EGiB WFS services that the aggregate reads (list at https://integracja.gugik.gov.pl/cgi-bin/KrajowaIntegracjaEwidencjiGruntow),
+    resultType=hits per county service. Either way about 2 x 380 requests per snapshot, one at a time.'
+  - 'Licence unresolved: internal only until GUGiK states reuse terms for the aggregate service.'
+  references:
+  - https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/
+  - https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza
+  - https://integracja.gugik.gov.pl/cgi-bin/KrajowaIntegracjaEwidencjiGruntow
+  - https://uldk.gugik.gov.pl/opis.html

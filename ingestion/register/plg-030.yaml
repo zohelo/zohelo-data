@@ -1,0 +1,74 @@
+id: PLG-030
+name: dane.gov.pl open-data catalogue and API
+short_name: dane.gov.pl
+provider: Chancellery of the Prime Minister
+source_system: dane_gov_pl
+status: built
+family: J
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [open data, data catalog]
+entities: [dataset, resource, institution]
+granularity: One catalogue record per dataset (title, publisher, keywords, categories, issued and modified dates, accrual
+  periodicity, high-value flag) with its distributions (format, media type, download URL, byte size, modified).
+coverage: 'Current catalogue only (no history of records): data.europa.eu holds 9,993 datasets harvested from dane.gov.pl
+  (catalogue `dane-gov-pl`, Dev probe run 43831903004, 16 Nov 2026); the newest `modified` among the records shown was 2026-06-15.'
+access:
+  endpoint: https://data.europa.eu/api/hub/search/search?filter=dataset&facets={"catalog":["dane-gov-pl"]}
+  kind: api
+  interfaces: [REST API, JSON, SPARQL]
+  auth: none
+  cost: free
+  limits: 'None published (data.europa.eu FAQ lists the search, SPARQL and registry APIs without limits; the search API
+    is read-only). Plan: one request at a time, a second apart, pages of 100 records (maximum page size to confirm): about 100 requests for the whole
+    catalogue.'
+licence:
+  status: open
+  notes: 'Terms: copyright notice of data.europa.eu, https://data.europa.eu/en/copyright-notice (desk fetch 16 Nov 2026):
+    "To the extent possible under law, the European Union has waived all copyright and related or neighbouring rights
+    to metadata of the open data portal" (CC0 1.0). Commercial reuse and modification: allowed (CC0); no attribution
+    required. Attribution used anyway: "Metadata: data.europa.eu (catalogue dane.gov.pl)". The same page says resources
+    keep "the licence under which the owner has chosen to release them" and that for resources without licence information
+    "users must consult the licence conditions in the original portal"; the distributions read carried no licence value, so no resource content is taken from this entry. The terms of dane.gov.pl itself were not read
+    (the host does not answer runners).'
+updates: 'data.europa.eu harvests national catalogues on its own schedule (not published on the pages read); the catalogue
+  record `dane-gov-pl` showed modified 2023-02-10 and the newest dataset seen was modified 2026-06-15, so the harvest
+  lag is unknown: measure it in the Landing trial (newest `modified` against today). Weekly refresh is enough.'
+ingestion:
+  history: 'API, tested (Dev probe run 43831903004, job 133178972022, branch test/src-r13-probe, script dev/src_r13_probe.py,
+    16 Nov 2026): https://data.europa.eu/api/hub/search/catalogues/dane-gov-pl and /api/hub/search/search with the facet
+    catalog=dane-gov-pl answered 200 JSON from a GitHub runner (count 9,993); dataset keys include id, identifier, title,
+    publisher, modified, issued, accrual_periodicity, categories, keywords, is_hvd, landing_page and distributions (access_url,
+    download_url, format, media_type, byte_size, modified). dane.gov.pl itself (api.dane.gov.pl, dane.gov.pl, www.dane.gov.pl,
+    all 185.41.93.178) does not accept a TCP connection from runners: 20 s timeout in this run, after 75 s timeouts on
+    12 Nov (Dev runs 43282997907 and 43288930412); the official EU republisher is the route. Full load: about 100 pages
+    of 100 records; size not measured (measure in the Landing trial).'
+  incremental: 'Entity = the dane-gov-pl catalogue, version = download time (the API gives no catalogue version). Weekly
+    snapshot of every record, replaced whole (refresh full, small source). Distributions point to api.dane.gov.pl and
+    are not downloaded: each publisher''s data comes from its own register entry.'
+  identifiers: data.europa.eu dataset id (derived from the dane.gov.pl URL, as https-dane-gov-pl-pl-dataset-1650-...),
+    dane.gov.pl dataset number inside it, publisher name, distribution id.
+modelling:
+  notes: 'Entity table of datasets keyed by the dane.gov.pl dataset number (title, publisher, categories, periodicity,
+    high-value flag, modified), plus a distribution table. Smallest Gold selection: number of datasets and of distributions
+    per publisher and per category, monthly by `modified`, Poland only, as draft KPIs in the open-data catalogue domain;
+    and a lookup that tells builders which register entries publish on dane.gov.pl. Mirrored resources are not observations.'
+  overlap: Overlaps nearly every Polish publisher in the register (UTK, ULC, NFZ, URE, Wrocław...); upstream lineage controls
+    onboarding. No KPI of kpi.csv is published here.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Not a route to the resources: every distribution read points to api.dane.gov.pl, which does not answer runners, so
+    PL-ENV-025 (UTK passenger and freight CSVs, datasets 1650-1652), PLG-032 and PL-ENV-028 gain no route from this entry.'
+  - 'Built through data.europa.eu (#3263): harvest lag measured in Dev trial 45827739830 (newest modification 18.8 h
+    old, newest harvest record 13.5 h; median 63 h from modification to harvest record for datasets modified in the
+    last 30 days). Distributions are counted, never downloaded.'
+  references:
+  - https://data.europa.eu/api/hub/search/catalogues/dane-gov-pl
+  - https://data.europa.eu/en/copyright-notice
+  - https://data.europa.eu/en/faq
+  - https://api.dane.gov.pl/doc/
+  - https://dane.gov.pl/pl

@@ -24,7 +24,7 @@ deliverables:
   - Register entry PLG-008 has licence.notes with the terms URL and attribution; status approved
   state: done
   notes:
-  - 'Evidence: licence #1752, register decision #1753 (ingestion/register.yaml status approved)'
+  - 'Evidence: licence #1752, register decision #1753 (ingestion/register/plg-008.yaml status approved)'
 - key: data/src-plg-008/development
   title: MF Treasury debt · Development
   done_when:
@@ -89,7 +89,7 @@ deliverables:
       trial Task proves them from Actions. Schedule (stage 4) comes later: the series is updated monthly.'
     files:
     - create: ingestion/sources/mf_treasury_debt.yaml
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/plg-008.yaml
     - edit: .github/workflows/pipeline.yml
     - edit: docs/sources.md
     steps:
@@ -100,7 +100,7 @@ deliverables:
     - 'Files under extraction.bulk_file.files: one file: entity treasury_debt_series, url_from {page: "https://www.gov.pl/web/finanse/szeregiczasowe",
       pattern: "/attachment/"}, format raw, version last_modified. If the page links several attachments, set url_from.pick
       from the Dev trial''s link list (the trial annotates every match).'
-    - 'Add `source_system: mf_treasury_debt` to register entry PLG-008 in ingestion/register.yaml.'
+    - 'Add `source_system: mf_treasury_debt` to register entry PLG-008 in ingestion/register/plg-008.yaml.'
     - Add mf_treasury_debt to the `source` options list of the workflow_dispatch inputs in .github/workflows/pipeline.yml
       (alphabetical place).
     - 'docs/sources.md: a `mf_treasury_debt` section like world_bank_wdi''s (route, entity, version, restart unit).'

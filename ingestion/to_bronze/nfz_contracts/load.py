@@ -11,7 +11,7 @@ pages do not hold ``meta.count`` agreements with distinct ids. Entities are the 
 Provider identity attributes are left out of Bronze (and Silver): name, NIP, REGON, registry number and place.
 Many NFZ providers are natural persons (individual and group practices of doctors, nurses and midwives), whose name
 and NIP/REGON are personal data; the register entry gives no basis for storing them, and an owner GDPR review is
-needed before any person-level load (as for REGON, register.yaml, and warehouse/dimensions/person.yaml). They stay
+needed before any person-level load (as for REGON, ingestion/register/, and warehouse/dimensions/person.yaml). They stay
 only in the exact Landing bytes; the decoder still requires them to be present (an unknown layout rejects), and
 keeps the NFZ provider code, which identifies a contract party per branch without naming it.
 """

@@ -1,0 +1,68 @@
+id: PLG-019
+name: KNF Public Warning List
+short_name: KNF public warning list
+provider: Polish Financial Supervision Authority (KNF)
+source_system: knf_warnings
+status: built
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [financial regulation, enforcement]
+entities: [enterprise, person]
+granularity: Warning entry with subject, identifiers, prosecutor, legal provision and notes.
+coverage: Cumulative list; first date/history not verified.
+access:
+  endpoint: https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne
+  kind: bulk_file
+  interfaces: [HTML]
+  auth: none
+  cost: free
+  limits: 'None stated; robots.txt of www.knf.gov.pl allows all agents (read 27 Nov 2026). One fixed page holds the
+    whole list (about 800 KB HTML, 668 entries on 27 Nov 2026): one GET per run.'
+licence:
+  status: unresolved
+  notes: 'Terms: none for reuse on https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne (read by the runner 27
+    Nov 2026, HTTP 200; the page links only the privacy policy and an RSS feed). The page states: "Na Liście ostrzeżeń
+    publicznych KNF publikujemy informacje o: złożonych przez Komisję zawiadomieniach o podejrzeniu popełnienia
+    przestępstwa" and criminal proceedings in which the KNF Chair acts as the injured party, and "Brak podmiotu na
+    liście ostrzeżeń publicznych KNF nie zwalnia z powinności sprawdzenia go w wiarygodnych źródłach informacji".
+    Entries are notifications of suspected offences, not findings of guilt. Commercial reuse and modification: not
+    stated. Internal only (licence gate).'
+updates: Updated with notifications and proceeding information, irregularly; no feed or entry dates (page read 27 Nov
+  2026).
+ingestion:
+  history: 'No history at source: the page shows the current list only; history starts with the first snapshot.'
+  incremental: 'Snapshot, weekly (O46), one GET of the page; version = download time, a new Landing file only when the
+    SHA-256 changed; Bronze keeps the reduced columns only (build limits in research.blockers).'
+  identifiers: Section (legal basis) + row number within the snapshot; KRS number where the identifier is one
+modelling:
+  notes: Never infer final liability; model allegation and procedural status over time.
+  overlap: Must not overwrite KRS/CEIDG registry status.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Build limits (data minimisation, decided in this review): store no names and no free text (entity names can name
+    natural persons and the entries are allegations). Per entry keep only: the section (legal basis of the
+    notification, e.g. art. 171 Prawo bankowe), the identifier only when it is a KRS number, the prosecutor''s office,
+    and whether a final judgment is mentioned. Gold: counts of entries by legal basis and prosecutor''s office per
+    weekly snapshot (Poland); the KRS numbers link to the KRS company dimension (PLG-012) as a flag, never by name.
+    Non-blocking owner question: may these counts ever be published? Until then internal (licence `unresolved`).'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was person-data and defamation risk, not a missing route;
+    a fixed public page holds the whole list, so the entry is approved for an internal build within the limits above.
+    Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script dev/src_parked2_probe.py, 27
+    Nov 2026): https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne HTTP 200, 805,623 bytes of HTML, "Liczba
+    znalezionych ostrzeżeń : 668", tables with columns Lp., entity name, identifier (KRS, NIP or REGON), prosecutor''s
+    office, mentions of final judgments, important information; robots.txt allows all; no CSV or XLS export link on
+    the page. The new KNF warning application lop.knf.gov.pl reset the connection (robots.txt unreadable) and was not
+    used. Shape: no entry date is shown, so history accumulates from weekly snapshots; an entry leaves the list when
+    removed (removal = absent in the next snapshot). Size: one page, about 0.8 MB, 668 rows (measured). Not measured:
+    whether every entry is in the first HTML answer without paging (the count line and the 231,629 characters of text
+    suggest it is; the builder checks rows = the count line). Effort S.'
+  - 'Earlier parking reason: list of public warnings about alleged offences naming entities and people, HTML only, no
+    export; republishing risks defamation and context loss'
+  references:
+  - https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne
+  - https://lop.knf.gov.pl/

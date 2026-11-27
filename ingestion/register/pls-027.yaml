@@ -1,0 +1,46 @@
+id: PLS-027
+name: Kultura i dziedzictwo narodowe – annual tables
+short_name: GUS culture tables
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_culture
+status: built
+family: B
+kpi: true
+geography: Poland and voivodeships
+provider_type: national-public
+domains: [culture, heritage, museums, libraries, performing arts]
+entities: [culture institution aggregate, event aggregate, visitor aggregate, territorial unit]
+granularity: Annual table cell by institution type, activity, attendance and geography.
+coverage: Annual publication family; page archive includes multiple editions, exact first structured edition varies.
+access:
+  endpoint: https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
+  kind: bulk_file
+  interfaces: [XLSX, ZIP, PDF, HTML]
+  auth: Public downloads.
+  cost: free
+  limits: No API quota.
+licence:
+  status: open-conditional
+  notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+    and printing data and pages, including own changes and summaries, on condition that the source is given; no
+    named licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for
+    users'' summaries or reworked text. Tables embedding third-party data keep their owners'' terms. Attribution:
+    "Źródło: GUS, Kultura i dziedzictwo narodowe w <year> roku" / "Source: Statistics Poland, Culture and national
+    heritage in <year>".'
+updates: Annual; release may include corrected files.
+ingestion:
+  history: Backfill structured workbooks by edition and retain raw ZIP/PDF.
+  incremental: Poll annually and version replaced workbooks.
+  identifiers: Reference year + table/sheet/category + geography.
+modelling:
+  notes: Institution counts, events and attendance are different facts; visitors may include repeat visits.
+  overlap: Many measures also appear in BDL; use publication tables when dimensions/footnotes are richer.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Curated tables only (Dev probes 43270655323, 43271074887): museum visitors, cinema admissions, cinemas, public library users, public libraries by voivodeship, editions from 2019 (Kultura w <year> roku until 2020, Kultura i dziedzictwo narodowe from 2021; one XLSX in 2025, a ZIP of chapter workbooks before). Other tables of the workbook are in Bronze, not modelled.'
+  references:
+  - https://stat.gov.pl/obszary-tematyczne/kultura-turystyka-sport/kultura/kultura-i-dziedzictwo-narodowe-w-2023-roku%2C2%2C21.html
+  - https://stat.gov.pl/en/copyright/

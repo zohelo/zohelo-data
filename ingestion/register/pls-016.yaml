@@ -1,0 +1,55 @@
+id: PLS-016
+name: e-zdrowie w liczbach dashboards
+short_name: CeZ e-health in numbers
+provider: Centrum e-Zdrowia (CeZ)
+status: reviewing
+family: B
+kpi: true
+geography: Poland; some voivodeship/powiat breakdowns
+provider_type: national-public
+domains: [digital health, e-prescriptions, e-referrals, medical events, preventive care]
+entities: [event-aggregate, prescription-aggregate, referral-aggregate, person-aggregate, territorial unit]
+granularity: Dashboard indicator by period and geography/demographic slice; downloadable structure is product-dependent.
+coverage: Medical events from July 2021; e-prescriptions from 2020; other dashboards vary.
+access:
+  endpoint: https://ezdrowie.gov.pl/portal/artykul/e-zdrowie-w-liczbach-e-recepty
+  kind: web
+  interfaces: [HTML, Power BI publish-to-web report (app.powerbi.com/view)]
+  auth: Public viewing; bulk/API access not documented.
+  cost: free
+  limits: Unknown.
+licence:
+  status: unresolved
+  notes: 'Terms: none for data. Portal footer of https://ezdrowie.gov.pl/portal/home/badania-i-dane: "© 2026 Centrum e-Zdrowia.
+    Wszystkie prawa zastrzeżone." (all rights reserved); no reuse licence on the dashboard pages (checked 11 Nov 2026 from
+    a GitHub runner). Not reusable: stays internal.'
+updates: Dashboard-dependent; no common publication schedule verified.
+ingestion:
+  history: Only ingest if a documented export exists; otherwise retain as research/reference candidate.
+  incremental: Manual catalogue monitoring until a machine-readable export and terms are documented.
+  identifiers: Dashboard indicator + period + geography; link TERYT only where actual codes are supplied.
+modelling:
+  notes: Counts may be events, documents or people; denominators and system adoption affect interpretation.
+  overlap: Overlaps NFZ and ZUS administrative measures, but P1 events represent different workflows.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: Centrum e-Zdrowia publishes "e-zdrowie w liczbach" (e-prescriptions by voivodeship, sex, age and payment
+    since 2020, and the infectious-disease report) only as public Power BI reports, with no file, API or dane.gov.pl dataset,
+    and its portal reads "© 2026 Centrum e-Zdrowia. Wszystkie prawa zastrzeżone." The data reach the public page only through
+    the requests the published report itself makes to the Power BI service (the same kind of "page''s own request" route
+    as D40 and D41, which needs a D row per source). Which do you want: (a) a web-route D row for PLS-016 that reads those
+    report requests politely (one report at a time, monthly, aggregates only, internal while the licence is unresolved),
+    (b) a re-use request to CeZ under the Open Data Act for the monthly tables behind the reports with their reuse terms,
+    or (c) leave the source out?'
+  - 'Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026):
+    both ezdrowie.gov.pl pages answered (text 9,137 and 4,749 characters); the e-recepty page links the report https://app.powerbi.com/view?r=…
+    and no download; dane.gov.pl institution search "e-Zdrowia" gave no CeZ dataset. The report''s own query requests were
+    not read or probed: a web route needs a D row per source (playbook stage 1), so it is offered to the owner as option
+    (a). The "all rights reserved" footer alone is not why the entry waits (it also stands on approved internal entries,
+    e.g. PLS-030); the missing decided route is.'
+  references:
+  - https://ezdrowie.gov.pl/portal/home/badania-i-dane
+  - https://ezdrowie.gov.pl/portal/artykul/e-zdrowie-w-liczbach-e-recepty

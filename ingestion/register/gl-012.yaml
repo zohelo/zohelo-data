@@ -1,0 +1,63 @@
+id: GL-012
+name: World Economic Outlook (WEO) Database
+short_name: IMF WEO
+provider: International Monetary Fund
+status: reviewing
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [macroeconomy, forecasts, fiscal]
+entities: [country, country-group]
+granularity: Country/group/indicator/year and vintage; actuals and forecasts coexist.
+coverage: 1980-present plus mostly five forecast years; gaps vary. Historical forecast archive and vintage appendices
+  are supplied.
+access:
+  endpoint: https://data.imf.org/en/datasets/IMF.RES%3AWEO
+  kind: api
+  interfaces: [HTML, Excel, SDMX 2.1 API, SDMX 3.0 API]
+  auth: portal viewing public; API Swagger requires beta portal sign-in
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+    derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+    its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+    the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+    automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+    provided as is. Attribution: "Source: International Monetary Fund, World Economic Outlook Database, <link
+    to the dataset>".'
+updates: Published twice yearly, April and October; vintages change estimates, forecasts and groups.
+ingestion:
+  history: Load every retained vintage, appendix and historical-forecast package.
+  incremental: Append new vintage; never overwrite prior forecasts. Within-vintage corrections require replacement.
+  identifiers: IMF dataset/dataflow + economy + subject code + year + vintage.
+modelling:
+  notes: Forecast-vintage fact; actual/estimate/forecast status and units are required. Group aggregates are non-additive.
+  overlap: Overlaps WDI and national sources; WEO values are analytical vintages, not interchangeable with latest
+    official observations.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: the IMF terms (https://www.imf.org/en/about/copyright-and-terms, read by the runner 26 Nov 2026) let
+    users "download, extract, copy, create derivative works, publish, distribute, and use Data" with attribution, but also
+    say "The IMF prohibits bulk download of information by automated technology without explicit permission" and "For
+    any potential commercial reuse of IMF Data, email copyright@imf.org to request permission." The IMF''s own API answers
+    GitHub runners (api.imf.org SDMX 2.1 dataflow list HTTP 200; DataMapper API HTTP 200). Do you want to email copyright@imf.org
+    asking for explicit permission to load WEO, IFS and DOTS for Poland, the EU and comparator countries through api.imf.org
+    on a weekly schedule (one request at a time) and to show them on zohelo.com and bi.zohelo.com, or leave the IMF datasets
+    out (Eurostat, OECD, ECB, BIS, World Bank and UNCTAD cover most of the same series and are loaded)?'
+  - 'Re-review 26 Nov 2026 (Task #2916): the parking reason stands and is now an owner question (one question for GL-012,
+    GL-013 and GL-014). Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+    the terms page (8,161 characters) still carries the bulk-download sentence above; https://data.imf.org/en/Resource-Pages/IMF-API
+    points to https://portal.api.imf.org/apis; https://api.imf.org/external/sdmx/2.1/dataflow/all/all/latest HTTP 200
+    (463,527 bytes, SDMX structure) and https://www.imf.org/external/datamapper/api/v1/indicators HTTP 200 (48,417 bytes).
+    Route and licence are otherwise known: with the permission, WEO is built through api.imf.org (SDMX, one dataflow at
+    a time).'
+  references:
+  - https://data.imf.org/en/datasets/IMF.RES%3AWEO
+  - https://data.imf.org/en/Resource-Pages/IMF-API
+  - https://www.imf.org/en/about/copyright-and-terms

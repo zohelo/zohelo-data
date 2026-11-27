@@ -1,0 +1,49 @@
+id: TP-007
+name: PAP free news feed (RSS)
+short_name: PAP
+provider: Polska Agencja Prasowa S.A.
+current: true
+status: reviewing
+family: J
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [news, media-monitoring]
+entities: [headline]
+granularity: 'One feed item: title, link, publication time (pl). Not reachable: www.pap.pl/rss.xml (linked from the home page) answers automated clients with an Incapsula bot-protection page ("Not found"); /biznes/rss.xml is 404 (Dev probe 42784534992, 10 Nov 2026).'
+coverage: Rolling window of the newest items; history accumulates from the first landing (10 Nov 2026).
+access:
+  endpoint: https://www.pap.pl/rss.xml
+  kind: bulk_file
+  interfaces: [RSS, HTML]
+  auth: public
+  cost: free
+  limits: One request per feed every 3 hours (ingestion/sources/news_feeds.yaml).
+licence:
+  status: restricted
+  notes: 'Not assessed: the feed could not be read without circumventing bot protection, which is never done (AGENTS.md). Press publishers'' right (EU directive 2019/790 art. 15, Polish copyright act as amended 2024): a headline with a link and the outlet name; never article text or images (docs/topics.md).'
+updates: Continuous; items roll over within hours to days.
+ingestion:
+  history: None beyond the feed window; accumulates from the first landing.
+  incremental: Every landed copy loaded (accumulating Bronze); Silver deduplicates by canonical URL, then outlet + title.
+  identifiers: canonical URL; guid where given
+modelling:
+  notes: Attention signal for the topics layer (O32), not statistics; kept 400 days in Silver.
+  overlap: GDELT (CD-030) counts the same coverage; never add the two.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: PAP''s free feed https://www.pap.pl/rss.xml still answers automated clients with an Incapsula bot-protection
+    page (HTTP 200, 172 bytes "Not found."), and so does https://www.pap.pl/regulamin, so neither the feed nor PAP''s terms
+    can be read without getting around bot protection, which is never done. Do you want us to write to PAP asking for an
+    allowed way to read the feed (a syndication or partner route, or an exception for one request every 3 hours), or leave
+    PAP out of the news feeds?'
+  - 'Re-review 26 Nov 2026 (Task #2917): Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): robots.txt of www.pap.pl answered (it disallows search, node and paging paths,
+    not /rss.xml); the feed and the terms page returned the bot-protection page; nothing else on the host was asked. GDELT
+    (CD-030, loaded) records pap.pl article links among its sources but not PAP''s feed, so PAP is not contained in it.'
+  references:
+  - https://www.pap.pl/rss.xml
+  - https://www.pap.pl/
+  - https://www.pap.pl/regulamin

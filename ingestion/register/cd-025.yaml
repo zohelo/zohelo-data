@@ -1,0 +1,46 @@
+id: CD-025
+name: Wikimedia MediaWiki Action APIs and dumps
+short_name: Wikimedia
+provider: Wikimedia Foundation and project communities
+source_system: wikimedia_pageviews
+current: true
+status: silver
+family: J
+kpi: false
+geography: worldwide
+provider_type: community-academic
+domains: [encyclopedic-knowledge, media, language]
+entities: [page, revision, category, media-file, editor-account]
+granularity: 'Onboarded scope (topics, O32): daily user pageviews of the Wikipedia articles listed per topic
+  (warehouse/seeds/topic_signal.csv), pl and en. Pages, revisions and dumps are a later scope.'
+coverage: Pageviews per article from July 2015; first landing 455 days back (Dev probe 42784542844, 10 Nov 2026).
+access:
+  endpoint: https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{project}/all-access/user/{article}/daily/{start}/{end}
+  kind: api
+  interfaces: [REST API, JSON, bulk-files]
+  auth: Public read; a user agent with contact information is required.
+  cost: free
+  limits: 'REST API rate limit far above our use (one request per article and day, 0.2 s apart). The hourly
+    pageview dumps are the bulk route but are about 100 GB a year for a few dozen articles.'
+licence:
+  status: open
+  notes: 'Pageview statistics are published as CC0 1.0 (Wikimedia Analytics datasets; Terms of Use
+    https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use). Article text (CC BY-SA) is never fetched.'
+updates: Daily; views of day d are available on d+1. Past days are not revised.
+ingestion:
+  history: 455 days on the first landing per article.
+  incremental: Daily 14-day window per article; every copy loaded (accumulating Bronze), newest value per day in Silver.
+  identifiers: project + article title + day
+modelling:
+  notes: Attention signal for the topics layer; views are summed over a topic's articles in silver.topic_attention.
+  overlap: None.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - Article titles are checked by the run (404 = renamed article, a warning).
+  references:
+  - https://doc.wikimedia.org/generated-data-platform/aqs/analytics-api/reference/page-views.html
+  - https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use
+  - https://meta.wikimedia.org/wiki/User-Agent_policy

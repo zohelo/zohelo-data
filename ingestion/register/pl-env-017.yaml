@@ -1,0 +1,75 @@
+id: PL-ENV-017
+name: CRFOP and BDZP nature-protection spatial services
+short_name: GDOŚ nature protection
+provider: Generalna Dyrekcja Ochrony Środowiska (GDOŚ)
+status: reviewing
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [protected areas, biodiversity, habitats]
+entities: [protected area, species site, habitat]
+granularity: Protected-area boundaries plus protected species/habitat spatial records.
+coverage: Current national services; CRFOP updates depend on regional/local authorities and archive depth is unknown.
+access:
+  endpoint: https://sdi.gdos.gov.pl/wfs
+  kind: api
+  interfaces: [WMS, WFS, SHP via WFS, HTML]
+  auth: Public spatial services.
+  cost: Free public access.
+  limits: None published. GitHub runners got HTTP 403 for https://sdi.gdos.gov.pl/robots.txt (12 Nov and 26 Nov 2026), so
+    nothing else was requested from that host.
+licence:
+  status: unresolved
+  notes: 'Terms: the GDOŚ data page https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych (read 12 Nov 2026) states
+    no licence, no attribution wording and nothing on commercial reuse or modification of the spatial data; the portal footer
+    licence (CC BY-SA 4.0 for text) covers the page text, not the data sets. Limit named on the page: the map data "nie
+    stanowią jednak prawnego ustalenia lokalizacji i przebiegu granicy form ochrony przyrody"; species records are generalised
+    to a 1 km grid. The GDOŚ re-use page was not found. Attribution if used: "Źródło: Generalna Dyrekcja Ochrony Środowiska,
+    Centralny Rejestr Form Ochrony Przyrody" with the download date.'
+updates: Source-dependent updates; authoritative legal acts, not map geometry, determine protected boundaries. No update
+  dates are published for the layers.
+ingestion:
+  history: 'Documented route: the GDOŚ page gives one WFS GetFeature link per layer with outputFormat=shape-zip on https://sdi.gdos.gov.pl/wfs
+    (national parks, landscape parks, reserves, protected landscape areas, Natura 2000 SOO and OSO, nature and landscape
+    complexes, documentation sites, ecological sites, Ramsar areas, ecological corridors; nature monuments in 16 voivodeship
+    files), and WFS/WMS of the BDZP at https://bankdanych.gdos.gov.pl/backend/wfs. Not reachable from the platform: both
+    hosts answered 403 to a GitHub runner (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov
+    2026)); the refusal was not worked around, so sizes and counts are unknown.'
+  incremental: 'PROPOSAL: snapshot layers and compare IDs/geometries; change-data capture was not documented.'
+  identifiers: CRFOP object ID/code, INSPIRE ID where exposed, BDZP record ID and taxon/habitat code.
+modelling:
+  notes: 'Keep legal form/status and effective dates; restrict sensitive occurrence precision as required. kpi false. If
+    reachable: protected-area polygons by form as an entity table and the protected share of each gmina''s area. Stand-in
+    with a route today: EEA Natura 2000 and nationally designated areas (CDDA) through GL-037; protected area in hectares
+    per gmina is in GUS BDL.'
+  overlap: Overlaps Natura 2000 and INSPIRE protected-site reporting (EEA) and GUS BDL protected-area statistics.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: GDOŚ publishes the CRFOP layers (reserves, national and landscape parks, protected landscape areas,
+    Natura 2000, monuments of nature) as shapefile downloads on sdi.gdos.gov.pl, which refuses GitHub runners with HTTP
+    403 (not worked around), and states no reuse terms for them; the two GDOŚ datasets on dane.gov.pl (175 Natura 2000
+    and 485 Geoserwis, both CC0 1.0) only link natura2000.gdos.gov.pl/datafiles, a host name that no longer resolves, and
+    geoserwis.gdos.gov.pl/mapy, which also answers 403. Natura 2000 and nationally designated areas reach
+    us through the EEA (GL-037) and protected area per gmina through GUS BDL. Do you want to write to GDOŚ asking for access
+    from GitHub-runner addresses (or a copy of the shapefiles on dane.gov.pl) and for the reuse terms, or do you accept
+    the EEA and GUS BDL data and leave CRFOP out?'
+  - 'Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026):
+    sdi.gdos.gov.pl robots.txt HTTP 403 again; the GDOŚ page https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych
+    lists the WFS shape-zip links (e.g. TYPENAME=GDOS:Rezerwaty) on that host only. dane.gov.pl dataset 175 ("Baza danych
+    obszarów Natura 2000", CC0 1.0, link http://natura2000.gdos.gov.pl/datafiles) was not probed then.'
+  - 'Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026): dane.gov.pl
+    dataset 175 "Baza danych obszarów Natura 2000" (CC0 1.0, yearly, modified 2019-09-30) has one resource, the HTML link
+    http://natura2000.gdos.gov.pl/datafiles (dated 2016-07-01), and that host does not resolve (DNS "Name or service not
+    known", http and https); dataset 485 "Geoserwis Generalnej Dyrekcji Ochrony Środowiska" (CC0 1.0, daily, modified 2026-02-04)
+    has one resource, http://geoserwis.gdos.gov.pl/mapy/, whose robots.txt answers HTTP 403 (not worked around). Neither
+    gives a reachable file; the CC0 records would apply if GDOŚ restores a reachable copy.'
+  references:
+  - https://www.gov.pl/web/gdos/dostep-do-danych-geoprzestrzennych
+  - https://sdi.gdos.gov.pl/wfs
+  - https://bankdanych.gdos.gov.pl/backend/wfs
+  - https://dane.gov.pl/pl/dataset/175
+  - https://dane.gov.pl/pl/dataset/485

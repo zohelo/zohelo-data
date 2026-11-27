@@ -1,0 +1,61 @@
+id: GL-035
+name: IRENASTAT / Statistics Time Series
+short_name: IRENASTAT
+source_system: irena_stat
+provider: International Renewable Energy Agency
+status: built
+family: G
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [renewable-energy, capacity, generation]
+entities: [country, technology]
+granularity: Country/technology/year measure for renewable capacity and generation; exact dimensions vary by table.
+coverage: Worldwide annual series; starts and technology detail vary.
+access:
+  endpoint: https://pxweb.irena.org/api/v1/en/IRENASTAT
+  kind: api
+  interfaces: ['PxWeb API v1 (JSON table tree; POST queries return JSON-stat, CSV or PX)', IRENASTAT web query tool]
+  auth: none
+  cost: free
+  limits: 'PxWeb default limits apply (unverified for this server: about 10 calls per 10 seconds and a cell limit per query);
+    robots.txt absent (HTTP 404). www.irena.org refuses runners (robots.txt HTTP 403) and is not used for data.'
+licence:
+  status: open-conditional
+  notes: 'Terms: IRENA Terms and Conditions https://www.irena.org/terms-and-conditions (session read, 26 Nov 2026; they apply
+    to "the Website, the IRENA''s Platforms and Tools", IRENASTAT included): "Users may freely access, copy, share, download,
+    reproduce, print and/or view IRENA''s Content for non-commercial purposes, provided that appropriate attribution is given
+    to IRENA." and "No other use shall be made of IRENA''s Content without IRENA''s advanced written permission."; prohibited
+    (2.1(viii)): "attempt to disaggregate any data, material or statistics generated through any of IRENA''s Platforms and
+    Tools"; content attributed to third parties has its own terms; provided "as is" and "as available". Commercial reuse:
+    no (written permission needed); modification: not stated (disaggregation forbidden). Builder: licence.csv key `unresolved`
+    (internal) until the owner question is answered. Attribution: "Source: IRENA (<year>), IRENASTAT Online Data Query Tool,
+    <download date>."'
+updates: Annual statistics releases with possible historical revisions.
+ingestion:
+  history: Archive full release and technology classification.
+  incremental: Replace release/year partitions after publication.
+  identifiers: Country + technology + measure + year; retain on-grid/off-grid and capacity/generation distinction.
+modelling:
+  notes: 'Capacity is stock; generation is flow. Technology parents and children cannot be summed blindly. Smallest Gold selection:
+    the "Power Capacity and Generation" folder, installed renewable capacity (MW) and generation (GWh) by technology for Poland
+    first, then all countries; "Heat Generation" and "Finance" later. Annual. Values are taken as published per technology;
+    no shares or splits are derived below IRENA''s own breakdown (terms 2.1(viii)).'
+  overlap: Overlaps IEA, Eurostat energy statistics (loaded), UN energy and WDI; IRENA has the deeper renewables taxonomy.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2917): approved for internal build. The old parking reasons were the non-commercial terms
+    (not a reason to skip an internal build) and no confirmed machine route; the IRENASTAT PxWeb API is that route. Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026):
+    https://pxweb.irena.org/api/v1/en/IRENASTAT answered HTTP 200 (JSON) with the folders Finance, Heat Generation, Power
+    Capacity and Generation; the tables and their sizes were not listed in this run.'
+  - 'Owner question (does not block the internal build): IRENA allows its data to be copied and shared for non-commercial
+    purposes only, and any other use needs IRENA''s written permission (info@irena.org). Does zohelo.com and bi.zohelo.com
+    count as non-commercial use for you, so that IRENA data may be shown with attribution, or should we ask IRENA for permission
+    first?'
+  references:
+  - https://pxweb.irena.org/api/v1/en/IRENASTAT
+  - https://pxweb.irena.org/pxweb/en/IRENASTAT
+  - https://www.irena.org/terms-and-conditions

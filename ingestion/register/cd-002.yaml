@@ -1,0 +1,63 @@
+id: CD-002
+name: Alpha Vantage Market Data APIs
+short_name: Alpha Vantage
+provider: Alpha Vantage
+status: reviewing
+family: I
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [financial-markets, macroeconomics]
+entities: [security, currency-pair, commodity, country]
+granularity: Time series and reference endpoints for equities, options, FX, crypto, commodities and economic indicators.
+coverage: Documentation advertises long equity histories, but depth and intraday availability vary by endpoint and entitlement.
+access:
+  endpoint: https://www.alphavantage.co/documentation/
+  kind: api
+  interfaces: [API, CSV]
+  auth: 'API key; the free key is for personal, non-commercial use, commercial use needs a written agreement
+    (premium@alphavantage.co).'
+  cost: mixed
+  limits: 'Free key 25 requests a day; premium keys 75 to 1,200 requests a minute at $49.99 to $249.99 a month
+    (https://www.alphavantage.co/premium/, 26 Nov 2026).'
+licence:
+  status: restricted
+  notes: 'Terms: https://www.alphavantage.co/terms_of_service/ (a 4-page PDF, read by the runner 26 Nov 2026). Section 2:
+    the right to use the platform is granted "for personal, non-commercial use, unless you and Alpha Vantage have
+    agreed otherwise in writing"; use is commercial when "You are using the Alpha Vantage Platform as or on behalf of
+    a corporation, firm, partnership, trust or any other association and not as an individual" or "You plan to use or
+    provide information accessed through the Alpha Vantage Platform as part of any type of commercial activity that
+    allows individuals or entities other than User to access information directly or indirectly"; commercial use:
+    premium@alphavantage.co. Section 20: the economic-indicator and commodity APIs use the FRED API and bind the user
+    to the FRED API Terms of Use. No redistribution right and no attribution sentence are stated. Not reusable for
+    public display: stays internal.'
+updates: Market and macro series update at different cadences; revisions are endpoint-specific.
+ingestion:
+  history: 'PROPOSAL: backfill only selected endpoint-series pairs with saved request parameters.'
+  incremental: 'PROPOSAL: poll by source cadence and restate recent observations.'
+  identifiers: Symbol, exchange/currency and timestamp; identifiers require external mapping.
+modelling:
+  notes: Keep vendor technical indicators separate from raw observations; document adjustments.
+  overlap: Overlaps Marketstack, FMP, Nasdaq Data Link and official statistics.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (paid licence): Alpha Vantage''s free key is only for "personal, non-commercial use"; use on
+    behalf of a company or that lets others see the information is commercial and needs a written agreement
+    (premium@alphavantage.co; premium keys from $49.99 a month). Ask Alpha Vantage for a commercial licence for
+    zohelo, or park CD-002? Recommendation: park; its macro series are FRED copies under FRED''s own terms and its
+    share prices are US-centred resold exchange data.'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a commercial licence, which is an owner question, so
+    the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+    dev/src_parked1_probe.py, 26 Nov 2026): terms PDF HTTP 200 (156,583 bytes, quoted in licence.notes);
+    https://www.alphavantage.co/premium/ and https://www.alphavantage.co/realtime_data_policy/ HTTP 200; the
+    documented demo call https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
+    answered HTTP 200 JSON (21,300 bytes, last refreshed 2026-11-25), so the API answers GitHub runners. Polish
+    coverage was not tested (needs a key).'
+  - 'Earlier parking reason: vendor API with restricted-use terms and no blanket redistribution right'
+  references:
+  - https://www.alphavantage.co/documentation/
+  - https://www.alphavantage.co/terms_of_service/
+  - https://www.alphavantage.co/premium/

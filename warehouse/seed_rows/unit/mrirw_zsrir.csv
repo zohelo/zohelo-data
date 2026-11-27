@@ -1,4 +1,4 @@
 unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
-pln_per_tonne,zł/t,PLN per tonne,zł za tonę,false,pln_per_tonne,1,
-pln_per_kg,zł/kg,PLN per kilogram,zł za kilogram,false,pln_per_tonne,1000,
-pln_per_100kg,zł/100 kg,PLN per 100 kilograms,zł za 100 kilogramów,false,pln_per_tonne,10,
+pln_per_tonne,zł/t,PLN per tonne,zł za tonę,false,pln_per_tonne,1,PLN/t
+pln_per_kg,zł/kg,PLN per kilogram,zł za kilogram,false,pln_per_tonne,1000,PLN/kg
+pln_per_100kg,zł/100 kg,PLN per 100 kilograms,zł za 100 kilogramów,false,pln_per_tonne,10,PLN/100 kg

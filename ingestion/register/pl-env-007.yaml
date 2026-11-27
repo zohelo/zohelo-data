@@ -1,0 +1,58 @@
+id: PL-ENV-007
+name: Krajowa Integracja Numeracji Adresowej / PRG address services
+short_name: GUGiK address points
+provider: GUGiK and municipalities
+source_system: gugik_prg
+status: built
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [addresses, geospatial]
+entities: [address point, street]
+granularity: Address points (locality, street, house number, coordinates; attribute list not opened) from the municipal
+  address registers integrated in the PRG.
+coverage: Current national state; the bulk packages carried Last-Modified 12 Nov 2026 (SHP) and 10 Nov 2026 (GML). No history
+  is published.
+access:
+  endpoint: https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+  kind: bulk_file
+  interfaces: [bulk-files, SHP, GML, WMS, HTML]
+  auth: Public download.
+  cost: Free.
+  limits: None published.
+licence:
+  status: open-conditional
+  notes: 'Terms: PRG page https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/ (read 12 Nov 2026), where the
+    address packages are listed: "Dane PRG są dostępne bezpłatnie i do dowolnego wykorzystania." No licence name and no
+    attribution wording; commercial reuse and modification are allowed by that sentence ("do dowolnego wykorzystania").
+    Legal basis: rozporządzenie Rady Ministrów z dnia 16 lipca 2021 r. (Dz.U. 2021 poz. 1373). Attribution: "Źródło: GUGiK,
+    Państwowy Rejestr Granic (adresy)" with the download date.'
+updates: Address data "są aktualizowane na bieżąco w powiązaniu ze zmianami dokonywanymi w ewidencji miejscowości, ulic
+  i adresów"; the national packages carried Last-Modified 12 Nov 2026 (SHP) and 10 Nov 2026 (GML).
+ingestion:
+  history: 'Bulk, stable URLs (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)): https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+    (SHP, 564,429,905 bytes, Last-Modified and ETag sent) and https://opendata.geoportal.gov.pl/prg/adresy/PRG-punkty_adresowe.zip
+    (GML, 804,643,553 bytes). Packages per gmina, powiat and voivodeship come from WMS GetFeatureInfo of https://integracja.gugik.gov.pl/cgi-bin/PanstwowyRejestrGranic.
+    Address layer PRG_PunktyAdresowe_POLSKA: 8,647,096 points, 11 attributes (Dev probes 45810275130, 45811745316, 26 Nov
+    2026; members Deflate64).'
+  incremental: Entity = national SHP package, version = Last-Modified; snapshot, changed_since_last. The file is rebuilt
+    often (Last-Modified on the probe day) and is 0.56 GB, so load monthly and keep only the newest version in the Archive.
+    Add it as an entity of the existing gugik_prg source rather than a new source.
+  identifiers: PRG address identifier + TERYT (TERC, SIMC, ULIC) + house number.
+modelling:
+  notes: 'Addresses are not legal parcel identifiers or current residents. kpi false: reference data. Smallest Gold selection:
+    the number of address points per gmina (TERC), joined by code to dim_geography as an attribute or an entity-snapshot
+    count (like the GLEIF and VAT white list counts); individual points stay in Silver.'
+  overlap: Overlaps TERYT streets and localities (PLS-007) and the PRG boundaries already onboarded (gugik_prg); EGiB buildings
+    (PL-ENV-006) are a different register.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers: []
+  references:
+  - https://www.geoportal.gov.pl/pl/dane/panstwowy-rejestr-granic-prg/
+  - https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+  - https://opendata.geoportal.gov.pl/prg/adresy/PRG-punkty_adresowe.zip
+  - https://www.gov.pl/web/gugik/nowy-adres-uslug-dotyczacych-numeracji-porzadkowej

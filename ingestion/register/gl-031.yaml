@@ -1,0 +1,72 @@
+id: GL-031
+name: ITU DataHub
+short_name: ITU DataHub
+source_system: itu_datahub
+provider: International Telecommunication Union
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [telecommunications, digital-connectivity, prices, infrastructure]
+entities: [country, operator-aggregate, person-aggregate]
+granularity: Country/indicator/year with indicator-specific technology, access, household or sex breakdowns.
+coverage: Global ICT indicators; exact history and country availability vary by series.
+access:
+  endpoint: https://data360api.worldbank.org/data360/data?DATABASE_ID=ITU_DH
+  kind: api
+  interfaces: ['World Bank Data360 REST API (JSON; paging with skip)', 'World Bank Data Catalog CSV resources (dataset
+      0067055)']
+  auth: none
+  cost: free
+  limits: 'None published; one page answers up to 1,000 observations (`count` gives the total, `skip` pages). The producer''s
+    own hosts datahub.itu.int and api.datahub.itu.int refuse runners (robots.txt itself HTTP 403) and are not used.'
+licence:
+  status: unresolved
+  notes: 'Terms: two statements that do not agree, so unresolved and internal until the owner answers. (1) The producer,
+    https://datahub.itu.int/about (session read, 26 Nov 2026): "The Data is licensed to the public through a Creative Commons
+    Attribution-Non-Commercial-ShareAlike 3.0 IGO license." and "Under the terms of this licence, you may copy, redistribute,
+    and adapt the Data for non-commercial purposes, provided the work is appropriately cited." Suggested citation "International
+    Telecommunication Union, ITU DataHub, https://datahub.itu.int/." No ITU name or logo, no implied endorsement, no warranty.
+    (2) The site read, the World Bank: the catalogue page https://datacatalog.worldbank.org/search/dataset/0067055/itu-data-hub
+    (session read, 26 Nov 2026) says "This dataset is licensed under Creative Commons Attribution 4.0", while https://data.worldbank.org/summary-terms-of-use
+    and https://data360.worldbank.org/en/int/about say "Some datasets and indicators are provided by third parties, and may
+    not be redistributed or reused without the consent of the original data provider". Commercial reuse: not allowed by
+    ITU, allowed by the catalogue label; modification: allowed (share-alike under ITU). Builder: licence.csv key `unresolved`
+    (internal).'
+updates: Annual and other indicator updates; no portal-wide revision contract found.
+ingestion:
+  history: Only load explicitly downloadable/licensed tables with metadata.
+  incremental: Reload named releases or changed series; no CDC.
+  identifiers: ITU indicator + economy + technology/breakdown + year.
+modelling:
+  notes: 'Subscriptions, users, coverage, traffic and prices have different denominators and additivity. Smallest Gold selection:
+    the ITU_DH indicators for Poland first (1,139 observations over the 40 Data360 ITU_DH indicators, e.g. ITU_DH_INT_CONN_BAND_MBIT
+    international bandwidth in Mbit/s), then all countries; feeds the existing `internet_users` KPI as a second source (O31)
+    and new draft KPIs for fixed and mobile broadband subscriptions per 100 inhabitants. Annual; values carry OBS_STATUS and
+    OBS_CONF (PU = public) and UNIT_MULT, which must be applied as published (D33).'
+  overlap: Overlaps WDI (IT.NET.USER.ZS and other ITU series, loaded), UNdata SYB 314 Internet usage (loaded), Findex
+    connectivity and SDG indicators; ITU is the custodian/upstream, so a value present in WDI and ITU_DH is one observation
+    with two routes, never added.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2917): approved for internal build through the World Bank''s official republication. Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026):
+    data360api.worldbank.org/data360/indicators?datasetId=ITU_DH answered HTTP 200 with 40 indicator codes; /data360/data?DATABASE_ID=ITU_DH&REF_AREA=POL
+    answered HTTP 200, count 1,139, first page 1,000 rows (737,628 bytes). datahub.itu.int still refuses runners (robots.txt
+    HTTP 403), as on 11 Nov (Dev probe 43099401602); www.itu.int offers only the regional and global aggregates workbook (ITU_regional_global_Key_ICT_indicator_aggregates_Nov_2026.xlsx,
+    122,332 bytes, Last-Modified 4 Nov 2026).'
+  - 'Owner question (does not block the internal build): ITU licenses its DataHub data CC BY-NC-SA 3.0 IGO (non-commercial,
+    share-alike), while the World Bank catalogue labels its copy (dataset 0067055) CC BY 4.0 but also says third-party data
+    "may not be redistributed or reused without the consent of the original data provider". Do you want zohelo to treat the
+    ITU indicators as internal only, or to ask ITU (indicators@itu.int) whether showing them on zohelo.com and bi.zohelo.com
+    is allowed?'
+  references:
+  - https://datahub.itu.int/about
+  - https://data360api.worldbank.org/data360/indicators?datasetId=ITU_DH
+  - https://datacatalog.worldbank.org/search/dataset/0067055/itu-data-hub
+  - https://data.worldbank.org/summary-terms-of-use
+  - https://data360.worldbank.org/en/int/about
+  - https://www.itu.int/en/ITU-D/Statistics/Pages/stat/default.aspx

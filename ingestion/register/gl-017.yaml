@@ -1,0 +1,51 @@
+id: GL-017
+name: UNdata
+short_name: UNdata
+provider: United Nations Statistics Division
+source_system: undata
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [population, national-accounts, energy, environment, trade, health]
+entities: [country, country-group]
+granularity: Legacy data-mart table/series by geography and time; dimensions differ by contributing database.
+coverage: Multicountry sources including UNSD and other UN agencies; histories vary and some marts are legacy
+  editions.
+access:
+  endpoint: https://data.un.org/Default.aspx
+  kind: bulk_file
+  interfaces: [HTML, download handler, legacy web service]
+  auth: public
+  cost: free
+  limits: No numeric quota published. The legacy ExplorerHandler/DownloadHandler now return the UN System Data
+    Commons page (Dev probe 43086552621, 11 Nov 2026); the Statistical Yearbook CSV tables linked from
+    Default.aspx (SYB68; 27 tables of one layout, a few MB each) are used, one page and one file request per table and run.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://data.un.org/Host.aspx?Content=UNdataUse (UNdata Conditions of Use): all data and metadata
+    are free of charge and may be reused provided UNdata is cited as the reference; no named licence; commercial reuse
+    and modification not addressed; data supplied as in the source database, accuracy not guaranteed, use at the user''s
+    sole risk. The UN website terms (https://www.un.org/en/about-us/terms-of-use, personal non-commercial use) cover
+    the UN site, not the UNdata conditions above. Each mart''s source agency may set its own terms. Attribution: "Source:
+    UNdata (data.un.org), <source database / agency>".'
+updates: Update/revision behavior is mart-specific and poorly exposed in the opened catalog.
+ingestion:
+  history: Use only named maintained marts; archive export plus source label and date.
+  incremental: Replace whole mart extracts when changed; no CDC assumption.
+  identifiers: Mart ID + geography + series/dimensions + period; source identifiers outrank labels.
+modelling:
+  notes: Model by contributing mart; do not force heterogeneous tables into one indicator fact.
+  overlap: It mirrors FAOSTAT, IMF, WDI, WHO and others; avoid ingesting both without explicit lineage.
+research:
+  priority: conditional
+  evidence: catalogue-only
+  connection: tested
+  blockers:
+  - 'Assess whether each mart is current'
+  - 'Check the source agency terms of each selected mart; confirm stable download contract'
+  references:
+  - https://data.un.org/Handlers/ExplorerHandler.ashx?t=sources
+  - https://www.un.org/en/about-us/terms-of-use
+  - https://data.un.org/Host.aspx?Content=UNdataUse

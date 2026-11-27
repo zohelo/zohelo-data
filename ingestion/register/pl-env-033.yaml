@@ -1,0 +1,75 @@
+id: PL-ENV-033
+name: Rejestr Wniosków, Decyzji i Zgłoszeń (RWDZ) public search and API
+short_name: GUNB RWDZ building register
+provider: Główny Urząd Nadzoru Budowlanego (GUNB)
+source_system: gunb_rwdz
+status: built
+family: H
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [construction permits, buildings, planning]
+entities: [permit application, decision, construction notification]
+granularity: One record per building-permit application or decision (point feature), in one WFS feature type per year; a
+  record is not an as-built building.
+coverage: WFS feature types pozwolenia_2020 to pozwolenia_2026 plus pozwolenia_pozostale (earlier or undated records); 527,617
+  records for 2024, 519,719 for 2025, 331,852 for 2026 on 12 Nov 2026.
+access:
+  endpoint: https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
+  kind: api
+  interfaces: [WFS, GML, WMS, bulk-files (unverified), HTML]
+  auth: Public, no key.
+  cost: Free.
+  limits: 'None published: the WFS capabilities state no fees and no access constraints. The producer site wyszukiwarka.gunb.gov.pl
+    served a maintenance page ("Przerwa serwisowa - GUNB") in three probes between 18:46 and 20:01 UTC on 12 Nov 2026.'
+licence:
+  status: unresolved
+  notes: 'Terms: none stated. The WFS capabilities (read by the probe 12 Nov 2026) have empty Fees and AccessConstraints
+    and the abstract: "Usługa WFS publikująca Rejestr Wniosków Decyzji i Zgłoszeń. Usługa publikowana jest w infrastrukturze
+    Głównego Urzędu Geodezji i Kartografii na podstawie danych Głównego Urzędu Nadzoru Budowlanego https://wyszukiwarka.gunb.gov.pl/pobranie.html".
+    The GUGiK announcement https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
+    (22 Apr 2022) states no licence; the GUNB site was in maintenance, so its terms are unread. Internal build only. Attribution
+    if used: "Źródło: Główny Urząd Nadzoru Budowlanego, Rejestr Wniosków, Decyzji i Zgłoszeń (usługa GUGiK)". Personal data:
+    the attribute list of the features was not read; fields naming natural persons are left out at Bronze. Dev probe
+    43345366257 (13 Nov 2026) read https://wyszukiwarka.gunb.gov.pl/pobranie.html and the home page: no licence, reuse or
+    terms text on either. The bulk files name investors, designers (name, licence number), addresses and plots: Bronze
+    keeps only register numbers, authority, dates, decision number, voivodeship, TERYT code, kind of investment, object
+    category and cubature (docs/sources/gunb_rwdz.md).'
+updates: Registry updates follow authority filings; the refresh rhythm of the WFS and of the bulk files is not stated.
+ingestion:
+  history: 'Official alternative route, tested: the GUGiK WFS on GUNB data, https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
+    (GetCapabilities 200; feature types ms:pozwolenia_2020 ... ms:pozwolenia_2026 and ms:pozwolenia_pozostale; resultType=hits
+    works per type; GML output). Load per year type with paging (count and startIndex), one request at a time. The twin
+    WMS (.../RWDZ-WMS) is for maps only. Preferred route once it answers: the producer''s bulk files on https://wyszukiwarka.gunb.gov.pl/pobranie.html
+    (named in the WFS abstract; ZIP/CSV per voivodeship expected, unverified), which the builder retries first; the site
+    was in maintenance during all three probes. The RWDZ API documentation host https://dev.wyszukiwarka.gunb.gov.pl/docs
+    answers (title "RWDZ API"), its specification was not found.'
+  incremental: 'Snapshot per year type: closed years once, the current and the previous year weekly; version = download
+    date (the WFS gives none) or Last-Modified of the bulk files.'
+  identifiers: Register number of the application or decision; authority; location (TERYT to confirm in the attribute list);
+    year type.
+modelling:
+  notes: 'Smallest Gold selection: building permits by month of decision and by voivodeship and powiat, from 2020. New KPIs:
+    building-permit decisions and applications per month (count), Poland, voivodeships and powiats. Geometry and address
+    detail are not kept beyond the territorial code. kpi flag stays false until the register-fields table is updated. Effort
+    M (WFS paging of about 0.5 million records per year, GML).'
+  overlap: Complements EGiB/BDOT buildings and planning data; it does not prove construction completion.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43295137219 (job 131451310505, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+    20:01 UTC): the GUGiK WFS answered 200 (capabilities, hits per year type); the attribute list was not read (DescribeFeatureType
+    returned only the type name), so check it for personal data at the Landing trial.'
+  - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+    19:53 UTC) and Dev probe run 43295137219 (job 131451310505, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py,
+    12 Nov 2026, 20:01 UTC): wyszukiwarka.gunb.gov.pl still served the maintenance page (also in run 43282997907 at 18:46
+    UTC), so the bulk files and the terms on the producer site are unread; the builder retries pobranie.html before choosing
+    between bulk files and the WFS.'
+  - 'Licence unresolved: no terms stated on the WFS or the announcement. Internal build only.'
+  references:
+  - https://mapy.geoportal.gov.pl/wss/ext/GlownyUrzadNadzoruBudowlanego/RWDZ-WFS
+  - https://www.gov.pl/web/gugik/nowa-usluga-wfs-zwiazana-z-rejestrem-wnioskow-decyzji-i-zgloszen
+  - https://wyszukiwarka.gunb.gov.pl/pobranie.html
+  - https://dev.wyszukiwarka.gunb.gov.pl/docs

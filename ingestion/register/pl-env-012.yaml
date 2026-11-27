@@ -1,0 +1,77 @@
+id: PL-ENV-012
+name: Groundwater monitoring results (Monitoring Jakości Wód Podziemnych)
+short_name: GIOŚ groundwater
+provider: GIOŚ / Państwowy Instytut Geologiczny–PIB
+source_system: gios_groundwater
+status: built
+family: G
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [groundwater, water quality]
+entities: [monitoring point, sample, aquifer, result]
+granularity: Monitoring-point and sample-level groundwater chemistry/quality results where published.
+coverage: Yearly result pages 1991-2003, 2004-2007 and every year 2008-2025 on mjwp.gios.gov.pl (page list read 12 Nov
+  2026); machine-readable result files 2019-2024 on dane.gov.pl dataset 1405 (12 files, Dev probe 45810873298); the 2025
+  XLSX workbooks of mjwp verified on 12 Nov 2026 only.
+access:
+  endpoint: https://api.dane.gov.pl/1.4/datasets/1405/resources
+  kind: bulk_file
+  interfaces: [HTML, XLSX, CSV, JPG]
+  auth: Public result pages; underlying hydrogeological database access may differ.
+  cost: Free publications.
+  limits: None published.
+licence:
+  status: open-conditional
+  notes: 'Terms (route built, #2870): dane.gov.pl dataset 1405 "Państwowy Monitoring Środowiska - monitoring jakości wód
+    podziemnych", published by GIOŚ (https://dane.gov.pl/pl/dataset/1405, read through https://api.dane.gov.pl/1.4/datasets/1405
+    on 26 Nov 2026, Dev probe 45810255139): license_name "CC BY 4.0" (commercial reuse and modification allowed with
+    attribution). Licence row cc_by_4_0_gios_groundwater, attribution the PMŚ sentence below. Terms of the producer''s
+    portal: stated on the result page https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-2025.html (read 12 Nov 2026,
+    also from a GitHub runner): "Podmioty wykorzystujące udostępnione dane są zobowiązane do podawania źródła udostępnionych
+    danych w następujący sposób: „opracowano na podstawie danych Inspekcji Ochrony Środowiska uzyskanych w ramach Państwowego
+    Monitoringu Środowiska”". Grant: GIOŚ re-use page https://www.gov.pl/web/gios/ponowne-wykorzystywanie (read 12 Nov
+    2026), under the Open Data Act of 11 August 2021 (Dz. U. poz. 1641): "Każdy ma prawo do ponownego wykorzystywania informacji
+    sektora publicznego", re-use being use "w jakimkolwiek celu", for information published "na portalach tematycznych Głównego
+    Inspektoratu Ochrony Środowiska" (the page names no portal; mjwp.gios.gov.pl is the groundwater portal of GIOŚ). No licence is named for the data (the gov.pl footer CC BY-SA
+    4.0 covers the texts of the site, not these files). Commercial reuse: allowed (any purpose). Modification: not named in words;
+    covered by the any-purpose right, with the source line kept. Note to show: "Aktualność udostępnionych informacji zgodna
+    z datą ich przygotowania (marzec 2026)." Attribution: the quoted sentence.'
+updates: 'Yearly: the 2025 results were published on mjwp in March 2026 (files dated 19 March 2026); on dane.gov.pl the
+  yearly files were uploaded 15 Jan 2021 (2019, 2020), 9-14 Dec 2022 (2021), 15 Dec 2023 (2022) and 23 Dec 2024 (2023,
+  2024; update frequency "Rocznie").'
+ingestion:
+  history: 'Bulk by year: each yearly page links XLSX files with hash names (URL changes per release; the stable entry is
+    the page https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-<year>.html). 2025: five workbooks (inorganic indicators,
+    organic indicators and quality classes of operational monitoring; indicators and classes of the nitrate study), for
+    example https://mjwp.gios.gov.pl/g2/oryginal/2026_03/a9590ac1beebee567d198e94179f5a37.xlsx (353,746 bytes) and .../a11519d817605decc04b34db8e993004.xlsx
+    (94,011 bytes), both 200 with Last-Modified and ETag (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+    12 Nov 2026)). For 2024, 2015 and 1991-2003 the probe found no links ending in a file extension, so the files of earlier
+    years are unverified. About 1 MB a year (estimate from the two files). Built route (#2870): mjwp.gios.gov.pl answered
+    every request (pages, robots.txt, the 2025 file URLs) with HTTP 403 and a maintenance page on 26 Nov 2026 (Dev probes
+    45809388367, 45809752001), so the build reads GIOŚ''s own copies on dane.gov.pl dataset 1405: one file per year x
+    indicator group (inorganic, organic) x monitoring kind (diagnostic 2019 and 2022, operational 2020, 2021, 2023, 2024),
+    CSV 2019-2020, XLSX 2021-2024, one row per sample with one column per indicator. Not built: 2025 and 2008-2018 (only
+    on mjwp) and the quality-class workbooks (mjwp only).'
+  incremental: 'Entity = year x workbook, version = Last-Modified; once a year in April read the newest yearly page and
+    land its files (accumulating by year; a re-issued year replaces its entity). Small source: refresh full.'
+  identifiers: Monitoring point number, groundwater body (JCWPd), sampling date/year, parameter and quality class.
+modelling:
+  notes: 'Result sheets and class sheets are different grains; keep detection limits and qualifiers. Grain: monitoring point
+    x indicator x year; points carry coordinates and the groundwater body code, not TERYT (voivodeship only if the sheet
+    has it). Smallest Gold selection: share of monitoring points by quality class I-V per year for Poland as a new KPI in
+    environment.condition (good status = classes I-III).'
+  overlap: No KPI of kpi.csv is published here yet. EEA Waterbase groundwater (GL-037) carries the EU comparison; PIG-PIB
+    hydrogeological bases hold the same network.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - mjwp.gios.gov.pl answered HTTP 403 with a maintenance page on 26 Nov 2026 (Dev probes 45809388367, 45809752001); 2025,
+    2008-2018 and the quality classes wait for it to return (docs/sources/gios_groundwater.md).
+  references:
+  - https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-2025.html
+  - https://mjwp.gios.gov.pl/wyniki-badan/wyniki-badan-1991-2003.html
+  - https://www.gov.pl/web/gios/ponowne-wykorzystywanie
+  - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8887-bazy-danych-monitoring-wod-podziemnych.html

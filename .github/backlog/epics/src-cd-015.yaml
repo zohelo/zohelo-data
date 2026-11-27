@@ -33,12 +33,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry CD-015 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry CD-015 in ingestion/register/cd-015.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://www.gleif.org/en/lei-data/access-and-use-lei-data.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/cd-015.yaml
     steps:
     - Open https://www.gleif.org/en/lei-data/access-and-use-lei-data and the LEI data terms (CC0 1.0); record them.
     - 'Write licence.notes: ''Terms: CC0 1.0, <URL>. Attribution (requested, not required): "Source: GLEIF".'' and
@@ -53,8 +53,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='CD-015'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/cd-015.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

@@ -1,0 +1,47 @@
+id: PLS-017
+name: Biuletyn Statystyczny ochrony zdrowia
+short_name: MZ health statistics bulletin
+provider: Ministerstwo Zdrowia / Centrum e-Zdrowia
+source_system: mz_health_bulletin
+status: built
+family: B
+kpi: true
+geography: Poland and voivodeships, table-dependent
+provider_type: national-public
+domains: [health system, morbidity, hospitals, health workforce]
+entities: [facility-aggregate, health-worker aggregate, patient-aggregate, territorial unit]
+granularity: Annual bulletin table with hospitals, staff and selected morbidity measures.
+coverage: Editions 2000-2025 on the download list (PDF; since 2019 also a tables XLSX; 2000, 2004 and 2005 as RAR).
+access:
+  endpoint: https://ezdrowie.gov.pl/portal/home/badania-i-dane/biuletyn-statystyczny
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF]
+  auth: Public download.
+  cost: free
+  limits: None stated; plain file downloads via /downloadFile/<id> (e.g. /downloadFile/15038).
+licence:
+  status: unresolved
+  notes: 'Terms: no reuse licence on the page; the portal footer reads "© 2026 Centrum e-Zdrowia. Wszystkie prawa zastrzeżone."
+    (checked 11 Nov 2026). The bulletin is Ministry of Health public-sector statistics (Statistical Bulletin of the Ministry
+    of Health), but the site states no licence or attribution text; licence stays unresolved (internal only) until an owner
+    decision or a written confirmation from MZ/CeZ.'
+updates: Annual; the 2025 edition (PDF 4.17 MB, tables XLSX 0.29 MB) was posted on 2025-10-31, the 2024 edition on 2024-10-31,
+  2023 on 2023-11-10.
+ingestion:
+  history: 'Download every edition: XLSX tables 2019-2025 (about 0.3 MB each) and PDF 2000-2018 (0.3-5.8 MB each, about
+    70 MB all PDFs); keep the original files and the posting date.'
+  incremental: Poll the page once a month from October; new edition = new /downloadFile id; version by checksum.
+  identifiers: Edition + table + category + geography + reference year.
+modelling:
+  notes: Separate establishment stocks, beds, personnel headcounts/FTE and cases.
+  overlap: May duplicate GUS health publications and sector-register counts with different reference dates.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Licence unresolved: needs an owner decision or MZ confirmation before public display'
+  - Use the XLSX tables from 2019; earlier editions are PDF only (page-level extraction not tested)
+  - Assess workbook schema drift between editions
+  references:
+  - https://ezdrowie.gov.pl/portal/home/badania-i-dane

@@ -1,0 +1,61 @@
+id: GL-018
+name: Global SDG Indicators Database and API
+short_name: UN SDG Indicators
+source_system: un_sdg
+provider: United Nations Statistics Division
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [sustainable-development, population, economy, health, environment]
+entities: [country, region, person-aggregate]
+granularity: Indicator/series/geography/time with SDG disaggregations, nature/status and source attributes.
+coverage: Global reporting for the 2030 Agenda; time and country coverage vary by indicator.
+access:
+  endpoint: https://unstats.un.org/sdgs/indicators/database/archive
+  kind: bulk_file
+  interfaces: ['bulk CSV ZIP per release state on the database archive page (<release>_AllData_After_<date>_CSV.zip, newest
+      first)', 'SDG API v1 (JSON: Goal/List, Series/List, Series/Data per series code)', Swagger, HTML]
+  auth: public
+  cost: free
+  limits: None published; one series at a time.
+licence:
+  status: unresolved
+  notes: 'Terms: none for the database. The SDG data portal and indicator database pages are JavaScript shells (https://unstats.un.org/sdgs/dataportal
+    gave 5 characters of text and https://unstats.un.org/sdgs/indicators/database/ none to the runner on 26 Nov 2026), and
+    the API states no licence; the UN website terms (https://www.un.org/en/about-us/terms-of-use, read 28 Oct 2026: personal,
+    non-commercial use) are website terms. The UNdata terms (https://data.un.org/Host.aspx?Content=UNdataUse, read by
+    the runner 26 Nov 2026: "All data and metadata provided on UN data''s website are available free of charge and may
+    be copied freely, duplicated and further distributed provided that UN data is cited as the reference.") cover data.un.org,
+    not this API. Commercial reuse and modification: not stated, so unresolved and internal. Many series come from custodian
+    agencies with their own terms. Attribution if published: "Source: UN DESA, Global SDG Indicators Database, https://unstats.un.org/sdgs/dataportal".'
+updates: Custodian submissions and global releases revise past observations; cadence varies by series.
+ingestion:
+  history: Snapshot global release, data structures, codelists and metadata.
+  incremental: Reload release partitions or changed indicator-period keys; no CDC.
+  identifiers: SDG series code + geoAreaCode + timePeriod + complete disaggregation key.
+modelling:
+  notes: 'Smallest Gold selection: the SDG series reported for Poland (geoAreaCode 616) and the EU countries, one measure per
+    series code and frequency (mostly annual), with the disaggregation key as breakdown; ratios, rates and regional aggregates
+    are non-additive; keep the nature (C, CA, E, M, G, N) and reporting-status attributes. Series that are already loaded
+    from their custodian (WHO, ILO, FAO, UNESCO, World Bank) stay published from the custodian.'
+  overlap: Custodian sources overlap WHO, ILO, FAO, UNESCO, UNICEF, WDI and Eurostat SDG sets.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2916): approved for internal build. The parking reason (no database licence) is not a reason
+    to skip an internal build; the route is the SDG API. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+    https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?includechildren=false HTTP 200 (7,910 bytes JSON); Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+    https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false HTTP 200 (181,379 bytes JSON).'
+  - 'Licence unresolved: internal only until UNSD states reuse terms for the database (non-blocking owner option: ask statistics@un.org).'
+  - 'Built (#3316, docs/sources/un_sdg.md): the release''s bulk CSV ZIP from the database archive page instead of the API
+    (713 Series/Data requests and 68 minutes for Poland and the EU, Dev probe 45924741004). Release 2026.Q3.G.01: 3,198,008
+    rows, 713 series, 406 areas; Bronze keeps every row, Silver and Gold the 27 EU countries (Poland among them).'
+  references:
+  - https://unstats.un.org/sdgs/indicators/database/archive
+  - https://unstats.un.org/SDGAPI/swagger/
+  - https://unstats.un.org/sdgs/dataportal
+  - https://www.un.org/en/about-us/terms-of-use

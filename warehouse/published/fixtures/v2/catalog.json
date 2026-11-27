@@ -1696,7 +1696,7 @@
     {
       "licence_key": "unresolved",
       "name": "Terms not established",
-      "url": "https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml",
+      "url": "https://github.com/zohelo/zohelo-data/tree/main/ingestion/register",
       "attribution_text": "Source: see the source register",
       "commercial_ok": false,
       "share_alike": false

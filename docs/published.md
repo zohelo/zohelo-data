@@ -66,7 +66,7 @@ strings in ISO 8601 UTC.
 | kpis[].status | string | yes | KPI status |
 | domains | array | yes | the taxonomy; each entry has the columns of `warehouse/seeds/domain.csv` |
 | units | array | yes | the units; each entry has the columns of `warehouse/seeds/unit.csv` (strings; `is_rate` boolean), including `base_unit_key` and `factor` (D33, additive since 12 Nov 2026: one unit is `factor` base units, an exact decimal as a string, e.g. `mln_usd` = `1000000` × `usd`) |
-| units[].symbol_en | string | optional | English symbol, only where `symbol` is a Polish word or abbreviation (`os.` → `persons`, `os./km²` → `persons/km²`); left out for true symbols (`%`, `zł`, `EUR`). English pages show it instead of `symbol`; `symbol` is unchanged. Additive since 27 Nov 2026 (#2556); also in v2 `units[]` |
+| units[].symbol_en | string | optional | English symbol, only where `symbol` is a Polish word or abbreviation (`os.` → `persons`, `os./km²` → `persons/km²`); `zł` symbols → `PLN` (`zł/kWh` → `PLN/kWh`, `mln zł` → `million PLN`); left out for true symbols (`%`, `EUR`). English pages show it instead of `symbol`; `symbol` is unchanged. Additive since 27 Nov 2026 (#2556); also in v2 `units[]` |
 | sources | array | yes | one entry per source |
 | sources[].source_key | string | yes | source key |
 | sources[].name_pl | string | yes | Polish name |

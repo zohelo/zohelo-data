@@ -1,0 +1,61 @@
+id: PL-ENV-018
+name: Bank Danych o Lasach (BDL) OGC services
+short_name: Lasy Państwowe forest data
+provider: Lasy Państwowe
+source_system: lasy_bdl
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [forestry, land cover, recreation]
+entities: [forest compartment, forest boundary, tourism object, fire road]
+granularity: Forest boundaries/compartments and selected tourism/fire-road vector features; other themes are view-only.
+coverage: Current nationwide forest resource; archive/version depth not documented.
+access:
+  endpoint: https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows
+  kind: api
+  interfaces: [WFS 2.0.0 (GeoServer), OGC API Features, WMS, WMTS]
+  auth: None.
+  cost: free
+  limits: None published; the WFS capabilities set CountDefault 1,000,000 features per request.
+licence:
+  status: unresolved
+  notes: 'Terms: Regulamin of the Forest Data Bank https://www.bdl.lasy.gov.pl/portal/regulamin (read by the runner 26 Nov
+    2026; English https://www.bdl.lasy.gov.pl/portal/regulamin-en): "Access to the services referred to in chapter II is
+    public and free of charge"; use by entities other than administrative bodies "is subject to the rules on the re-use
+    of public information"; the user must "inform about the source, the time of creating and accessing public sector information"
+    and "forward unprocessed information to other users"; "The data presented on map services is illustrative only and cannot
+    be treated as an official document." The footer reads "© 2014-2026 Bank Danych o Lasach. All rights reserved." Commercial
+    reuse and modification are not stated, so the licence is unresolved and the source stays internal. Attribution: "Źródło:
+    Bank Danych o Lasach, Lasy Państwowe" with the date of creation and of download.'
+updates: Layer-specific cadence unknown.
+ingestion:
+  history: 'Documented route: OGC services (WMS, WMTS, WFS, OGC API Features) listed on https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1;
+    the page answered 200 (75 KB) from a GitHub runner but the endpoint URLs are not HTML links, so none was tested (Dev
+    probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)). The hosts have no robots.txt (404).
+    Sizes unknown.'
+  incremental: 'PROPOSAL: snapshot downloadable layers and compare IDs/geometries; no change-data capture is documented.'
+  identifiers: Forest address/compartment IDs and layer-native feature IDs.
+modelling:
+  notes: 'Smallest Gold selection: forest districts (BDL:Nadleśnictwa) and regional directorates (RDLP) as entity tables
+    with their codes and area, and the forest-district area as a measure; the forest-range layer (BDL:Leśnictwa) only if
+    needed. Forest area and cover per gmina stay with GUS BDL (no overlap in grain).'
+  overlap: Overlaps BDOT10k/land-cover forests conceptually but is a forest-management source.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915): approved for internal build. The Regulamin is now read and quoted, and the WFS
+    answers: Dev probe run 45815892766 (job 139895407895, same branch, argument `three`, 26 Nov 2026): GetCapabilities HTTP
+    200 (102,856 bytes, feature types BDL:Leśnictwa and others, CountDefault 1,000,000). Dev probe run 45813307617 (job
+    139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the services page lists the
+    WFS https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows (forest ranges, districts, RDLP, stands per RDLP) and OGC API Features.'
+  - 'Builder: the hits and GetFeature requests of the probe failed on our own URL encoding of "Nadleśnictwa" (UnicodeEncodeError),
+    not at the host; percent-encode the type name.'
+  - 'Licence unresolved: internal only until Lasy Państwowe confirm commercial reuse and modification.'
+  references:
+  - https://www9.bdl.lasy.gov.pl/portal/uslugi-ogc?v=1
+  - https://www.bdl.lasy.gov.pl/portal/regulamin
+  - https://www.bdl.lasy.gov.pl/portal/regulamin-en

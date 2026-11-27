@@ -1,0 +1,55 @@
+id: PLS-034
+name: Programme implementation and payment statistics
+short_name: ARiMR payment statistics
+provider: Agencja Restrukturyzacji i Modernizacji Rolnictwa (ARiMR)
+source_system: arimr_payments
+status: built
+family: D
+kpi: true
+geography: Poland and regional Poland, programme-dependent
+provider_type: national-public
+domains: [agricultural support, CAP payments, rural development]
+entities: [beneficiary aggregate, application aggregate, payment aggregate, territorial unit, programme]
+granularity: Published aggregate programme indicator such as applications, decisions, beneficiaries or amounts;
+  source pages vary.
+coverage: CAP/programming-period dependent; no single unified historical catalogue verified.
+access:
+  endpoint: https://www.gov.pl/web/arimr
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF]
+  auth: Public aggregate reports/materials.
+  cost: free
+  limits: Unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+    (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+    attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+    consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+    The report files carry no licence of their own; each direct-payment report states "Wykorzystanie danych możliwe
+    za podaniem źródła." (use of the data is possible with the source named; probe 43345651745). Aggregate
+    statistics only; personal beneficiary data stay out of scope. Attribution: "Źródło: ARiMR, <report title>
+    (<date>)" / "Source: Agency for Restructuring and Modernisation of Agriculture (ARiMR), <report title> (<date>)".'
+updates: Campaign/programme-dependent; frequent operational updates for some schemes.
+ingestion:
+  history: Curate aggregate statistics only after identifying stable named report families.
+  incremental: Poll programme statistics pages and retain reporting cutoff dates.
+  identifiers: Programme/intervention + campaign/year + geography + measure + status/cutoff date.
+modelling:
+  notes: Applications, approved beneficiaries and paid amounts are different lifecycle facts; cumulative updates
+    must not be summed.
+  overlap: Can overlap EU CAP transparency and GUS farm statistics; administrative support population differs
+    from all farms.
+research:
+  priority: conditional
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Curated selection only (Dev probes 43343134150, 43345651745): the index page links 13 scheme pages whose attachments are all PDF (no XLSX/CSV; api.dane.gov.pl timed out from the runner). Built: the monthly "Płatności bezpośrednie" report (newest and every year-end report), applications, decisions and amounts paid by campaign and voivodeship, cumulative as of the report date (newest report wins; open campaigns provisional). Not modelled: PS WPR 2023-2027 intervention reports, national aid, RDP 2014-2020 / 2007-2013 measures, KPO, fisheries and market-mechanism pages.'
+  - No beneficiary-level data: only voivodeship aggregates reach Bronze; the report footers (names of the ARiMR staff responsible) stay in the Landing file.
+  references:
+  - https://www.gov.pl/web/arimr
+  - https://www.gov.pl/web/arimr/wdrazane-programy-i-dzialania---dane-liczbowe
+  - https://www.gov.pl/web/arimr/platnosci-bezposrednie2
+  - https://www.gov.pl/web/gov/prawa-autorskie

@@ -1,0 +1,64 @@
+id: PLG-031
+name: Justice system statistical database (ISWS)
+short_name: ISWS justice statistics
+provider: Ministry of Justice
+source_system: ms_isws
+status: built
+family: F
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [courts, justice statistics]
+entities: [court, case category, person-aggregate]
+granularity: Multi-year tables (one workbook per topic) of the common courts, prosecution-related and notarial statistics;
+  national, some by court level, appeal area or district.
+coverage: Titles span 1946-2025; most multi-year workbooks run to 2025 (e.g. adoptions 2000-2025, notarial acts 1991-2025).
+access:
+  endpoint: https://isws.ms.gov.pl/pl/baza-statystyczna/
+  kind: bulk_file
+  interfaces: [XLS, PDF, HTML]
+  auth: public download
+  cost: free
+  limits: None published; robots.txt has no Disallow line.
+licence:
+  status: open-conditional
+  notes: 'Terms: the Ministry of Justice re-use page https://www.gov.pl/web/sprawiedliwosc/ponowne-wykorzystywanie (desk
+    fetch 12 Nov 2026; the tool returned fragments): conditions are the "obowiązek poinformowania o źródle pochodzenia,
+    czasie wytworzenia i pozyskania informacji od Ministerstwa Sprawiedliwości" and the "obowiązek poinformowania o przetworzeniu
+    informacji ponownie wykorzystywanej"; "Informacje sektora publicznego są udostępniane w celu ich ponownego wykorzystywania
+    bezpłatnie."; the Ministry "nie ponosi odpowiedzialności za dalsze udostępnianie lub ponowne wykorzystywanie". Commercial
+    and non-commercial reuse are both foreseen (a request names the purpose); modification must be stated. This is the Ministry-wide
+    page; isws.ms.gov.pl itself shows no terms (probe: no legal link, no licence sentence on the hub). Attribution: "Źródło:
+    Ministerstwo Sprawiedliwości, Informator Statystyczny Wymiaru Sprawiedliwości, <tytuł>, pozyskano <data>". dane.gov.pl
+    record 625 was not readable (api.dane.gov.pl timed out from the runner).'
+updates: 'Annual: the multi-year workbooks are extended by a year (2025 present on 12 Nov 2026); the yearly statistical
+  report is a PDF (2025 edition present).'
+ingestion:
+  history: 'Bulk files linked from HTML: https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/ lists 88 workbooks
+    as download,2853,<n>.html (answered as attachments named *.xls, 11-72 KB each in the three checked; Content-Type application/unknown);
+    /publikacje/ lists 66 PDFs (download,2779,<n>.html; the 2025 report is 3.6 MB). <n> is the position in the list, so
+    the entity is the attachment file name (Content-Disposition), not the URL. No API.'
+  incremental: Snapshot of the listing; version = file name plus bytes (no Last-Modified seen); re-read yearly after the
+    spring update, monthly check of the listing.
+  identifiers: Attachment file name; table title; year; court level or area where present.
+modelling:
+  notes: 'Smallest Gold selection: the multi-year workbooks on court caseload and case duration plus adoptions and notarial
+    acts (annual, Poland). New KPIs: cases received and resolved by the common courts, average case duration, final convictions
+    of adults. Court areas do not map to voivodeships, so Poland only at first. Files are named .xls: the shared XLSX decoder
+    (ingestion/common/xlsx_cells.py) does not read the old Excel format, so a reader is needed if the bytes are BIFF (not
+    inspected). Effort M.'
+  overlap: May overlap GUS justice tables; retain ministry definitions.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): hub, both listings and three
+    workbook downloads answered 200 to a GitHub runner; workbook layout and byte format (.xls) not inspected.'
+  - 'Build (#2968): Dev probe 43797252172 (16 Nov 2026) read all 88 workbooks; four are landed (caseload, duration,
+    adoptions, notarial acts; .xlsx except notarial acts .xls). Adult convictions are left out: the 1946-2019 table
+    is a Word document and the 2002-2020 workbook is no longer extended.'
+  references:
+  - https://isws.ms.gov.pl/pl/baza-statystyczna/opracowania-wieloletnie/
+  - https://isws.ms.gov.pl/pl/baza-statystyczna/publikacje/
+  - https://www.gov.pl/web/sprawiedliwosc/ponowne-wykorzystywanie
