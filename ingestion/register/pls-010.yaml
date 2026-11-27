@@ -1,0 +1,62 @@
+id: PLS-010
+name: Rocznik Statystyczny Ubezpieczeń Społecznych
+short_name: ZUS social insurance yearbook
+provider: Zakład Ubezpieczeń Społecznych (ZUS)
+source_system: zus_yearbook
+current: true
+status: built
+family: B
+kpi: true
+geography: Poland and regional breakdowns, edition-dependent
+provider_type: national-public
+domains: [social insurance, pensions, benefits, contributions]
+entities: [person-aggregate, payer-aggregate, territorial unit]
+granularity: Annual table cell within statistical yearbook; breakdowns vary by edition.
+coverage: Multiple yearbook editions; exact earliest digital edition not verified.
+access:
+  endpoint: https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
+  kind: bulk_file
+  interfaces: [HTML, PDF, XLSX]
+  auth: Public downloads.
+  cost: free
+  limits: Unknown.
+licence:
+  status: unresolved
+  notes: 'Terms not stated for the yearbook page or in the PDF editions (no re-use statement in the 2009-2011 and
+    2021-2023 front matter, Dev trial 43856643415), as for psz.zus.pl (review of #2846): the ZUS re-use terms cover
+    information on its BIP and dane.gov.pl, and the yearbook page www.zus.pl/baza-wiedzy is neither. Earlier reading,
+    kept for the owner: ZUS re-use terms
+    https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego:
+    everyone may re-use, without a request and free of charge, public sector information that ZUS publishes (the page
+    names its BIP and dane.gov.pl; the statistical portal and yearbooks are ZUS public information under the same
+    regime), for commercial or non-commercial purposes; the re-user must give the source, the date the information was
+    created and the date it was obtained, say whether it is used in whole or in part, and disclose any processing; ZUS
+    is not liable for processed information. No named licence. Attribution: "Źródło: ZUS, Rocznik Statystyczny
+    Ubezpieczeń Społecznych <rok>, pobrane <data>" / "Source: ZUS, Social Insurance Statistical Yearbook <year>,
+    retrieved <date>"; mark processed figures as processed.'
+updates: Periodically issued yearbook; revisions and schedule unknown.
+ingestion:
+  history: Load available editions and deduplicate repeated historical tables by edition/reference year.
+  incremental: Poll publication page for new edition.
+  identifiers: Edition + table + category + reference period + geography.
+modelling:
+  notes: Preserve edition and footnotes; repeated historical values may be revised.
+  overlap: Curated annual synthesis of Portal Statystyczny topics; avoid double-counting identical observations.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Built (#434): the PDF editions 2009-2011 to 2021-2023 landed whole (ingestion/to_landing/zus_yearbook), their
+    text layer in Bronze line by line (pypdf layout mode), Silver tables found by title: contribution payers (Tabl.
+    8) and insured persons (Tabl. 9) by voivodeship at 31 December, 2009-2023. No XLSX, CSV or dane.gov.pl copy of
+    the yearbook was found (Dev probe 43326914693); psz.zus.pl has insured persons and payers by voivodeship only
+    for the current year''s quarters, so the annual history is not contained in zus_psz. robots.txt of www.zus.pl:
+    "User-Agent: *", empty "Disallow:" (Dev trial 43856643415). Not built: the pension tables by voivodeship
+    (Tabl. 37 (59) of 2021-2023; their numbers break apart in the layout text of the 2009-2011 edition), finance,
+    benefits, medical certification and rehabilitation tables.'
+  - 'Dev probe 43087698750: the yearbook page offers PDF editions only (1999-2002 to 2021-2023), no XLSX or CSV; the same figures are on the ZUS statistical portal (PLS-009) as XLSX. Build from PLS-009; PDF table extraction not planned.'
+  - Verify downloadable formats and earliest edition
+  references:
+  - https://www.zus.pl/baza-wiedzy/statystyka/rocznik-statystyczny-ubezpieczen-spolecznych
+  - https://www.zus.pl/web/biuletyn-informacji-publicznej/obsluga-klienta/ogolne-zasady-zalatwiania-spraw/ponowne-wykorzystywanie-informacji-sektora-publicznego

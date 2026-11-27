@@ -1,0 +1,66 @@
+id: PL-ENV-015
+name: MIDAS mineral deposits and mining areas database
+short_name: PIG-PIB MIDAS deposits
+provider: PIG-PIB
+source_system: pig_midas
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [minerals, mining, geology]
+entities: [deposit, mining area, concession]
+granularity: Deposit, mining area/land and concession records with geometry.
+coverage: Current national state of documented deposits, mining areas and mining terrains, plus selected archival layers
+  (deposits removed from the balance, former mining areas and terrains); no dated versions.
+access:
+  endpoint: https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer
+  kind: api
+  interfaces: [WFS, ArcGIS REST, HTML, map, bulk-files, SHP]
+  auth: Public WFS and search application; the SHP packages of the download manager are sent to an e-mail address.
+  cost: Free.
+  limits: None published; no default feature count in the capabilities.
+licence:
+  status: open-conditional
+  notes: 'Terms: PIG-PIB rules for re-use of public sector information https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
+    (read 12 Nov 2026; under the Open Data Act of 2021): information is provided for re-use "co do zasady, bezpłatnie";
+    the user must give "źródle, czasie wytworzenia i pozyskania informacji publicznej", say when the information was processed
+    and whether all or part was used, and pass the terms on to recipients; using the information counts as accepting the
+    offer. The rules set no separate limit on commercial use (a request only states whether the purpose is commercial);
+    modification is allowed when disclosed. PIG-PIB accepts no liability for use, interpretation or processing. The WFS
+    capabilities point to the same rules ("Zasady wykorzystania danych z bazy MIDAS"), and so does the MIDAS rules page
+    https://www.pgi.gov.pl/midas/zrodla-danych.html (read 26 Nov 2026, Dev probe 45817073166): the MIDAS data "stanowią
+    informację sektora publicznego. Zasady ponownego wykorzystywania informacji sektora publicznego będących w posiadaniu
+    PIG-PIB określone są pod adresem: https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html";
+    the page adds "Korzystanie z zasobów aplikacji oznacza akceptację Zasad wykorzystywania informacji". Attribution: "Źródło: Państwowy Instytut Geologiczny - PIB, System Gospodarki i Ochrony Bogactw Mineralnych
+    Polski MIDAS" with the date of the data and the download date.'
+updates: Maintained continuously; the download manager carries daily dated packages (cbdg_midas_zloza_2026_11_12.zip), so
+  the layers change about daily. The yearly balance of mineral resources is the official reference state.
+ingestion:
+  history: 'API: WFS https://cbdgmapa.pgi.gov.pl/arcgis/services/midas/MapServer/WFSServer?service=WFS&request=GetCapabilities
+    answered 200 (16,446 bytes) from a GitHub runner with six feature types: documented deposits, mining areas, mining terrains
+    and three archival layers (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)); a GetFeature
+    full load was not run. Sizes from the download manager''s catalogue: deposits 7.01 MB, mining areas 1.77 MB, mining
+    terrains 1.72 MB, removed deposits 0.95 MB zipped SHP, so a full load is a few requests per layer. The same data as
+    SHP ZIP sit in https://dm.pgi.gov.pl/, delivered by e-mail link only.'
+  incremental: 'Entity = feature type, version = download date (the WFS gives none); monthly full snapshot per layer (changed_since_last
+    by SHA-256). Small source: refresh full.'
+  identifiers: MIDAS deposit number, mining-area/land ID, concession number where published.
+modelling:
+  notes: 'Separate deposit, mining area and mining terrain; preserve legal status and effective dates. kpi false: reference
+    data. Grain: one polygon per deposit or mining area with mineral type and status; CRS not checked, no TERYT code (assign
+    voivodeship and gmina by a spatial join to PRG). Smallest Gold selection: the documented-deposits layer as an entity
+    table with mineral, status and TERC, and from it the number of documented deposits and of active mining areas per voivodeship.'
+  overlap: Overlaps concession registers and the yearly balance of mineral resources (resources and extraction in tonnes
+    are in the balance and GUS BDL, not here).
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers: []
+  references:
+  - https://www.pgi.gov.pl/midas.html
+  - https://midas-app.pgi.gov.pl/
+  - https://www.pgi.gov.pl/midas/dane-przestrzenne.html
+  - https://dm.pgi.gov.pl/
+  - https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html

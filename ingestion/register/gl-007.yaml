@@ -1,0 +1,45 @@
+id: GL-007
+name: International Debt Statistics (IDS)
+short_name: World Bank IDS
+provider: World Bank
+source_system: world_bank_ids
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [debt, development-finance]
+entities: [country]
+granularity: Debtor country/creditor or instrument/period at table-specific grain.
+coverage: Low- and middle-income country external debt time series; start varies by measure.
+access:
+  endpoint: https://www.worldbank.org/en/programs/debt-statistics/ids
+  kind: bulk_file
+  interfaces: [HTML, bulk-files]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0 per the Data Catalog record
+    https://datacatalog.worldbank.org/search/dataset/0038015/international-debt-statistics (Public) and the
+    World Bank Terms of Use for Datasets https://www.worldbank.org/ext/en/legal/terms-conditions/datasets;
+    commercial reuse and modification allowed; do not imply World Bank endorsement or use its name or logo;
+    third-party conditions, where any, are in the indicator metadata. Attribution: "The World Bank:
+    International Debt Statistics: <data source>".'
+updates: Annual publication with revisions to historical debt stocks and flows.
+ingestion:
+  history: Archive complete named releases with metadata and vintage.
+  incremental: Reload a named release or affected period after publication; no CDC.
+  identifiers: Use published economy and indicator IDs; preserve survey/round/vintage where applicable.
+modelling:
+  notes: Model observations at stated grain; retain uncertainty, status, unit, source and methodology fields.
+  overlap: Overlaps WDI debt indicators and IMF/BIS external debt views; concepts and country scope differ.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers: []
+  references:
+  - https://www.worldbank.org/en/programs/debt-statistics/ids
+  - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets

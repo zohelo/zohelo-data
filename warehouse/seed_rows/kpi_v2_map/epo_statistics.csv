@@ -1,0 +1,3 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+european_patent_applications,economy,A,european_patent_applications,epo_statistics,applications_by_country,epo_statistics:by_country:applications:applications,A,PL;EU,,sum,up,ready,"2016 on, newest EPO Technology Dashboard edition holding the year; licence unresolved (internal)"
+european_patents_granted,economy,A,european_patents_granted,epo_statistics,grants_by_country,epo_statistics:by_country:patents:grants,A,PL;EU,,sum,up,ready,"2016 on, newest EPO Technology Dashboard edition holding the year; licence unresolved (internal)"

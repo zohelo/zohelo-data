@@ -1,0 +1,73 @@
+id: CD-014
+name: Companies House Free Company Data Product (basic company data)
+short_name: Companies House
+provider: UK Companies House
+source_system: companies_house
+status: built
+family: I
+kpi: false
+geography: United Kingdom
+provider_type: national-public
+domains: [business-register, corporate-filings]
+entities: [enterprise]
+granularity: 'Free Company Data Product: one row per live company on the register (name, number, registered office, status,
+  type, country of origin, incorporation date, SIC codes). PSC and accounts products exist but are out of the selection.'
+coverage: Snapshot of live companies, compiled to the end of the previous month; the listing holds only the current snapshot,
+  so history builds up from the first Landing.
+access:
+  endpoint: https://download.companieshouse.gov.uk/en_output.html
+  kind: bulk_file
+  interfaces:
+  - ZIP
+  - CSV
+  - HTML
+  auth: None for the bulk files. The REST and streaming APIs need a registered key and are not used.
+  cost: free
+  limits: None stated for the download pages; robots.txt (43 characters) does not forbid them. For reference, the API allows
+    "600 requests within a five-minute period" (https://developer-specs.company-information.service.gov.uk/guides/rateLimiting,
+    desk reading 12 Nov 2026).
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.gov.uk/guidance/companies-house-data-products (read by the runner 12 Nov 2026): "We impose
+    no rules or requirements on how the information on the public register is used, and we’re not responsible for your use
+    of the company data. You are responsible for complying with any applicable data protection, copyright and other legislation
+    and regulations."; page footer: "All content is available under the Open Government Licence v3.0, except where otherwise
+    stated". The download page itself says only that the snapshot "is provided free of charge and will not be supported".
+    Commercial reuse: allowed (no rules or requirements on use; the word "commercial" is not used). Modification: allowed
+    on the same sentence. Attribution: none required for register data; shown as "Source: Companies House (UK), Free Company
+    Data Product". Condition: data-protection law is the reuser''s duty, so the PSC snapshot (personal data) stays out.'
+updates: 'Monthly: "compiled up to the end of the previous month", published within 5 working days; the 2026-11-01 edition
+  was written on 7 Nov 2026 (Last-Modified). PSC snapshot daily before 10am GMT (not used).'
+ingestion:
+  history: 'Bulk feature: the listing page links BasicCompanyDataAsOneFile-<YYYY-MM-DD>.zip (tested: 494,554,856 bytes,
+    application/zip, Last-Modified and ETag present) and the same data in 7 parts of about 70 MB; the date in the name changes
+    each month, so the listing page is read first.'
+  incremental: Monthly snapshot; version = the date in the file name. Each snapshot replaces the previous one; a company
+    that leaves the register disappears from the file.
+  identifiers: Company number; country of origin as text; UK postcode, no NUTS or TERYT codes.
+modelling:
+  notes: 'kpi false and low value for Poland: build after the Polish and international statistical sources. Smallest Gold
+    selection: monthly number of live UK-registered companies whose country of origin is Poland, and new incorporations
+    per month in total; the full file stays in Bronze as one snapshot. No Polish regional split. Frequency M. Missing values
+    are empty fields (field list PDF not read: unverified, as is the exact name of the country-of-origin column). Duplicates:
+    none expected inside a snapshot; snapshots repeat every company each month, the file date tells them apart. No overlap
+    with published KPIs. Size: 495 MB zipped per month (measured), several million rows (not counted). Effort M.'
+  overlap: Upstream of OpenCorporates (CD-016, parked); overlaps GLEIF (CD-015) for companies with an LEI.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): en_output.html answered 200 (7,442
+    bytes, Last-Modified 7 Nov 2026) and lists the one-file ZIP (471Mb) and 7 parts; HEAD of BasicCompanyDataAsOneFile-2026-11-01.zip
+    answered 200 with 494,554,856 bytes; en_pscdata.html and the gov.uk guidance answered 200.'
+  - 'Dev probe run 43320416371 (12 Nov 2026) read the 2026-11-01 file: 5,711,779 rows, 55 columns, company numbers
+    unique; empty fields are empty (SIC "None Supplied", country of origin blank in 271 rows); CountryOfOrigin "POLAND"
+    in 50 rows (no other spelling); incorporation dates DD/MM/YYYY up to 2026-10-31. Not verified: whether older snapshots
+    stay downloadable, the accounts data pages.'
+  - The PSC snapshot (about 2.5 GB, daily, personal data) is deliberately out of scope.
+  references:
+  - https://download.companieshouse.gov.uk/en_output.html
+  - https://www.gov.uk/guidance/companies-house-data-products
+  - https://www.gov.uk/government/publications/companies-house-accreditation-to-information-fair-traders-scheme/public-task-copyright-and-crown-copyright
+  - https://developer-specs.company-information.service.gov.uk/

@@ -1,0 +1,58 @@
+id: GL-033
+name: UNODC Data Portal
+short_name: UNODC Data Portal
+provider: United Nations Office on Drugs and Crime
+status: reviewing
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [crime, justice, drugs, prisons, trafficking]
+entities: [country, person-aggregate]
+granularity: Indicator/country/year with crime, victim, sex, age, justice-process or drug dimensions by table.
+coverage: Worldwide but country/year coverage varies substantially by topic and national reporting.
+access:
+  endpoint: https://data.unodc.org/
+  kind: bulk_file
+  interfaces: [HTML, download files]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: restricted
+  notes: 'Terms: UNODC Legal Notice https://www.unodc.org/unodc/legal.html (applies to UNODC sites; no open licence
+    found for data.unodc.org): materials may be downloaded and copied for the user''s personal, non-commercial use
+    only; no right to resell or redistribute them or to create derivative works; provided "as is", without warranty
+    of accuracy or completeness. Public display on zohelo.com or bi.zohelo.com needs UNODC''s written permission;
+    internal analysis only. Attribution: "Source: UNODC, dataUNODC (data.unodc.org), <download date>."'
+updates: Collection rounds and revisions vary; no common release schedule found.
+ingestion:
+  history: Archive topic export, definitions, questionnaire/source and release date.
+  incremental: Replace topic files/releases; no CDC.
+  identifiers: UNODC indicator + country + time + full disaggregation; preserve source and metadata flags.
+modelling:
+  notes: Police-recorded counts, survey prevalence and model estimates are different facts; rates and totals cannot
+    be mixed.
+  overlap: Overlaps SDG, WHO mortality and UNdata homicide series; UNODC may be custodian/upstream.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: UNODC''s Legal Notice (https://www.unodc.org/unodc/legal.html, linked as "Terms and Conditions" from
+    the data portal) allows its materials to be downloaded and copied for personal, non-commercial use only, with no right
+    to redistribute them or create derivative works, and no open licence is stated for data.unodc.org. Do you want us to
+    ask UNODC (through https://data.unodc.org/contactus) for written permission to load its crime, justice and drug statistics
+    and show them on zohelo.com and bi.zohelo.com, or to load them for internal analysis only under the Legal Notice?'
+  - 'Re-review 26 Nov 2026 (Task #2917), route: Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): https://data.unodc.org/ answered HTTP 200 (robots.txt disallows only
+    Drupal system paths, not /sites/ or /datareport/); the portal is a JavaScript application (659 characters of text) whose
+    topic reports are /datareport/<topic> (hom-victim, violent-offences, prison-held, cjs-arrested, tip-victims, firearm-seizures,
+    druguse, drug-seizure, econ-corruption, wildlife-seizures); the download files behind them were not identified in this
+    run (the metadata files are under /sites/dataportal.unodc.org/files/<yyyy-mm>/, e.g. metadata_intentional_homicide.pdf).
+    The Legal Notice page answered 200 (Last-Modified 12 Oct 2009, so the terms recorded on 11 Nov are unchanged); its text
+    was not re-read in full this run.'
+  - Profile missingness and definition breaks
+  references:
+  - https://data.unodc.org/
+  - https://data.unodc.org/datareport/hom-victim
+  - https://www.unodc.org/unodc/legal.html

@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+sdds_calendar,TP-012,"Kalendarz upowszechniania danych SDDS (NBP, MF)","SDDS advance release calendar (NBP, Ministry of Finance)","Główny Urząd Statystyczny (GUS), koordynator SDDS",signal,file,national-public,gus_copyright_sdds,https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych

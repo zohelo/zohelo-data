@@ -1,0 +1,20 @@
+version: 2
+sources:
+- name: gios_groundwater
+  description: >-
+    GIOŚ groundwater quality monitoring (register PL-ENV-012): the yearly result files of dane.gov.pl dataset 1405
+    (2019 on, one file per year x indicator group x monitoring kind), values as published text.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gios_groundwater/
+    loaded_by: ingestion/to_bronze/gios_groundwater/
+    config: ingestion/sources/gios_groundwater.yaml
+  tables:
+  - name: gios_groundwater_records
+    description: >-
+      Rows of the newest copy of each result file (entity <year>_<inorganic|organic>_<diagnostic|operational>):
+      record_kind 'sample' (one per water sample, the point and sample columns as published) and 'value' (one per
+      non-empty indicator cell: sheet row, indicator column name, cell text); partitioned by entity.
+  - name: gios_groundwater_rejected_files
+    description: Files of gios_groundwater the Bronze decoder rejected, with the reason.

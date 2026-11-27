@@ -1,0 +1,30 @@
+version: 2
+models:
+  - name: otomoto_series
+    description: >-
+      OTOMOTO Insights, Raport Rynkowy OTOMOTO (register CD-034; licence unresolved, internal): the series of the monthly
+      report chosen for Gold, Poland, by segment (the report's tabs Samochody używane, Samochody nowe, Motocykle, Maszyny
+      ciężkie): active_listings (average daily active listings on OTOMOTO), users_index and buyers_index (monthly users
+      and buyers, January 2025 = 100). The newest edition that holds a month is kept; value as published (text that is
+      not a number keeps value null, value_status not_numeric, never 0). Grain: measure_code x segment_label x
+      period_month. History 2025-01 to 2026-08 from the August 2026 edition (Dev trial 45821781004: 180 rows).
+    tests:
+      - unique:
+          column_name: "measure_code || '|' || segment_label || '|' || period_month"
+    columns:
+      - name: measure_code
+        tests: [not_null, {accepted_values: {arguments: {values: [active_listings, users_index, buyers_index]}}}]
+      - name: segment_label
+        tests:
+          - not_null
+          - accepted_values: {arguments: {values: [Samochody używane, Samochody nowe, Motocykle, Maszyny ciężkie]}}
+      - name: period_month
+        tests: [not_null]
+      - name: value_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, not_numeric]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [listings, jan2025_100]}}}]
+      - name: edition
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

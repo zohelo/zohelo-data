@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+nfz_pharmacy_refunds,PLS-013,NFZ: refundacja apteczna (API Statystyki NFZ),NFZ statistics: pharmacy refunds,Narodowy Fundusz Zdrowia (NFZ),cube,api,national-public,nfz_api_terms,https://api.nfz.gov.pl/app-stat-api-ra/

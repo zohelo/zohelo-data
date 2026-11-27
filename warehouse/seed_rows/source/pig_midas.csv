@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+pig_midas,PL-ENV-015,PIG-PIB MIDAS złoża kopalin i obszary górnicze,PIG-PIB MIDAS mineral deposits and mining areas,Państwowy Instytut Geologiczny - Państwowy Instytut Badawczy (PIG-PIB),registry,api,national-public,pig_pib_isp_reuse,https://www.pgi.gov.pl/midas.html

@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+knf_entities,PLG-016,Podmioty nadzorowane przez KNF (rejestry ESMA: państwo macierzyste Polska),KNF supervised entities (ESMA registers: home member state Poland),European Securities and Markets Authority (ESMA); dane od Komisji Nadzoru Finansowego (KNF),registry,file,international-public,esma_registers_notice,https://registers.esma.europa.eu/publication/searchRegister?core=esma_registers_upreg

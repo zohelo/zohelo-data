@@ -1,0 +1,44 @@
+id: PL-ENV-005
+name: NMT, NMPT and airborne laser-scanning elevation products
+short_name: GUGiK elevation (NMT)
+provider: GUGiK
+source_system: gugik_nmt
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [elevation, lidar, geospatial]
+entities: [raster cell, point cloud, survey area]
+granularity: Terrain/surface model cells and LiDAR point clouds; resolution and density vary by release.
+coverage: National programme with area-specific editions; complete archive depth unconfirmed.
+access:
+  endpoint: https://www.geoportal.gov.pl/pl/dane/numeryczny-model-terenu-nmt/
+  kind: api
+  interfaces: [bulk-files, WMS, WMTS, WFS-index]
+  auth: Public download and viewing/index services.
+  cost: Free download.
+  limits: Unknown; no numeric quota was confirmed.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.geoportal.gov.pl/pl/dane/numeryczny-model-terenu-nmt/ states: "Dane NMT są dostępne bezpłatnie
+    i możliwe do dowolnego wykorzystania" (page read 11 Nov 2026 from a GitHub runner). No licence name or attribution wording;
+    show "Źródło: GUGiK, NMT".'
+updates: Acquisition campaigns by area.
+ingestion:
+  history: 'Sheet download in the geoportal "Pobierz dane" module (NMT grid <=1 m and 5 m), WCS, WFS sheet indexes per year
+    (2000-2019 index in PL-KRON86-NH); terabyte scale (estimate): stage 2 decides the landing scope.'
+  incremental: 'PROPOSAL: compare release dates and checksums; do not assume change-data capture.'
+  identifiers: Sheet/footprint, acquisition epoch, resolution/density and vertical reference.
+modelling:
+  notes: Preserve vertical datum and source CRS; Geoportal examples use EPSG:2180. Do not derive change without epoch alignment.
+  overlap: Related products must not be summed; NMPT and NMT represent different surfaces.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - Confirm formats, vertical datums and package coverage.
+  references:
+  - https://www.geoportal.gov.pl/pl/dane/numeryczny-model-terenu-nmt/
+  - https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl

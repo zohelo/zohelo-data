@@ -1,9 +1,11 @@
 source_system: gugik_prg
-description: "GUGiK PRG — national register of boundaries: administrative units and cadastral units (shapefiles)"
+description: "GUGiK PRG — national register of boundaries (administrative and cadastral units) and address points (shapefiles)"
 
-# Extraction strategy (docs/landing.md). Bulk feature: one national ZIP of shapefiles on
-# opendata.geoportal.gov.pl (~377 MB, ~7 min). No validators from the server, so every run
-# downloads and writes only when the SHA-256 changed. Free for any purpose (GUGiK).
+# Extraction strategy (docs/landing.md). Bulk feature: national ZIPs of shapefiles on opendata.geoportal.gov.pl.
+# Boundaries (~377 MB, ~7 min): no validators from the server, so every run downloads and writes only when the
+# SHA-256 changed. Address points (register PL-ENV-007, #3106; ~565 MB): Last-Modified and ETag sent, rebuilt by
+# GUGiK most days; its members are Deflate64, which Python's zipfile cannot test, so it lands as exact bytes
+# (format raw, .bin) and the Bronze decoder unpacks it with 7z (CRC checked). Free for any purpose (GUGiK).
 extraction:
   kind: bulk_file
   bulk_file:
@@ -12,30 +14,39 @@ extraction:
         url: https://opendata.geoportal.gov.pl/prg/granice/00_jednostki_administracyjne.zip
         format: zip
         version: ingested          # the server sends no validators
+      - entity: punkty_adresowe
+        url: https://opendata.geoportal.gov.pl/prg/adresy/PunktyAdresowe/POLSKA.zip
+        format: raw                # ZIP with Deflate64 members (7z in Bronze)
+        version: last_modified
   initial: bulk
-  production: snapshot                  # the package is the complete register state
+  production: snapshot                  # each package is the complete current register state
   incremental_policy: changed_since_last  # by SHA-256 of the download
-  schedule:                             # UTC; monthly (state 1 January + corrections)
+  schedule:                             # UTC; monthly (boundaries: state 1 January + corrections; addresses: daily rebuilds, monthly is enough)
     - {cron: "40 2 3 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
 
 landing: 01_landing/gugik_prg/
-# ZIP kept as exact bytes (.bin). Yearly changes: newest version + 90 days.
+# Packages kept as exact bytes. Newest version plus 3 days of superseded ones (0.94 GB a version, as GLEIF and the VAT
+# white list; was 90 days before the address package, #3106).
 archive_policy:
   move: true
-  retention: {keep_latest: 1, keep_days: 90}
+  retention: {keep_latest: 1, keep_days: 3}
   prune: report
-bronze: [bronze.prg_boundaries, bronze.prg_rejected_files]
-silver: [silver.prg_units]
-gold: [gold.geo_unit, gold.geo_neighbour, gold.build_prg]   # also gold.map_geography (PRG codes) and geo/<level>.geojson
+bronze: [bronze.prg_boundaries, bronze.prg_address_points, bronze.prg_rejected_files]
+silver: [silver.prg_units, silver.prg_address_points]
+gold: [gold.geo_unit, gold.geo_neighbour, gold.build_prg, gold.prg_address_counts]   # also gold.map_geography (PRG codes) and geo/<level>.geojson
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   prg_units: {rows: 200000}  # 60,367
-  poc_build_prg: {rows: 4300}  # 2,875 PRG units (16 voivodeships, 380 powiats, 2,479 gminas; Dev trial 43099545187 minus the country)
+  poc_build_prg: {rows: 8700}  # 5,751: 2,875 unit areas (16 voivodeships, 380 powiats, 2,479 gminas) + 2,876 address counts (Dev trial 45827301180)
+  poc_prg_address_counts: {rows: 4400}  # 2,876: Poland, 16 voivodeships, 380 powiats, 2,479 gminas (Dev trial 45827301180)
 # Tables of retired code still in the catalog, replaced by the tables above (globs allowed).
 legacy_tables: [bronze.prg_country, bronze.prg_voivodeships, bronze.prg_counties, bronze.prg_municipalities,
                 bronze.prg_surface_areas, silver.prg_*, gold.dim_prg_*, gold.fact_prg_surface_areas]
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
-# Refresh policy for all layers (owner decision #875): small, rebuilt in full (monthly).
-refresh: {mode: full, decided: "#875"}
+# Refresh policy for all layers (D32): entity = declared package. Boundaries: a new package is appended to Bronze and
+# the superseded one pruned, Silver prg_units (60 k rows) rebuilt in full by dbt. Address points (~8.6 M rows): a new
+# package replaces the entity's one file in bronze.prg_address_points and silver.prg_address_points (entity tables,
+# design #875), nothing else is rewritten.
+refresh: {mode: incremental, unit: "package (file); boundaries Silver rebuilt in full", decided: "D32 + #3106"}
 
 activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

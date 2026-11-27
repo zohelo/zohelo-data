@@ -1,0 +1,49 @@
+id: PLG-024
+name: Sejm API
+short_name: Sejm API
+provider: Chancellery of the Sejm
+source_system: sejm
+status: built
+family: F
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [parliament, legislation, elections]
+entities: [member of parliament, committee, bill, vote, question]
+granularity: Term-scoped MPs, clubs, committees, sittings, votes, prints and questions.
+coverage: Multiple terms; oldest coverage varies by resource.
+access:
+  endpoint: https://api.sejm.gov.pl/sejm.html
+  kind: api
+  interfaces: [REST API, JSON, OpenAPI]
+  auth: Public; no key.
+  cost: free
+  limits: None stated in the documentation (HTTP 200/400/404 only; page/limit via offset and limit).
+licence:
+  status: unresolved
+  notes: 'Terms: https://api.sejm.gov.pl/sejm.html documents the API without any licence, attribution or rate-limit clause
+    (page last changed 25 Aug 2026; a change history is listed). Licence stays unresolved (internal only) until the Chancellery
+    of the Sejm states reuse terms; the data are public parliamentary records, MP photos and personal data need a field
+    allowlist.'
+updates: Updated with parliamentary activity; corrections possible.
+ingestion:
+  history: 'Term 10 (since 2023-11-13) and earlier terms: MPs, votings, prints, proceedings, interpellations, committees;
+    entry point https://api.sejm.gov.pl/sejm/term10 (count and lastChanged per resource).'
+  incremental: 'PROPOSAL: poll current-term resources, using available lastChanged metadata as a signal; reconcile snapshots
+    and prior-term corrections, without assuming CDC.'
+  identifiers: term + MP/sitting-vote/print/interpellation ID
+modelling:
+  notes: Keep documents, events and votes distinct; memberships are effective-dated.
+  overlap: Connects RCL drafts, Senate stages and ELI acts via explicit bridges.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Licence unresolved: no terms on the API page'
+  - 'Allowlist defined (#481): the MP list is reduced before Landing to id, active, club, districtNum, districtName and
+    voivodeship; names, birth data, e-mails, professions and photos never land'
+  references:
+  - https://api.sejm.gov.pl/sejm.html
+  - https://api.sejm.gov.pl/
+  - https://api.sejm.gov.pl/sejm/term10

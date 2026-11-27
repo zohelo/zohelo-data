@@ -1,0 +1,48 @@
+id: PLS-005
+name: Narodowy Spis Powszechny Ludności i Mieszkań 2021 (NSP 2021) results
+short_name: GUS NSP 2021
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_nsp2021
+status: built
+family: B
+kpi: true
+geography: Poland to fine census geographies, table-dependent
+provider_type: national-public
+domains: [population census, demography, housing, migration, households]
+entities: [person-aggregate, household-aggregate, dwelling-aggregate, territorial unit]
+granularity: Published aggregate census table; geography and cross-tabulation vary; no personal records proposed.
+coverage: Reference date 31 March 2021; releases published progressively after census.
+access:
+  endpoint: https://stat.gov.pl/spisy-powszechne/nsp-2021/
+  kind: bulk_file
+  interfaces: [HTML, XLSX, CSV, PDF, interactive tables]
+  auth: Public aggregate results.
+  cost: free
+  limits: Download limits unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+    and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+    licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+    summaries or reworked text. Census tables are published already disclosure-controlled; keep GUS confidentiality
+    symbols as published. Attribution: "Źródło: GUS, Narodowy Spis Powszechny Ludności i Mieszkań 2021" / "Source:
+    Statistics Poland, National Population and Housing Census 2021".'
+updates: Census release is periodic with later thematic releases/corrections, not a live feed.
+ingestion:
+  history: Load published aggregate tables and release metadata once; version corrections.
+  incremental: Poll release catalogue for corrections or new thematic tables.
+  identifiers: Census table/variable/category + geography + reference date; link TERYT 2021 vintage.
+modelling:
+  notes: Model denominators and universes explicitly; avoid adding overlapping categories or mixing resident-population
+    concepts.
+  overlap: BDL population series are annual estimates and may be rebased; census results are benchmarks, not additive
+    to BDL.
+research:
+  priority: review-first
+  evidence: catalogue-only
+  connection: tested
+  blockers:
+  - 'Curated tables only (Dev probes 43270285788, 43271452794, 43271980321): population 2011 and 2021 (total, urban, rural, urban share) and census activity, employment and unemployment rates by voivodeship, from the themed final-results workbooks; nationality, language and religion, census-district and household tables are not curated yet; housing indicators: Task #2921. Census values are not added to the published population or unemployment KPIs (benchmarks, not additive to BDL).'
+  references:
+  - https://stat.gov.pl/spisy-powszechne/nsp-2021/
+  - https://stat.gov.pl/en/copyright/

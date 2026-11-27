@@ -1,0 +1,54 @@
+id: PLG-027
+name: ISAP — Internet System of Legal Acts archive
+short_name: ISAP legal acts
+provider: Chancellery of the Sejm
+status: parked
+family: F
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [law, official gazette]
+entities: [legal act, official journal]
+granularity: Bibliographic record and linked text for official journals.
+coverage: Historical acts including pre-digital material; completeness by era unverified.
+access:
+  endpoint: https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=wdu20070500331
+  kind: web
+  interfaces: [HTML, PDF]
+  auth: public browsing
+  cost: free
+  limits: Unknown.
+licence:
+  status: unresolved
+  notes: 'Terms: none read; https://isap.sejm.gov.pl/ robots.txt (read by the runner 27 Nov 2026) allows only
+    Googlebot and Nekstbot ("User-agent: * Disallow: /"), so no ISAP page was opened. The same records are served by
+    the Sejm ELI API (PLG-026, licence unresolved there too). Internal only.'
+updates: Updated with publications/text versions; no machine feed verified.
+ingestion:
+  history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
+  incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
+  identifiers: journal + year + number/position; ELI where present
+modelling:
+  notes: Separate metadata, original text and non-authoritative consolidated text.
+  overlap: Use as archive/fallback where ELI is incomplete.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Contained in: PLG-026 `eli_pl` (built; Silver `eli_pl_acts`, Gold entity table `legal_acts`,
+    docs/sources/eli_pl.md). ISAP is the web front of the Sejm''s legal-act database; the ELI API serves the same
+    records with the same addresses: ISAP''s example act WDU20070500331 is
+    https://api.sejm.gov.pl/eli/acts/DU/2007/331 (address "WDU20070500331", Dz.U. 2007 nr 50 poz. 331), and `eli_pl`
+    loads every journal year of Dziennik Ustaw (from 1918, 76 acts) and Monitor Polski (Dz.U. 2007: 1,887 acts; M.P.
+    2007: 1,092). Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+    dev/src_parked2_probe.py, 27 Nov 2026). ISAP''s robots.txt disallows every other agent, so it is not a route in
+    any case. The act texts (PDF/HTML) are left out of `eli_pl` by choice and are served by the same API.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the earlier reason "superseded by PLG-026" is restated in the `Contained in:`
+    form.'
+  - 'Earlier parking reason: superseded by PLG-026: ISAP is the web interface of the same legal-act database that the
+    Sejm ELI API serves as JSON and PDF; no separate bulk or API route'
+  references:
+  - https://isap.sejm.gov.pl/
+  - https://api.sejm.gov.pl/eli/acts/DU/2007/331
+  - https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=wdu20070500331

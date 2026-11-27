@@ -1,0 +1,50 @@
+source_system: gugik_bdot10k
+description: "GUGiK BDOT10k — Baza Danych Obiektów Topograficznych (topographic objects database): the catalogue of the powiat download packages"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-003. The vector packages themselves (GML/SHP/GPKG, ~90 MB a
+# powiat, ~1.3 GB a voivodeship) are not downloaded (heavy geodata). Smallest valuable selection: the package index
+# the "Dane do pobrania" layer of the BDOT10k page reads, GUGiK's WFS PobieranieBDOT10k, feature type
+# BDOT10k_powiaty (380 features: TERYT, powiat name, Data_aktualizacji, URL of the GML package), read in one request
+# without geometry (PROPERTYNAME; ~144 KB). WFS 1.0.0 because its answer carries no timeStamp: two reads of an unchanged
+# index are byte-identical (probe 45820108249), so a copy lands only when the index changed. Declared as one file of the
+# shared bulk_file pattern (no extractor code); the server sends no Last-Modified, so version = download time.
+# Entity = the index, restart unit = one file. Left out: the voivodeship packages (not in the WFS; the WMS
+# GetFeatureInfo lists them), package sizes (the index has none; HEAD per package not done), the 2011-schema, SHP and
+# GPKG twins, and the BDOT10k statistics WFS (StatystykiBudynkow, ...; object counts per class, no reference date).
+# Dev probes 45810649041, 45816094170, 45817079007, 45817979093, 45820108249 (test/3097-gugik-bdot10k-probe);
+# Dev trial 45827286618 (test/3097-gugik-bdot10k-trial).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: powiat_packages          # 380 powiat packages on 26 Nov 2026, editions 2021-10-08 to 2026-08-27
+        url: "https://mapy.geoportal.gov.pl/wss/service/PZGIK/BDOT/WFS/PobieranieBDOT10k?SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=BDOT10k_powiaty&PROPERTYNAME=TERYT,NAZWA_POWIATU,Data_aktualizacji,URL_GML"
+        format: raw
+        version: last_modified           # none sent: download time
+        probe: get                       # a MapServer CGI; inspect reads the headers of a GET
+  initial: bulk
+  production: snapshot                    # each read is the complete current index
+  incremental_policy: changed_since_last  # SHA-256 of the answer
+  schedule: # UTC; packages are re-issued asynchronously, no calendar; weekly (O46), Thursday 05:35
+    - {cron: "35 5 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gugik_bdot10k/
+# GML answers kept as exact bytes. Newest version + 90 days in the Archive.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.bdot10k_packages, bronze.bdot10k_rejected_files]
+silver: [silver.bdot10k_powiat_packages]
+gold: [gold.build_gugik_bdot10k, gold.metrics_bdot10k_powiat_packages]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  bdot10k_powiat_packages: {rows: 600}  # 380 (Dev 45827286618)
+  poc_build_gugik_bdot10k: {rows: 170}  # 109 = 63 count + 46 share rows (Dev 45827286618)
+  poc_metrics_bdot10k_powiat_packages: {rows: 30}  # 17 = Poland + 16 voivodeships (Dev 45827286618)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one answer of ~144 KB and 380 rows with no changed-since feature; each copy is
+# the whole index, so a new copy replaces it and Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3097"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

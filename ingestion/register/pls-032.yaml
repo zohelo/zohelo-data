@@ -1,0 +1,57 @@
+id: PLS-032
+name: Zintegrowany System Rolniczej Informacji Rynkowej (ZSRIR)
+short_name: MRiRW ZSRIR market information
+provider: Ministerstwo Rolnictwa i Rozwoju Wsi
+source_system: mrirw_zsrir
+status: built
+family: B
+kpi: true
+geography: Poland and macroregions/markets, commodity-dependent
+provider_type: national-public
+domains: [agricultural prices, agricultural markets, food markets]
+entities: [commodity, market aggregate, region, reporting establishment aggregate]
+granularity: Weekly/monthly commodity price and volume indicator; geography and product specification vary by
+  market bulletin.
+coverage: Legacy bulletin archive plus new portal from 2025; exact starts differ by commodity.
+access:
+  endpoint: https://zsrir.minrol.gov.pl/api/ZsrirData/GetReportFileList?id=<report>
+  kind: bulk_file
+  interfaces: [HTML, PDF, XLSX]
+  auth: Public; the portal's report list and file download need no sign-in (other endpoints answer 401).
+  cost: free
+  limits: None stated; one request at a time.
+licence:
+  status: unresolved
+  notes: 'Terms: the site read, zsrir.minrol.gov.pl, states no terms of use; each workbook only says "PUBLIKOWANIE
+    DANYCH POCHODZĄCYCH Z RAPORTU MOŻLIWE JEST WYŁĄCZNIE Z PODANIEM ŹRÓDŁA" (publishing data from the report is
+    allowed only with the source named; Dev trial 45705794335, milk workbook row 34), which names no commercial reuse
+    or modification terms, so the status is unresolved and the source stays internal (#2484). Earlier reading of the
+    gov.pl pages, which do not cover the portal: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+    (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+    attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+    consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+    The report files carry no licence of their own. Copies on dane.gov.pl follow that dataset''s own reuse
+    conditions. Attribution: "Źródło: MRiRW, Zintegrowany System Rolniczej Informacji Rynkowej (<bulletin, date>)"
+    / "Source: Ministry of Agriculture and Rural Development, ZSRIR (<bulletin, date>)".'
+updates: Weekly for major meat/grain market reports; monthly for some feed/other bulletins.
+ingestion:
+  history: Backfill commodity-specific bulletins only where structured tables are stable.
+  incremental: Poll new ZSRIR portal by commodity/period; retain corrections.
+  identifiers: Commodity specification + market stage + geography + reporting period + unit/currency.
+modelling:
+  notes: Prices require tax, quality, delivery and market-stage dimensions; volumes and prices must remain separate.
+  overlap: KOWR republishes/analyses ZSRIR market data; do not treat both as independent observations.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Route found (Dev probes 43813028487 to 43856647230 on test/zsrir, 16 Nov 2026): zsrir.minrol.gov.pl sends its leaf certificate without the intermediate (Certum DV TLS G2 R39 CA); with the CA''s own published intermediate added to certifi''s roots the chain verifies to Certum Trusted Root CA, verification on. The portal''s public endpoints list and serve every bulletin (XLSX and PDF) since August 2024; the legacy gov.pl market pages point to dane.gov.pl, which does not answer runners. The portal states no terms of use.'
+  - Open new portal technical/terms pages
+  - Inventory structured export
+  - Resolve series breaks in 2025 migration
+  references:
+  - https://www.gov.pl/web/rolnictwo/biuletyny-informacyjne
+  - https://dane.gov.pl/pl/dataset/1022%2Czintegrowany-system-rolniczej-informacji-rynkowej-biuletyny-informacyjne-rynek-pasz
+  - https://www.gov.pl/web/gov/prawa-autorskie

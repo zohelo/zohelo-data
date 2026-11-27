@@ -1,0 +1,73 @@
+id: CD-012
+name: EDGAR APIs, bulk data and filing archives
+short_name: SEC EDGAR
+provider: U.S. Securities and Exchange Commission
+status: reviewing
+family: I
+kpi: false
+geography: United States
+provider_type: national-public
+domains: [corporate-filings, company-fundamentals]
+entities: [issuer, filing, reported-fact, security]
+granularity: Submission/filing metadata and XBRL fact by CIK, taxonomy, unit and period; original filing documents by accession.
+coverage: Filing archives span EDGAR history; structured XBRL APIs cover filings since 2009, with scope qualifications.
+access:
+  endpoint: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+  kind: api
+  interfaces: [API, bulk-files, HTML, XBRL, JSON]
+  auth: Public HTTPS, no key; identify requests and follow fair-access guidance.
+  cost: free
+  limits: 'Automated access must follow the SEC privacy and security policy and developer FAQs (declare a User-Agent; SEC
+    fair-access rate limit, 10 requests per second per the FAQs, not re-read: the pages were refused). 12 Nov 2026: every
+    SEC host and route answered HTTP 403 to the repository''s identified User-Agent, from the first request on, with the
+    page "Request Rate Threshold Exceeded [...] Automated access to our sites must comply with SEC.gov''s Privacy and
+    Security Policy. Please visit www.sec.gov/developer for more developer resources and Fair Access guidelines."'
+licence:
+  status: open-conditional
+  notes: 'Terms: SEC.gov privacy and security policy, section "Website Dissemination", https://www.sec.gov/privacy (read
+    12 Nov 2026): "Information presented on sec.gov is considered public information and may be copied or further distributed",
+    without the permission of the SEC; "Please consider appropriate citation to the SEC as the source." No licence is named;
+    commercial reuse and modification are not restricted by the policy (copying and further distribution of public information
+    without permission). Conditions: no SEC seal, logos or artwork, and the EDGAR names and the SEC name are trademarks
+    that may not be used in a trade name, trademark or domain. Filer attachments can contain third-party rights and personal
+    data: ingest the structured JSON, preserve provenance. Attribution: "Source: U.S. Securities and Exchange Commission,
+    EDGAR".'
+updates: API JSON updates in real time; bulk ZIPs update nightly; indexes are daily/quarterly.
+ingestion:
+  history: 'Bulk: nightly ZIPs of the JSON APIs (recompiled about 3:00 a.m. ET): companyfacts.zip (XBRL Company Facts and
+    Frames data) and submissions.zip (filing histories) under https://www.sec.gov/Archives/edgar/; per-entity JSON at https://data.sec.gov/submissions/CIK##########.json
+    and /api/xbrl/companyfacts/. Size: low GB zipped (estimate).'
+  incremental: Re-download the nightly ZIPs; the JSON APIs update during the day as filings are disseminated.
+  identifiers: CIK, accession number, form, filing date; facts keyed by taxonomy/concept/unit/period/frame.
+modelling:
+  notes: Keep raw filings immutable; facts require dimensional context and restatement handling.
+  overlap: Upstream of FMP, Marketstack and many vendors; vendor facts must retain derivation lineage.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: SEC EDGAR answers HTTP 403 to the User-Agent every zohelo-data extractor sends ("zohelo-data/1.0
+    (+https://github.com/zohelo/zohelo-data; public statistics platform)"), on both hosts and every route, which we do not
+    work around. The SEC asks automated clients to declare a User-Agent naming the operator and a contact e-mail address
+    (its sample form, as commonly cited: "Sample Company Name AdminContact@<sample company domain>.com"; not re-read, the
+    page was refused too), and the project has no contact address configured; none is invented and no personal address
+    is used. Which e-mail address (a project mailbox you control, not a personal one) may zohelo-data declare in the User-Agent
+    of its SEC EDGAR requests?'
+  - 'Dev probe run 43321810312 (job 131544106164, branch test/1498-sec-edgar, script dev/sec_edgar_probe.py, 12 Nov 2026;
+    one request at a time, 3 s apart, GET and HEAD only): HTTP 403 on www.sec.gov/robots.txt and data.sec.gov/robots.txt
+    (the first two requests), on /about/developer-resources, /search-filings/edgar-search-assistance/accessing-edgar-data,
+    /search-filings/edgar-application-programming-interfaces and /privacy, on the bulk files /Archives/edgar/daily-index/bulkdata/submissions.zip
+    and /Archives/edgar/daily-index/xbrl/companyfacts.zip, on /files/company_tickers.json, on the company search by country
+    (State=R9, Poland) and on data.sec.gov/submissions/CIK0000320193.json. Nothing was read or stored. Unverified: whether
+    a User-Agent in the SEC''s form is served from GitHub runners (the source review''s probe of 12 Nov read the pages from
+    a runner with a browser-style agent, so the runner addresses are not refused as such).'
+  - 'After the answer (Development Task #1498): re-read the fair-access limit and the User-Agent rule; scope Polish and
+    Poland-related issuers (business address or state of incorporation Poland, EDGAR country code R9, to verify) selected
+    from the nightly submissions.zip while reading it (one request, the archive is not landed), entities only, no natural-person
+    filers, no street addresses or phone numbers; submissions JSON fields only, no filing documents.'
+  - 'Filing attachments can hold third-party rights and personal data: ingest the structured JSON, not documents'
+  references:
+  - https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+  - https://www.sec.gov/about/developer-resources
+  - https://www.sec.gov/privacy

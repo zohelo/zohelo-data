@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+- name: knf_entities
+  description: >-
+    KNF supervised entities (register PLG-016), route 1: the parent entries of the ESMA registers core
+    esma_registers_upreg whose home member state is Poland (Solr JSON answer), newest copy. Text as published.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/knf_entities/
+    loaded_by: ingestion/to_bronze/knf_entities/
+    config: ingestion/sources/knf_entities.yaml
+  tables:
+  - name: knf_entities_esma_entries
+    description: >-
+      One row per document of the answer (one register entry: an authorised entity or a branch), every value as
+      published text (host member states joined with '|'). Not requested, so not stored: head-office and branch
+      addresses, websites, free-text comments, the index's own timestamps.
+  - name: knf_entities_rejected_files
+    description: ESMA register answers the Bronze decoder rejected (unknown layout or field, incomplete answer), with the reason.

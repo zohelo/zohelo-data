@@ -1,0 +1,12 @@
+source_system,unit_code,measure_key_pattern,unit_key
+itu_datahub,SB,,subscriptions
+itu_datahub,SB_10P2_HB,,per_100
+itu_datahub,PT_POP,,pct_population
+itu_datahub,PT_HH,,pct_households
+itu_datahub,MBIT_S,,mbit_s
+itu_datahub,KBPS,,kbit_s
+itu_datahub,GB_SB,,gb_per_subscription
+itu_datahub,XB_Y,,eb_per_year
+itu_datahub,USD,,usd
+itu_datahub,PPP,,ppp_usd
+itu_datahub,PT_GNI_PS,,pct_gni_per_capita

@@ -1,6 +1,6 @@
 # The 11-stage template of a source Epic (SPEC.md §2–4; program plan §7.1; backlog audit §3.4).
 #
-# Every register entry (ingestion/register.yaml, later ingestion/register/*.yaml) is one source Epic "{short_name} [{id}]" under its
+# Every register entry (ingestion/register/<id lower>.yaml, D42) is one source Epic "{short_name} [{id}]" under its
 # family Area (data/src-a … data/src-k). Phase 1 source Epics (the 10 onboarded sources) are written
 # by hand in epics/src-<id>.yaml because most of their stages are already done; the other ~173
 # registered sources are generated lazily by ops/backlog_sync.py from the register and this file:
@@ -10,8 +10,7 @@
 #                                   when its predecessor stage is done.
 # Placeholders: {id} register id (GL-001), {id_lower} (gl-001), {source_system} (eurostat),
 # {short_name} (Eurostat), {family_area} (data/src-a), {register_file} = the file holding entry {id}
-# (ingestion/register.yaml until Epic data/ingestion/register-restructure splits it, then
-# ingestion/register/<provider>.yaml; the sync resolves it when rendering).
+# (ingestion/register/<id lower>.yaml, one file per entry since D42; the sync resolves it when rendering).
 # {window} / {needed} come from the source's schedule cadence (rule D11): daily → 7 days / 3 runs,
 # weekly → 21 days / 3 runs, monthly → 62 days / 2 runs (or 1 run plus the next due date in the comment).
 # Keys: data/src-{id_lower}/<stage key>/<task>.

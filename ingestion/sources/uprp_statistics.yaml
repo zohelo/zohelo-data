@@ -1,0 +1,49 @@
+source_system: uprp_statistics
+description: "UPRP — industrial-property statistics from the Patent Office's annual reports: applications and rights granted or registered for inventions, utility models, trademarks and industrial designs, European patents validated in Poland (Poland, yearly)"
+
+# Extraction strategy (docs/landing.md). Register EX-001. Bulk feature: https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp
+# links 30 PDF annual reports (2003 to 2025; from 2019 a Polish and an English edition) at addresses with no pattern,
+# so the page is the entry (ingestion/to_landing/uprp_statistics/). The statistics API and charts on
+# statystyka.pue.uprp.gov.pl are not read: its robots.txt disallows all robots (owner question in the register).
+# Only the Polish reports from 2019 are landed (seven files, about 110 MB): they end with five-year statistics tables
+# that Bronze reads from the PDF text layer with pypdf (requirements.txt), each cell guarded by its table's sums
+# (ingestion/to_bronze/uprp_statistics/); later reports restate earlier years and Silver keeps the newest report's
+# checked value. Left out: the 2003-2018 reports (other layouts; their years before 2015 are not loaded) and the
+# English editions. Entity = one report (raport_<year>), version = Last-Modified; a held URL whose Last-Modified
+# is unchanged is not downloaded again, other files land only when their SHA-256 differs. Restart unit: one file.
+# Dev probes 45811725126 and 45813573663 (26 Nov 2026: page links, text layer of the 2016-2025 reports).
+extraction:
+  initial: bulk
+  production: snapshot                  # each report as published; a replaced file lands as a new version
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256
+  schedule: # UTC; one report a year, published in late summer (2025 edition: Last-Modified 31 Aug 2026); a monthly
+    # check on the 17th (the run ends with Bronze; the platform's weekly Sunday run builds Silver and Gold, O46)
+    - {cron: "35 8 17 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/uprp_statistics/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.uprp_statistics_cells, bronze.uprp_statistics_rejected_files]
+silver: [silver.uprp_statistics_counts]
+gold:
+  - gold.build_uprp_statistics
+  - gold.metrics_patent_applications
+  - gold.metrics_patents_granted
+  - gold.metrics_trademark_applications
+  - gold.metrics_industrial_design_applications
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the PR's Dev trial
+  uprp_statistics_counts: {rows: 800}  # 535: 48 table rows x 11 years (2015-2025), validations 9, less 2 cells
+  poc_build_uprp_statistics: {rows: 800}  # 535, one per Silver row
+  poc_metrics_patent_applications: {rows: 30}  # 11 years
+  poc_metrics_patents_granted: {rows: 30}
+  poc_metrics_trademark_applications: {rows: 30}
+  poc_metrics_industrial_design_applications: {rows: 30}
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): seven yearly PDF reports, about 1,700 table cells; one new file a year;
+# small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3265"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

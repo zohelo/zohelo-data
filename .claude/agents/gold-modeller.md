@@ -32,7 +32,7 @@ skills:
   (`poc_build_<source>+`).
 - Do **not** touch `warehouse/models/gold/poc_fact_*.sql` or `warehouse/tests/fact_grain.sql` unless your Task says
   so. A source's Gold lines go in the source's own files (`docs/source-registration.md`, D34): never add a
-  line to `warehouse/macros/poc_blocks.sql`, `poc_map_geography.sql` or, for a model of one source,
+  source's line to `warehouse/macros/poc_blocks.sql`, `poc_map_geography.sql` or, for a model of one source,
   `warehouse/warehouse.yaml` and `_gold.yml`. Rows of `kpi`, `kpi_measure`, `kpi_v2_map`, `unit`, `unit_map` and
   `unit_decimals` go in `warehouse/seed_rows/<list>/<source_system>.csv` (the header line of `_shared.csv`, then
   your rows; D36): never a new row in `_shared.csv` or in another source's file; a row that exists is edited

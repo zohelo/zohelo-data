@@ -1,0 +1,4 @@
+source_system,unit_code,measure_key_pattern,unit_key
+mf_treasury_debt,mln_pln,,mln_pln
+mf_treasury_debt,ratio,,share
+mf_treasury_debt,number,,number

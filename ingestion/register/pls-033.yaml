@@ -1,0 +1,62 @@
+id: PLS-033
+name: Weekly agricultural market situation reports
+short_name: KOWR agricultural markets
+provider: Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)
+source_system: kowr_markets
+status: built
+family: B
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [grain markets, meat markets, agricultural prices, trade]
+entities: [commodity, market aggregate, country]
+granularity: Weekly market report table/indicator by commodity and market stage; separate grain, meat and other
+  market pages.
+coverage: Current and archived weekly reports, with pages showing 2023-2026 examples.
+access:
+  endpoint: https://www.gov.pl/web/kowr/raporty-tygodniowe
+  kind: bulk_file
+  interfaces: ['fixed gov.pl pages (raporty-tygodniowe; Rynek-zboz; Rynek-miesa)', 'PDF attachments (https://www.gov.pl/attachment/<uuid>;
+      file name in Content-Disposition, e.g. 41_12-18.10.26_zboże.pdf)']
+  auth: None.
+  cost: free
+  limits: 'None published; robots.txt of www.gov.pl allows all. About 0.3 to 0.9 MB per weekly PDF; one request at a time.'
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+    (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+    attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+    consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+    The report files carry no licence of their own. Tables that KOWR takes from other sources (e.g. GUS, MRiRW,
+    EU) keep their owners'' terms. Attribution: "Źródło: KOWR, <report title> (<date>)" / "Source: National
+    Support Centre for Agriculture (KOWR), <report title> (<date>)".'
+updates: Weekly for grain and meat pages; report files may be revised/replaced.
+ingestion:
+  history: Backfill PDFs for selected commodities; retain report-period metadata.
+  incremental: Poll weekly and version by checksum.
+  identifiers: Report week + commodity/specification + market stage + unit/currency.
+modelling:
+  notes: 'Narrative/derived report values need table/page provenance; do not infer raw respondent microdata. Smallest Gold
+    selection: the tables KOWR compiles itself and that ZSRIR (PLS-032, loaded) does not carry, expected to be EU and world grain and meat
+    quotations and Polish export and import figures quoted per week (table list to be confirmed by the builder), for Poland; Polish
+    producer prices taken from ZSRIR are skipped as duplicates. Weekly (report week Monday to Sunday); grain, meat, dairy
+    ("Raport o sytuacji na rynku produktów mlecznych") and the combined "Sytuacja na rynku podstawowych produktów rolno-żywnościowych".'
+  overlap: Frequently based on ZSRIR and other official/EU sources; preserve upstream source and avoid duplicate price points.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (27 Nov 2026, PR #3323; asked once): the loaded grain tables are KOWR compilations stated as based on European Commission data (EU purchase prices), KE/EBC/NBP data (FOB quotations) and the Polish commodity exchanges (exchange offers); gov.pl terms say tables taken from others keep their owners'' terms. May they be published under the gov.pl terms (or the Commission''s reuse notice), or must KOWR or the exchanges be asked? Until then `licence_key = unresolved` (internal).'
+  - 'Re-review 26 Nov 2026 (Task #2917): approved for internal build. The old parking reason (PDF only, extraction untested)
+    is technical (owner rule of 12 Nov 2026); the pipeline reads PDF text layers. Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): Rynek-zboz and Rynek-miesa each
+    list 175 attachments (weekly reports back to 2023), raporty-tygodniowe 16 (the latest weeks of grain, meat, dairy and
+    the combined report); HEAD of eight answered 200 application/pdf, 283,019 to 854,591 bytes, e.g. 41_12-18.10.26_zboże.pdf
+    526,289 bytes. Tables and the upstream source of each table not checked in this run (the builder''s first step).'
+  - 'dane.gov.pl: KOWR (institution 52) publishes only "Budżet realizowanych programów" there (same run); no market tables.'
+  references:
+  - https://www.gov.pl/web/kowr/raporty-tygodniowe
+  - https://www.gov.pl/web/kowr/Rynek-zboz
+  - https://www.gov.pl/web/kowr/Rynek-miesa
+  - https://www.gov.pl/web/gov/prawa-autorskie

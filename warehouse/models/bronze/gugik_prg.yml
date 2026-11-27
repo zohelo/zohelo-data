@@ -1,7 +1,7 @@
 version: 2
 sources:
 - name: gugik_prg
-  description: GUGiK PRG — national register of boundaries (administrative and cadastral units)
+  description: GUGiK PRG — national register of boundaries (administrative and cadastral units) and address points
   database: r2
   schema: bronze
   meta:
@@ -15,10 +15,32 @@ sources:
       A01 voivodeships, A02 powiats, A03 gminas, A05 cadastral units, A06 cadastral precincts);
       attributes as text (jpt_kod_je = TERYT code), geometry as WKB (geographic ETRS89 as published) with the
       layer's .prj text in crs_wkt.
+  - name: prg_address_points
+    description: >-
+      Address points of the newest national address package (register PL-ENV-007, #3106; entity punkty_adresowe,
+      layer PRG_PunktyAdresowe_POLSKA), one row per point, one file replaced whole per package (entity table,
+      ingestion/to_bronze/gugik_prg/entities.py): the 11 attributes as text (OGC_FID, ID_IIP, NUMER_PORZ, KOD_POCZT,
+      DATA_NAD, NAZWA_ULC, ID_ULIC, NAZWA_GMI, TERYT_GMI, NAZWA_MSC, ID_SIMC), x and y as printed (EPSG:2180), the
+      geometry type, the layer's .prj text and provenance. The package's other layers are not loaded.
   - name: prg_rejected_files
-    description: Landing files the PRG Bronze decoder rejected, with the reason.
+    description: Landing files the PRG Bronze decoder or the address Silver checks rejected, with the reason.
   - name: prg_country
   - name: prg_voivodeships
   - name: prg_counties
   - name: prg_municipalities
   - name: prg_surface_areas
+- name: gugik_prg_silver
+  description: >-
+    Silver table of gugik_prg written per package by the loader (design #875), from
+    warehouse/entity/prg_address_points.sql; it holds exactly the newest address package.
+  database: r2
+  schema: silver
+  tables:
+  - name: prg_address_points
+    description: >-
+      Entity table of the PRG address points (register PL-ENV-007): one row per address point, grain address_id
+      (ID_IIP) with its version stamp, the TERC code of the gmina, SIMC of the locality, ULIC of the street, names, house number, postal
+      code, date assigned and coordinates in EPSG:2180 as published. Grain, not-null keys (address_id, gmina_code,
+      house_number, coordinates, raw_sha256), 7-digit gmina codes and coordinates inside Poland are checked by the
+      loader on every package (entity.apply), which rejects the package otherwise; tests/
+      gugik_prg_address_points_complete.sql checks the table as a whole.

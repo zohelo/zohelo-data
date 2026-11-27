@@ -1,0 +1,3 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+renewable_capacity,poland,A,renewable_capacity,irena_stat,Country_ELECSTAT,irena_stat:elecstat:MW:capacity.total_renewable,A,PL;EU,,sum,up,ready,"2000 on, newest IRENASTAT release; stock at the end of the year; licence unresolved (internal)"
+renewable_generation,poland,A,renewable_generation,irena_stat,Country_ELECSTAT,irena_stat:elecstat:GWh:generation.total_renewable,A,PL;EU,,sum,up,ready,"2000 on, newest IRENASTAT release; flow over the year; licence unresolved (internal)"

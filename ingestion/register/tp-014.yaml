@@ -1,0 +1,42 @@
+id: TP-014
+name: ECB statistical calendar and Governing Council meetings
+short_name: ECB calendars
+provider: European Central Bank
+source_system: release_calendars
+current: true
+status: silver
+family: J
+kpi: false
+geography: euro area
+provider_type: international-public
+domains: [release-calendar, official-statistics]
+entities: [release]
+granularity: 'One ECB statistical release (date, time Frankfurt, title, dataset, reference period, tentative) or Council meeting.'
+coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+access:
+  endpoint: 'https://www.ecb.europa.eu/press/calendars/statscal/html/index.en.html'
+  kind: api
+  interfaces: [HTML]
+  auth: public
+  cost: free
+  limits: 'Two pages per run, 5 seconds apart.'
+licence:
+  status: open-conditional
+  notes: 'ECB website copyright: reproduction allowed with the source acknowledged (https://www.ecb.europa.eu/services/disclaimer/html/index.en.html). robots.txt Crawl-delay 5 is respected.'
+updates: Calendars change when dates are announced or moved.
+ingestion:
+  history: None needed; forthcoming dates.
+  incremental: Daily re-download; written only when the SHA-256 changed.
+  identifiers: publisher + date + title
+modelling:
+  notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+  overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - Calendar layout changes reject the file (decoder checks); watch bronze.release_calendars_rejected_files.
+  references:
+  - https://www.ecb.europa.eu/press/calendars/statscal/html/index.en.html
+  - https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html

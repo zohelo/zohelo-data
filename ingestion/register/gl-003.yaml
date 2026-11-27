@@ -1,0 +1,53 @@
+id: GL-003
+name: OECD Data Explorer and SDMX API
+short_name: OECD Data Explorer
+provider: OECD
+source_system: oecd
+current: true
+status: silver
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [economy, tax, trade, labour, health, education, environment, regional]
+entities: [country, region, person-aggregate, enterprise-aggregate]
+granularity: Dataflow observation at complete SDMX dimensional key; geographic coverage differs sharply by dataset.
+coverage: 'OECD members plus accession, partner and other economies depending on dataflow; history is dataset-specific.
+  CLI (DSD_STES@DF_CLI 4.1): 57 areas incl. OECD, G7, G20, EA20, EU; Poland only BCICP/CCICP (business and
+  consumer confidence) from 1997-07/2001-05 to 2026-10; the amplitude-adjusted CLI (LI) only for 22 areas (G20
+  economies, G7, G20, A5M, G4E, NAFTA), not for Poland, EU, EA20 or OECD.'
+access:
+  endpoint: https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/all?format=csvfile
+  kind: api
+  interfaces: [HTML, SDMX REST API, CSV]
+  auth: public; registration encouraged but not required by terms page
+  cost: free
+  limits: Rate limiting is documented without a numeric threshold; one request per selection and run. The CLI
+    selection (all areas, full history) is one 21 MB response (Dev probe 42776278659, 10 Nov 2026).
+licence:
+  status: open-conditional
+  notes: 'Terms: OECD Terms and Conditions (updated 15 Mar 2024),
+    https://www.oecd.org/en/about/terms-conditions.html, section on Data: users may extract, download, copy,
+    adapt, print, distribute, share and embed Data for any purpose, commercial use and modification included,
+    subject to restrictions stated for a dataset and to third-party rights (the OECD does not warrant it owns
+    all Data). Attribution: "OECD (<year>), <dataset name>, OECD Data Explorer, <DOI or URL> (accessed on
+    <date>)" or the citation given with the dataset.'
+updates: Series schedules vary. New dataflow versions may make non-backward-compatible structural changes.
+ingestion:
+  history: Snapshot selected dataflows, structures, codelists and attributes by version.
+  incremental: Query recent periods only after structure comparison; replace changed observations.
+  identifiers: Agency + dataset + version + SDMX key; map REF_AREA only after inspecting codelist.
+modelling:
+  notes: Full-grain fact; retain unit, adjustment, measure and status. OECD aggregates and indexes are non-additive.
+  overlap: May ingest Eurostat, national or other agencies; lineage distinguishes same-looking indicators.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dataset-level rights scan (third-party restrictions in dataset metadata) for every dataflow added after CLI'
+  - 'Coverage matrix beyond OECD membership'
+  - 'Handle versioned structure breaks'
+  references:
+  - https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html
+  - https://www.oecd.org/en/about/terms-conditions.html

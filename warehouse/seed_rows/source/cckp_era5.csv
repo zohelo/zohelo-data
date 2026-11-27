@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+cckp_era5,GL-036,Bank Światowy CCKP: reanaliza ERA5 0.25° (temperatura powietrza i opady),World Bank Climate Change Knowledge Portal: ERA5 0.25-degree reanalysis (air temperature and precipitation),World Bank (data: Copernicus Climate Change Service / ECMWF ERA5),cube,api,international-public,cc_by_4_0_cckp_era5,https://climateknowledgeportal.worldbank.org/download-data

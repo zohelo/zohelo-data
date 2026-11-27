@@ -1,0 +1,91 @@
+id: EX-004
+name: Open Patent Services (OPS)
+short_name: EPO Open Patent Services
+provider: European Patent Organisation (EPO)
+source_system: epo_statistics
+status: built
+family: J
+kpi: false
+geography: multicountry
+provider_type: international-public
+domains: [innovation, intellectual-property]
+entities: [patent-publication, patent-family, applicant]
+granularity: 'Statistics workbooks: count of European patent applications or granted patents by country of residence of the
+  applicant, field of technology and year. Linked open EP data: one record per EP application and publication.'
+coverage: 'Statistics: 2016-2025 in the EPO Technology Dashboard 2025 edition, EPO member states and main origins, one
+  workbook per main country incl. Poland. Linked open EP data: all EP publications, updated weekly.'
+access:
+  endpoint: 'https://www.epo.org/en/about-us/statistics/data-download'
+  kind: 'bulk_file'
+  interfaces: [XLSX, N-Triples, SPARQL]
+  auth: 'None for the statistics workbooks and for Linked open EP data; OPS itself needs registration and OAuth
+    credentials and is not used.'
+  cost: free
+  limits: 'Statistics: about 40 XLSX files of 20 to 40 KB on link.epo.org, one request per file. Linked open EP data: bulk
+    N-Triples download (full set updated weekly, GZIP with SHA-512 checksums); its API and SPARQL endpoint are for
+    occasional use only. OPS (not used): free threshold per week, fair use charter.'
+licence:
+  status: unresolved
+  notes: 'Terms: https://www.epo.org/en/about-us/statistics/data-download (the page that links the statistics workbooks,
+    read by the runner 26 Nov 2026) states no reuse terms, and https://www.epo.org/en/terms-of-use and
+    https://www.epo.org/en/legal-notice gave the probe no reuse text; commercial reuse and modification of the
+    statistics: not stated, so `unresolved` (internal only). Open alternative for record-level data:
+    https://www.epo.org/en/searching-for-patents/data/linked-open-data: "The EPO grants usage of Linked open EP data
+    under "Creative Commons Attribution 4.0 International Public" License" and "Linked open EP data is a
+    free-of-charge service and is governed by a fair use policy" (bulk download for production use). Not used: OPS
+    terms (https://www.epo.org/en/service-support/ordering/terms-and-conditions/ops-terms-and-conditions) 3.1 users
+    "may distribute the data as part of these products", 3.2 "Users are not permitted to make the data as such
+    available to the public or to copy and/or distribute the data as such"; raw-data (bulk) terms require the
+    attribution "This product contains data sourced from EPO databases, © European Patent Organisation".'
+updates: 'Statistics: one edition a year (the 2025 Technology Dashboard holds 2016-2025); version = edition in the file name
+  plus the file SHA-256 (HEAD gave no Last-Modified). Linked open EP data: weekly.'
+ingestion:
+  history: 'Load the workbooks of the current edition: applications and granted patents per country of residence of the
+    applicant (2016-2025), per field of technology, per field and country for each year, and the Poland country
+    workbook; keep each edition.'
+  incremental: 'Yearly snapshot: the next edition is found by its file names on the data-download page; each edition restates
+    history, the newest wins.'
+  identifiers: 'Country of residence of the applicant (country names, map to ISO2), field of technology (as named in the
+    workbooks), year, indicator (applications, grants), edition.'
+modelling:
+  notes: 'Grain: indicator x applicant country of residence x field of technology x year; annual only; unit count of
+    applications or patents (D33, as published). Smallest Gold selection: European patent applications and granted
+    patents of Polish residents per year 2016-2025, total and by field of technology, then all countries. Suppression
+    markers: none seen in the page list; the builder checks empty cells (never 0). Duplicates: editions overlap in
+    years; keep the newest edition. Record-level EP data from Linked open EP data (CC BY 4.0) is a later, larger
+    step.'
+  overlap: 'WIPO IP statistics (GL-032) count patent filings by office and origin, including EPO filings of Polish residents,
+    under WIPO''s counting rules; UPRP statistics (EX-001, built) count national filings at the Polish office. No
+    published KPI uses EPO counts today.'
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Non-blocking (licence, for publication): the EPO statistics page states no reuse terms, so EX-004 is built for
+    internal use only. Do you want to ask the EPO (contact form on epo.org) whether its patent statistics workbooks
+    may be republished with attribution? Without an answer they stay internal; record-level EP data can be published
+    under CC BY 4.0 from Linked open EP data.'
+  - 'Re-review 26 Nov 2026 (Task #2913): approved on a new route. The parking reason (OPS forbids distributing the
+    data as such and needs registration) stands for OPS, which is not used. Dev probe run 45879796136 (job
+    140115959895, branch test/src-parked-probe, script dev/src_parked1_probe.py, 26 Nov 2026): OPS page and OPS
+    terms HTTP 200 (quoted in licence.notes); robots.txt of ops.epo.org answered 403, so no OPS call was made. Dev
+    probe run 45880748620 (job 140119185484, same branch and script, argument `two`, 26 Nov 2026):
+    https://www.epo.org/en/searching-for-patents/data/linked-open-data (CC BY 4.0),
+    https://www.epo.org/en/searching-for-patents/data/bulk-data-sets/ebd (EP bibliographic data, weekly, under the
+    raw-data terms) and the raw-data and PATSTAT terms HTTP 200. Dev probe run 45881196237 (job 140120671833, same
+    branch and script, argument `three`, 26 Nov 2026): https://www.epo.org/en/about-us/statistics/data-download HTTP
+    200 lists about 40 XLSX workbooks of the EPO Technology Dashboard 2025 (European patent applications and granted
+    patents 2016-2025 per country of residence of the applicant, per field of technology, and per field and country
+    for each year; one workbook per country incl. "Poland 2025", 34 KB); HEAD of three of them HTTP 200; the Linked
+    open EP data user guide PDF (bulk download section) HTTP 200.'
+  - 'Earlier parking reason: OPS terms allow use in own products but prohibit distributing the data as such and need
+    a fair-use agreement'
+  references:
+  - https://www.epo.org/en/about-us/statistics/data-download
+  - https://link.epo.org/web/about-us/statistics/european-patent-applications-2016-2025-per-country-of-residence-of-the-applicant-epo-technology-dashboard-2025.xlsx
+  - https://link.epo.org/web/about-us/statistics/european-patent-applications-per-field-of-technology-and-per-country-of-residence-of-the-applicant-for-each-individual-year-2016-2026-epo-technology-dashboard-2025.xlsx
+  - https://link.epo.org/web/about-us/statistics/poland-epo-technology-dashboard-2025.xlsx
+  - https://www.epo.org/en/searching-for-patents/data/linked-open-data
+  - https://link.epo.org/web/linked_open_ep_data_user_guide_en.pdf
+  - https://www.epo.org/en/service-support/ordering/terms-and-conditions/ops-terms-and-conditions

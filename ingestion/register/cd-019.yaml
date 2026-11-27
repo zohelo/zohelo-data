@@ -1,0 +1,56 @@
+id: CD-019
+name: Instagram API
+short_name: Instagram API
+provider: Meta
+status: reviewing
+family: J
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [social-media, marketing]
+entities: [professional-account, media, comment, insight]
+granularity: Media and account data for authorized Instagram professional accounts; fields depend on API and permissions.
+coverage: Primarily current account/media state; not a complete public Instagram history.
+access:
+  endpoint: https://developers.facebook.com/docs/instagram-platform/overview
+  kind: api
+  interfaces: [API]
+  auth: Meta app, access token, permissions and account authorization/review as applicable.
+  cost: free
+  limits: Permission and app-tier specific; unknown here.
+licence:
+  status: restricted
+  notes: 'Terms: https://developers.facebook.com/terms/ (Meta Platform Terms, read by the runner 27 Nov 2026, HTTP
+    200; it refers to the Meta Terms of Service, the Instagram Terms of Use and the Meta Commercial Terms, whose pages
+    on facebook.com are disallowed to the probe by robots.txt and were not read). The platform overview
+    https://developers.facebook.com/docs/instagram-platform/overview says: "The Instagram Platform is a collection of
+    APIs that allows your app to access data for Instagram professional accounts, including business and creator
+    accounts. You can build an app that serves only an account you own or manage, or an app that serves app users''
+    Instagram professional accounts." No reuse right for public accounts at large is stated: stays internal.'
+updates: Account events/metrics update continuously; retention and deletion rules apply.
+ingestion:
+  history: 'PROPOSAL: onboard only consenting business/creator accounts after policy review.'
+  incremental: 'PROPOSAL: poll authorized media/insights and process revocation/deletion.'
+  identifiers: Instagram account and media IDs; do not infer cross-platform person identity.
+modelling:
+  notes: Account-owned snapshots with observed_at; separate media from changing metrics.
+  overlap: Overlaps Content Library only for approved research/public scope.
+research:
+  priority: conditional
+  evidence: tested
+  connection: not-tested
+  blockers:
+  - 'Owner question (account): the Instagram API serves only professional accounts that the app owner owns or manages,
+    or whose users connect them; it gives no public statistics. Connect a zohelo Instagram professional account
+    through a Meta app (owner-created), or park CD-019? Recommendation: park. The eight social-platform APIs CD-017 to
+    CD-024 can be answered in one reply (''park CD-017 to CD-024''); none offers official statistics for Poland, and
+    each needs an account, an application or a paid plan.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was owner-authorised access only, an account question, so
+    the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+    dev/src_parked2_probe.py, 27 Nov 2026): the platform overview and Meta Platform Terms HTTP 200 (quoted);
+    facebook.com/legal/terms and facebook.com/legal/commercial_terms robots.txt disallow (recorded).'
+  - 'Earlier parking reason: owner-authorised integrations only; no collection of public accounts at scale'
+  references:
+  - https://developers.facebook.com/docs/instagram-platform/overview
+  - https://developers.facebook.com/terms/
+  - https://developers.facebook.com/docs/instagram-platform/reference/instagram-media

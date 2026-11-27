@@ -1,0 +1,59 @@
+id: CD-018
+name: Meta Content Library and API
+short_name: Meta Content Library
+provider: Meta
+status: reviewing
+family: J
+kpi: false
+geography: multicountry
+provider_type: commercial
+domains: [social-media, research]
+entities: [public-page, public-group, public-event, public-post, creator-account]
+granularity: Approved research access to selected public Facebook and Instagram content and engagement fields.
+coverage: Near-real-time library; available download scope is limited and it is not a general historical commercial archive.
+access:
+  endpoint: https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/
+  kind: api
+  interfaces: [research-UI, API]
+  auth: Application through ICPSR; qualified academic/nonprofit public-interest researchers.
+  cost: free
+  limits: Contract/workspace specific; no numerical limit relied on.
+licence:
+  status: restricted
+  notes: 'Terms: https://developers.facebook.com/docs/content-library-and-api (read by the runner 27 Nov 2026, HTTP
+    200): "Content Library and API are controlled-access environments. The functionality to download the public data
+    subset is only available in the Content Library user interface (not in the API), and only if the Inter-university
+    Consortium for Political and Social Research (ICPSR) or the Secure Data Access Center (CASD) has approved your
+    Meta Content Library application and you or your institution has consented to the appropriate contract terms (Meta
+    Research Tools Terms and Conditions, Information Sharing Agreement)"; the API runs only "in Meta''s Secure
+    Research Environment ... or in an approved third-party cleanroom". transparency.meta.com is disallowed to the
+    probe by robots.txt and was not read. Research-only: stays internal.'
+updates: Near real time, subject to platform removals and research controls.
+ingestion:
+  history: 'PROPOSAL: catalogue only unless a qualifying research project is approved.'
+  incremental: 'PROPOSAL: follow workspace rules; no independent long-term mirroring.'
+  identifiers: Platform content/account IDs and observation time; identity linkage needs ethics review.
+modelling:
+  notes: Research evidence store, not a reusable commercial dimension.
+  overlap: Broader than owner-authorized APIs but narrower in purpose and export rights.
+research:
+  priority: specialist
+  evidence: tested
+  connection: not-tested
+  blockers:
+  - 'Owner question (eligibility and agreement): access needs an approved application through ICPSR or CASD by a
+    research institution, contract terms with Meta, and analysis only inside Meta''s cleanroom; zohelo is not such an
+    institution. Seek a partnership with an eligible institution, or park CD-018? Recommendation: park. The eight
+    social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017 to CD-024''); none offers
+    official statistics for Poland, and each needs an account, an application or a paid plan.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was research-only governed access, an eligibility and
+    agreement question for the owner, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch
+    test/src-parked2-probe, script dev/src_parked2_probe.py, 27 Nov 2026): the developer documentation page HTTP 200
+    (quoted), https://developers.facebook.com/terms/dfc_platform_terms/ and https://developers.facebook.com/devpolicy/
+    HTTP 200; https://transparency.meta.com/researchtools/meta-content-library robots.txt disallow (recorded, not
+    worked around).'
+  - 'Earlier parking reason: research-only governed access (Meta Content Library); not eligible for product ingestion'
+  references:
+  - https://developers.facebook.com/docs/content-library-and-api
+  - https://transparency.meta.com/researchtools/meta-content-library
+  - https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/

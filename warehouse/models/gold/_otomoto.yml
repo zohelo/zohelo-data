@@ -1,0 +1,16 @@
+version: 2
+models:
+  - name: poc_build_otomoto
+    description: >-
+      Build stage — OTOMOTO Insights (register CD-034), block insights: Poland, monthly from January 2025, average daily
+      active listings on OTOMOTO and the traffic indices (monthly users and buyers, January 2025 = 100), by segment of
+      the report (breakdown_json segment). Values and units as published; licence unresolved, so internal.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

@@ -1,0 +1,50 @@
+id: GL-029
+name: Refugee Data Finder / Refugee Statistics API
+short_name: UNHCR Refugee Statistics
+provider: United Nations High Commissioner for Refugees
+source_system: unhcr
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [forced-displacement, asylum, statelessness]
+entities: [country-pair, person-aggregate]
+granularity: Origin/asylum country/year/population type; separate asylum applications, decisions, demographics
+  and solutions.
+coverage: Almost 70 years of forced-displacement statistics; geography/demographic completeness varies.
+access:
+  endpoint: https://api.unhcr.org/docs/refugee-statistics.html
+  kind: api
+  interfaces: [HTML, REST API, JSON, CSV]
+  auth: public
+  cost: free
+  limits: Default page size 100 is documented; no maximum or rate quota stated; limit=20000 returns the 7,802-row
+    selection in one page (Dev trials 43279310455, 43282453427).
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0 plus supplemental terms, https://www.unhcr.org/terms-use-datasets ("licensed under a Creative
+    Commons Attribution International License 4.0"): UNHCR APIs may be used to access the datasets; include the URL
+    of these terms when sharing; no implied endorsement; third-party datasets flagged in metadata may need their provider''s
+    consent; UNHCR may change or discontinue datasets and APIs. Attribution: "Source: UNHCR Refugee Population Statistics
+    Database" with credit to UNHCR''s data providers.'
+updates: Annual and other releases can revise history; methodology page governs definitions.
+ingestion:
+  history: Load endpoints by year/resource plus lookups and footnotes.
+  incremental: Use year filters for refresh, then upsert complete keys; no CDC.
+  identifiers: UNHCR or ISO3 origin/asylum codes + year + population category; preserve code-system choice.
+modelling:
+  notes: Counts may aggregate when country filters are omitted; avoid accidental totals. Population stocks and
+    flows differ. Built (#2415) with every selection naming its dimensions (coa_all=true; coa=POL with coo_all=true),
+    Bronze rejecting a response over more than one page and tests/unhcr_selection.sql; the third-party idmc and
+    unrwa endpoints are not landed.
+  overlap: Overlaps UNdata, IOM and WDI; operational situation data may have different cutoffs.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers: []
+  references:
+  - https://api.unhcr.org/docs/refugee-statistics.html
+  - https://data.unhcr.org/en/situations/ukraine
+  - https://www.unhcr.org/terms-use-datasets

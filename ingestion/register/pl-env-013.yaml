@@ -1,0 +1,71 @@
+id: PL-ENV-013
+name: Hydroportal / water-management spatial data
+short_name: Wody Polskie Hydroportal
+provider: Państwowe Gospodarstwo Wodne Wody Polskie
+source_system: wody_polskie_apgw
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [water management, flood risk, drought]
+entities: [water body, flood-hazard zone, planning unit]
+granularity: Flood hazard/risk, water-body and planning geometries; availability differs by theme.
+coverage: Current national planning/map editions; some dated plan cycles, but uniform archive depth unknown.
+access:
+  endpoint: https://api.dane.gov.pl/media/resources/20231220/Geobaza_2aPGW_ver_20230915.gdb.zip
+  kind: bulk_file
+  interfaces: [File Geodatabase ZIP (dane.gov.pl dataset 599), WFS (IIaPGW), WMS (ISOK INSPIRE), request form]
+  auth: None for the dane.gov.pl file and the WMS/WFS; flood hazard vectors only on request.
+  cost: Free; a written request "może wiązać się z naliczeniem opłaty".
+  limits: None published; one file per plan cycle.
+licence:
+  status: open-conditional
+  notes: 'Terms: dane.gov.pl dataset 599 "Baza danych przestrzennych aktualizacji planów gospodarowania wodami" (Wody Polskie,
+    http://apgw.gov.pl/) is published under "CC BY 4.0" with the condition "Zakres odpowiedzialności podmiotu zobowiązanego
+    (dostawcy) za udostępniane informacje sektora publicznego" (API record read by the runner 26 Nov 2026). Wody Polskie
+    page https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami (read by
+    the runner 26 Nov 2026): "Dane mogą zostać wykorzystane nieodpłatnie zarówno w celach niekomercyjnych, jak i komercyjnych
+    pod warunkiem wskazania źródła oraz czasu wytworzenia i pozyskania informacji od podmiotu zobowiązanego." Commercial
+    reuse yes; modification allowed under CC BY 4.0. Attribution: "Źródło: Państwowe Gospodarstwo Wodne Wody Polskie, Baza
+    danych przestrzennych aPGW (2023), dane.gov.pl" with the date produced and the date obtained.'
+updates: Theme and plan-cycle specific (flood hazard and risk maps and water-management plans in six-year cycles).
+ingestion:
+  history: 'Bulk file: the aPGW 2023 File Geodatabase on dane.gov.pl (dataset 599), one ZIP of 307,606,332 bytes, Last-Modified
+    20 Dec 2023, ETag "6582d525-1255b33c" (HEAD, Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)).
+    It holds the planning units of the 2nd update of the river basin plans; the previous plan cycle is not on dane.gov.pl,
+    so history starts with the 2023 edition. The Hydroportal map application and the ISOK WMS services (view only) are
+    not used; flood hazard vectors are sent only on a written request (not part of this approval). Unit boundaries are
+    also on dane.gov.pl dataset 2170.'
+  incremental: 'Snapshot per plan cycle: the version is the resource date and ETag of the dataset 599 ZIP; a new plan update
+    (six-year cycle) arrives as a new resource. A weekly HEAD is enough; the ZIP is downloaded only when the ETag changes.'
+  identifiers: Water-body codes, flood-map scenario identifiers and administrative/planning unit codes.
+modelling:
+  notes: 'Smallest Gold selection: the water-management planning units of the 2nd update of the river basin plans (aPGW
+    2023) from the File Geodatabase: surface and groundwater bodies (JCWP, JCWPd) and river basin districts as entity tables
+    with their codes and area, plus the count and area of water bodies per river basin district and per voivodeship (by
+    intersection with PRG) as measures; the plan cycle is the version. Flood hazard zones stay out: they are view-only (ISOK
+    WMS) and on written request.'
+  overlap: Overlaps IMGW hydrology and GIOŚ monitoring but is planning/reference data, not observations; water-body geometry
+    is also reported to the EEA (GL-037).
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915): approved for the planning data that Wody Polskie publish as a bulk file on dane.gov.pl
+    (dataset 599: Geobaza_2aPGW_ver_20230915.gdb.zip, resource dated 2023-12-20, plus the WFS https://wody.isok.gov.pl/gpservices/KZGW/ISOK_IIaPGW2023/MapServer/WFSServer).
+    Dev probe run 45815140983 (job 139892828435, same branch, argument `two`, 26 Nov 2026) read the record and its resources;
+    Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026):
+    isok.gov.pl/inspire.html lists only WMS view services (HY 10k, PGW), both answering GetCapabilities with "Brak warunków
+    dostępu i użytkowania".'
+  - 'Not part of this approval: flood hazard and risk zones (vectors only by written request, possibly charged). Owner option,
+    not blocking: a written request to Wody Polskie for the 1 percent flood hazard zones as SHP, if the gmina flood-zone
+    share is wanted.'
+  - 'Builder: the ZIP is 307,606,332 bytes (Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)); DuckDB
+    spatial reads File Geodatabase (OpenFileGDB); store the entity tables and measures, not the geometry.'
+  references:
+  - https://dane.gov.pl/pl/dataset/599
+  - https://www.gov.pl/web/wody-polskie/udostepnianie-danych-z-systemu-informacyjnego-gospodarowania-wodami
+  - https://isok.gov.pl/inspire.html
+  - https://wody.isok.gov.pl/hydroportal.html

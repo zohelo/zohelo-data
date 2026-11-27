@@ -1,0 +1,61 @@
+id: PLS-021
+name: Rejestr Szkół i Placówek Oświatowych (RSPO) API and search
+short_name: RSPO schools register
+provider: Ministerstwo Edukacji Narodowej / System Informacji Oświatowej
+source_system: rspo
+status: built
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [schools, education institutions, reference data]
+entities: [school, education establishment, governing body, territorial unit]
+granularity: One school/establishment register entry, integrating SIO data and searchable by location or governing body.
+coverage: Current register via the API (credentials); yearly lists of the register's state on 30 September on dane.gov.pl
+  (dataset 839; 58-column layout 2020-2025, older layouts 2017-2018, per-voivodeship XLS 2013-2015).
+access:
+  endpoint: https://api.dane.gov.pl/1.4/datasets/839/resources
+  kind: bulk
+  interfaces: [dane.gov.pl public API (JSON, no key), XLSX per year; REST API api.rspo.gov.pl (OpenAPI 3.1, credentials)]
+  auth: 'dane.gov.pl: none. api.rspo.gov.pl: free, but credentials (basic auth) are granted only after an e-mail request
+    to rspo@cie.gov.pl ("Wniosek o dostęp do API <entity>"), decided within 14 days; CIE may refuse without reason.'
+  cost: free
+  limits: 'dane.gov.pl: none published. API: CIE "may introduce request limits" (Regulamin point 3.5); none published.'
+licence:
+  status: open-conditional
+  notes: 'Terms: dane.gov.pl dataset 839 "Wykaz szkół i placówek oświatowych" (https://dane.gov.pl/pl/dataset/839, read
+    through https://api.dane.gov.pl/1.4/datasets/839 on 26 Nov 2026, Dev probe 45747111363): license_name "CC BY 4.0",
+    license_condition_default_cc40 true (the default condition of the portal; its legacy field license_description reads
+    "Other (Public Domain)"). Attribution: "Źródło: Ministerstwo Edukacji Narodowej, Wykaz szkół i placówek
+    oświatowych (dane.gov.pl)". CC BY 4.0 allows commercial reuse and modification with attribution and an
+    indication of changes. The API regulations (https://api.rspo.gov.pl/files/Regulamin.pdf) carry no licence and
+    apply only to the API, which is not used.'
+updates: Yearly list of the state on 30 September (dane.gov.pl update frequency "Rocznie"; 2025 published 16 Feb 2026,
+  2024 on 17 Mar 2025); the register itself is operational.
+ingestion:
+  history: Yearly lists 2020/2021-2025/2026 (state of 30 September) in one layout; 2017 and 2018 lists in other layouts
+    and the 2013-2015 per-voivodeship XLS files are not landed.
+  incremental: A list whose file URL is not landed yet (new year or corrected upload, dated path); weekly check.
+  identifiers: RSPO number is primary (unique per list); TERYT codes of gmina, powiat and voivodeship; REGON is
+    published but not loaded.
+modelling:
+  notes: Model institution, site, governing body and school type separately; status and validity dates matter. The lists
+    publish no start or liquidation dates; Gold keeps the years in which a number is listed.
+  overlap: Overlaps SIO aggregates and GUS education establishment counts; one is entity-level register, others aggregates.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Not used: the RSPO API (owner action: send the access request to rspo@cie.gov.pl, application form
+    https://api.rspo.gov.pl/files/Wniosek.pdf); the yearly lists on dane.gov.pl are the route (#3031)'
+  - 'Allowed public fields: no institution name, address, contact, REGON or governing-body identity is loaded (7,742 of
+    55,741 entries of 2025 are run by a natural person)'
+  references:
+  - https://dane.gov.pl/pl/dataset/839
+  - https://api.dane.gov.pl/1.4/datasets/839/resources
+  - https://api.rspo.gov.pl/
+  - https://rspo.gov.pl/institutions
+  - https://api.rspo.gov.pl/v3/api-docs.yaml
+  - https://api.rspo.gov.pl/files/Regulamin.pdf
+  - https://api.rspo.gov.pl/files/RSPO-API-doc.pdf

@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+scholarly_works_pl_institution,openalex,openalex:works_pl:works,"OpenAlex works API, filter institutions.country_code:PL, group_by publication_year, every publication year up to the year of the copy",1,

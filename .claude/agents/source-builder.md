@@ -24,8 +24,8 @@ skills:
   `ingestion/common/lineage.py`, `.github/workflows/pipeline.yml`, `warehouse/models/bronze/sources.yml` or
   `docs/sources.md`. Your rows of the code lists (`source`, `licence`, `unit`, `unit_map`, `unit_decimals`) go in
   `warehouse/seed_rows/<list>/<source_system>.csv`: the header line of `_shared.csv`, then your rows; never a new
-  row in `_shared.csv` or in another source's file (D36). Still shared: `ingestion/register.yaml` (touch only your
-  own entry, merge `origin/main` right before opening the PR and resolve conflicts by keeping both sides). Do not touch `poc_fact_*` or Gold (that is `gold-modeller`).
+  row in `_shared.csv` or in another source's file (D36). Your register entry is its own file,
+  `ingestion/register/<id lower>.yaml` (D42). Do not touch `poc_fact_*` or Gold (that is `gold-modeller`).
 - One PR per source (or small family), at most about 400 changed lines; body starts `Closes #<Task>` (create the
   Task by REST if the generated one does not exist: `gh api repos/zohelo/zohelo-data/issues -f title=… -f type=Task
   -f body=…`; open the PR by REST, `gh pr create` fails). Do **not** enable auto-merge: the orchestrator merges

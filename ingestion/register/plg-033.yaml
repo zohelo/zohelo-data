@@ -1,0 +1,67 @@
+id: PLG-033
+name: Police Statistics portal
+short_name: Police statistics
+provider: Polish Police Headquarters
+source_system: policja_statistics
+status: built
+family: F
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [crime, public safety]
+entities: [offence-aggregate, person-aggregate, region]
+granularity: 'Annual crime statistics by category: recorded and detected offences and detection rate by voivodeship-level
+  unit; proceedings initiated by registering police unit.'
+coverage: 1999 onwards; the end year differs by category (all offences to 2021, homicide to 2023 on 12 Nov 2026).
+access:
+  endpoint: https://statystyka.policja.pl/
+  kind: bulk_file
+  interfaces: [XLSX, HTML]
+  auth: public download
+  cost: free
+  limits: None published; robots.txt disallows only /ftp/.
+licence:
+  status: unresolved
+  notes: 'Terms: https://policja.pl/pol/wolnytekst/46616,dok.html ("Prawa autorskie", read by the probe 12 Nov 2026; the
+    footer of statystyka.policja.pl links it as "Nota prawna - Chcesz wykorzystać materiał z serwisu Statystyka. Zapoznaj
+    się z zasadami"): "W przypadku wykorzystania materiałów prosimy o podanie ich źródła: policja.pl. W serwisie zamieszczane
+    są także utwory, co do których prawa autorskie przysługują osobom trzecim. Ich wykorzystanie przez internautów wymaga
+    zgody właścicieli tych materiałów." The page asks for the source and says nothing on commercial reuse or modification,
+    so reuse is not stated as allowed: internal use until the owner decides. Attribution if used: "Źródło: policja.pl".'
+updates: 'Annual per category, uneven: the all-offences workbook was last modified 25 Mar 2022 (data to 2021). No release
+  calendar.'
+ingestion:
+  history: 'Bulk files linked from the category pages of https://statystyka.policja.pl/ (server-rendered): https://statystyka.policja.pl/st/przestepstwa-ogolem
+    lists two XLSX per category, e.g. /download/20/232277/przestepstwa-ogolem-do-2021.xlsx (27,434 bytes; by administrative
+    unit) and /download/20/232279/postepowania-wszczete-przestepstwa-ogolem-do-2021.xlsx (19,753 bytes; by police unit).
+    The file name carries the end year, so the category page is the stable entry. Categories: all offences, criminal offences,
+    seven selected categories (fight and battery, bodily harm, theft, burglary, robbery, damage to property, homicide) and
+    more; road-accident annual reports are on their own page (26 files).'
+  incremental: Snapshot per category workbook; version = Last-Modified (ETag present); yearly check is enough.
+  identifiers: Category page, workbook name, year, voivodeship-level police unit (names, no TERYT).
+modelling:
+  notes: 'Smallest Gold selection: the by-administrative-unit workbook of all offences and of the seven selected categories.
+    New KPIs: recorded offences per 100,000 residents and detection rate (%), annual, Poland and voivodeships (population
+    from GUS). Caveat stated on the portal: for 2013-2016 offences of the central units (BSW KGP, CBŚP) are assigned to
+    voivodeship units, earlier years to garrisons. Police units are not one-to-one with voivodeships (a separate Warsaw
+    metropolitan command is expected; to confirm in the workbook). Effort S. Built 16 Nov 2026 (#2969, Dev trial 43806377026):
+    the workbooks print Polska, the 16 voivodeships (Mazowieckie as one row) and the two police areas that split Mazowieckie
+    (KSP Warszawa, KWP Radom); the voivodeships add up to Poland. Gold: Poland and voivodeships; KPIs recorded_offences
+    and offence_detection_rate (draft); the rate per 100,000 residents and the other eight categories are not built yet.'
+  overlap: GUS BDL publishes Police crime statistics by voivodeship and powiat, more current than the portal workbooks;
+    keep both series (O31).
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Owner question: the Police copyright page says only "W przypadku wykorzystania materiałów prosimy o podanie ich źródła:
+    policja.pl." and nothing on commercial reuse or modification. Do you accept that as permission to publish with the attribution
+    "Źródło: policja.pl" (licence open-conditional), or does PLG-033 stay internal (unresolved)?'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): portal, category page and both
+    workbooks (HEAD) answered 200 to a GitHub runner.'
+  - 'The all-offences workbook ends in 2021: check freshness per category at the build.'
+  references:
+  - https://statystyka.policja.pl/
+  - https://statystyka.policja.pl/st/przestepstwa-ogolem
+  - https://policja.pl/pol/wolnytekst/46616,dok.html

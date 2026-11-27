@@ -1,0 +1,47 @@
+id: PLG-026
+name: ELI Poland — Dziennik Ustaw and Monitor Polski
+short_name: ELI Dziennik Ustaw
+provider: Government Legislation Centre (RCL) / Chancellery of the Sejm
+source_system: eli_pl
+status: built
+family: F
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [law, official gazette]
+entities: [legal act, official journal]
+granularity: Journal/year/position and published, consolidated or codified text.
+coverage: URI documentation states years 1918-current, subject to source availability.
+access:
+  endpoint: https://api.sejm.gov.pl/eli.html
+  kind: api
+  interfaces: [REST API, JSON, PDF, HTML]
+  auth: Public; no key.
+  cost: free
+  limits: Unknown.
+licence:
+  status: unresolved
+  notes: 'Terms: the ELI API documentation https://api.sejm.gov.pl/eli.html (11 Nov 2026 read) states no licence or attribution
+    text. Registered as open-conditional on the strength of ELI general statements; the exact licence is not quoted anywhere
+    reachable, so it is set to unresolved (internal only) until the Chancellery of the Sejm confirms terms. Legal acts themselves
+    are not protected by copyright (Polish Copyright Act art. 4), but the database and formatting terms need confirmation.'
+updates: Publication-driven; consolidated/codified versions may appear later.
+ingestion:
+  history: 'PROPOSAL: enumerate documented ELI journal/year/position resources from 1918 onward, preserving ogl/tj/uj, language
+    and format.'
+  incremental: 'PROPOSAL: append new journal positions and revisit known acts for later consolidated/codified versions;
+    do not infer legal-status CDC.'
+  identifiers: ELI journal + year + position + text type + language + format
+modelling:
+  notes: Published text may be authoritative; codified text may lack legal force.
+  overlap: Substantial overlap with ISAP and RCL/Sejm documents.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Licence unresolved: no licence text on the ELI API page'
+  - Confirm paging and the act-text endpoints in the dev trial
+  references:
+  - https://eli.gov.pl/
+  - https://api.sejm.gov.pl/eli_pl.html

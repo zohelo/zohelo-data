@@ -1,0 +1,61 @@
+id: CD-032
+name: Allegro REST API
+short_name: Allegro API
+provider: Allegro
+status: reviewing
+family: J
+kpi: false
+geography: multicountry-Europe
+provider_type: commercial
+domains: [e-commerce]
+entities: [seller-account, offer, product, order, category]
+granularity: Seller-owned offers/orders plus selected public resources such as categories; endpoint authorization varies.
+coverage: Operational current state; no general historical marketplace snapshot product is documented.
+access:
+  endpoint: https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR
+  kind: api
+  interfaces: [API]
+  auth: 'Fully registered Allegro account and a REST API key granted after Allegro verifies the application (rules section
+    3); OAuth, client_credentials for public resources such as the category list.'
+  cost: free
+  limits: Endpoint/application specific; unknown here.
+licence:
+  status: restricted
+  notes: 'Terms: https://developer.allegro.pl/rules (Regulamin REST API, read by the runner 26 Nov 2026): the REST API user
+    is an Allegro user with a complete registration; "REST API jest autoryzowanym przez Spółkę sposobem komunikacji
+    zewnętrznych aplikacji z zasobami Allegro"; a REST API key "zostaje przyporządkowany do Konta danego Użytkownika
+    po pozytywnej weryfikacji wniosku przez Spółkę", and Allegro may limit keys and scopes, notably for reading offer
+    data. https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR: the client_credentials
+    flow is "przeznaczona do zasobów, które pozwalają na dostęp do publicznych danych, np. pobieranie listy
+    kategorii". No right to republish marketplace data is stated; attribution sentence: none given. Not reusable for
+    public display: stays internal.'
+updates: Operational resources change continuously; events and polling differ by resource.
+ingestion:
+  history: 'PROPOSAL: onboard only consenting seller accounts and approved public resources.'
+  incremental: 'PROPOSAL: use account events where documented plus reconciliation; no market-wide archive.'
+  identifiers: Marketplace, seller, offer, product and category IDs; offers are seller listings, not products.
+modelling:
+  notes: Tenant-separated offer/order facts; distinguish listed price from transaction value.
+  overlap: May overlap merchant systems and price vendors; public search is incomplete by design.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (account): Allegro''s REST API is open only to a fully registered Allegro account whose
+    application Allegro verifies, it is built for sales integrations, and it publishes no market statistics (public
+    resources are lists such as categories; offer search is for verified applications). Register an Allegro account
+    and REST API application for zohelo, or park CD-032? Recommendation: park; there is no measure for Gold beyond
+    the category tree.'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was restricted terms; the open point is an account,
+    which is an owner question, so the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch
+    test/src-parked-probe, script dev/src_parked1_probe.py, 26 Nov 2026):
+    https://developer.allegro.pl/documentation, https://developer.allegro.pl/rules and the authorization tutorial
+    HTTP 200 (quoted in licence.notes); robots.txt of api.allegro.pl is "user-agent: * / disallow: /", so no API
+    call was made (recorded, not worked around).'
+  - 'Earlier parking reason: sales-integration API; public offer search is restricted to verified applications and
+    does not imply data reuse rights'
+  references:
+  - https://developer.allegro.pl/rules
+  - https://developer.allegro.pl/tutorials/uwierzytelnianie-i-autoryzacja-zlq9e75GdIR
+  - https://developer.allegro.pl/documentation

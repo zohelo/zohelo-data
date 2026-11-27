@@ -1,0 +1,60 @@
+id: PLS-030
+name: Barometr Zawodów
+short_name: Barometr Zawodów
+provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
+source_system: barometr_zawodow
+status: built
+family: B
+kpi: true
+geography: powiat, voivodeship and Poland
+provider_type: national-public
+domains: [occupational shortage forecast, labour demand, vacancies]
+entities: [occupation, powiat, voivodeship, country]
+granularity: Annual expert forecast category (shortage/balance/surplus) by occupation and powiat; portal also shows occupational
+  statistics.
+coverage: Nationwide forecasts available from 2016; Małopolska has earlier results.
+access:
+  endpoint: https://barometrzawodow.pl/modul/publikacje?publication=national&year=2025
+  kind: bulk_file
+  interfaces: [fixed HTML publication pages per year, PDF reports and posters (text layer), interactive maps and tables]
+  auth: None.
+  cost: free
+  limits: None published; robots.txt allows all. The directory https://barometrzawodow.pl/forecast-card-zip/2026/ answers
+    HTTP 403 (no listing); the files are read only by the links on the publication pages.
+licence:
+  status: unresolved
+  notes: 'Terms: the national report "BAROMETR ZAWODÓW 2026" (https://barometrzawodow.pl//forecast-card-zip/2026/report_pl/raport_ogolnopolski_2026.pdf,
+    session read 26 Nov 2026) states: "Copyright by: Wojewódzki Urząd Pracy w Krakowie", "Kopiowanie i rozpowszechnianie
+    może być dokonywane z podaniem źródła." and "Publikacja jest dystrybuowana bezpłatnie." The site footer reads "All rights
+    reserved". Copying and distribution with the source are allowed; commercial reuse and modification are not stated, so
+    the status is unresolved (internal). Attribution: "Źródło: Barometr zawodów <year>, Wojewódzki Urząd Pracy w Krakowie".'
+updates: Annual forecast produced from expert assessment in prior-year Q3/Q4.
+ingestion:
+  history: Backfill forecast cards/maps by year and geography after export and licence review.
+  incremental: Poll annually; retain methodology edition and occupation grouping.
+  identifiers: Forecast year + powiat/voivodeship + Barometr occupation code/name.
+modelling:
+  notes: 'Smallest Gold selection: the forecast category (deficit, balance, surplus) per occupation for Poland and the 16
+    voivodeships, forecast years 2016-2026, from the national and voivodeship reports (PDF tables), as a categorical measure
+    with the forecast year as the period; powiat cards later. A forecast is not an observation: kept as its own measure
+    family, never merged with vacancy counts.'
+  overlap: Uses labour-market evidence and expert judgment; must not be merged numerically with registered vacancies.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915): approved for internal build. The old parking reason (maps and PDF only) is technical
+    (O44). Dev probe run 45815140983 (job 139892828435, same branch, argument `two`, 26 Nov 2026): the publication page
+    for 2025 links raport_ogolnopolski_2025.pdf and BAROMETR_ZAWODOW_ogolnopolski_2025.pdf; Dev probe run 45813307617 (job
+    139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the home page links the national
+    publication pages for 2016-2025; the table and map modules load their data by script (no address in custom.js, Dev probe
+    run 45815892766 (job 139895407895, same branch, argument `three`, 26 Nov 2026)).'
+  - 'Built 26 Nov 2026 (#454): the national report has no occupation x voivodeship table; it reprints the 17 posters
+    (with hidden remnants of other posters on some pages, 2018-2023). The source is the posters: the national poster and
+    the poster of each voivodeship page (publication=province&province=<1-16>), each occupation in a coloured block per
+    category with the category name on the block''s tab (docs/sources/barometr_zawodow.md).'
+  references:
+  - https://barometrzawodow.pl/
+  - https://barometrzawodow.pl/modul/publikacje?publication=national&year=2025
+  - https://barometrzawodow.pl//forecast-card-zip/2026/report_pl/raport_ogolnopolski_2026.pdf

@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+address_points,gugik_prg,gugik_prg:punkty_adresowe:address_points,"entity snapshot of the newest national package (latest only, one date); gminas by the point's TERC code, powiats and voivodeships from it",1,address_points

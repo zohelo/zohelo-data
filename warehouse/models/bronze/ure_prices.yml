@@ -1,0 +1,17 @@
+version: 2
+sources:
+- name: ure_prices
+  description: URE energy price indicators (register PL-ENV-020), three indicator pages of ure.gov.pl (HTML tables)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/ure_prices/
+    loaded_by: ingestion/to_bronze/ure_prices/
+    config: ingestion/sources/ure_prices.yaml
+  tables:
+  - name: ure_prices_cells
+    description: >-
+      One row per data cell of the page's tables (row label = year, column header text, cell text as shown) with the
+      page's modification and publication dates, newest copy of each page; partitioned by entity.
+  - name: ure_prices_rejected_files
+    description: Pages of ure_prices the Bronze decoder rejected (unknown table layout), with the reason.

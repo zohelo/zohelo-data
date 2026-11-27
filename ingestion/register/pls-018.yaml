@@ -1,0 +1,60 @@
+id: PLS-018
+name: Raport – Stan Sanitarny Kraju
+short_name: GIS sanitary state report
+provider: Główny Inspektorat Sanitarny (GIS)
+source_system: gis_sanitary
+status: built
+family: B
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [public health, sanitary inspection, food safety, environmental health]
+entities: [country, inspection-aggregate, establishment-aggregate, sample-aggregate]
+granularity: Annual report table/indicator aggregated from national, voivodeship, powiat and border sanitary inspectorates.
+coverage: 'Annual reports 2006 to 2025 on the page (Dev probe 45894316074): Stan Sanitarny Kraju 2006-2023, Raport z działań PIS 2024 and 2025; built from 2012 (food-samples table, years 2010-2025).'
+access:
+  endpoint: https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
+  kind: bulk_file
+  interfaces: [fixed gov.pl page, 'PDF attachments (https://www.gov.pl/attachment/<uuid>; file name in Content-Disposition)']
+  auth: None.
+  cost: free
+  limits: 'None published; robots.txt of www.gov.pl allows all ("User-Agent: * Allow: /"). One file per year, 16 to 35 MB.'
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+    (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+    attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+    consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+    The report files carry no licence of their own. Attribution: "Źródło: Główny Inspektorat Sanitarny, Stan
+    sanitarny kraju (<year>)" / "Source: Chief Sanitary Inspectorate (GIS), Sanitary state of the country
+    (<year>)".'
+updates: Annual; source materials come from regional/local inspectorates.
+ingestion:
+  history: Load available annual reports and hand-curated stable tables.
+  incremental: Poll annually and version report files.
+  identifiers: Edition/year + chapter/table/category; regional observations need source-office identifiers.
+modelling:
+  notes: 'Narrative-heavy; store extracted figures with page/table provenance and definitions. Smallest Gold selection: the
+    national tables that repeat every year (inspections and inspected establishments, food and water samples tested and
+    the share not meeting requirements, by voivodeship where the report gives them; table list to be confirmed by the builder),
+    2012 onwards; text, photographs and
+    named establishments are never stored. Annual. From 2024 GIS publishes "Raport z działań Państwowej Inspekcji Sanitarnej"
+    (2024 in two parts, 2025) in place of "Stan Sanitarny Kraju": a new edition family with its own table map, not assumed
+    comparable.'
+  overlap: Underlying regional reports can overlap national totals; never add national and regional publications together.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2917): approved for internal build. The old parking reason (PDF only, extraction untested)
+    is technical (owner rule of 12 Nov 2026); the pipeline already reads PDF text layers (pypdf: NID, ULC, ARiMR, ZUS). Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026):
+    the page answered with 20 attachments: Stan Sanitarny Kraju 2012 to 2023 and Raport z działań PIS 2024 and 2025; HEAD
+    of eight answered 200 application/pdf, e.g. Raport_z_działań_PIS_za_2025.pdf 16,540,569 bytes, Stan_Sanitarny_Kraju_za_2023.pdf
+    24,086,677 bytes, Stan_Sanitarny_Kraju_w_2022_roku.pdf 34,593,681 bytes, SSK-2018-www.pdf 22,882,918 bytes. Text layer
+    and table layout not checked in this run (the builder''s first step).'
+  - 'dane.gov.pl search "stan sanitarny" (same run) gave no GIS dataset; the report is not republished as tables.'
+  references:
+  - https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
+  - https://www.gov.pl/web/gov/prawa-autorskie

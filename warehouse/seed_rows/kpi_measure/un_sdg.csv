@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+women_in_parliament,un_sdg,un_sdg:sdg_observations:PERCENT:SG_GEN_PARL,"UN Global SDG Indicators Database SG_GEN_PARL (indicator 5.5.1, IPU Parline), % of all seats",1,

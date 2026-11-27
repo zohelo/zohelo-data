@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+- name: sdds_calendar
+  description: >-
+    SDDS advance release calendar of Poland (Kalendarz Upowszechniania Danych; registers TP-012 NBP and TP-013
+    Ministry of Finance), published by GUS as SDDS national coordinator on
+    https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych: one XLSX workbook per calendar year
+    (entity calendar_<year>), newest copy of each.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/sdds_calendar/
+    loaded_by: ingestion/to_bronze/sdds_calendar/
+    config: ingestion/sources/sdds_calendar.yaml
+  tables:
+  - name: sdds_calendar_cells
+    description: >-
+      One row per non-empty cell of the newest copy of each calendar workbook (ingestion/common/xlsx_cells.py):
+      sheet_index, sheet_name, row_number, column_number, cell_ref, cell_type, value_text (text as stored; dates of
+      the "Ostatnia aktualizacja" column as Excel serial numbers), number_format; provenance raw_sha256,
+      source_version, ingested_at, source_row_number. Loaded only after the calendar layout guard; partitioned by
+      entity.
+  - name: sdds_calendar_rejected_files
+    description: Calendar workbooks the Bronze decoder rejected (not an XLSX, or not the calendar layout), with the reason.

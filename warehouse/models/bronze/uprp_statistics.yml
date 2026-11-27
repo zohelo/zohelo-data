@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: uprp_statistics
+  description: UPRP industrial-property statistics (register EX-001), statistics tables of the Polish annual reports (PDF)
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/uprp_statistics/
+    loaded_by: ingestion/to_bronze/uprp_statistics/
+    config: ingestion/sources/uprp_statistics.yaml
+  tables:
+  - name: uprp_statistics_cells
+    description: >-
+      One row per expected cell of the nine statistics tables read from the text layer of the newest copy of each
+      landed report (table code and title, page, row code and label as printed, year, value as printed or none) with
+      its guard: 'ok' when a sum of the table holds for the cell, else the reason; one row per table not found.
+      Partitioned by entity.
+  - name: uprp_statistics_rejected_files
+    description: Files of uprp_statistics the Bronze decoder rejected (no readable PDF, no statistics table), with the reason.

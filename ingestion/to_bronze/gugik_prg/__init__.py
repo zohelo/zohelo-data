@@ -1,6 +1,7 @@
 """GUGiK PRG Landing → Bronze activities.
 
-bronze.load       load.py → bronze.prg_boundaries (one Parquet file per Landing file)
+bronze.load       load.py → bronze.prg_boundaries (one Parquet file per Landing file), then entities.py →
+                  bronze.prg_address_points and silver.prg_address_points (one file each, replaced whole; #3106)
 bronze.verify     ingestion/common/lineage.py --source gugik_prg
 landing.archive   ingestion/common/archive.py --source gugik_prg (move to Archive)
 archive.prune     ingestion/common/retention.py --source gugik_prg (archive_policy.retention)

@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: poc_build_openalex
+    description: >-
+      Gold build stage of OpenAlex (CD-028): annual works with an author affiliated with an institution in Poland,
+      all, open access and by OpenAlex field (block works_pl), and works and open-access works per Polish institution for the
+      recent years OpenAlex lists (block institutions_pl); values and units as published, the current year
+      provisional. Grain: measure_key × breakdown × date_key.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: institution_openalex
+    description: >-
+      One row per institution OpenAlex places in Poland (register CD-028, CC0): OpenAlex id, ROR id as published,
+      name, type, city and region text, coordinates, all-time works and citation counts at the read, parent ids.
+      Area Poland; no voivodeship is assigned.
+    columns:
+      - name: institution_id
+        tests: [not_null, unique]
+      - name: display_name
+        tests: [not_null]
+  - name: poc_metrics_scholarly_works_pl_institution
+    description: >-
+      Draft KPI scholarly_works_pl_institution - works with an author affiliated with an institution in Poland per
+      publication year (OpenAlex), Poland.

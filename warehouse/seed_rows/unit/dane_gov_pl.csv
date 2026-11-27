@@ -1,0 +1,3 @@
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+datasets,zb.,datasets,zbiory danych,false,datasets,1,datasets
+distributions,zas.,distributions (resources),zasoby (dystrybucje),false,distributions,1,distributions

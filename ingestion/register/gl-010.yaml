@@ -1,0 +1,67 @@
+id: GL-010
+name: Enterprise Surveys
+short_name: World Bank Enterprise Surveys
+source_system: world_bank_es
+provider: World Bank
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [enterprise, business-climate, survey]
+entities: [country, enterprise]
+granularity: Anonymized firm response with survey weights; published indicators by economy/topic.
+coverage: Over 160 economies; survey years and panels vary; formal, informal and micro-enterprise programs differ.
+access:
+  endpoint: https://data360api.worldbank.org/data360/data?DATABASE_ID=WB_ES
+  kind: api
+  interfaces: ['World Bank Data360 REST API (JSON; paging with skip; indicator list /data360/indicators?datasetId=WB_ES)',
+               HTML, 'microdata portal (registered, not used)']
+  auth: None for the Data360 API; microdata only after login under the Data Access Protocol (not used).
+  cost: free
+  limits: None published; one page answers up to 1,000 observations (`count` gives the total, `skip` pages), as for GL-031.
+licence:
+  status: unresolved
+  notes: 'Terms: two statements for the site read (the World Bank), none labelling WB_ES itself. (1) World Bank Dataset Terms
+    https://www.worldbank.org/ext/en/legal/terms-conditions/datasets (read by the runner 26 Nov 2026): "Unless specifically
+    labeled otherwise, these Datasets are provided to you under a Creative Commons Attribution 4.0 International License
+    (CC BY 4.0), with the additional terms below."; https://data.worldbank.org/summary-terms-of-use (same run): "Unless
+    indicated otherwise in the data or indicator metadata, you are free to copy, distribute, adapt, display or include
+    the data in other products for commercial or noncommercial purposes at no cost under a Creative Commons Attribution
+    4.0 International License"; both also say some datasets "are provided by third parties, and may not be redistributed
+    or reused without the consent of the original data provider". (2) Enterprise Surveys https://www.enterprisesurveys.org/en/citing-the-data
+    (same run): users may not pass on microdata, "as that would violate the terms of the “Data Access Protocol” signed
+    when gaining access to the Data Portal"; nothing on the published indicators. The WB_ES catalogue label could not be
+    read (the catalogue API answered HTTP 429), so the status stays unresolved and the source internal until the label
+    is read. Microdata are not used. Attribution if published: "Source: World Bank Enterprise Surveys, www.enterprisesurveys.org".'
+updates: Country survey releases are episodic; panel and expanded files appear separately.
+ingestion:
+  history: 'Full load of the Data360 dataset WB_ES: 1,196,747 observations (count of the first page), about 1,200 pages of
+    1,000; indicator list 12,414 bytes (WB_ES_M_*, WB_ES_S_*, WB_ES_T_* codes). Rows carry INDICATOR, REF_AREA (ISO3), TIME_PERIOD,
+    FREQ "A", UNIT_MEASURE, OBS_VALUE, OBS_STATUS, OBS_CONF, DECIMALS and breakdowns (SEX, AGE, URBANISATION, COMP_BREAKDOWN_1-3).'
+  incremental: 'Snapshot per survey release: Enterprise Surveys publish one economy at a time; reload the dataset monthly
+    at most (O46: weekly runs at most) and keep the newest TIME_PERIOD per economy and indicator; LATEST_DATA marks the
+    newest value.'
+  identifiers: INDICATOR + REF_AREA + TIME_PERIOD + breakdown codes.
+modelling:
+  notes: 'Smallest Gold selection: the Enterprise Surveys indicators for Poland and the EU economies (firms reporting corruption,
+    access to finance as an obstacle, female top manager, days to obtain an operating licence, share of firms with a website),
+    one value per survey year (FREQ A, survey years irregular). Keep OBS_STATUS and OBS_CONF; a missing value is not zero.
+    WDI repeats about 20 of these (IC.FRM.*): keep both, the WDI copy stays the published one.'
+  overlap: WDI (GL-005) carries a subset (IC.FRM.*, IC.TAX.*); firm data are distinct from business registers.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2916): approved for internal build through the World Bank Data360 API; the old parking
+    reason (microdata licence) does not touch the published indicators. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+    https://data360api.worldbank.org/data360/data?DATABASE_ID=WB_ES&top=3&skip=0 HTTP 200 (count 1,196,747); Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+    /data360/indicators?datasetId=WB_ES HTTP 200 (12,414 bytes), World Bank Dataset Terms and Summary Terms of Use read;
+    the World Bank Data Catalog search API answered HTTP 429 (not retried).'
+  - 'Licence unresolved: internal only until the WB_ES catalogue label is read (CC BY 4.0 under the Dataset Terms unless
+    labelled otherwise).'
+  - 'Apply disclosure and survey-weight rules: indicators are survey estimates; keep the survey year as published.'
+  references:
+  - https://www.enterprisesurveys.org/en/enterprisesurveys
+  - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets

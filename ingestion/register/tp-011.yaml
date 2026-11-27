@@ -1,0 +1,42 @@
+id: TP-011
+name: GUS publication calendar (kalendarium)
+short_name: GUS kalendarium
+provider: Główny Urząd Statystyczny (GUS)
+source_system: release_calendars
+current: true
+status: silver
+family: J
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [release-calendar, official-statistics]
+entities: [release]
+granularity: 'One GUS publication on a day: title and link (signal releases at 09:30 Warsaw; the page gives no time).'
+coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+access:
+  endpoint: 'https://stat.gov.pl/kalendarium/{DD-MM-YYYY}.html'
+  kind: api
+  interfaces: [HTML, PDF]
+  auth: public
+  cost: free
+  limits: '53 day pages per run (7 back, 45 ahead), 1 second apart.'
+licence:
+  status: open-conditional
+  notes: 'stat.gov.pl copyright terms (D23): copying and own analyses allowed with the source given. robots.txt allows the pages. No machine-readable calendar (month and year calendars are HTML and PDF).'
+updates: Calendars change when dates are announced or moved.
+ingestion:
+  history: None needed; forthcoming dates.
+  incremental: Daily re-download; written only when the SHA-256 changed.
+  identifiers: publisher + date + title
+modelling:
+  notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+  overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - Calendar layout changes reject the file (decoder checks); watch bronze.release_calendars_rejected_files.
+  references:
+  - https://stat.gov.pl/kalendarium/
+  - https://stat.gov.pl/copyright

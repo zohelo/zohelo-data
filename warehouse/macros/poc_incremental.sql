@@ -4,9 +4,9 @@
    blocks (poc_observations(is_incremental())) and this strategy replaces them in its table. #}
 
 {# The `full_refresh` config of a per-block incremental model: true when the plan lists the model under
-   `full_refresh` (code changed, no build properties, table missing, too many position deletes) or when the build
-   is not the changed-only plan (no var `changed_blocks`: an explicit filter or "fqn:*" rebuilds it in full, as a
-   table was); else none, so dbt's own --full-refresh flag still applies. #}
+   `full_refresh` (code changed, no build properties, table missing, too many position deletes, file growth) or
+   when the build is not the changed-only plan (no var `changed_blocks`: an explicit filter or "fqn:*" rebuilds it
+   in full, as a table was); else none, so dbt's own --full-refresh flag still applies. #}
 {% macro poc_block_full_refresh(model_name) %}
     {%- if model_name in var('full_refresh_models', []) or var('changed_blocks', none) is none -%}
         {{- return(true) -}}

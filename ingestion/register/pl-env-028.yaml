@@ -1,0 +1,59 @@
+id: PL-ENV-028
+name: Warsaw open-data portal and public-transport feeds
+short_name: Warsaw open data and GTFS
+provider: Miasto Stołeczne Warszawa / Warszawski Transport Publiczny
+status: reviewing
+family: H
+kpi: false
+geography: Warsaw, Poland
+provider_type: subnational-public
+domains: [municipal open data, public transport]
+entities: [municipal dataset, vehicle, stop, trip]
+granularity: Portal datasets plus operational vehicle-position and timetable resources; formats differ.
+coverage: Current city scope. The city is replacing api.um.warszawa.pl with dane.um.warszawa.pl; live-feed retention unknown.
+access:
+  endpoint: https://warszawa19115.pl/-/dane-po-warszawsku
+  kind: api
+  interfaces: [portal, API, bulk-files]
+  auth: Legacy API needs a personal apikey after registration (reported by third parties; the portal itself was not readable).
+  cost: Free public access; conditions differ by resource.
+  limits: api.um.warszawa.pl and dane.um.warszawa.pl gave no answer to a GitHub runner in two probes (timeouts of 20 s and
+    75 s on robots.txt); www.ztm.waw.pl answered HTTP 202 with an empty body.
+licence:
+  status: unresolved
+  notes: 'Terms: not read (neither city portal was reachable). https://warszawa19115.pl/-/dane-po-warszawsku (desk fetch
+    12 Nov 2026) states no licence and says of the migration: "W ciągu najbliższych miesięcy serwis Otwarte dane Warszawy
+    całkowicie zastąpi dotychczasowy serwis." An attribution rule (credit "Miasto Stołeczne Warszawa", download date, link)
+    is reported by a third party only: unverified.'
+updates: Vehicle positions refresh frequently; timetables daily. Portal migration from api.um.warszawa.pl to dane.um.warszawa.pl
+  in progress.
+ingestion:
+  history: 'No route from the platform yet: both city portals time out from GitHub runners, the legacy API needs an apikey
+    tied to a personal account, and the ZTM timetable source is a restricted endpoint according to the maintainer of the
+    third-party WarsawGTFS rebuild (https://github.com/MKuranowski/WarsawGTFS). That rebuild (https://mkuran.pl/gtfs/warsaw.zip)
+    is not the city''s feed and carries conflicting licence labels, so it is not used. dane.gov.pl could not be searched
+    for Warsaw sets (timeout from the runner).'
+  incremental: None until the owner question is answered.
+  identifiers: Dataset id; GTFS ids if a feed is ever available.
+modelling:
+  notes: 'kpi false. If a feed becomes reachable: the same city-GTFS selection as PL-ENV-029 and PL-ENV-030.'
+  overlap: City feeds may be mirrored in national catalogues; ingest producer version once.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Owner question: Warsaw''s city data needs two things that only you can provide. The legacy API api.um.warszawa.pl needs
+    a personal apikey from a registered account (reported by third parties; the portal was not readable), and both city
+    portals (api.um.warszawa.pl and the new dane.um.warszawa.pl) do not answer GitHub runners. Do you want to register an
+    account and key and send the city a re-use request (text drafted for you) for access from GitHub-runner addresses or
+    for the timetable files with their reuse terms, or do you leave Warsaw out of the city feeds (Gdańsk, Poznań and Wrocław
+    are approved)?'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): timeout on robots.txt of both
+    portals (20 s); www.ztm.waw.pl HTTP 202, empty body. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+    script dev/src_dfh_fix_probe.py, 12 Nov 2026): timeout on robots.txt of both portals again (75 s).'
+  - 'Reuse terms not read: licence unresolved.'
+  references:
+  - https://warszawa19115.pl/-/dane-po-warszawsku
+  - https://api.um.warszawa.pl/
+  - https://dane.um.warszawa.pl/

@@ -1,0 +1,66 @@
+id: PLG-017
+name: Banking-sector data and sector information
+short_name: KNF banking sector data
+provider: Polish Financial Supervision Authority (KNF)
+source_system: knf_banking
+status: built
+family: C
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [banking, prudential statistics]
+entities: [banking sector, financial institution]
+granularity: Sector aggregates by bank type, balance sheet, profit, credit quality and capital.
+coverage: Monthly banking-sector data from January 2018 in the current workbook (new structure since the December 2023 release);
+  an archive workbook holds the series to December 2017 ("dane archiwalne przed zmianami MSSF").
+access:
+  endpoint: https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=56224&p_id=18
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF]
+  auth: public download
+  cost: free
+  limits: None published.
+licence:
+  status: unresolved
+  notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read 12 Nov 2026, also from a
+    GitHub runner): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z linkiem
+    do serwisu www.knf.gov.pl." No licence is named, and the notice grants no reuse (re-read 12 Nov 2026): commercial reuse
+    and modification are not stated (neither allowed nor forbidden in words), so the terms are unresolved (playbook: terms
+    not stated → unresolved; the source stays internal until KNF states them). Disclaimer: the UKNF "nie ponosi żadnej
+    odpowiedzialności za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło: Komisja Nadzoru Finansowego, www.knf.gov.pl".'
+updates: 'Monthly: the page "Dane miesięczne sektora bankowego" is replaced in place about six weeks after the month (August
+  2026 data, "Data aktualizacji" 9 October 2026).'
+ingestion:
+  history: 'Bulk: the stable page (articleId=56224) links the current workbook, whose URL changes with every release (https://www.knf.gov.pl/knf/pl/komponenty/img/2026_08-Dane_statystyczne_100100.xlsx,
+    2,197,937 bytes), and the archive to December 2017 (https://www.knf.gov.pl/knf/pl/komponenty/img/2017%2012%20-%20SEKTOR%20BANKOWY%20-%20DANE_55663.xlsx,
+    1,091,361 bytes); both answered 200 from a GitHub runner (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+    12 Nov 2026)). The files send no Last-Modified or ETag.'
+  incremental: 'Entity = workbook (current, archive), version = the release month in the file name; read the stable page,
+    follow the .xlsx link, replace the entity (snapshot; unchanged bytes skipped by SHA-256). Small source: refresh full.'
+  identifiers: period + sheet + item + sector group (commercial banks, cooperative banks, branches of credit institutions)
+modelling:
+  notes: 'Accounting definitions changed with the IFRS switch at the start of 2018: keep the archive as a separate series.
+    Grain: item x sector group x month, Poland only, PLN million and percent; multi-sheet workbook (the page names a mortgage
+    sheet "Hipoteki" and a liquidity sheet with LCR and NSFR; the other sheets were not opened). Smallest Gold selection:
+    total assets, net profit (year to date), loans to the non-financial sector, and, where the workbook has them, the share
+    of impaired loans and the total capital ratio, as new monthly KPIs in finance.money_banking.'
+  overlap: Complements NBP monetary statistics (PLG-005) and ECB/EBA supervisory data, which give the EU comparison; no
+    KPI of kpi.csv is published here yet.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Built (#2871): source knf_banking, the current workbook "Dane miesięczne sektora bankowego" found on the
+    stable page (bulk_file url_from), every value in Silver (silver.knf_banking_series: 13 sheets, blocks by bank
+    group, items by heading and label path, January 2018 on), seven items in Gold (total assets, net profit year to
+    date, non-financial receivables without and with impairment, non-financial deposits, employees; total capital
+    ratio quarterly). Dev probe 45758367857: robots.txt of www.knf.gov.pl allows every agent. Not built: the archive
+    workbook to December 2017 (another layout, before the IFRS 9 changes).'
+  - Quarterly and annual KNF banking tables were not found on the statistics listing (only the monthly page is listed there);
+    search again when building.
+  references:
+  - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=56224&p_id=18
+  - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne
+  - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
+  - https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe

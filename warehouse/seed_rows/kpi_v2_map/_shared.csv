@@ -8,7 +8,7 @@ adult_learning,poland,A,adult_learning,eurostat,TRNG_LFSE_01,eurostat:TRNG_LFSE_
 adult_learning,poland,A,adult_learning,gus_bdl,P2656,gus_bdl:P2656:%:wartość liczbowa,A,PL;VOIV,,rate,up,ready,"LFS 25-64, value (not the precision indicator); ends 2020 in Silver (Dev probe 43085044303)"
 arope_rate,labour;poland,A,arope_rate,eurostat,ILC_PEPS01N,eurostat:ILC_PEPS01N:PC:TOTAL,A,PL;EU;EU27,sex,rate,down,ready,EU 2030 definition
 arope_rate,labour;poland,A,arope_rate,gus_dbw,1603_1339_116_4,gus_dbw:1603_1339_116_4:116,A,PL;VOIV,,rate,down,ready,"EU-SILC by macroregion and NUTS 2 region, 2019-2024 (Dev probe 43085044303)"
-avg_wage,labour,M,average_gross_wage,gus_bdl,P2497,gus_bdl:P2497:%,A,PL;VOIV,,mean,up,ready,"national economy, annual"
+avg_wage,labour,M,average_gross_wage,gus_bdl,P2497,gus_bdl:P2497:zł,A,PL;VOIV,,mean,up,ready,"excluding entities employing up to 9 persons (bez podmiotów o liczbie pracujących do 9 osób), annual"
 avg_wage,labour,M,average_gross_wage,gus_dbw,376_2_243_1;398_16_243_3,gus_dbw:376_2_243_1:243;gus_dbw:398_16_243_3:243,M;Q,PL;VOIV,,mean,up,ready,enterprise sector monthly (Poland and voivodeships); national economy quarterly
 basic_digital_skills,poland,A,basic_digital_skills,eurostat,ISOC_SK_DSKL_I21,eurostat:ISOC_SK_DSKL_I21:PC_IND:I_DSK2_BAB,A,PL;EU;EU27,,rate,up,ready,"at least basic overall skills, individuals 16-74; survey every two years"
 bond_yield_10y,poland,M,bond_yield_10y,eurostat,IRT_LT_MCBY_M,eurostat:IRT_LT_MCBY_M:_Z:MCBY,M,PL;EU,,rate,neutral,ready,EMU convergence-criterion 10-year yield

@@ -73,7 +73,10 @@ entities (DBW: the files of one block), or, for a source whose Silver is a dbt t
 itself; a table too large for one block is split by an entity column first.
 
 **A source whose Silver is dbt tables** (#2998, #2943; World Bank WDI, OECD, NBP, BIS, ILOSTAT, UNDP HDR,
-UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, and World Bank Findex, ICP and WGI so far) declares them in the
+UNdata, UNECE, FAOSTAT, World Bank IDS, EEA, ECB, UNCTAD, World Bank Findex, ICP and WGI, NBP balance of
+payments, UN WPP, UNESCO UIS, World Bank EdStats and GEM, OWID, WHO, the Ministry of Finance's public
+debt, Treasury debt, state budget and local-government budget summaries, ENTSOG gas flows and KNF monthly banking-sector
+data so far) declares them in the
 builder (`tables` of its `SOURCES` entry): each table is one block, named after the table, with its own
 build stage, because two tables of one source rarely share a shape (UNCTAD's nine tables do, one macro
 builds them all, so they share one stage). The block's Silver files are the
@@ -228,6 +231,64 @@ one. It is retried when its recipe changes.
 - **World Bank WGI.** `world_bank_wgi:wgi_observations:_Z:<indicator code>@A`, as WDI: every `GOV_WGI_<dimension>.<x>`
   code (estimate, score and its bounds, standard error, number of sources) is one measure; unit the metadata
   field as published, else `as named`.
+- **NBP balance of payments.** `nbp_bop:nbp_bop_observations:mln_<currency>:<workbook>:<item code>@<M|Q>`: workbook
+  (bop_m, bop_q, iip_q), currency sheet (PLN, EUR, USD; never converted) and Silver's item code define the measure;
+  no breakdowns. Poland only (`PL`).
+- **UN WPP.** `un_wpp:un_wpp_demographic_indicators:<unit>:<indicator>@A`: an indicator column (TPopulation1July,
+  LExFemale …) is one measure whole, as WDI's codes (WPP publishes the values by sex as their own indicators); the
+  unit per indicator as WPP's definitions state it (thousands of persons, births or deaths, per 1,000 population,
+  per 1,000 live births, years …). Locations by ISO two-letter code, else LocID, through the curated map (countries,
+  the EU (EU: 27) group, World); the UN's other groups stay `_X` with their code. The age-group table is left out:
+  its columns are sums and ratios Silver computes from the published five-year groups (which stay in Bronze), not
+  series WPP publishes.
+- **UNESCO UIS.** `unesco_uis:unesco_uis_observations:<unit>:<base indicator>@A`, as the curated stage: GERD as % of GDP
+  (`pct_gdp`) and tertiary attainment 25+ (`pct`); the `.F` and `.M` indicators are the sex breakdown of their base
+  indicator (`{"sex": "T|F|M"}`). Countries by ISO alpha-3; the UIS, SDG, MDG, World Bank and UNESCO groupings stay `_X`
+  with their code.
+- **World Bank EdStats.** `world_bank_edstats:edstats_pisa:score:<base indicator>@A`: one measure per PISA subject, the
+  `.FE` and `.MA` indicators its sex breakdown, as the curated stage. The OECD average (`OED`) stays `_X`.
+- **World Bank GEM.** `world_bank_gem:gem_observations:<unit>:<series code>@<A|Q|M>`: a series code is one measure
+  whole and each frequency GEM publishes it at is a measure of its own (the curated stage keeps one); units as the
+  curated stage names them per series.
+- **OWID.** `owid:owid_observations:<unit>:<chart>@A`: a chart's one value column is one measure, units as the curated
+  stage. An entity without a code (OWID's continents, Maddison regions, states before German and Italian
+  unification) keeps its published name as the source code; it and OWID's other `OWID_…` codes stay `_X`.
+- **WHO.** `who:who_observations:years:<indicator code>@A`: life expectancy (WHOSIS_000001) and healthy life
+  expectancy (WHOSIS_000002) at birth, the sexes their breakdown (`{"sex": "T|F|M"}`); the point estimate only, the
+  bounds stay in Silver, as the curated stage. Areas `<type>:<M49 code>`: COUNTRY and the two territory types by
+  their M49 code through ISO 3166-1 numeric → alpha-3 (`gold_who_map.sql`, the list `gold_iso3166_numeric.sql` that
+  UNdata's map reads too); WHO regions and World Bank income groups stay `_X` with their code, GLOBAL:1 is the World.
+
+- **Ministry of Finance public debt and State Treasury debt.** `mf_public_debt:public_debt:<unit>:<sheet>:<block
+  title>[#<n>]:<item label>[#<occurrence>]@<A|Q|M>` (`mf_treasury_debt:treasury_debt:…` alike): every sheet, block
+  (a header row) and item of the workbook as Silver reads it (macro `xlsx_wide_series`), labels as published; `#<n>`
+  only when a sheet has several blocks of one title, the occurrence only for a label repeated in a block. One
+  frequency per block from the months of its period ends (only December A, only quarter ends Q, else M; the figures
+  are stocks at the period end, so a 31 December value of a quarterly or monthly block is that block's point). Unit
+  as Silver names it: `mln_pln`, `ratio` (a fraction, 1 = 100 %; the curated stage's ×100 is not applied), `number`
+  (Treasury duration). Poland only (`PL`), no breakdowns.
+- **Ministry of Finance state budget.** `mf_state_budget:budget_execution:THS_PLN:<measure>:<line label>[#<occurrence>]@<M|A>`:
+  every line of table 1 of the newest report of each year; `execution_ytd` (from January to the month, as the report
+  states it, at its month, M) and `plan` (the budget act, A). A main line printed twice is two series (Silver's
+  occurrence), never one picked row. Poland only (`PL`). KRUS, the fourth source of `poc_build_public_finance`, is
+  whole in that curated stage and has no per-block tables.
+- **Ministry of Finance local-government budget summaries.**
+  `mf_jst_budgets:mf_jst_budget_summary:pln:<plan|executed|total>:<section>:<item label>[#<occurrence>]@Q`: every item
+  of the DW (revenue, expenditure, financing) and ZN (liabilities, receivables) workbooks of each quarter; `plan` (the
+  plan after changes) and `executed` (from January to the quarter's end, as published, never differenced) for DW,
+  `total` (the stock at the quarter's end) for ZN. The unit type is the breakdown (`{"unit_type": …}`; `jst`, all
+  units, is the total series). Poland only (`PL`), PLN as published.
+- **ENTSOG physical gas flows.** `entsog:entsog_physical_flow:kWh/d:<entry|exit>@D`: every point and direction of
+  GAZ-SYSTEM per gas day, the point as the breakdown (`{"point": <pointKey>}`, labelled with the point's newest
+  name), no total series: the totals and point groups, with their completeness rule, stay in `build_entsog`. Area by
+  the operator's row of the map (`PL-TSO-0002` → `PL`).
+- **KNF monthly banking-sector data.** `knf_banking:knf_banking_series:<pln|number|share>:<sheet>:<item path>@<M|Q>`:
+  every item of every sheet of the current workbook, the item identified by Silver's path of headings and parent
+  labels (never by row position), the frequency the block's own (quarterly where every date of the block is a quarter
+  end). Unit as the workbook states it: a cell under a `%` number format is a fraction as stored (`share`, 0.215 shown
+  as 21.5%, never multiplied by 100), any other cell the sheet's `Dane w` line (`zł` → `pln`, `sztukach` → `number`).
+  The bank group is the breakdown (`{"bank_group": …}`; `banking_sector`, the whole sector, is the total series).
+  Year-to-date items (profit and loss) as published, never differenced. Poland only (`PL`).
 
 The rule is code: changing it changes every recipe of the source. Rule keys differ from the curated
 hand-made keys (`eurostat:UNE_RT_M:PC_ACT:TOTAL` curated, `eurostat:UNE_RT_M:PC_ACT:SA@M` by rule).
@@ -255,7 +316,14 @@ rule-based build stages apply the rules the curated stages already apply:
   signs `x`, `X`, `n`; API attribute ids 4, 14, 50, 91), a number other than 0 under such a sign is;
   two different published values for one key reject the subgroup in Silver already. A value for a
   year after the year of the subgroup's version, and every row of a subgroup named a projection
-  (`prognoza`), has status `forecast`.
+  (`prognoza`), has status `forecast`. An exact 0 without such a sign is a zero BDL publishes and is
+  loaded as published, as Eurostat's (#2973): the API gives it attribute 0 (`/attributes`: name "0",
+  no symbol), apart from the no-value signs and from 15 `-` (no information after a change of units
+  or variables; no Silver row carries it), and the website export writes an empty cell empty and this
+  zero as `0`, both within one variable and unit (`/attributes` as read in Dev run 43275462132; counts in
+  Dev runs 45829968475 and 45833898232, #1178).
+  In the subgroups of gminas and statistical localities most rows are such zeros (P2179 97%, P2035
+  89%, P2017 84% of the values); a reader that wants no zeros filters on `value`.
 - GUS DBW: an empty value is not loaded; a 0 with a no-value sign (`id_brak_wartosci` other than 253
   "Nie dotyczy") or under confidentiality (`id_tajnosci` other than 43 "Dane jawne") is not loaded; a
   non-zero number under confidentiality or with sign 38 (figure withheld) is loaded as `confidential`,
@@ -283,6 +351,31 @@ rule-based build stages apply the rules the curated stages already apply:
   nor a value that is not a finite number, nor a year after the year of the version (a projection; none of the
   three publishes one). Findex and WGI publish no flags (`ok`). ICP surveys the benchmark years 2017 and 2021;
   every other year of ICP 2021 is filled between and around them and has status `estimated`, never `ok`.
+- NBP balance of payments: a cell without a number or
+  outside the period grid is not loaded (it fails Silver's tests); the newest period of each workbook is
+  `provisional` (NBP revises it with the next release), every earlier one `ok`, as in the curated stage. UN WPP:
+  the projections (years from 2024 in the 2024 revision) are not loaded, nor an empty cell; no flags (`ok`).
+- UNESCO UIS: magnitude `NA` (not applicable; the API sends 0 in the value field) is not loaded; magnitude `NIL` (nil
+  or negligible) is loaded as published with status `flagged`; qualifiers `UIS_EST` and `NAT_EST` give `estimated`
+  as in the curated stage, any other qualifier `flagged`. World Bank EdStats: no flags today; a flag gives `flagged`.
+  World Bank GEM: a period that had not ended on the day of the file's version is not loaded (the annual rows of the
+  current year are an average or a sum of the months so far); no flags (`ok`). OWID: years before 1800 (Maddison
+  from year 1, V-Dem from 1789) are not loaded, nor an exact 0 in the consumption-based CO2 chart (a missing value,
+  the curated stage's rule); no flags (`ok`).
+- WHO: a row without a value, a row not in state `PUBLISHED`, a period that is not a year and a year after the year
+  of the file's version (a projection; none today) are not loaded; no flags (`ok`).
+- Ministry of Finance (public debt, Treasury debt, state budget): Silver keeps numbers only, so a cell without a
+  number (`b.d.`, `-`) is no row; a value that is not a finite number is not loaded, nor a period end after the day
+  of the workbook's version (a projection; none today), nor two period ends of one measure in one period (both stay
+  out; none today). No flags (`ok`).
+- MF local-government budget summaries: Silver keeps numbers only (a cell `#` is no row); a value that is not a
+  finite number is not loaded, nor a quarter after the workbook's version (none today). No flags (`ok`).
+- KNF monthly banking-sector data: Silver keeps numbers only (an empty cell is no row); a value that is not a finite
+  number is not loaded, nor a period end after the day of the download (a projection; none today). No flags (`ok`).
+- ENTSOG: a record without a value (`isNA` or empty) is no row, nor a value that is not a finite number, nor a running
+  value (last updated before its gas day ended), unless the day ended more than 7 days before the newest update in
+  the table (the curated stage's rule, anchored on the data so that the same files give the same rows). Confirmed
+  `ok`, Provisional `provisional`. Two records of one point, direction and gas day reject the block.
 - FAOSTAT: a cell flagged `M` (missing value) is not loaded whatever number it carries; a projection (a year
   after the year of the file's version) is not loaded; flags E and I `estimated`, B `break`, P `provisional`, A
   and X `ok`, any other flag `flagged`. World Bank IDS: a year after the last actual year (the newest year of

@@ -1,0 +1,61 @@
+version: 2
+sources:
+- name: gugik_orto
+  description: >-
+    GUGiK orthophoto sheet index (register PL-ENV-004), WFS Skorowidze, one feature type per data year; one file per
+    year, replaced whole (design #875). No imagery.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gugik_orto/
+    loaded_by: ingestion/to_bronze/gugik_orto/entities.py
+    config: ingestion/sources/gugik_orto.yaml
+  tables:
+  - name: gugik_orto_sheets
+    description: >-
+      Every feature of the newest complete version of each year's feature type as published: gml_id, the 13 properties
+      of DescribeFeatureType as text (godlo, akt_rok, piksel, kolor, zrodlo_danych, uklad_xy, modul_archiwizacji,
+      nr_zglosz, akt_data, czy_ark_wypelniony, url_do_pobrania, dt_pzgik, wlk_pliku_mb), the footprint (geometry
+      type, srsName, first posList, ring count), provenance (raw_sha256 of the page, source_version, ingested_at),
+      part_index and source_row_number; partitioned by entity (orto_<YYYY>).
+  - name: gugik_orto_rejected_files
+    description: Year versions of gugik_orto the decoder or the Silver checks rejected, with the reason.
+- name: gugik_orto_entities
+  description: >-
+    Silver table of gugik_orto written per year by the loader, not by dbt (design #875): exactly the newest version of
+    every year, from warehouse/entity/gugik_orto_sheets.sql, checked per year before it is accepted (feature_id
+    unique, keys not null, data_year = the feature type's year).
+  database: r2
+  schema: silver
+  tables:
+  - name: gugik_orto_sheets
+    description: >-
+      GUGiK orthophoto sheet index, one row per index feature = sheet x product x edition (feature_id): sheet id
+      (godło), data year and date, pixel size (m), colour, data source, CRS of the sheet, archive scale, submission
+      number, partially filled flag, download link (not followed), PZGiK date, file size (MB), and the footprint's
+      centroid (EPSG:2180 easting/northing) and planar area (km2). History: 1957-2026 (49 years). Trial run in
+      docs/sources/gugik_orto.md.
+    tests:
+      - unique:
+          column_name: feature_id
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: feature_id
+        tests: [not_null]
+      - name: sheet_id
+        tests: [not_null]
+      - name: data_year
+        tests: [not_null]
+      - name: colour
+        tests: [{accepted_values: {arguments: {values: [RGB, CIR, B/W]}}}]
+      - name: data_source
+        tests: [{accepted_values: {arguments: {values: [Zdj. cyfrowe, Zdj. analogowe, Scena sat.]}}}]
+      - name: crs_xy
+        tests: [{accepted_values: {arguments: {values: [PL-1992, 'PL-2000:S5', 'PL-2000:S6', 'PL-2000:S7', 'PL-2000:S8']}}}]
+      - name: sheet_filled
+        tests: [{accepted_values: {arguments: {values: [TAK, NIE]}}}]
+      - name: geometry_type
+        tests: [{accepted_values: {arguments: {values: [Polygon]}}}]
+      - name: raw_sha256
+        tests: [not_null]

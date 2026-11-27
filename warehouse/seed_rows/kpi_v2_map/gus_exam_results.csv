@@ -1,0 +1,4 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+exam8_polish,poland,A,exam8_polish,gus_exam_results,eighth_grade_means,gus_exam_results:exam8:pct_max_points:polish,A,PL;VOIV,sex,mean,up,ready,"2019 on, GUS republication of the OKE results (May exam)"
+exam8_mathematics,poland,A,exam8_mathematics,gus_exam_results,eighth_grade_means,gus_exam_results:exam8:pct_max_points:mathematics,A,PL;VOIV,sex,mean,up,ready,"2019 on, GUS republication of the OKE results (May exam)"
+exam8_english,poland,A,exam8_english,gus_exam_results,eighth_grade_means,gus_exam_results:exam8:pct_max_points:english,A,PL;VOIV,sex,mean,up,ready,"2019 on, GUS republication of the OKE results (May exam)"

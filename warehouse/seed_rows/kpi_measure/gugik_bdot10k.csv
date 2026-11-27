@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+bdot10k_powiat_packages,gugik_bdot10k,gugik_bdot10k:powiat_packages:packages:count,"BDOT10k powiat packages, all edition years; date the package index was read (entity snapshot)",1,packages

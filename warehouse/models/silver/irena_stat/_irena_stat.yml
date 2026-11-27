@@ -1,0 +1,47 @@
+version: 2
+models:
+  - name: irena_stat_electricity
+    description: >-
+      IRENASTAT electricity statistics (register GL-035; licence unresolved, internal): installed electrical capacity
+      in MW (stock, end of year) and electricity generation in GWh (flow, the year) by country or area (ISO3 as
+      published), technology (26 published technologies, parents and children side by side, never summed) and grid
+      connection (All, On-grid, Off-grid), annual, as published in the newest release of table Country_ELECSTAT. A
+      cell without a value keeps value null with its status, never 0. Grain: country_code x technology x data_type x
+      grid_connection x year.
+    tests:
+      - unique:
+          column_name: "country_code || '|' || technology || '|' || data_type || '|' || grid_connection || '|' || year"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [country_elecstat]}}}]
+      - name: country_code
+        tests: [not_null]
+      - name: technology
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Total Non-Renewable', 'Total Renewable', 'Oil', 'Renewable hydropower', 'Solar photovoltaic',
+                         'Onshore wind energy', 'Natural gas', 'Coal', 'Renewable waste', 'Solar thermal energy',
+                         'Solid biofuels', 'Other fossil fuels', 'Gas biofuels', 'Mechanical storage (Pumped hydro)',
+                         'Nuclear energy', 'Geothermal energy', 'Mixed hydropower', 'Marine energy',
+                         'Other non-renewable energy', 'Non-renewable waste', 'Liquid biofuels', 'Offshore wind energy',
+                         'Oil shale-sands', 'Peat and peat products', 'Non-renewable energy', 'Pure hydropower']
+      - name: data_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Electricity Generation (GWh)', 'Electrical Installed Capacity (MW)']
+      - name: measure
+        tests: [not_null, {accepted_values: {arguments: {values: [capacity, generation]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [MW, GWh]}}}]
+      - name: grid_connection
+        tests: [not_null, {accepted_values: {arguments: {values: [All, On-grid, Off-grid]}}}]
+      - name: year
+        tests: [not_null]
+      - name: release
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

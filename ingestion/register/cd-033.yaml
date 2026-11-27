@@ -1,0 +1,65 @@
+id: CD-033
+name: Dane Otodom dashboards and reports
+short_name: Otodom reports
+provider: Otodom / OLX Group
+status: reviewing
+family: J
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [housing-market]
+entities: [city, district, listing-type, property-type]
+granularity: Published aggregates such as offer prices, rents and active-listing counts by geography/property
+  segment.
+coverage: Series and dashboard history vary; pages show current and archived reports rather than raw listing histories.
+access:
+  endpoint: https://www.otodom.pl/wiadomosci/dane/aktualne-dane/
+  kind: web
+  interfaces:
+  - HTML
+  - dashboard
+  - PDF
+  auth: 'Public reading. The data product is paid: Otodom Analytics (https://analytics.otodom.pl/), a subscription of 399
+    to 1,699 zł per 30 days or an individual offer (desk reading 12 Nov 2026); no CSV, XLSX or API is mentioned.'
+  cost: mixed
+  limits: None documented; www.otodom.pl robots.txt (1,259 characters) does not forbid the pages read.
+licence:
+  status: restricted
+  notes: 'Terms: https://www.otodom.pl/regulamin/ (read by the runner 12 Nov 2026; operator Grupa OLX sp. z o.o.): "Zabrania
+    się w szczególności: a. jakiegokolwiek wykorzystywania tych treści bez pisemnej zgody uprawnionych; b. jakiegokolwiek
+    agregowania i przetwarzania danych oraz innych informacji dostępnych w Serwisie w celu ich dalszego udostępniania osobom
+    trzecim w ramach innych serwisów internetowych jak i poza Internetem". Commercial reuse: not allowed without written
+    consent. Modification (aggregating, processing for third parties): not allowed. Automated access: not addressed by name.
+    Attribution sentence: none, since reuse is not allowed. Not reusable for public display.'
+updates: Dashboard articles are updated a few times a year (2026-03-01, 2026-07-02 seen); price press releases roughly monthly.
+ingestion:
+  history: 'No machine-readable route: the two data pages answered 200 as HTML articles with no CSV or XLSX link and no
+    chart embed in the HTML (only a tag-manager frame); the dashboards are drawn by scripts. Nothing is loaded without written
+    consent.'
+  incremental: None.
+  identifiers: City, market segment, metric and month; counts are platform listings, not the whole market.
+modelling:
+  notes: 'kpi false. With permission the selection would be the monthly asking price per square metre and rent for the largest
+    cities (no voivodeship series seen). Frequency M. Not established: markers, revisions, size (nothing read). No overlap
+    with published KPIs. Effort M, and only with a licence.'
+  overlap: 'Official housing-price series: NBP residential price reports (quarterly, 17 cities) and GUS; asking prices differ
+    from transaction prices.'
+research:
+  priority: specialist
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Owner question (written permission): Otodom''s terms forbid using or aggregating its content without written consent
+    of Grupa OLX, which also publishes the OTOMOTO market report (CD-034, buildable but without reuse terms). Ask Grupa
+    OLX in writing for permission to store and show the monthly Otodom and OTOMOTO aggregates with attribution (the request
+    can be drafted for you), or leave Otodom unbuilt and OTOMOTO internal? Recommendation: ask once for both; without an
+    answer Otodom is not built (official housing-price series exist at NBP and GUS but are not asking prices).'
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.otodom.pl/regulamin
+    answered 200 with the clause quoted in licence.notes; both data pages answered 200 (240,810 and 282,588 bytes) with
+    no data file or chart embed in the HTML.'
+  - 'Not verified: the Otodom Analytics terms, any data endpoint behind the dashboards, history depth.'
+  references:
+  - https://www.otodom.pl/wiadomosci/dane-otodom-aktualne-ceny-ofertowe-mieszkan-i-domow/
+  - https://www.otodom.pl/wiadomosci/dane/aktualne-dane/
+  - https://www.otodom.pl/regulamin/
+  - https://analytics.otodom.pl/

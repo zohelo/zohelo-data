@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: irena_stat
+  description: IRENASTAT PxWeb API (register GL-035), electricity statistics by country, technology, data type, grid connection and year
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/irena_stat/
+    loaded_by: ingestion/to_bronze/irena_stat/
+    config: ingestion/sources/irena_stat.yaml
+  tables:
+  - name: irena_stat_electricity
+    description: >-
+      Cells of the newest copy of entity country_elecstat (table Country_ELECSTAT_<release>_PX), values as published
+      text: one per country x technology x data type x grid connection x year with a value or a status, PxWeb codes
+      and labels as published; cells marked '..' without a value are not stored; partitioned by entity.
+  - name: irena_stat_rejected_files
+    description: Files of irena_stat the Bronze decoder rejected, with the reason.

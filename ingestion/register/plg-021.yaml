@@ -1,0 +1,58 @@
+id: PLG-021
+name: Concentration decisions and notifications
+short_name: UOKiK concentration decisions
+provider: Office of Competition and Consumer Protection (UOKiK)
+status: approved
+family: F
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [merger control, competition]
+entities: [enterprise, transaction, government decision]
+granularity: Concentration case, parties, decision and procedural dates.
+coverage: Coverage/first year not verified.
+access:
+  endpoint: https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+  kind: api
+  interfaces: [JSON (Domino view), HTML, PDF]
+  auth: public
+  cost: free
+  limits: 'None published. decyzje.uokik.gov.pl has no robots.txt (HTTP 404). The main site uokik.gov.pl is another host:
+    its robots.txt (87 agents) allows generic agents and disallows ClaudeBot, anthropic-ai, GPTBot, CCBot and other AI crawlers
+    by name, so nothing is read from uokik.gov.pl. The page https://uokik.gov.pl/koncentracje is therefore not used.'
+licence:
+  status: unresolved
+  notes: 'Terms: not read. The entry page of the decisions host is a 393-byte frameset without terms; UOKiK''s terms would
+    be on uokik.gov.pl, which is not opened because its robots.txt disallows the Claude crawlers by name. Reuse is therefore
+    not stated as allowed: internal use only until the terms are quoted. Published decisions are redacted versions.'
+updates: Event-driven; proceeding, decision and appeal dates differ. Annual totals appear in the UOKiK annual report (spring).
+ingestion:
+  history: 'Same route as PLG-020, one extraction for both entries: concentration decisions (DKK series) are entries of
+    the decisions database, read from the JSON view https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
+    (tested, see PLG-020). No separate index, API or export of concentration cases was found. Notifications that did not
+    end in a published decision are not in this route.'
+  incremental: 'With PLG-020: weekly snapshot of the view index; a new decision is a new view entry.'
+  identifiers: Case signature (DKK-...), decision number and date.
+modelling:
+  notes: 'kpi false. Smallest Gold selection: the count of concentration decisions per year (DKK signature), Poland only,
+    from the decisions entity table of PLG-020; no regional grain. Effort S on top of PLG-020.'
+  overlap: Subset/view of broader UOKiK decisions; deduplicate by case.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+    the decisions host answered (robots.txt HTTP 404, the view WWW-wszystkie as JSON 200). Build together with PLG-020 as
+    one source system.'
+  - 'Licence unresolved: UOKiK''s terms are not read. Internal build only.'
+  - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,
+    19:53 UTC): the view WWW-wszystkie is categorised, not flat: 12 top-level categories (subject areas; the first is "Jakość
+    paliw"), then the year, then one entry per decision whose single cell is an HTML fragment starting "Numer decyzji:".
+    The names of the other eleven categories were not read. So concentration decisions are selected by their category or
+    by the DKK signature in the decision number; which of the two works is not verified, and the stage-1 issue stays open
+    until the builder has listed the categories. If neither works, this entry goes back to reviewing with that finding.'
+  references:
+  - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf
+  - https://decyzje.uokik.gov.pl/bp/dec_prez.nsf/WWW-wszystkie?ReadViewEntries&OutputFormat=JSON
+  - https://uokik.gov.pl/robots.txt

@@ -1,0 +1,45 @@
+source_system: gus_exam_results
+description: "GUS republication of the CKE/OKE results — mean eighth-grade exam result (% of points) by subject and sex, Poland and voivodeships, annual from 2019 (PLS-025)"
+
+# Extraction strategy (docs/landing.md). Register PLS-025. cke.gov.pl is never read (its robots.txt disallows every
+# agent but Scrapy); the route is GUS's own republication of the OKE results: the page 'Średnie wyniki uczniów na
+# egzaminie ósmoklasisty' (stat.gov.pl ...,18,1.html, dane.gov.pl dataset 2585) links one CSV ('Tablice w formacie
+# CSV') and the same table as XLSX at fixed addresses. Bulk feature: the CSV, one fixed URL, the whole series 2019-
+# in one file of about 340 kB (UTF-8 with a byte order mark, ';' separated, CRLF; header nazwa_zmiennej; kraj;
+# wojewodztwo; przedmiot; plec; typ_informacji_z_jednostka_miary; rok; wartosc; flaga). Entity = the file; version =
+# download time (stat.gov.pl sends no Last-Modified or ETag), written only when the SHA-256 changed. Restart unit:
+# the file. Dev probe 45894428046 (26 Nov 2026): HTTP 200, 343,749 bytes, 2,856 rows = 17 areas x 8 subjects x 3 sex
+# groups x 7 years (2019-2025), flags '(.)' 139 and '(–)' 370, each with wartosc '0'. The matura means (GUS
+# publikacja,17, dataset 2621) have another shape (Poland only; exam formula, kind and level) and are left out.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: eighth_grade_means
+        url: "https://stat.gov.pl/download/gfx/portalinformacyjny/pl/defaultaktualnosci/5488/18/1/1/srednie_wyniki_uczniow_na_egzaminie_osmoklasisty.csv"
+        format: raw
+        version: ingested
+  initial: bulk
+  production: snapshot                  # the file is the whole series; a new edition replaces it
+  incremental_policy: changed_since_last  # SHA-256 (no Last-Modified)
+  schedule: # UTC; CKE publishes the results in early July, GUS republishes later in the year (no calendar); monthly check on the 14th (O46: under one run a week)
+    - {cron: "40 9 14 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gus_exam_results/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report   # a newer file could drop years an older one holds
+bronze: [bronze.gus_exam_results_means, bronze.gus_exam_results_rejected_files]
+silver: [silver.gus_exam_results_eighth_grade]
+gold: [gold.build_gus_exam_results]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gus_exam_results_eighth_grade: {rows: 4300}  # 2,856: 17 areas x 8 subjects x 3 sex groups x 7 years 2019-2025 (Dev trial 45901699841)
+  poc_build_gus_exam_results: {rows: 3600}  # 2,347: the rows with a value (509 flagged rows have none) (Dev trial 45901699841)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one file of about 340 kB and 2,856 rows, one new year a year, no changed-since
+# filter; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #449"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

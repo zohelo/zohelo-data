@@ -1,0 +1,94 @@
+id: PL-ENV-011
+name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
+short_name: GIOŚ surface water
+provider: GIOŚ
+source_system: gios_surface_water
+status: built
+family: G
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [water quality, environment]
+entities: [surface-water monitoring point, water body, sample, result]
+granularity: Monitoring-point (PPK) sample results per indicator and date; water-body (JCWP) status classification per
+  six-year assessment.
+coverage: Current year (provisional, refreshed monthly) plus yearly archive workbooks; status assessments 2019-2024 for
+  rivers, lakes, transitional and coastal water bodies.
+access:
+  endpoint: https://wody.gios.gov.pl/pjwp/api/publications/publication/367
+  kind: bulk_file
+  interfaces: ['XLSX workbooks linked from the portal''s publication 367 "Dane archiwalne i bieżące z monitoringu wód powierzchniowych"
+      (JSON record, files at /pjwp/api/publications/media/<id>)', 'ArcGIS REST MapServer services with Query (https://wody.gios.gov.pl/arcgis/rest/services/PJWP)']
+  auth: None; public GET requests.
+  cost: free
+  limits: None published; ArcGIS maxRecordCount 1,000 per query. The export tool of the portal (POST /geo-files-export/task)
+    is not used.
+licence:
+  status: open-conditional
+  notes: 'Terms: the portal''s own regulations, read from https://wody.gios.gov.pl/pjwp/api/terms_and_conditions (Dev probe
+    run 45853517179, 26 Nov 2026): "Measurement data presented on the website may be used in order to read the content
+    as well as to reuse data in part or as a whole."; the re-user must give the source "in a clear and legible way", the
+    time the information was created and whether it is used in whole or in part, "Data source should be provided as follows:
+    „Data source: GIOŚ – The State Environmental Monitoring”", and must state any processing; GIOŚ is "not responsible for
+    the content of public sector information after its processing". Polish: „Źródło danych: GIOŚ – Państwowy Monitoring
+    Środowiska”. Publication 367 adds: "Uprzejmie prosimy, aby przy każdorazowym przywołaniu danych wskazywano państwowy
+    monitoring środowiska jako źródło ich pochodzenia." The dane.gov.pl record of this portal (dataset 608, GIOŚ) carries
+    "CC BY 4.0" (API record read by the runner 26 Nov 2026). Commercial reuse: allowed (no limit in the regulations; CC
+    BY 4.0 record); modification: allowed when stated. Third-party documents on the site (studies, methodologies) are excluded;
+    only measurement data and classifications are used.'
+updates: 'Current-year workbooks are replaced about monthly ("Dane RW 2026, stan na 02.11.2026"; the regulations: results
+  "updated monthly"); provisional values are verified after the year. Yearly archive workbooks do not change. The ArcGIS
+  result layer has one service per year (2024, 2025, 2026).'
+ingestion:
+  history: 'Bulk: publication 367 links 84 workbooks (Dev probe run 45855480360, job 140032605492, argument `five`): the
+    current-year results "Dane RW" (rivers, 48,164,001 bytes), "Dane LW" (lakes, 8,936,557 bytes) and "Dane CW, TW" (transitional
+    and coastal, 993,697 bytes), all "stan na 02.11.2026" and XLSX (magic 504b0304), plus yearly archive workbooks (for
+    example "dane fizykochemiczne_CW_TW_2021.xlsx", 1,294,676 bytes) and biological data sets; the four water-category
+    publications (RIVERS/88, LAKES/87, TRANSITIONAL_WATERS/107, COAST_WATERS/108) link the classification files. Status
+    assessment through ArcGIS (Dev probe run 45854625135, job 140029691360, argument `four`): PJWP/Ocena_stanu_JCWP_rzeczne_2019_2024
+    (capabilities Map,Query,Data; five layers: ecological status, ecological potential, chemical status, overall status;
+    2,340 river water bodies; fields KOD_JCWP, NAZWA_JCWP, S_P_EKO, STATUS), the lake, transitional, coastal and reservoir
+    services of the same period, PJWP/Wyniki_pomiarow_chemicznych_i_fizykochemicznych_2025 (574,512 results; fields KOD_JCWP,
+    KOD_PPK, NAZWA_PPK, DATA_POMIA, WSKAZNIK, WYNIK, JEDNOSTKA, GRANICA_OZ, X, Y) and PJWP/Siec_PPK (3,984 monitoring points,
+    2022-2027).'
+  incremental: 'Snapshot: the file list is read from the publication record each run; a workbook is downloaded when its
+    media id, Content-Disposition name ("stan na <date>") or bytes changed; archive years are loaded once. The status services
+    change once per six-year assessment.'
+  identifiers: Monitoring point code (KOD_PPK), water-body code (KOD_JCWP), indicator (WSKAZNIK), sample date (DATA_POMIA),
+    assessment period.
+modelling:
+  notes: 'Smallest Gold selection: (1) share and count of surface water bodies by status class (good / below good, ecological
+    and chemical) per water category and voivodeship, assessment 2019-2024, from the ArcGIS status layers (2,340 river bodies
+    plus lakes, transitional, coastal); (2) yearly mean of selected physico-chemical indicators (for example total nitrogen,
+    total phosphorus, BOD5) per voivodeship from the result workbooks. Raw results stay in Silver. Values below the limit
+    of quantification are flagged by GRANICA_OZ (or "<" in the workbooks) and never become the limit value or zero; provisional
+    current-year values are marked as such. Frequencies: results by sample date (aggregated yearly in Gold); status per
+    six-year assessment. Voivodeship by point-in-polygon of the PPK coordinates with PRG (or the JCWP-to-gmina mapping).'
+  overlap: Complements groundwater monitoring (PL-ENV-012) and Wody Polskie planning data (PL-ENV-013 holds the same JCWP
+    codes); the EEA WISE/Waterbase reporting (GL-037) carries the same status per water body for Poland, at a later date.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915, fix of the review of #3268): approved. The earlier "JavaScript only" finding was
+    wrong: the portal''s script (bundle-505ffd16142c797f5674.min.js) calls its own JSON API under https://wody.gios.gov.pl/pjwp/api
+    (API_CONTEXT "/pjwp" plus "/api"; the earlier guesses /pjwp/api/publications 404 and /publications/367 400 were wrong
+    paths). Dev probe runs on branch test/src-parked-probe, script dev/src_parked3fix_probe.py, 26 Nov 2026: 45851940348
+    (job 140020286051, argument `one`: bundle read, download functions /files/download/, /geo-files-export/task (POST),
+    /publications/); 45852736337 (job 140023061088, argument `two`: API paths and ArcGIS folders); 45853517179 (job 140025787216,
+    argument `three`: /pjwp/api/terms_and_conditions, /publications/publication/367, /publications/?page=0&size=10, /dictionaries/*
+    all HTTP 200 JSON; ArcGIS folder PJWP lists the status and result services); 45854625135 (job 140029691360, argument
+    `four`: ArcGIS layers, fields and counts); 45855480360 (job 140032605492, argument `five`: the 84 workbook links of
+    publication 367 and five workbook downloads, HTTP 200 XLSX). robots.txt: none on wody.gios.gov.pl (the host answers
+    the gov.pl portal page), nothing refused.'
+  - 'Route note: the workbooks are published files at stable addresses that the publication links (a bulk workaround in
+    the playbook''s order, polite GETs, terms allow reuse); the ArcGIS services are the provider''s public map services
+    with Query. The portal''s export tool (POST /geo-files-export/task, then polling) is a browser export and is not used.'
+  references:
+  - https://wody.gios.gov.pl/pjwp/publication/367
+  - https://wody.gios.gov.pl/pjwp/api/terms_and_conditions
+  - https://wody.gios.gov.pl/arcgis/rest/services/PJWP
+  - https://dane.gov.pl/pl/dataset/608
+  - https://www.gov.pl/web/gios/monitoring-jakosci-wod
+  - https://www.gov.pl/web/gios/ponowne-wykorzystywanie

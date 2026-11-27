@@ -1,0 +1,5 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+patent_applications,uprp_statistics,uprp_statistics:annual_reports:applications:inventions_applications:total,"UPRP annual report table 1.1, invention applications, Suma końcowa (national and PCT procedure)",1,
+patents_granted,uprp_statistics,uprp_statistics:annual_reports:rights:inventions_grants:total,"UPRP annual report table 1.7, patents granted to domestic and foreign holders, Suma końcowa",1,
+trademark_applications,uprp_statistics,uprp_statistics:annual_reports:applications:trademarks_applications:total,"UPRP annual report table 4.1, trademark applications, Suma końcowa (national and international procedure)",1,
+industrial_design_applications,uprp_statistics,uprp_statistics:annual_reports:applications:industrial_designs_applications:total,"UPRP annual report table 5.1, industrial design applications, Suma końcowa (national and international procedure)",1,

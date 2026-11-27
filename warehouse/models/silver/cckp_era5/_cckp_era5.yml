@@ -1,0 +1,32 @@
+version: 2
+models:
+  - name: cckp_era5_observations
+    description: >-
+      ERA5 0.25-degree reanalysis aggregated by the World Bank Climate Change Knowledge Portal (register GL-036; licence
+      cc_by_4_0_cckp_era5) over
+      the land of each country and territory and of Poland's 16 first-level units (voivodeships): tas, mean air
+      temperature in degC, and pr, precipitation total in mm, monthly and annual (annual pr = the year's total), as
+      published; reanalysis estimates, not station observations or projections. A value that is not a number keeps
+      value null, never 0. Grain: variable x aggregation x geocode x period_label.
+    tests:
+      - unique:
+          column_name: "variable || '|' || aggregation || '|' || geocode || '|' || period_label"
+    columns:
+      - name: variable
+        tests: [not_null, {accepted_values: {arguments: {values: [tas, pr]}}}]
+      - name: aggregation
+        tests: [not_null, {accepted_values: {arguments: {values: [monthly, annual]}}}]
+      - name: geocode
+        tests: [not_null]
+      - name: geo_level
+        tests: [not_null, {accepted_values: {arguments: {values: [country, adm1]}}}]
+      - name: period_label
+        tests: [not_null]
+      - name: period_year
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [degC, mm]}}}]
+      - name: dataset_period
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

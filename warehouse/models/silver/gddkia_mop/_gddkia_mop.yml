@@ -1,0 +1,43 @@
+version: 2
+models:
+  - name: gddkia_mop_rest_areas
+    description: >-
+      GDDKiA "Tabela MOP istniejące" (register PL-ENV-023): existing rest areas (MOP) and parkings on national roads,
+      one row per listed rest area of each landed monthly edition. Grain: entity (edition mop_<yyyy>_<mm>) x lp (the
+      producer's row number of that edition). Columns found by header text; values as published (closed lists as
+      in the September 2026 edition); road class, number, chainage, direction and x/y as published text; the
+      manager's name only for GDDKiA, "Prywatny" and companies (manager_kind). Trial run: see
+      ingestion/sources/gddkia_mop.yaml.
+    tests:
+      - unique:
+          column_name: "entity || '|' || lp"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: edition_month
+        tests: [not_null]
+      - name: lp
+        tests: [not_null]
+      - name: voivodeship_name
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [dolnośląskie, kujawsko-pomorskie, lubelskie, lubuskie, łódzkie, małopolskie, mazowieckie,
+                         opolskie, podkarpackie, podlaskie, pomorskie, śląskie, świętokrzyskie, warmińsko-mazurskie,
+                         wielkopolskie, zachodniopomorskie]
+      - name: manager_kind
+        tests: [{accepted_values: {arguments: {values: [gddkia, private, company, other]}}}]
+      - name: current_category
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [MOP funkcja komercyjna, MOP funkcja podstawowa, Parking prywatny, Parking]
+      - name: target_category
+        tests:
+          - accepted_values:
+              arguments:
+                values: [MOP funkcja komercyjna, MOP funkcja podstawowa, Parking prywatny, parking]
+      - name: raw_sha256
+        tests: [not_null]

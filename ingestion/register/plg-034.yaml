@@ -1,0 +1,106 @@
+id: PLG-034
+name: Government Legislative Process portal (RPL), including consultations
+short_name: RCL legislative process (RPL)
+provider: Government Legislation Centre (RCL)
+source_system: kprm_work_list
+status: built
+family: F
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [legislation, public consultation]
+entities: [draft legal act, legislative stage, ministry, consultation submission]
+granularity: 'Approved route (the government''s work list on gov.pl): one row per planned government draft (bill,
+  regulation of the Council of Ministers, other government document) with work-list number, title, kind, type,
+  responsible body, planned adoption and status. RPL itself (not reachable): project by type, title, creation date,
+  applicant, work-list number and status, with staged documents.'
+coverage: 'Work list of the Council of Ministers: 1,526 drafts published from 21 December 2023 to 12 November 2026
+  (the current government); earlier terms are HTML pages without a file. RPL: current, adopted and archived drafts
+  since 1 January 2012 by RCL''s accessibility statement (desk fetch); not read.'
+access:
+  endpoint: https://www.gov.pl/web/premier/wplip-rm
+  kind: bulk_file
+  interfaces: [CSV, HTML]
+  auth: Public download.
+  cost: free
+  limits: 'None published. robots.txt of www.gov.pl: "User-Agent: * Allow: /". The RPL hosts legislacja.rcl.gov.pl
+    and legislacja.gov.pl do not answer GitHub runners (timeouts on robots.txt in three runs on 12 Nov 2026), so
+    their robots.txt is unread.'
+licence:
+  status: open-conditional
+  notes: 'Terms: KPRM re-use page https://www.gov.pl/web/premier/ponowne-wykorzystywanie, for the site that is read
+    (from a GitHub runner, 12 Nov 2026): "Informacje sektora publicznego udostępniane na stronie Kancelarii Prezesa Rady
+    Ministrów (dalej: KPRM) są udostępniane w celu ponownego wykorzystywania na licencji Creative Commons Uznanie
+    Autorstwa 3.0 Polska, o ile nie jest to stwierdzone inaczej. KPRM nie ponosi odpowiedzialności za dalsze ponowne
+    wykorzystywanie informacji sektora publicznego udostępnianych na stronie KPRM." The footer of the work-list page
+    (https://www.gov.pl/web/premier/wplip-rm) says: "Treści tekstowe publikowane w serwisie (z wyłączeniem treści
+    audiowizualnych), są udostępniane na licencji typu Creative Commons: uznanie autorstwa - na tych samych
+    warunkach 4.0 (CC BY-SA 4.0)." Both allow commercial reuse and modification with attribution; the two statements
+    differ, so the stricter one is applied: CC BY-SA 4.0, share-alike for published adaptations. Attribution:
+    "Źródło: Kancelaria Prezesa Rady Ministrów, Wykaz prac legislacyjnych i programowych Rady Ministrów, gov.pl
+    (<data pobrania>), CC BY-SA 4.0". For RPL data, should that route open: RCL''s re-use page
+    https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
+    (read from a GitHub runner, 12 Nov 2026) cites the re-use act and says "każdemu przysługuje prawo do ponownego
+    wykorzystywania informacji sektora publicznego: udostępnionych w systemie teleinformatycznym", naming "serwis
+    Rządowy Proces Legislacyjny", with the conditions "obowiązku każdorazowego informowania o źródle pozyskanych
+    danych oraz czasie wytworzenia żądanego zbioru przez podmiot zobowiązany, obowiązku informowania o przetworzeniu
+    informacji ponownie wykorzystywanej"; the RPL site''s own footer was never read (host timeout). Consultation
+    attachments are third parties'' works and name people: never loaded.'
+updates: 'Event-driven: rows are added and changed as drafts enter the work list or change status; the newest row
+  was published on 12 Nov 2026 at 15:53. No feed; the file has no Last-Modified or ETag.'
+ingestion:
+  history: 'Bulk file: the page https://www.gov.pl/web/premier/wplip-rm links "Pobierz dane do pliku csv"
+    (https://www.gov.pl/register-file/Rejestr_20874195.csv): HEAD and GET 200 from a GitHub runner, 11,313,160
+    bytes, UTF-8 with BOM, semicolon-separated, 19 columns, 1,526 rows, all rows 19 fields wide. Columns: Numer
+    projektu (unique, for example UC2, UD505), Tytuł, Rodzaj dokumentu (Projekty ustaw, Projekty rozporządzeń,
+    Projekty innych dokumentów rządowych), Typ dokumentu (5 values), Informacja dodatkowa, two long text columns
+    (aims, up to 36,383 characters; substance, up to 90,880), three empty columns, Organ odpowiedzialny za
+    opracowanie projektu (46 values), Organ współpracujący, Osoba odpowiedzialna, Organ odpowiedzialny (44 values),
+    Planowane przyjęcie przez RM (free text), Informacja o rezygnacji, Status realizacji (Zrealizowany, Wycofany;
+    empty on 363 rows), Data publikacji (2023-12-21 09:46 to 2026-11-12 15:53), Podgląd (link to the draft''s page).
+    The Prime Minister''s own list https://www.gov.pl/web/premier/wpl-prm links Rejestr_20874196.csv (HEAD 200, not
+    read). The archive of earlier terms (https://www.gov.pl/web/premier/prace-legislacyjne-rady-ministrow) has no
+    file. Dev probe run 43299743376 (job 131467412298), branch test/src-fix-probe, 12 Nov 2026; the link was found
+    in Dev probe run 43295075918 (job 131451094958). RPL itself: legislacja.rcl.gov.pl and legislacja.gov.pl timed
+    out on robots.txt from GitHub runners in Dev probe run 43289510189 and again at about 20:00 UTC (90 s) and 20:25
+    UTC (60 s), so nothing else was requested there; dane.gov.pl timed out too (75 s). RPL addresses seen in search
+    results: /lista?typeId=<n>&pSize=<n>&pNumber=<n> and /projekt/<id> (not opened).'
+  incremental: 'Entity = the work-list file (one per list), version = download date (the source gives none);
+    snapshot once a day at most, unchanged bytes skipped by SHA-256. Small source: full refresh.'
+  identifiers: 'Work-list number (Numer projektu, for example UD505); RPL shows the same number per project
+    (/projekt/<id>), which would link the two if RPL becomes readable.'
+modelling:
+  notes: 'kpi false. Gold use, metadata only: an entity table of government drafts keyed by work-list number (kind,
+    type, responsible body, publication date, status); later, as event counts, drafts entering the work list per
+    month by responsible body and kind and the share realised or withdrawn (monthly and annual as separate
+    measure_keys). Do not load Osoba odpowiedzialna (names of officials) or the two long text columns into Silver
+    beyond what a title needs. Planowane przyjęcie is free text (quarter, date, "ZREALIZOWANY ..."): keep as
+    published. An empty Status realizacji means in progress, not unknown. Duplicates: Numer projektu is unique in
+    the file; titles repeat (1,287 distinct). Effort S.'
+  overlap: 'PLG-024 Sejm API (approved) covers bills from the Sejm print on and PLG-026 ELI (approved) the published
+    acts; the work list covers the planned government stage; RPL alone has the stage documents, ministers'' own
+    regulations and consultations, which no loaded source holds. No kpi.csv KPI overlaps.'
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (it does not block the work-list build): will you send this to RCL (contact address on
+    https://bip.rcl.gov.pl, not read here)? "Szanowni Państwo, serwis Rządowy Proces Legislacyjny
+    (legislacja.gov.pl, legislacja.rcl.gov.pl) nie odpowiada na zapytania z serwerów GitHub Actions (przekroczenie
+    czasu połączenia). Proszę o informację: (1) czy RCL udostępnia lub może udostępnić wykaz projektów z metadanymi
+    (numer z wykazu, tytuł, wnioskodawca, etapy z datami) jako plik, kanał RSS lub API; (2) czy automatyczne,
+    rzadkie pobieranie stron list projektów jest dopuszczalne i z jakich adresów sieciowych."'
+  - 'Not worked around: the timeouts of both RPL hosts from GitHub runners (three runs on 12 Nov 2026); no other
+    network path is tried.'
+  - 'Not verified: robots.txt, footer and every page of the RPL site; the Prime Minister''s list file (HEAD only);
+    whether the address of the work-list file is stable (read the link from the page).'
+  - 'Consultation attachments name commenters: metadata only, never the documents.'
+  references:
+  - https://www.gov.pl/web/premier/wplip-rm
+  - https://www.gov.pl/register-file/Rejestr_20874195.csv
+  - https://www.gov.pl/web/premier/wpl-prm
+  - https://www.gov.pl/web/premier/ponowne-wykorzystywanie
+  - https://legislacja.rcl.gov.pl/
+  - https://bip.rcl.gov.pl/rcl/ponowne-wykorzystywanie/3122,Warunki-ponownego-wykorzystywania-informacji-publicznej.html
+  - https://bip.rcl.gov.pl/rcl/dostepnosc/deklaracje-dostepnosci/23028,Deklaracja-dostepnosci-strony-Rzadowego-Procesu-Legislacyjnego.html

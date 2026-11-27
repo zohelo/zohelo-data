@@ -1,0 +1,15 @@
+version: 2
+models:
+  - name: poc_build_gis_sanitary
+    description: >-
+      Build stage — GIS annual report (register PLS-018), from silver.gis_sanitary_food_samples: food samples
+      examined by the State Sanitary Inspection laboratories and the per cent not meeting health-quality
+      requirements, Poland, all foodstuffs and domestic, annual 2012 onwards, each year from its own report. Values
+      and units as published (samples, per cent); no share is calculated.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]

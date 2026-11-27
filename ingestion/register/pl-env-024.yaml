@@ -1,0 +1,66 @@
+id: PL-ENV-024
+name: CEPiK public API
+short_name: CEPiK
+provider: Ministerstwo Cyfryzacji / Centralna Ewidencja Pojazdów i Kierowców
+source_system: cepik
+status: built
+family: H
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [vehicles, transport]
+entities: [vehicle model/registration aggregate, public registry record]
+granularity: 'Statistics workbooks: vehicles registered per month by voivodeship and by vehicle type; driving licences issued;
+  inspection stations and technical inspections. The API serves single vehicle records.'
+coverage: Statistics pages for 2023-2026 (10 pages listed); the 2026 workbook holds January-September on 12 Nov 2026.
+access:
+  endpoint: https://www.gov.pl/web/cepik/statystyki
+  kind: bulk_file
+  interfaces: [XLSX, PDF, HTML, REST-API]
+  auth: public download; the API is public and free
+  cost: free
+  limits: None published for the files. api.cepik.gov.pl gave no answer to a GitHub runner (timeout), so the API is not
+    a route from the platform.
+licence:
+  status: open-conditional
+  notes: 'Terms: stated on https://www.gov.pl/web/cepik/api-dla-centralnej-ewidencji-pojazdow-i-kierowcow-api-do-cepik (read
+    by the probe 12 Nov 2026): "Dane z CEPiK można wykorzystywać do celów komercyjnych i niekomercyjnych. W obu przypadkach
+    musisz poinformować o źródle wytworzenia i pozyskania informacji." Commercial reuse allowed; modification is not addressed;
+    the source of creation and of acquisition must be named. The sentence stands on the API page and speaks of CEPiK data
+    in general; the statistics pages carry only the gov.pl footer (text content CC BY-SA 4.0). Attribution: "Źródło: Centralna
+    Ewidencja Pojazdów i Kierowców (CEPiK), Ministerstwo Cyfryzacji; pobrano z gov.pl <data>".'
+updates: 'Monthly: the 2026 workbook by voivodeship was last modified 22 Oct 2026 with data to September.'
+ingestion:
+  history: 'Bulk files linked from stable pages: https://www.gov.pl/web/cepik/statystyki lists one page per topic and year
+    (e.g. /web/cepik/pojazdy-zarejestrowane-w-2026-roku, /prawa-jazdy-wydane-w-2026-roku, /stacje-kontroli-pojazdow-skp-i-badania-techniczne-bt-w-2025-roku).
+    The 2026 vehicles page has four attachments: XLSX and PDF by voivodeship, XLSX and PDF by vehicle type. Tested: the
+    voivodeship XLSX (18,058 bytes, one sheet, a national row of monthly totals and one row per voivodeship with a column
+    block per month). Attachment UUIDs change with each monthly update, so the page is the entry. API https://api.cepik.gov.pl/
+    (vehicle records by voivodeship and date window): not reachable from runners and not needed for the aggregates.'
+  incremental: Snapshot of the current-year workbooks, monthly; version = Last-Modified; closed years once.
+  identifiers: Year, month, voivodeship (names), vehicle type.
+modelling:
+  notes: 'Smallest Gold selection: vehicles registered by voivodeship and by vehicle type, 2023-2026. New KPI: vehicle registrations
+    per month (count), Poland and voivodeships; second step: driving licences issued. Whether the counts are first registrations
+    or all registrations is to be read from the workbook header. Effort S (XLSX through the shared cell decoder).'
+  overlap: Vehicle stock may overlap official aggregates; API records and statistical totals are different grains.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): statistics pages and the voivodeship
+    XLSX answered 200 to a GitHub runner; api.cepik.gov.pl timed out (robots.txt, one attempt), so every API detail stays
+    unverified.'
+  - Confirm the definition of "pojazdy zarejestrowane" (first registrations or all) at the build.
+  - 'Built (#2966): vehicles registered per month by voivodeship and by vehicle type, XLSX 2016-2026 (Dev probe 43340837086,
+    branch test/2966-cepik-trial: 22 workbooks, one sheet each, three-month blocks). Not landed: driving licences issued,
+    inspection stations and technical inspections. The workbook of 22 Oct 2026 prints the September 2026 voivodeship values
+    in another order than the names (Mazowieckie 3,598, Łódzkie 35,467): those rows are kept out of Gold. Trial of 26 Nov 2026
+    (Dev run in the PR): the workbook is corrected (0 order_suspect rows) and repeats September in an unheaded column 13, kept
+    as outside_table, not in Gold.'
+  references:
+  - https://www.gov.pl/web/cepik/statystyki
+  - https://www.gov.pl/web/cepik/pojazdy-zarejestrowane-w-2026-roku
+  - https://www.gov.pl/web/cepik/api-dla-centralnej-ewidencji-pojazdow-i-kierowcow-api-do-cepik
+  - https://api.cepik.gov.pl/doc

@@ -238,6 +238,7 @@
     {
       "unit_key": "persons",
       "symbol": "os.",
+      "symbol_en": "persons",
       "name_en": "persons",
       "name_pl": "osoby",
       "is_rate": false,
@@ -1695,7 +1696,7 @@
     {
       "licence_key": "unresolved",
       "name": "Terms not established",
-      "url": "https://github.com/zohelo/zohelo-data/blob/main/ingestion/register.yaml",
+      "url": "https://github.com/zohelo/zohelo-data/tree/main/ingestion/register",
       "attribution_text": "Source: see the source register",
       "commercial_ok": false,
       "share_alike": false

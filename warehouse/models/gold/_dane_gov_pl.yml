@@ -1,0 +1,43 @@
+version: 2
+models:
+  - name: open_data_datasets_pl
+    description: >-
+      Entity table (catalogue records): one row per dataset of the dane.gov.pl open-data catalogue as harvested by
+      data.europa.eu (register PLG-030, #3263), keyed by the dane.gov.pl dataset number; date_key = the day of its last
+      modification (UTC). Title, publisher (dane.gov.pl institution number and name), periodicity, high-value flag,
+      numbers of themes and distributions, the harvest record's times and the harvest lag in hours (harvest record
+      modified minus dataset modified). Metadata only (CC0, data.europa.eu): no data of the datasets.
+    columns:
+      - name: dataset_number
+        tests: [not_null, unique]
+      - name: date_key
+        tests: [not_null]
+  - name: poc_build_dane_gov_pl
+    description: >-
+      Build stage - the dane.gov.pl catalogue as harvested by data.europa.eu, Poland, monthly (M): datasets by the
+      month of their last modification and distributions by the month of theirs, in total, by publisher (dane.gov.pl
+      institution number) and by EU data theme (one measure_key per count and breakdown). The state of the catalogue on
+      the download date (a dataset modified again moves to the newer month); the download month is provisional; only
+      months with a count have a row.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || breakdown_json || '|' || date_key"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_open_data_datasets_modified
+    description: >-
+      KPI open_data_datasets_modified (draft) from gold.build_dane_gov_pl: datasets of the dane.gov.pl catalogue by
+      month of last modification, Poland (macros/poc_metrics.sql).
+  - name: poc_metrics_open_data_distributions_modified
+    description: >-
+      KPI open_data_distributions_modified (draft) from gold.build_dane_gov_pl: distributions of the dane.gov.pl
+      catalogue by month of last modification, Poland (macros/poc_metrics.sql).

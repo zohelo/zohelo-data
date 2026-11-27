@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+groundwater_nitrate_above_50_share,gios_groundwater,gios_groundwater:nitrate:%:above_50_share.%,"GIOŚ PMŚ groundwater monitoring, points with a sample above 50 mg/l NO3 of the points with nitrate results; the diagnostic or operational network of the year (one per year)",1,

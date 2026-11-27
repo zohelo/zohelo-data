@@ -1,0 +1,61 @@
+id: GL-013
+name: International Financial Statistics (IFS)
+short_name: IMF IFS
+provider: International Monetary Fund
+status: reviewing
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [macroeconomy, money, prices, exchange-rates]
+entities: [country]
+granularity: SDMX observation at dataset-specific economy, indicator, counterpart, frequency and period grain.
+coverage: Multicountry coverage and history vary by series; exact current catalog metadata must be inventoried.
+access:
+  endpoint: https://data.imf.org/
+  kind: api
+  interfaces: [HTML, SDMX 2.1 API, SDMX 3.0 API]
+  auth: portal viewing public; API Swagger requires beta portal sign-in
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.imf.org/en/about/copyright-and-terms (Data section): download, extract, copy, create
+    derivative works, publish and distribute Data with attribution; do not alter Data in a way that affects
+    its nature or accuracy and state any material transformation with the citation; sellers must tell buyers
+    the Data is free from the IMF; potential commercial reuse via copyright@imf.org; bulk download by
+    automated means needs explicit IMF permission; third-party material needs its holder''s permission;
+    provided as is. Attribution: "Source: International Monetary Fund, International Financial Statistics,
+    <link to the dataset>".'
+updates: Observation frequency and revisions are series-specific; no single schedule documented on opened pages.
+ingestion:
+  history: Snapshot full selected dataflows with structures and vintage timestamp.
+  incremental: Reload recent windows plus any revised older keys after metadata comparison.
+  identifiers: IMF dataflow + full SDMX key; counterpart-country code is required for DOTS.
+modelling:
+  notes: Retain frequency, unit, adjustment and status; stocks, flows, rates and indexes must not be summed.
+  overlap: Overlaps national, WDI, BIS and trade aggregators; keep IMF as a separately sourced observation.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: the IMF terms (https://www.imf.org/en/about/copyright-and-terms, read by the runner 26 Nov 2026) let
+    users "download, extract, copy, create derivative works, publish, distribute, and use Data" with attribution, but also
+    say "The IMF prohibits bulk download of information by automated technology without explicit permission" and "For
+    any potential commercial reuse of IMF Data, email copyright@imf.org to request permission." The IMF''s own API answers
+    GitHub runners (api.imf.org SDMX 2.1 dataflow list HTTP 200; DataMapper API HTTP 200). Do you want to email copyright@imf.org
+    asking for explicit permission to load WEO, IFS and DOTS for Poland, the EU and comparator countries through api.imf.org
+    on a weekly schedule (one request at a time) and to show them on zohelo.com and bi.zohelo.com, or leave the IMF datasets
+    out (Eurostat, OECD, ECB, BIS, World Bank and UNCTAD cover most of the same series and are loaded)?'
+  - 'Re-review 26 Nov 2026 (Task #2916): the parking reason stands and is now an owner question (one question for GL-012,
+    GL-013 and GL-014). Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026):
+    the terms page (8,161 characters) still carries the bulk-download sentence above; https://data.imf.org/en/Resource-Pages/IMF-API
+    points to https://portal.api.imf.org/apis; https://api.imf.org/external/sdmx/2.1/dataflow/all/all/latest HTTP 200
+    (463,527 bytes, SDMX structure) and https://www.imf.org/external/datamapper/api/v1/indicators HTTP 200 (48,417 bytes).
+    Route and licence are otherwise known: with the permission, IFS is built through api.imf.org (SDMX, one dataflow at
+    a time).'
+  references:
+  - https://data.imf.org/
+  - https://data.imf.org/en/Resource-Pages/IMF-API
+  - https://www.imf.org/en/about/copyright-and-terms

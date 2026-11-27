@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: pig_midas
+  description: PIG-PIB MIDAS mineral deposits, mining areas and mining terrains (register PL-ENV-015), WFS GetFeature
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/pig_midas/
+    loaded_by: ingestion/to_bronze/pig_midas/
+    config: ingestion/sources/pig_midas.yaml
+  tables:
+  - name: pig_midas_features
+    description: >-
+      One row per feature of the newest GEOJSON response of each of the six MIDAS WFS layers (entities deposits,
+      deposits_removed, mining_areas, mining_areas_archival, mining_terrains, mining_terrains_archival): every property
+      as the text of its JSON value (columns of other layers NULL), the geometry as GeoJSON text (EPSG:4326), the
+      feature's position in the response and provenance; partitioned by entity.
+  - name: pig_midas_rejected_files
+    description: Responses of pig_midas the Bronze decoder rejected, with the reason.

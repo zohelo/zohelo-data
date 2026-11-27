@@ -34,7 +34,7 @@ silver: [silver.dbw_observations]
 # Gold: the curated KPI blocks are in the shared models of warehouse/warehouse.yaml (build_dbw, fact_*).
 # Full coverage (O43, D35, docs/gold-coverage.md): every loaded block by rule, one file per block and table,
 # written by gold.observations (warehouse/observations.py, build stage warehouse/entity/gold_gus_dbw_build.sql),
-# not by dbt. gold.observations is not in `activities` yet: adding it there authorizes the Pipeline load.
+# not by dbt.
 gold: [gold.gus_dbw_observations, gold.gus_dbw_series, gold.gus_dbw_measures, gold.gus_dbw_geography,
        gold.observations_rejected, gold.build_dbw, gold.src_dbw, gold.src_dbw_dictionary]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
@@ -47,4 +47,7 @@ legacy_tables: [bronze.dbw_dictionaries, bronze.dbw_indicators, bronze.dbw_metad
 # in Bronze, Silver and Gold; nothing else is rewritten.
 refresh: {mode: incremental, unit: file, decided: "#875"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35; #1185): the platform's weekly run keeps Gold current with
+# the blocks that changed; the first load is started by hand (Pipeline run "gold: observations" of gus_dbw with
+# filter * or block ids) and continued by every later run, each within its time budget, smallest blocks first.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune, gold.observations]

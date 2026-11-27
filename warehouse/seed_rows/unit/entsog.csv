@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-kwh_per_day,kWh/d,kilowatt-hours per day,kilowatogodziny na dobę,true,kwh_per_day,1
-kwh,kWh,kilowatt-hours,kilowatogodziny,false,kwh,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+kwh_per_day,kWh/d,kilowatt-hours per day,kilowatogodziny na dobę,true,kwh_per_day,1,
+kwh,kWh,kilowatt-hours,kilowatogodziny,false,kwh,1,

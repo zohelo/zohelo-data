@@ -1,0 +1,59 @@
+id: PL-ENV-027
+name: Port of Gdańsk cargo and traffic statistics releases
+short_name: Port of Gdańsk statistics
+provider: Zarząd Morskiego Portu Gdańsk S.A.
+status: parked
+family: H
+kpi: true
+geography: Port Gdańsk, Poland
+provider_type: subnational-public
+domains: [maritime transport, cargo, ports]
+entities: [port, cargo category, ship call, passenger aggregate]
+granularity: Period totals for cargo categories, TEU, ship calls, passengers and trade direction.
+coverage: Periodic official releases; a structured historical series was not verified.
+access:
+  endpoint: https://www.portgdansk.pl/wydarzenia/rekordowe-przeladunki-w-porcie-gdansk-mocny-polmetek-2026-roku/
+  kind: web
+  interfaces: [HTML]
+  auth: Public web releases.
+  cost: Free viewing.
+  limits: None published; robots.txt disallows only /wp-admin/.
+licence:
+  status: restricted
+  notes: 'Terms: the site footer reads "2026 © All rights reserved by ZMPG S.A." (probe 12 Nov 2026; Polish pages: "Wszelkie
+    prawa zastrzeżone przez Zarząd Morskiego Portu Gdańsk S.A.", desk fetch). No licence or reuse permission is stated;
+    the port authority is a company, not a public office.'
+updates: Press releases after each quarter (the nine-month 2026 release is dated 27 Oct 2026).
+ingestion:
+  history: 'No machine route: figures appear in press-release text, and https://www.portgdansk.pl/en/business/general-information/facts-and-figures/
+    shows charts for 2010-2025 without numbers or a download (its only file link is a PwC report PDF).'
+  incremental: 'None: the series are read from Eurostat (GL-001).'
+  identifiers: Period, cargo group.
+modelling:
+  notes: 'No Gold use from this source. Confirmed stand-in: annual gross weight of goods handled in the port of Gdańsk in
+    Eurostat mar_mg_aa_pwhd (2005-2024, port code PL_0PLGDN), loaded through GL-001. Likely further cover, not confirmed
+    for Gdańsk: quarterly detail for Polish ports (mar_go_qm_pl, in Silver), containers in TEU (mar_mg_am_pvh), cargo type
+    (mar_mg_am_pwhc) and passengers (mar_mp_aa_pphd).'
+  overlap: Port-specific facts are not a national maritime total and may overlap national summaries.
+research:
+  priority: specialist
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Parked, not for a technical reason: the port authority, a company, reserves all rights and offers press-release text
+    and charts only. Its annual gross weight handled is contained in Eurostat mar_mg_aa_pwhd, which we load through GL-001
+    (Gdańsk is rep_mar PL_0PLGDN; 3,960 rows in Silver; Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe,
+    script dev/src_dfh_fix_probe.py, 12 Nov 2026)). Containment of the quarterly, container, cargo-type and passenger series
+    is likely (mar_go_qm_pl with 2,476,692 rows in Silver; mar_mg_am_pvh, mar_mg_am_pwhc and mar_mp_aa_pphd listed in silver.eurostat_dataflows)
+    but not confirmed for Gdańsk. Eurostat is two to three quarters behind the port''s own releases.'
+  - 'Owner question: the Port of Gdańsk reserves all rights and publishes its quarterly cargo, container and passenger figures
+    only as press-release text; Eurostat, which we load, confirms only the annual gross weight for Gdańsk and runs two to
+    three quarters behind. Do you want a written permission request sent to ZMPG S.A. (text drafted for you) to reuse the
+    port''s quarterly figures with attribution, or do you accept the Eurostat series as sufficient?'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the facts-and-figures page answered
+    200 and links no data file. Not verified: that Gdańsk is a port in mar_go_qm_pl and in the three catalogue tables (only
+    mar_mg_aa_pwhd was opened), and the Silver row counts of those three.'
+  references:
+  - https://www.portgdansk.pl/en/business/general-information/facts-and-figures/
+  - https://www.portgdansk.pl/wydarzenia/trzy-kwartaly-2026-ponad-6-mln-ton-ladunkow-wiecej-niz-przed-rokiem-port-gdansk-bije-rekordy/
+  - https://ec.europa.eu/eurostat/databrowser/view/mar_mg_aa_pwhd/default/table

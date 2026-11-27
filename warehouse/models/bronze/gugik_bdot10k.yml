@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: gugik_bdot10k
+  description: GUGiK BDOT10k, topographic objects database (register PL-ENV-003), the index of the powiat download packages
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gugik_bdot10k/
+    loaded_by: ingestion/to_bronze/gugik_bdot10k/
+    config: ingestion/sources/gugik_bdot10k.yaml
+  tables:
+  - name: bdot10k_packages
+    description: >-
+      One row per feature of the newest copy of the WFS index (entity powiat_packages, feature type BDOT10k_powiaty):
+      TERYT, powiat name, update date and GML package URL as the text read, the feature's position in the answer and
+      provenance; partitioned by entity.
+  - name: bdot10k_rejected_files
+    description: Index answers of gugik_bdot10k the Bronze decoder rejected, with the reason.

@@ -1,0 +1,71 @@
+id: CD-004
+name: Nasdaq Data Link
+short_name: Nasdaq Data Link
+provider: Nasdaq
+status: reviewing
+family: I
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [financial-markets, economics, alternative-data]
+entities: [dataset, security, enterprise, country]
+granularity: Dataset-defined rows or series through streaming, real-time/delayed and tables products.
+coverage: Dataset-specific; large-table bulk downloads can provide full or filtered history where entitled.
+access:
+  endpoint: https://data.nasdaq.com/
+  kind: api
+  interfaces:
+  - API
+  - JSON
+  - CSV
+  - XML
+  - Parquet
+  auth: 'API key from a Nasdaq Data Link account (the owner would have to create it). Docs (desk reading 12 Nov 2026): time-series
+    API "you must have an API key"; bulk download "All requests will require the use of an API Key".'
+  cost: mixed
+  limits: 'https://docs.data.nasdaq.com/docs/rate-limits-1 (desk reading 12 Nov 2026): without a key "20 calls per 10 minutes
+    and 50 calls per day"; with a key "300 calls per 10 seconds, 2,000 calls per 10 minutes and a limit of 50,000 calls
+    per day", concurrency limit of one; bulk download is described for subscribers ("For new subscribers, an initial 25
+    request limit").'
+licence:
+  status: unresolved
+  notes: 'No terms page of data.nasdaq.com (the site the data is read from) was found or read: the runner received only
+    a JavaScript shell from https://data.nasdaq.com/ and the session could not open the host (12 Nov 2026). Evidence read
+    instead: https://help.quandl.com/article/602-who-sets-the-terms-and-conditions-for-databases-that-i-sell-on-nasdaq-data-link
+    ("you would set the exact terms by which your Nasdaq Data Link customers access your data": terms are set per dataset
+    by its publisher) and https://www.nasdaq.com/legal, which covers nasdaq.com, not Data Link ("solely for your personal,
+    non-commercial use"; "agree not to sell, copy, distribute, or create derivative works based on the Services"). Commercial
+    reuse: not stated for Data Link. Modification: not stated. Attribution sentence: none found. Stays internal.'
+updates: Dataset-specific. "Free data feeds do not have any regular, guaranteed update times" (https://help.quandl.com/article/510-how-often-is-the-data-on-nasdaq-data-link-refreshed-or-updated,
+  desk reading 12 Nov 2026).
+ingestion:
+  history: 'None proposed before the owner answer. If opened: one table per product code through the Tables API with the
+    key.'
+  incremental: None proposed.
+  identifiers: Dataset (product) code plus native row keys and dates; keep the upstream publisher.
+modelling:
+  notes: 'kpi false. No Gold selection: "Most of the datasets on Nasdaq Data Link is premium" (getting-started page) and
+    the only free product confirmed is the US CFTC Commitments of Traders table, which CFTC publishes itself; no Poland-specific
+    dataset was found. Frequencies, missing-value markers, duplicates and size were not established (nothing to load). No
+    overlap with published KPIs.'
+  overlap: Republishes official or commercial upstream data; the original producer is the better source for every free series
+    found.
+research:
+  priority: conditional
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Owner question (account, key): Nasdaq Data Link needs an account and an API key that you would create, almost all of
+    its data is paid, and the only free product found is the US CFTC Commitments of Traders table (no data about Poland).
+    Create a free account and key for it, or park CD-004? Recommendation: park.'
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://data.nasdaq.com/ answered
+    200 with a JavaScript shell (3,184 bytes, no terms links in the HTML); robots.txt 200 with no rule against the request;
+    https://docs.data.nasdaq.com/docs/getting-started and /docs/rate-limits-1 answered 404 to the runner, although both
+    opened in the session the same day (the getting-started page says the docs site "will be retired on August 31 2026").'
+  - 'Not verified: the data.nasdaq.com terms of use, the list of free products beyond CFTC, any API call (no key).'
+  references:
+  - https://docs.data.nasdaq.com/docs/getting-started
+  - https://docs.data.nasdaq.com/docs/data-organization
+  - https://docs.data.nasdaq.com/docs/large-table-download
+  - https://docs.data.nasdaq.com/docs/rate-limits-1
+  - https://www.nasdaq.com/legal

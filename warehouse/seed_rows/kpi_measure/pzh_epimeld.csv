@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+pertussis_incidence,pzh_epimeld,pzh_epimeld:annual:per_100k:krztusiec_a37,"NIZP PZH-PIB annual bulletin, pertussis (A37), Poland and voivodeships",1,
+measles_incidence,pzh_epimeld,pzh_epimeld:annual:per_100k:odra_b05,"NIZP PZH-PIB annual bulletin, measles (B05), Poland and voivodeships",1,
+chickenpox_incidence,pzh_epimeld,pzh_epimeld:annual:per_100k:ospawietrzna_b01,"NIZP PZH-PIB annual bulletin, chickenpox (B01), Poland and voivodeships",1,

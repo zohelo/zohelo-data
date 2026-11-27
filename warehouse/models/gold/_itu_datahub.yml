@@ -1,0 +1,22 @@
+version: 2
+models:
+  - name: poc_build_itu_datahub
+    description: >-
+      Build stage — ITU DataHub (register GL-031) via World Bank Data360 ITU_DH, block itu_dh: the numeric ICT
+      indicators by economy, one measure per indicator and published unit (counts, per 100 inhabitants, % of
+      population or households, bandwidth, traffic, prices in USD, PPP and % of GNI per person), annual, values as
+      published; sex, age, urbanisation and skill level as breakdowns, total only where the source gives '_T' or no
+      breakdown; text indicators (IT_COMP_*) not loaded; licence unresolved (internal).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_fixed_broadband_subscriptions
+    description: KPI fixed_broadband_subscriptions (draft) from gold.build_itu_datahub (macros/poc_metrics.sql).
+  - name: poc_metrics_mobile_broadband_subscriptions
+    description: KPI mobile_broadband_subscriptions (draft) from gold.build_itu_datahub (macros/poc_metrics.sql).

@@ -1,0 +1,77 @@
+id: CD-005
+name: GPW Market Data
+short_name: GPW market data
+provider: Warsaw Stock Exchange (GPW)
+status: reviewing
+family: I
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [financial-markets]
+entities: [security, index, exchange, trade, quote]
+granularity: Instrument trades, quotes and reference data; product depth ranges from post-trade to order-book views.
+coverage: Real-time, delayed and historical products; exact archive depth depends on agreement/product.
+access:
+  endpoint: https://www.gpw.pl/market-data
+  kind: bulk_file
+  interfaces: [feed, bulk-files, HTML]
+  auth: 'Market Data License Agreement with GPW for any distribution or non-display use, including delayed data taken from
+    www.gpw.pl; the website shows delayed data and a daily price archive (XLS per day and instrument class) for
+    viewing.'
+  cost: mixed
+  limits: Contract and product specific; no published request limit for the website archive.
+licence:
+  status: restricted
+  notes: 'Terms: https://www.gpw.pl/pub/GPW/files/PDF/dane_rynkowe/WSE_Market_Data_Policy.pdf (WSE Market Data Policy, 9
+    pages, read by the runner 26 Nov 2026): "Market Data is provided for a fee in the case of Real -Time Data";
+    "Market Data is provided free of charge in the case of Delayed Data"; "Delayed Data is also made available via the
+    WSE (GPW) website at www.gpw.pl"; "The WSE (GPW) charges fees for the distribution of Delayed Data only where the
+    recipient redistributes such data in a manner that makes access to the Delayed Data conditional upon the user
+    paying any fee"; "Further distribution of Delayed Data, including data sourced from the WSE (GPW) website,
+    requires the conclusion of a License Agreement." https://www.gpw.pl/market-data: "Each company that intends to
+    offer its clients access to real time market data or wishes to use WSE market data internally for non-display
+    purposes is required to sign the Market Data License Agreement." Fee schedule from 1 Jan 2027
+    (https://www.gpw.pl/pub/GPW/files/PDF/cennik/2027_01_01_WSE_Market_Data_License_Agreement_Fee_Schedule.pdf): End
+    of Trading Information, distribution "G – Closing Data and Indicators 14 500" PLN a year.
+    https://www.gpw.pl/disclaimer: accuracy disclaimer only ("2017 © Warsaw Stock Exchange"). No open licence;
+    attribution sentence: none given. Not reusable without the agreement: stays out.'
+updates: Real-time or delayed streams; historical publications vary.
+ingestion:
+  history: 'PROPOSAL: license exact products and backfill daily reference/trade files.'
+  incremental: 'PROPOSAL: consume licensed feed or files; replay corrections by trade date.'
+  identifiers: ISIN, GPW ticker, instrument, market, timestamp; map MIC and issuer LEI.
+modelling:
+  notes: Separate trades, quotes, corporate actions and index observations.
+  overlap: Canonical Polish market source; aggregators may normalize or omit instruments.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (agreement): GPW''s Market Data Policy says delayed data is free of charge unless the
+    redistributor charges its users, but "Further distribution of Delayed Data, including data sourced from the WSE
+    (GPW) website, requires the conclusion of a License Agreement", and internal non-display use also needs that
+    agreement; the 2027 fee schedule lists distribution of "G – Closing Data and Indicators" at 14,500 PLN a year.
+    Do you want to write to GPW (market data department) asking to sign the Market Data License Agreement for free
+    display of delayed end-of-day data on zohelo (WIG and WIG20 closing values, monthly market statistics), and
+    whether the closing-data fee applies to a free service, or park CD-005? Recommendation: ask once, in one letter
+    that also covers GPW Benchmark (CD-011) and TGE (CD-010), which use the same agreement and fee schedule; without
+    an agreement nothing is loaded.'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a GPW data licence, which is an owner question, so
+    the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+    dev/src_parked1_probe.py, 26 Nov 2026): https://www.gpw.pl/market-data HTTP 200 (licence model, fee schedules
+    2017 to 2027 linked; the 2027 schedule PDF, 24 pages, read); https://www.gpw.pl/archiwum-notowan HTTP 200 (form:
+    instrument class, day, "Pobierz (XLS)"); robots.txt of www.gpw.pl disallows only /pub/NEWCONNECT/DI/EUROSNACK.
+    Dev probe run 45880748620 (job 140119185484, same branch and script, argument `two`, 26 Nov 2026): the Market
+    Data Policy PDF (quoted in licence.notes), https://www.gpw.pl/gpw-statistics (daily to annual statistics; 26 Nov
+    2026: 402 companies, capitalisation PLN 2,832,559.84 million), https://www.gpw.pl/disclaimer. Smallest Gold
+    selection once licensed: WIG and WIG20 daily closing values and monthly market capitalisation and number of
+    companies (Poland), from the daily price-archive XLS and the monthly statistics.'
+  - 'Earlier parking reason: exchange market data is licensed (distribution and non-display use are fee-bearing)'
+  references:
+  - https://www.gpw.pl/market-data
+  - https://www.gpw.pl/pub/GPW/files/PDF/dane_rynkowe/WSE_Market_Data_Policy.pdf
+  - https://www.gpw.pl/pub/GPW/files/PDF/cennik/2027_01_01_WSE_Market_Data_License_Agreement_Fee_Schedule.pdf
+  - https://www.gpw.pl/pub/GPW/files/DOC/dane_rynkowe/WSE_Market_Data_License_Agreement.docx
+  - https://www.gpw.pl/archiwum-notowan
+  - https://www.gpw.pl/gpw-statistics

@@ -1,0 +1,23 @@
+version: 2
+models:
+  - name: poc_build_gugik_nmt
+    description: >-
+      Build stage — GUGiK elevation sheet indexes: sheet editions (index features) by service (NMT, NMPT, LIDAR x
+      EVRF2007, KRON86; never summed across) and data year, in total and by spatial characteristic as published, and
+      the share of each characteristic (%), for Poland (every feature) and each voivodeship (features whose footprint
+      centroid lies inside its PRG boundary; area code mapped in poc_map_geography), from silver.gugik_nmt_sheets.
+      Rule in the model header. Grain: measure_key x geography_key x breakdown x date_key.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

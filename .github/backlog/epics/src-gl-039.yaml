@@ -24,7 +24,7 @@ deliverables:
   - Register entry GL-039 has licence.notes with the terms URL and attribution; status approved
   state: done
   notes:
-  - 'Evidence: licence #1671, register decision #1672 (ingestion/register.yaml status approved)'
+  - 'Evidence: licence #1671, register decision #1672 (ingestion/register/gl-039.yaml status approved)'
 - key: data/src-gl-039/development
   title: UN World Population Prospects · Development
   done_when:
@@ -44,7 +44,7 @@ deliverables:
       review; the Dev trial Task proves them from Actions. Schedule (stage 4) comes later: WPP is revised every two years.'
     files:
     - create: ingestion/sources/un_wpp.yaml
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/gl-039.yaml
     - edit: .github/workflows/pipeline.yml
     - edit: docs/sources.md
     steps:
@@ -55,7 +55,7 @@ deliverables:
     - 'Files under extraction.bulk_file.files: one file: entity demographic_indicators_medium, url "https://population.un.org/wpp/assets/Excel%20Files/1_Indicator%20(Standard)/CSV_FILES/WPP2024_Demographic_Indicators_Medium.csv.gz",
       format gzip, version last_modified. If the Dev trial gets 404, it annotates the links of https://population.un.org/wpp/downloads?folder=Standard%20Projections&group=CSV%20format;
       take the Demographic_Indicators_Medium .csv.gz URL from that list.'
-    - 'Add `source_system: un_wpp` to register entry GL-039 in ingestion/register.yaml.'
+    - 'Add `source_system: un_wpp` to register entry GL-039 in ingestion/register/gl-039.yaml.'
     - Add un_wpp to the `source` options list of the workflow_dispatch inputs in .github/workflows/pipeline.yml (alphabetical
       place).
     - 'docs/sources.md: a `un_wpp` section like world_bank_wdi''s (route, entity, version, restart unit).'

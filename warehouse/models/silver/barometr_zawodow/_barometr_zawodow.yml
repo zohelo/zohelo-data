@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: barometr_zawodow_forecasts
+    description: >-
+      Barometr Zawodów (register PLS-030): the forecast category (as printed: deficit, balance, surplus) of every
+      occupation the experts assessed, per forecast year and area, from the edition's posters: Poland from the
+      national poster, the 16 voivodeships from their own posters. Grain: forecast_year x
+      area_code x occupation_name. A forecast, not an observation; occupations by their printed name in each edition
+      (no code, no cross-year mapping). History and trial run: see ingestion/sources/barometr_zawodow.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', forecast_year, area_code, occupation_name)"
+    columns:
+      - name: forecast_year
+        tests: [not_null]
+      - name: area_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32', PL]
+      - name: occupation_name
+        tests: [not_null]
+      - name: category_key
+        tests: [not_null, {accepted_values: {arguments: {values: [deficyt, rownowaga, nadwyzka]}}}]
+      - name: file_kind
+        tests: [not_null, {accepted_values: {arguments: {values: [national, province]}}}]
+      - name: raw_sha256
+        tests: [not_null]

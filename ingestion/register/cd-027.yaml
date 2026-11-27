@@ -1,0 +1,75 @@
+id: CD-027
+name: OpenStreetMap Planet, history and replication diffs
+short_name: OpenStreetMap
+provider: OpenStreetMap contributors and OpenStreetMap Foundation
+status: reviewing
+family: J
+kpi: false
+geography: worldwide
+provider_type: community-academic
+domains: [geospatial, transport, places]
+entities: [node, way, relation, changeset]
+granularity: Tagged nodes, ways and relations; full-history files include versions and changesets.
+coverage: Global planet and history; archive documentation points to coverage from 2006 with gaps/quality varying by place.
+access:
+  endpoint: https://wiki.openstreetmap.org/wiki/Planet.osm
+  kind: api
+  interfaces: [bulk-files, replication-diffs, API, PBF, XML]
+  auth: Public downloads; bulk users should use planet/diffs, not operational map APIs or tiles.
+  cost: free
+  limits: 'Operational API/tile/geocoder policies apply; planet delivery is the bulk route. robots.txt read from GitHub
+    runners on 26 Nov 2026 (Dev probes 45812376344, 45813689333, 45811517922): download.geofabrik.de "User-agent: *
+    Disallow: *.osm.pbf" (also *.osc.gz, *.shp.zip, *.md5, state files); taginfo.geofabrik.de and taginfo.openstreetmap.org
+    "User-agent: * Disallow: /api"; download.openstreetmap.fr (OSM France extracts) "User-agent: * Disallow: /".
+    Main Overpass instance (wiki Overpass_API): regular use below 1/100 of 10,000 queries, 1 GB and 10 minutes of
+    processing a day.'
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.openstreetmap.org/copyright says OpenStreetMap is open data "rozpowszechniany na licencji Open
+    Data Commons Open Database License (ODbL)" and may be copied, distributed and adapted "pod warunkiem podania OpenStreetMap
+    i jego autorów jako źródła" (page in Polish) (page read 11 Nov 2026 from a GitHub runner). Attribution: "© OpenStreetMap
+    contributors" with the ODbL link; share-alike applies to derived databases, produced works and third-party layers need
+    separate analysis. Geofabrik extracts carry the same ODbL. English page (read 26 Nov 2026 from a runner, Dev probe
+    45811003504): "OpenStreetMap is open data, licensed under the Open Data Commons Open Database License (ODbL) by the
+    OpenStreetMap Foundation (OSMF). ... You are free to copy, distribute, transmit and adapt our data, as long as you
+    credit OpenStreetMap and its contributors. If you alter or build upon our data, you may distribute the result only
+    under the same license." Geofabrik (osm-internal.download.geofabrik.de front page, Dev probe 45811517922): "Files are
+    provided under the terms of the Open Database License 1.0, i.e. no usage restrictions apply."'
+updates: Weekly planet, minute/hour/day diffs; community edits may revert or delete objects.
+ingestion:
+  history: 'Poland extract poland-latest.osm.pbf from Geofabrik (https://download.geofabrik.de/europe/poland.html): 2.0
+    GB, refreshed daily (data up to 2026-11-10T21:21:39Z at the check), per-voivodeship extracts 80-180 MB; the official
+    full planet file is the alternative route (https://planet.openstreetmap.org/, about 80 GB, not measured). Build
+    attempt #3262 (26 Nov 2026, Dev probes 45810636426 to 45813689333): the smallest valuable selection, counts of
+    features per tag value and voivodeship, is technically easy (DuckDB spatial ST_ReadOSM reads the 316 MB
+    mazowieckie extract in 2 s with 251 MB of memory: 34.3 M nodes, 5.0 M ways, 36 k relations; OSM France copies of
+    opolskie and mazowieckie read once in probe 45811003504, before that server''s robots.txt was read; not repeated),
+    but every route to
+    the voivodeship extracts or counts is refused to automated clients: download.geofabrik.de by robots.txt
+    (Disallow: *.osm.pbf) and, from some runners, by refused TCP connections; Geofabrik regional taginfo (counts per
+    voivodeship, data until 2026-11-24) by robots.txt (Disallow: /api); the OSM France per-voivodeship extracts (16
+    files, 61-316 MB, 2.4 GB, mazowieckie last built 17 Nov) by robots.txt (Disallow: /). overpass-api.de was
+    unreachable from one runner, and area counts of a voivodeship exceed its regular-use processing time;
+    overpass.private.coffee invites unlimited use, including commercial, but its status page and a first query timed
+    out (60 s, 300 s). planet.openstreetmap.org answers but the planet does not fit a runner and is out of scope.'
+  incremental: 'PROPOSAL: apply replication sequence diffs idempotently; periodic checksum/reseed.'
+  identifiers: OSM type+ID+version; spatial links are probabilistic unless tagged identifiers exist.
+modelling:
+  notes: Bitemporal feature/tag model; geometry and semantics change independently.
+  overlap: May underlie geocoders and map products; avoid duplicate-derived counting.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: every small route to OpenStreetMap counts per Polish voivodeship is refused to automated clients
+    by robots.txt (Geofabrik download server "Disallow: *.osm.pbf", Geofabrik taginfo "Disallow: /api", OSM France
+    extracts "Disallow: /"), which we never work around, and the full planet does not fit a runner. Do you want a
+    permission request sent to Geofabrik (text drafted for you) for one download a month of the 16 Polish voivodeship
+    extracts (about 2 GB) from GitHub Actions, or do you decide that OpenStreetMap stays out until such a route exists?'
+  - ODbL attribution/share-alike design
+  - Select extract boundary
+  - Handle deletions/redactions
+  references:
+  - https://wiki.openstreetmap.org/wiki/Planet.osm
+  - https://www.openstreetmap.org/copyright
