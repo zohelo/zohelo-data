@@ -9,7 +9,9 @@
    - <block>:<unit>:service_total: Poland only, every record of the service (unfiltered hits).
    - <block>:<unit>:outside_powiat_list: records whose unit code matches none of the 380 powiats: Poland = service
      total - sum of powiats; a voivodeship = its 2-digit prefix count - sum of its powiats. Counts are read minutes
-     apart, so a county update between two requests can make it slightly negative; it is kept as computed. #}
+     apart, so a county update between two requests can make it slightly negative; it is kept as computed.
+   Lineage: a round is 17 Landing files (parts); a row's raw_sha256 is the file of its part (a powiat's and a
+   voivodeship's: the voivodeship part; Poland's: the PL part, the round's first file). #}
 with geo as (
     select
         source_code,
@@ -100,15 +102,16 @@ measured as (
     from outside
 ),
 
-provenance as (
+provenance as (  -- one Landing file per part: PL, or a voivodeship with its powiats
     select
         block_id,
         snapshot_date,
+        case scope when 'PL' then 'PL' else left(area_code, 2) end as part,
         max(source_version) as source_version,
         max(raw_sha256) as raw_sha256,
         count(distinct raw_sha256) as files
     from counts
-    group by block_id, snapshot_date
+    group by all
 )
 
 select
@@ -143,9 +146,14 @@ select
     m.observation_status_key,
     p.source_version,
     case
-        when p.files > 1 then error('build_gugik_egib: ' || m.block_id || ' ' || m.snapshot_date || ' reads two files')
+        when p.files > 1
+            then error('build_gugik_egib: ' || m.block_id || ' ' || m.snapshot_date || ' part ' || p.part || ' twice')
         else p.raw_sha256
     end as raw_sha256
 from measured as m
-inner join provenance as p on m.block_id = p.block_id and m.snapshot_date = p.snapshot_date
+inner join provenance as p
+    on
+        m.block_id = p.block_id
+        and m.snapshot_date = p.snapshot_date
+        and p.part = case m.area_code when 'PL' then 'PL' else left(m.area_code, 2) end
 left join geo as g on m.area_code = g.source_code
