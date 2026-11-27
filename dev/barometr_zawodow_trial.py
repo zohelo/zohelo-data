@@ -354,6 +354,15 @@ def build(arrow, work: Path):
                   "min": rows(con, f"select arg_min(geography_key || ' ' || period_label || ' ' || value, value) {f}"),
                   "max": rows(con, f"select arg_max(geography_key || ' ' || period_label || ' ' || value, value) {f}")}
     g["kpi_checks"] = kpi
+    g["status(key,rows)"] = rows(con, f"select observation_status_key, count(*) from {b} group by 1 order by 1")
+    # national report 2022, chart 4 (deficit occupations per voivodeship, 2022): the posters must give the same
+    report_2022 = {"TERC:08": 62, "TERC:22": 55, "TERC:02": 50, "TERC:30": 47, "TERC:16": 44, "TERC:04": 37,
+                   "TERC:32": 37, "TERC:12": 34, "TERC:26": 33, "TERC:24": 32, "TERC:18": 27, "TERC:28": 24,
+                   "TERC:06": 23, "TERC:20": 21, "TERC:14": 19, "TERC:10": 11}
+    got = dict(run(con, f"select geography_key, value from {b} where period_label = '2022' and measure_key like '%:deficyt' and geography_key <> 'PL'"))
+    g["report_2022_deficit_mismatch"] = {k: [v, got.get(k)] for k, v in report_2022.items() if got.get(k) != v}
+    if g["status(key,rows)"] != [["forecast", str(g["rows"])]] or g["report_2022_deficit_mismatch"]:
+        failures.append("gold status or 2022 deficit counts")
     spots = {
         "PL_by_year(year,measure,value)": rows(con, f"select period_label, split_part(measure_key, ':', 4), value from {b} where geography_key = 'PL' order by 1, 2", 60),
         "voiv_2026(area,measure,value)": rows(con, f"select geography_key, split_part(measure_key, ':', 4), value from {b} where period_label = '2026' and geography_key <> 'PL' order by 1, 2", 60),
