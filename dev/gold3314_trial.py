@@ -216,7 +216,7 @@ def check_unesco_uis(con) -> dict:
             "select measure_key, observation_status_key, count(*) from o group by all order by 1, 2"
         ).fetchall(),
         "series_sex_poland": con.execute(
-            "select s.breakdown_json, s.is_total, s.sex_code, count(*) from o inner join s using (series_key) "
+            "select s.breakdown_json, s.is_total, s.sex_key, count(*) from o inner join s using (series_key) "
             "where o.geography_key = 'PL' group by all order by 1"
         ).fetchall(),
         "poland_newest": newest_pl(con),
@@ -229,7 +229,7 @@ def check_world_bank_edstats(con) -> dict:
         "measures": con.execute("select measure_key, unit_key, points from m order by 1").fetchall(),
         "areas_matched": one(con, "select count(*) filter (where geography_key <> '_X'), count(*) from g"),
         "poland_2018": con.execute(
-            "select o.measure_key, s.sex_code, o.value from o inner join s using (series_key) "
+            "select o.measure_key, s.sex_key, o.value from o inner join s using (series_key) "
             "where o.geography_key = 'PL' and o.date_key = '2018-01-01' order by 1, 2"
         ).fetchall(),
     }
