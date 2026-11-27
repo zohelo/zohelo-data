@@ -183,7 +183,6 @@ def main(argv) -> int:
             "levels": n(f"select string_agg(prosecutor_level || '=' || c, ' ') from (select prosecutor_level, count(*) c from {SM} group by 1 order by 1)"),
             "other_level_offices": n(f"select count(distinct prosecutor_office) from {SM} where prosecutor_level = 'other'"),
             "offices": n(f"select count(distinct prosecutor_office) from {SM}"),
-            "offices_listed_with_note": n(f"select count(*) from {SM} where prosecutor_office <> prosecutor_office_listed"),
             "krs_count_sum": n(f"select sum(krs_count) from {SM}"),
             "tests_run": len(failures),
             "test_failures": {k: v for k, v in failures.items() if v} or "none",
