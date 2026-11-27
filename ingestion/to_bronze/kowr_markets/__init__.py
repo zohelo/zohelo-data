@@ -50,6 +50,8 @@ COLUMNS = [
     ("table_code", "VARCHAR"),
     ("table_title", "VARCHAR"),
     ("period_text", "VARCHAR"),
+    ("period_start", "VARCHAR"),
+    ("period_end", "VARCHAR"),
     ("stated_source", "VARCHAR"),
     ("row_group", "VARCHAR"),
     ("row_label", "VARCHAR"),
@@ -82,7 +84,8 @@ EU_TAIL = {"- brak danych", "Procentowa", "zmiana", "ceny w EUR", *EU_GROUPS}
 EXCHANGE_GOODS = {"pszenica konsumpcyjna", "pszenica paszowa", "żyto konsumpcyjne", "jęczmień paszowy", "kukurydza"}
 EXCHANGE_COLUMNS = ["minimalna", "maksymalna", "średnia", "zmiana_tygodniowa", "zmiana_miesieczna", "zmiana_roczna"]
 EXCHANGE_HEADERS = {"minimalna maksymalna średnia tygodniowa miesięczna roczna", "oferty sprzedaży (zł/t)", "Towar"}
-NO_DATA = {'"-" brak danych', "- brak danych"}
+NO_DATA = re.compile(r"""['"„”]?-['"”]? brak danych""")  # '"-" brak danych', '- brak danych', ''-" brak danych'
+
 
 PRICE = re.compile(r"-|\d+(?:,\d+)?")
 CHANGE = re.compile(r"-|-?\d+(?:,\d+)?|####")
@@ -93,7 +96,8 @@ FOB_HEADER = re.compile(r"Towar Jedn\. ?miary .*?(\d{1,2}\.\d{2}\.\d{4}).*zł/t(
 # "Średni kurs NBP z dnia 21.10.2026 r.: EUR = 4,3716 zł." (FOB), "1 EUR = 4,3695 PLN (wg EBC - 22.10.2026 r.)" (EU)
 RATE = re.compile(r"EUR ?= ?(\d[,.]\d{2,4}) ?(?:zł|PLN)")
 SOURCE_LINE = re.compile(r"Źródło: (.+)")
-LAST_DATE = re.compile(r"(\d{1,2})\.(\d{2})\.(\d{4})(?:\D*)$")
+# "12-18.10.2026 r.", "9-15.11.2026", "07-13.07.25", "27.03 - 2.04.2023", "30.06-06.07.25", "18-31.12.2023"
+PERIOD = re.compile(r"(\d{1,2})(?:\.(\d{2}))? ?- ?(\d{1,2})\.(\d{2})\.(\d{2}|\d{4})(?: r\.)?")
 EXCHANGE_ROW = re.compile(
     rf"([a-ząćęłńóśźż ]+?) ({GROUPED}) ({GROUPED}) ({GROUPED}) ({CHANGE.pattern}) "
     rf"({CHANGE.pattern}) ({CHANGE.pattern})"
@@ -110,12 +114,29 @@ def number(text: str) -> Decimal:
     return Decimal(text.replace(" ", "").replace(",", "."))
 
 
-def week_end(text: str, end: date, where: str) -> str:
-    """The period text, checked to end on the report week's Sunday."""
-    match = LAST_DATE.search(text.strip())
-    if not match or date(int(match.group(3)), int(match.group(2)), int(match.group(1))) != end:
-        raise Layout(f"{where}: period {text!r} does not end on {end:%d.%m.%Y}")
-    return text.strip()
+def period_of(text: str, end: date, where: str) -> tuple[str, str, str]:
+    """(period text, first day, last day) of a weekly table. The EU and exchange tables often show the week before
+    the report's, once two weeks (18-31.12.2023 in the report of 18-24.12.2023; Dev trial 45910578662): a period is
+    accepted when it runs Monday to Sunday over one or two weeks and ends between four weeks before and one week after
+    the report week's Sunday."""
+    match = PERIOD.fullmatch(text.strip())
+    if not match:
+        raise Layout(f"{where}: period {text!r} not read")
+    d1, m1, d2, m2, y2 = match.groups()
+    year = int(y2) + (2000 if len(y2) == 2 else 0)
+    try:
+        last = date(year, int(m2), int(d2))
+        first = date(year - (int(m1 or m2) > int(m2)), int(m1 or m2), int(d1))
+    except ValueError as exc:
+        raise Layout(f"{where}: period {text!r}: {exc}") from exc
+    if (
+        first.weekday() != 0
+        or last.weekday() != 6
+        or (last - first).days not in (6, 13)
+        or not (end - timedelta(28) <= last <= end + timedelta(7))
+    ):
+        raise Layout(f"{where}: period {text!r} is not one or two weeks ending near {end:%d.%m.%Y}")
+    return text.strip(), first.isoformat(), last.isoformat()
 
 
 def norm(line: str) -> str:
@@ -140,8 +161,8 @@ def stated(lines: list[str], code: str) -> str:
     return found[0]
 
 
-def fob(lines: list[str]) -> tuple[str, str, list[tuple[str, str, str, str]]]:
-    """(quote date text, stated source, cells (group, market, column, value))."""
+def fob(lines: list[str]) -> tuple[tuple[str, str, str], str, list[tuple[str, str, str, str]]]:
+    """((quote date text, ISO date, ISO date), stated source, cells (group, market, column, value))."""
     header = [m for m in map(FOB_HEADER.fullmatch, lines) if m]
     rate = [m for m in map(RATE.search, lines) if m]
     if len(header) != 1 or len(rate) > 1 or not any("tygodniowa miesięczna roczna" in x for x in lines):
@@ -156,7 +177,7 @@ def fob(lines: list[str]) -> tuple[str, str, list[tuple[str, str, str, str]]]:
         if not row:
             if (
                 line
-                and line not in NO_DATA
+                and not NO_DATA.fullmatch(line)
                 and line != "tygodniowa miesięczna roczna"
                 and not (FOB_HEADER.fullmatch(line) or RATE.search(line) or SOURCE_LINE.fullmatch(line))
             ):
@@ -192,7 +213,10 @@ def fob(lines: list[str]) -> tuple[str, str, list[tuple[str, str, str, str]]]:
             cells.append((group, market, "kontrola", f"{price} EUR/t x {nbp} <> {pln} zł/t"))
     if {g for g, _ in seen} != set(FOB_MARKETS):
         raise Layout(f"fob: commodity groups found {sorted({g for g, _ in seen})}")
-    return header[0].group(1), source, cells
+    quoted = header[0].group(1)
+    day = re.match(r"(\d{1,2})\.(\d{2})\.(\d{4})", quoted)
+    iso = date(int(day.group(3)), int(day.group(2)), int(day.group(1))).isoformat()
+    return (quoted, iso, iso), source, cells
 
 
 def eu_groups(frags: list[tuple[str, float, float]]) -> list[str]:
@@ -219,9 +243,9 @@ def eu_groups(frags: list[tuple[str, float, float]]) -> list[str]:
     return order
 
 
-def eu(lines: list[str], end: date, frags=None) -> tuple[str, str, list[tuple[str, str, str, str]]]:
-    """(week text, stated source, cells (commodity, country, row label, value)). The commodity of each block comes
-    from the text positions (eu_groups); without them (unit tests on a text dump) from the printed order."""
+def eu(lines: list[str], end: date, frags=None) -> tuple[tuple[str, str, str], str, list[tuple[str, str, str, str]]]:
+    """((week text, first day, last day), stated source, cells (commodity, country, row label, value)). The commodity
+    of each block comes from the text positions (eu_groups); without them (tests on a text dump) the printed order."""
     countries = [x for x in lines if x in COUNTRIES]
     if countries != COUNTRIES:
         raise Layout(f"eu: countries not as expected: {len(countries)} of {len(COUNTRIES)}")
@@ -245,11 +269,12 @@ def eu(lines: list[str], end: date, frags=None) -> tuple[str, str, list[tuple[st
         if (
             line
             and line not in EU_TAIL
+            and not NO_DATA.fullmatch(line)
             and not (RATE.search(line) or EU_PERIOD.fullmatch(line) or SOURCE_LINE.fullmatch(line))
         ):
             raise Layout(f"eu: unexpected line {line[:80]!r}")
     week, source, ecb = (
-        week_end(period[0].group(1), end, "eu"),
+        period_of(period[0].group(1), end, "eu"),
         stated(tail, "eu"),
         number(rate[0].group(1)) if rate else None,
     )
@@ -266,7 +291,11 @@ def eu(lines: list[str], end: date, frags=None) -> tuple[str, str, list[tuple[st
             off = [
                 (country, eur, pln)
                 for country, eur, pln in zip(COUNTRIES, rows[i - 4][1], values, strict=True)
-                if eur not in ("-", "0") and pln != "-" and abs(number(eur) * ecb - number(pln)) > number(pln) / 100 + 2
+                # Polska is skipped: its PLN price is ZSRIR's, its EUR price the Commission's own conversion
+                if country != "Polska"
+                and eur not in ("-", "0")
+                and pln != "-"
+                and abs(number(eur) * ecb - number(pln)) > number(pln) / 100 + 2
             ]
             if len(off) > 2:  # the columns are shifted, not one cell mistyped
                 raise Layout(f"eu: {group}: EUR x {ecb} is not the PLN price in {len(off)} columns: {off[:3]}")
@@ -275,19 +304,24 @@ def eu(lines: list[str], end: date, frags=None) -> tuple[str, str, list[tuple[st
     return week, source, cells
 
 
-def exchange(lines: list[str], end: date) -> tuple[str, str, list[tuple[str, str, str, str]]]:
-    """(week text, stated source, cells ('', commodity, column, value))."""
+def exchange(lines: list[str], end: date) -> tuple[tuple[str, str, str], str, list[tuple[str, str, str, str]]]:
+    """((week text, first day, last day), stated source, cells ('', commodity, column, value))."""
     period = [m for m in map(EXCHANGE_PERIOD.fullmatch, lines) if m]
     if len(period) != 1 or not set(lines) >= EXCHANGE_HEADERS:
         raise Layout(f"exchange: period lines {len(period)}, headers {sorted(EXCHANGE_HEADERS - set(lines))} missing")
-    week, source = week_end(period[0].group(1), end, "exchange"), stated(lines, "exchange")
+    sources = [m.group(1) for m in map(SOURCE_LINE.fullmatch, lines) if m]
+    if len(sources) > 1:
+        raise Layout(f"exchange: {len(sources)} 'Źródło:' lines")
+    # two reports of January 2026 print no source line under this table: stated_source stays empty
+    week, source = period_of(period[0].group(1), end, "exchange"), (sources or [""])[0]
     cells, seen = [], set()
     for line in lines:
         row = EXCHANGE_ROW.fullmatch(line)
         if not row:
             if (
                 line
-                and line not in NO_DATA | EXCHANGE_HEADERS
+                and line not in EXCHANGE_HEADERS
+                and not NO_DATA.fullmatch(line)
                 and not (EXCHANGE_PERIOD.fullmatch(line) or SOURCE_LINE.fullmatch(line))
             ):
                 raise Layout(f"exchange: unexpected line {line[:80]!r}")
@@ -297,9 +331,10 @@ def exchange(lines: list[str], end: date) -> tuple[str, str, list[tuple[str, str
             raise Layout(f"exchange: commodity {good!r} unknown or repeated")
         seen.add(good)
         low, high, mean = values[:3]
-        if "-" not in (low, high, mean) and not number(low) <= number(mean) <= number(high):
-            raise Layout(f"exchange: {good}: not minimum <= average <= maximum: {values[:3]}")
         cells += [("", good, c, v) for c, v in zip(EXCHANGE_COLUMNS, values, strict=True)]
+        if "-" not in (low, high, mean) and not number(low) <= number(mean) <= number(high):
+            # the producer's average lies outside its own minimum and maximum (2 reports): marked, Silver loads none
+            cells.append(("", good, "kontrola", f"min {low} max {high} avg {mean}"))
     if not seen:
         raise Layout("exchange: no commodity row")
     return week, source, cells
@@ -314,7 +349,7 @@ def parse(
     out = []
     for code in TITLES:
         page, lines = locate(pages, code)
-        period, source, cells = (
+        (period, first, last), source, cells = (
             fob(lines)
             if code == "fob"
             else eu(lines, end, None if frags is None else frags[page - 1])
@@ -328,6 +363,8 @@ def parse(
                     "table_code": code,
                     "table_title": TITLES[code],
                     "period_text": period,
+                    "period_start": first,
+                    "period_end": last,
                     "stated_source": source,
                     "row_group": group,
                     "row_label": row,
