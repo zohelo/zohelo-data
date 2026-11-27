@@ -235,7 +235,11 @@ November the digest reads each file without its comments and layout (`code_text(
 comments and the `--` comments go and white space outside quotes counts as one space (text inside quotes is
 kept); YAML counts as its parsed document; `requirements.txt` without `#` comments. So a comment or
 re-indentation of a shared macro rebuilds nothing; a file that does not read cleanly (an unclosed quote) counts
-by its bytes, as before.
+by its bytes, as before. A Jinja comment goes as Jinja renders it: white space that touches it stays (`a{# c #}b`
+reads `ab`), and a `-` marker strips the white space beside it. SQL whose quotes the reading does not follow (a
+`/* */` comment, a `$` outside quotes, an `E'…'` string) counts by its bytes too, so an apostrophe there cannot
+turn a real change into a "comment" (#3342 review). `repo_check` (`configuration`) asserts the cases listed next to
+`sql_code()`.
 
 The files under `macros/sources/` enter the fingerprint only of the models that use them
 (`source_macro_files()`): a model that calls a macro defined there gets that file, and a model that reaches
