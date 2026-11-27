@@ -6494,7 +6494,8 @@ sources:
   name: Krajowa Integracja Ewidencji Gruntów i Budynków (KI EGiB) aggregate WFS
   short_name: GUGiK KI EGiB
   provider: GUGiK with county cadastral authorities
-  status: approved
+  source_system: gugik_egib
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -7035,7 +7036,8 @@ sources:
   name: 'Central Geological Database: boreholes (CBDG Otwory)'
   short_name: PIG-PIB boreholes
   provider: Państwowy Instytut Geologiczny–PIB (PIG-PIB)
-  status: approved
+  source_system: pig_boreholes
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -7303,7 +7305,8 @@ sources:
   name: Bank Danych o Lasach (BDL) OGC services
   short_name: Lasy Państwowe forest data
   provider: Lasy Państwowe
-  status: approved
+  source_system: lasy_bdl
+  status: built
   family: G
   kpi: false
   geography: Poland
