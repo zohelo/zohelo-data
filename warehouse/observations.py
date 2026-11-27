@@ -414,6 +414,20 @@ SOURCES.update(
         )
     }
 )
+# MF local-government budget summaries (every item of each unit type's DW and ZN workbook; Poland's national totals per
+# unit type, geography PL, no lookup) and ENTSOG physical gas flows (every point and direction of GAZ-SYSTEM, area by
+# the operator's map row): one Silver dbt table each, every series by rule; the curated build_mf_jst_budgets (four
+# totals) and build_entsog (direction totals, point groups, monthly sums) stay the KPI layer.
+SOURCES["mf_jst_budgets"] = {
+    "tables": {"mf_jst_budget_summary": (("silver", "mf_jst_budget_summary"), "gold_mf_jst_budgets_build")},
+    "lookups": {},
+    "keyed_by": (),
+}
+SOURCES["entsog"] = {
+    "tables": {"entsog_physical_flow": (("silver", "entsog_physical_flow"), "gold_entsog_build")},
+    "lookups": _area_map("entsog"),
+    "keyed_by": ("geo_map",),
+}
 SOURCES["world_bank_wgi"] = {
     "tables": {"wgi_observations": (("silver", "wgi_observations"), "gold_world_bank_wgi_build")},
     "lookups": {
