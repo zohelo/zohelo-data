@@ -1,0 +1,45 @@
+source_system: sdds_calendar
+description: "SDDS advance release calendar of Poland (Kalendarz Upowszechniania Danych, published by GUS as SDDS national coordinator): expected release dates of the NBP and Ministry of Finance data categories (TP-012, TP-013)"
+
+# Extraction strategy (docs/landing.md, docs/sources/sdds_calendar.md). Register TP-012 (NBP statistics publications)
+# and TP-013 (Ministry of Finance budget and debt publications), approved by #3346 on this route: nbp.pl answers
+# runners with a bot-protection page (never worked around) and no gov.pl page names an MF calendar, while GUS, the
+# SDDS national coordinator, publishes the official calendar of both as one workbook on
+# https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych (robots.txt "User-agent: * Allow: /*").
+# The file name carries the calendar year and the update date (sdds_kalendarz_upowszechniania_danych_w_2026_r_
+# 25_11_2026.xlsx), so the link is read from the page on every run (ingestion/to_landing/sdds_calendar/): entity
+# calendar_<year>, so each year's calendar keeps its own files when the next year's replaces it on the page. Version =
+# download time (no Last-Modified or ETag, Dev probe 45963679231); a copy lands only when its SHA-256 changed. Two GETs
+# per run (page, then the 27 KB workbook, 2 s apart). Bronze keeps every cell (ingestion/common/xlsx_cells.py) after a
+# layout guard by sheet name; Silver parses the dated cells. A separate source, not an entity of release_calendars:
+# that source's one source.csv row carries the Eurostat licence, this file is under the GUS terms.
+extraction:
+  initial: bulk
+  production: snapshot                  # each copy is the year's whole calendar
+  incremental_policy: changed_since_last  # SHA-256 (the server sends no validator)
+  schedule: # UTC; the file is replaced when an expected date changes (update dates in the 25 Nov 2026 copy span
+    # Aug to Nov 2026, several a month); weekly (O46), Wednesday morning
+    - {cron: "40 6 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/sdds_calendar/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}   # per entity, so every calendar year keeps its newest copy
+  prune: report
+bronze: [bronze.sdds_calendar_cells, bronze.sdds_calendar_rejected_files]
+silver: [silver.sdds_calendar_releases]
+gold: [gold.sdds_release, gold.build_sdds_calendar]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the PR's Dev trial
+  # Measured on the 2026 workbook of 25 Nov 2026 (see the PR's Dev trial): 189 Silver rows (all publishers), 106 NBP and
+  # MF releases, 40 build rows (14 months x total, NBP, MF, NBP only to December 2026). Each calendar year
+  # adds about as many: the ceilings cover two years at about 1.5 x.
+  sdds_calendar_releases: {rows: 600}
+  sdds_release: {rows: 350}
+  poc_build_sdds_calendar: {rows: 120}
+
+bronze_latest_only: true   # policy #822/#845: newest copy per entity; every calendar year is its own entity
+# Refresh policy for all layers (D32): one workbook of about 27 KB and 600 cells per calendar year; small, rebuilt in
+# full.
+refresh: {mode: full, decided: "D32 + #3347"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
