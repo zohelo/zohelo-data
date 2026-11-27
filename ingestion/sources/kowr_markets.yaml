@@ -26,11 +26,12 @@ archive_policy:
 bronze: [bronze.kowr_markets_cells, bronze.kowr_markets_rejected_files]
 silver: [silver.kowr_markets_fob_prices, silver.kowr_markets_eu_prices, silver.kowr_markets_exchange_offers]
 gold: [gold.build_kowr_markets]
-full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial TRIAL
-  kowr_markets_fob_prices: {rows: 2400}
-  kowr_markets_eu_prices: {rows: 22000}
-  kowr_markets_exchange_offers: {rows: 1400}
-  poc_build_kowr_markets: {rows: 2000}
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); about 1.5 x the rows of Dev trial TRIAL (Mar 2023 to Nov 2026),
+  # growth about 9 FOB rows, 84 EU rows and 5 exchange rows a week
+  kowr_markets_fob_prices: {rows: 1750}
+  kowr_markets_eu_prices: {rows: 18500}
+  kowr_markets_exchange_offers: {rows: 1100}
+  poc_build_kowr_markets: {rows: 1650}
 
 bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
 # Refresh policy for all layers (D32): about 180 PDFs of under 1 MB and some 90,000 Bronze cells, one new file a week;
