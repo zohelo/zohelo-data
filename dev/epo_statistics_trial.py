@@ -281,7 +281,9 @@ def build(arrow, work: Path):
     }
     g: dict = {"rows": one(con, f"select count(*) from {b}")}
     g["columns_in_contract_order"] = [r[0] for r in con.sql(f"describe {b}").fetchall()] == CONTRACT
-    series = "measure_key || '|' || geography_key || '|' || breakdown_json"
+    # exactly poc_series_key() (macros/poc_blocks.sql), as tests/fact_grain.sql sees it
+    series = ("measure_key || '|' || geography_key || case when geography_key = '_X' then ':' || "
+              "coalesce(geography_source_code, '') else '' end || '|' || breakdown_json")
     g["dup_series_date"] = one(con, f"select count(*) from (select {series} as series_key, date_key from {b} group by all having count(*) > 1)")
     g["by_block(block,rows,series,first,last)"] = rows(con, f"select block_id, count(*), count(distinct {series}), min(date_key), max(date_key) from {b} group by 1 order by 1")
     g["measures"] = rows(con, f"select measure_key, unit_code, count(*) from {b} group by 1, 2 order by 1")
