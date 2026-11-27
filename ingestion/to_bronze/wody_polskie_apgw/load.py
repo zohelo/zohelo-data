@@ -190,7 +190,8 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
         con.execute("SET memory_limit = '6GB'")
         con.execute("INSTALL spatial; LOAD spatial;")
         try:
-            meta = con.execute("SELECT layers FROM ST_Read_Meta(?)", [gdb]).fetchone()
+            found = con.execute("SELECT layers FROM ST_Read_Meta(?)", [gdb]).fetchall()
+            meta = found[0] if len(found) == 1 else None
         except duckdb.Error as exc:
             raise ValueError(f"{folder}: not readable as a File Geodatabase: {str(exc)[:300]}") from exc
         if not meta or not meta[0]:
@@ -214,16 +215,16 @@ def decode(body: bytes, receipt: dict[str, Any]) -> pa.Table:
                 )
             except duckdb.Error as exc:
                 raise ValueError(f"{name}: not readable: {str(exc)[:300]}") from exc
-            rows = con.execute("SELECT count(*) FROM t").fetchone()[0]
+            rows = con.execute("SELECT count(*) FROM t").fetchall()[0][0]
             if rows == 0:
                 raise ValueError(f"{name}: no features")
             LAST_LAYERS[name] = rows
             for i, f in enumerate(fields):
                 parts.append(
-                    con.execute(
+                    con.sql(
                         f"SELECT ? AS layer, n AS feature_number, ? AS field, f{i} AS value FROM t ORDER BY n",
-                        [name, f],
-                    ).fetch_arrow_table()
+                        params=[name, f],
+                    ).to_arrow_table()
                 )
         con.close()
     table = pa.concat_tables(parts)
