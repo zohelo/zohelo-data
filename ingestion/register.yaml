@@ -1628,6 +1628,11 @@ sources:
       extraction needs IOM''s prior written permission). No API or bulk file is offered. The portal republishes other producers''
       data: migrant stock and remittances are in WDI (GL-005, SM.POP.TOTL, BX.TRF.PWKR.CD.DT), refugees in UNHCR (GL-029);
       re-check the terms page when it answers.'
+    - 'Recheck 27 Nov 2026 (parked re-review, batch 6): still parked, reason unchanged. Dev probe run 45955251368 (job
+      140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py): both
+      https://www.migrationdataportal.org/terms-use and https://migrationdataportal.org/terms-use answered HTTP 503
+      with the page "Site under maintenance | Migration data portal" (37,815 bytes), so the terms of 28 Oct 2026 remain
+      the last reading; nothing on record says the restriction was lifted.'
     - 'Redistribution and derivatives need IOM written permission; use upstream sources'
     references:
     - https://www.migrationdataportal.org/
@@ -11516,81 +11521,153 @@ sources:
   short_name: NBP calendars
   provider: Narodowy Bank Polski (NBP)
   current: true
-  status: parked
+  status: approved
   family: J
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [release-calendar, official-statistics]
   entities: [release]
-  granularity: 'MPC meeting dates; statistics publication dates.'
-  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  granularity: 'Statistics publication dates: one expected release date per NBP data category and month, with the
+    reference period in brackets (SDDS advance release calendar). MPC meeting dates are not in this route (see
+    research.blockers).'
+  coverage: 'The current calendar year, January to December (the 2026 file read 27 Nov 2026); one file per year.'
   access:
-    endpoint: 'https://nbp.pl/polityka-pieniezna/decyzje-rpp/'
-    kind: api
-    interfaces: [HTML]
-    auth: public
+    endpoint: 'https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych'
+    kind: bulk_file
+    interfaces: [XLSX, HTML]
+    auth: none
     cost: free
-    limits: 'Not landed.'
+    limits: 'None stated; robots.txt of stat.gov.pl is "User-agent: * Allow: /*" (read by the runner 27 Nov 2026). One
+      page GET to find the link and one XLSX GET (about 27 KB) per run. The file name carries the update date
+      (sdds_kalendarz_upowszechniania_danych_w_2026_r_25_11_2026.xlsx), so the link is read from the page at run time
+      (url_from, as mf_state_budget).'
   licence:
-    status: unresolved
-    notes: 'Not reachable: nbp.pl answers automated clients with a bot-protection page ("Pardon Our Interruption", Dev probe 42784902820); never circumvented. NBP terms as PLG-006. MPC dates stay in the manual seed release_calendar.csv.'
-  updates: Calendars change when dates are announced or moved.
+    status: open-conditional
+    notes: 'Terms: https://stat.gov.pl/copyright (read 27 Nov 2026; the calendar file is published by GUS, the SDDS
+      national coordinator, on stat.gov.pl, so the GUS terms apply as for TP-011, D23). The page reads: "nie ma
+      zastrzeżeń co do kopiowania plików i stron oraz dokonywania wydruków" and "w tym do własnych opracowań, pod
+      warunkiem, że będzie podane ich źródło"; no named licence. Attribution: "Źródło: GUS, SDDS Kalendarz
+      Upowszechniania Danych" (source to be given, no exact wording prescribed). Commercial reuse: not stated.
+      Modification: own analyses allowed with the source given. The NBP terms (PLG-006) do not apply: nothing is read
+      from nbp.pl.'
+  updates: 'The file is replaced when dates change ("Ostatnia aktualizacja: 25.11.2026 r." on the Polish page; the
+    English page showed 10/23/2026 in a desk reading the same day, so the two language copies are not updated
+    together). Every cell is an expected date: "Wszystkie daty są oczekiwanymi datami publikacji i mogą ulec zmianie."'
   ingestion:
-    history: None needed; forthcoming dates.
-    incremental: Daily re-download; written only when the SHA-256 changed.
-    identifiers: publisher + date + title
+    history: 'None at source beyond the current year''s file; past release dates of the year stay in it, so the Bronze
+      copies of each version are the history.'
+    incremental: 'Snapshot, weekly with release_calendars (O46); version = download time (the XLSX has no
+      Last-Modified); a new Landing file only when the SHA-256 changed; Bronze latest-only.'
+    identifiers: 'Table (sector) + data category label + month column; publisher derived from the category (NBP:
+      monetary financial institutions balance, NBP balance sheet, official reserves, foreign-currency liquidity,
+      balance of payments, international investment position, external debt).'
   modelling:
-    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
-    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+    notes: 'Use the Polish file (cleaner dates). Cells are text "DD.MM.YYYY\n(MM YYYY)" or "(Q1 2026)" / "(4 kw.
+      2025)"; one cell can hold two releases ("02.03.2026 (12 2025) 20.03.2026\n(01 2026)"); "-" = no release;
+      "dziennie" = daily (interest rates, exchange rates, WIG: no dated rows); the "Ostatnia aktualizacja" column is an
+      Excel date serial (46332 = 2026-11-06). The file has visible slips that must be rejected or flagged, never
+      guessed: official reserves for 05 2026 dated 07.04.2026 (the English copy says 07/05/26), international
+      investment position and external debt March cells dated 31.03.2025 for 4 kw. 2024. Silver: one row per
+      category × reference period × expected date, publisher NBP, GUS or MF by category (one parser serves TP-012 and
+      TP-013). Release dates of a topic''s main KPIs add to its heat (release bonus) and give topics.json next_release.'
+    overlap: 'GUS rows (real sector, population) are already in the GUS kalendarium (TP-011): keep only the NBP and MF
+      tables, or keep all and mark GUS rows as the second channel. MPC dates stay in the manual seed
+      warehouse/seeds/release_calendar.csv.'
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: tested
     blockers:
-    - Parked: no reachable route without circumventing bot protection or a blocked host.
+    - 'MPC meeting dates (not blocking the approval): they are not in the SDDS calendar, the Monetary Policy Council does
+      not publish its schedule in Monitor Polski (MP 2026/943 and MP 2025/1013 are the policy assumptions, no dates),
+      and every nbp.pl page still answers the runner with the bot-protection page "Pardon Our Interruption" (5,996
+      bytes; never worked around). The 12 dates a year stay in the manual seed release_calendar.csv, read by a person
+      from https://nbp.pl/en/monetary-policy/schedule-of-mpc-meetings, which lists the 2026 dates and says "Narodowy
+      Bank Polski will advise on any changes".'
+    - 'Re-review 27 Nov 2026 (parked re-review, batch 6): the parking reason (bot protection) was technical, which the
+      owner rule of 12 Nov does not accept; an official republisher carries the NBP statistics release dates. Dev
+      probe run 45955251368 (job 140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py, 27
+      Nov 2026): https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych HTTP 200 (redirected to
+      /banki-i-bazy-danych/sdds/), linking the XLSX above, HTTP 200, 26,882 bytes, 6 sheets, 56 non-empty rows; the
+      financial and external sector tables list 9 NBP categories with monthly or quarterly dates for January to
+      December 2026 (e.g. "Wybrane dane z bilansu NBP | 07.01.2026 (12 2025) | 06.02.2026 (01 2026) | …"). English copy
+      at https://stat.gov.pl/en/databases/sdds, same layout, 25,540 bytes. nbp.pl: /en/monetary-policy/schedule-of-mpc-meetings,
+      /polityka-pieniezna/decyzje-rpp/ and /en/statistic-and-financial-reporting/calendar all HTTP 200 with the
+      bot-protection page. Effort S (one entity in release_calendars, shared with TP-013).'
+    - 'Earlier parking reason (10 Nov 2026): no reachable route without circumventing bot protection or a blocked host.'
     references:
+    - https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych
+    - https://stat.gov.pl/en/databases/sdds
+    - https://stat.gov.pl/copyright
+    - https://nbp.pl/en/monetary-policy/schedule-of-mpc-meetings
     - https://nbp.pl/polityka-pieniezna/decyzje-rpp/
 - id: TP-013
   name: Ministry of Finance publication calendar
   short_name: MF calendar
   provider: Ministerstwo Finansów
   current: true
-  status: parked
+  status: approved
   family: J
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [release-calendar, official-statistics]
   entities: [release]
-  granularity: 'Budget execution and public debt publication dates.'
-  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  granularity: 'Budget execution and public debt publication dates: one expected release date per Ministry of Finance
+    data category and month, with the reference period in brackets (SDDS advance release calendar, fiscal sector).'
+  coverage: 'The current calendar year plus January and February of the next (the fiscal table of the 2026 file runs to
+    "2 2027"; read 27 Nov 2026).'
   access:
-    endpoint: 'https://www.gov.pl/web/finanse'
-    kind: api
-    interfaces: [HTML]
-    auth: public
+    endpoint: 'https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych'
+    kind: bulk_file
+    interfaces: [XLSX, HTML]
+    auth: none
     cost: free
-    limits: 'Not landed.'
+    limits: 'Same file and limits as TP-012: robots.txt of stat.gov.pl allows all; one page GET and one XLSX GET (about
+      27 KB) per run; the link is read from the page at run time because the file name carries the update date.'
   licence:
-    status: unresolved
-    notes: 'Not reachable: www.gov.pl refuses connections from GitHub runners (Dev probe 42784902820); the MF sources PLG-007/008/009 may need another route too. No machine-readable calendar found.'
-  updates: Calendars change when dates are announced or moved.
+    status: open-conditional
+    notes: 'Terms: https://stat.gov.pl/copyright (read 27 Nov 2026; the file is GUS''s, so the GUS terms apply as for
+      TP-011, D23): "nie ma zastrzeżeń co do kopiowania plików i stron oraz dokonywania wydruków" and "w tym do własnych
+      opracowań, pod warunkiem, że będzie podane ich źródło"; no named licence. Attribution: "Źródło: GUS, SDDS
+      Kalendarz Upowszechniania Danych" (no exact wording prescribed). Commercial reuse: not stated. Modification: own
+      analyses allowed with the source given. Nothing is read from gov.pl for this entry.'
+  updates: 'As TP-012: the file is replaced when dates change (Polish page "Ostatnia aktualizacja: 25.11.2026 r.");
+    every date is expected and "może ulec zmianie".'
   ingestion:
-    history: None needed; forthcoming dates.
-    incremental: Daily re-download; written only when the SHA-256 changed.
-    identifiers: publisher + date + title
+    history: 'Current year''s file only; Bronze copies of each version are the history.'
+    incremental: 'One entity with TP-012 (snapshot, weekly with release_calendars, O46; version = download time; new
+      Landing file only when the SHA-256 changed; Bronze latest-only).'
+    identifiers: 'Table "Sektor podatkowo-budżetowy" + category label + month column; publisher MF for: "Operacje
+      szczebla centralnego sektora instytucji rządowych i samorządowych" (state budget execution, monthly, about the
+      20th), "Dług krajowy Skarbu Państwa" and "Dług zagraniczny Skarbu Państwa" (monthly), "Państwowy dług publiczny"
+      (quarterly). "Operacje sektora instytucji rządowych i samorządowych" has no dated cell in 2026.'
   modelling:
-    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
-    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+    notes: 'Parsed with TP-012 (cell rules and slips there; in this table the June Treasury debt cells give the
+      period as "(04 2026)" in the Polish copy and "(03.26)" in the English one, so the Polish copy is read). The categories match loaded sources: mf_state_budget (PLG-007), mf_treasury_debt and
+      mf_public_debt (PLG-008/009), so a release row can link to their KPIs for the topic release bonus and
+      topics.json next_release.'
+    overlap: 'The manual seed warehouse/seeds/release_calendar.csv holds MF dates by hand today; the seed rows for these
+      categories can go once this entity is loaded.'
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: tested
     blockers:
-    - Parked: no reachable route without circumventing bot protection or a blocked host.
+    - 'Re-review 27 Nov 2026 (parked re-review, batch 6): the parking reason (www.gov.pl refusing runners) no longer
+      holds and was technical; the MF release dates are published by GUS in the SDDS advance release calendar. Dev
+      probe run 45955251368 (job 140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py, 27
+      Nov 2026): the calendar XLSX (see TP-012) has a fiscal-sector sheet with the four MF categories above, e.g.
+      "Dług krajowy Skarbu Państwa | 20.01.2026 (11 2025) | - | 02.03.2026 (12 2025) 20.03.2026 (01 2026) | …"; www.gov.pl
+      now answers the runner (robots.txt "User-agent: * Allow: /"; /web/finanse/zapowiedzi, /web/finanse/zadluzenie
+      and /web/finanse/dane-fiskalne-na-potrzeby-nadzoru-budzetowego-ue HTTP 200), but none of them names a
+      publication calendar or schedule (no "harmonogram" or "kalendarz" text or link). Effort S (with TP-012).'
+    - 'Earlier parking reason (10 Nov 2026): no reachable route without circumventing bot protection or a blocked host.'
     references:
-    - https://www.gov.pl/web/finanse
+    - https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych
+    - https://stat.gov.pl/copyright
+    - https://www.gov.pl/web/finanse/zapowiedzi
 - id: TP-014
   name: ECB statistical calendar and Governing Council meetings
   short_name: ECB calendars
