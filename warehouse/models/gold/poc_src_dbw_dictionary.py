@@ -1,7 +1,7 @@
 """Gold PoC extraction stage: the label dictionaries of the activated DBW blocks' files
 (bronze.dbw_dictionary_items, one file per bulk file), planned with pyiceberg and streamed by
 DuckDB — a dbt SQL read of that table opens all 11,296 files. Keep BLOCKS in step with
-macros/poc_blocks.sql (poc_dbw_blocks) and poc_src_dbw.py."""
+macros/sources/gus_dbw.sql (poc_dbw_blocks) and poc_src_dbw.py."""
 
 BLOCKS = (
     "581_57_93_4",

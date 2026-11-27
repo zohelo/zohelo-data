@@ -11,3 +11,28 @@ eea as (
     where g.level_name = 'country' and g.iso2 is not null
 )
 {% endmacro %}
+
+{# EEA greenhouse gas inventory (gold.build_eea, block govreg_ghg_inventory): the sectors built, CRF codes as
+   published; is_total marks the national totals (without and with LULUCF). #}
+{% macro poc_eea_sectors() %}
+    select * from (
+        values
+        ('Sectors/Totals_excl', true),
+        ('Sectors/Totals_incl', true),
+        ('1', false),
+        ('2', false),
+        ('3', false),
+        ('4', false),
+        ('5', false)
+    ) as t (sector_code, is_total)
+{% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__eea() %}
+    {{ return({
+        'block_model': 'poc_build_eea',
+        'blocks': [
+            ['govreg_ghg_inventory', 'Greenhouse gas emissions by sector, GovReg inventory (EEA)'],
+        ],
+    }) }}
+{% endmacro %}
