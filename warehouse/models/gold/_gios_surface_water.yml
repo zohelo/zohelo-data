@@ -1,0 +1,20 @@
+version: 2
+models:
+  - name: poc_build_gios_surface_water
+    description: >-
+      Build stage — GIOŚ surface-water status assessment 2019-2024 (register PL-ENV-011), block status, Poland: surface
+      water bodies by status class per water category (rivers, dam reservoirs, lakes, transitional, coastal, all) and
+      assessment (ecological status and potential, chemical status, overall status; monitoring), counts, class shares
+      and the good-status share; one annual row dated 2024-01-01, period_label 2019-2024. Licence
+      cc_by_4_0_gios_surface_water.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_surface_water_good_status_share
+    description: KPI surface_water_good_status_share (draft) from gold.build_gios_surface_water (macros/poc_metrics.sql).
