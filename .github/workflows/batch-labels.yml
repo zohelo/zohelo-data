@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
           test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
       - name: ops/measure_names.py submit
         id: submit
@@ -196,7 +196,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
           test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
       - name: ops/measure_names.py collect
         id: collect

@@ -193,7 +193,8 @@ def build_requests(rows: list[dict], model: str) -> tuple[list[dict], dict]:
 
 def submit(args) -> int:
     """Send the batch; write the manifest and the job summary."""
-    api = client()  # fails first when federation is not configured, before reading R2
+    api = client()
+    api.models.list(limit=1)  # exchanges the short-lived GitHub OIDC token now, before the R2 read can outlast it
     rows = select(read_measures(), args.scope)
     if not rows:
         annotate("error", "measure names", {"scope": args.scope, "measures": 0})
