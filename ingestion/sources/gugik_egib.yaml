@@ -10,7 +10,7 @@ description: "GUGiK KI EGiB — national integration of the county land and buil
 # 40 s at the server (also unfiltered), a building request about 6 s (Dev probes 45897200062, 45898092158), so a round
 # is landed in 17 parts (PL, each voivodeship with its powiats), each its own entity, and may span two runs; restart
 # unit one part (ingestion/to_landing/gugik_egib/). Version = download time; one round per feature type at most every
-# 6 days. Dev trial in docs/sources/gugik_egib.md.
+# 6 days. Dev trial 45920510130 (docs/sources/gugik_egib.md).
 extraction:
   initial: api
   production: snapshot                  # each round is the complete count of its day; rounds accumulate in Bronze
@@ -28,8 +28,8 @@ bronze: [bronze.gugik_egib_hits, bronze.gugik_egib_rejected_files]
 silver: [silver.gugik_egib_counts]
 gold: [gold.build_gugik_egib]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822); both grow by one round a week per feature type
-  gugik_egib_counts: {rows: 62000}  # 397 rows a round and feature type (Dev trial): 794 a week, 41,300 a year; 1.5 x a year, then incremental
-  poc_build_gugik_egib: {rows: 65000}  # 415 rows a round and feature type (Dev trial): 830 a week, 43,200 a year; 1.5 x a year
+  gugik_egib_counts: {rows: 62000}  # 397 rows a round and feature type (Dev trial 45920510130): 794 a week, 41,300 a year; 1.5 x a year, then incremental
+  poc_build_gugik_egib: {rows: 65000}  # 413 rows a building round (Dev trial 45920510130), at most 415: 830 a week, 43,200 a year; 1.5 x a year
 
 bronze_latest_only: true   # policy #822/#845; each part is its own entity, so no part is superseded
 # Refresh policy for all layers (D32): about 800 rows a week, no changed-since feature (counts of the day); Silver and

@@ -38,5 +38,13 @@ voivodeship 02 it gives 2,057,867 against 1,957,958 by `ID_DZIALKI`.
   `https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/` states no licence and no reuse sentence;
   the WFS capabilities say Fees and AccessConstraints "none". Attribution if used: "Źródło: GUGiK, Krajowa Integracja
   Ewidencji Gruntów" with the download date.
+- Dev trial 45920510130 (27 Nov 2026, scratch `zz_dev_gugik_egib`, removed): the building round, 17 parts and 397
+  requests in about 47 minutes, 18 files and 626,595 bytes with the first parcel part; a second pass wrote nothing;
+  inspect and verify green; Bronze 398 rows, second load appended nothing, 0 rejected; Silver 397 rows, unique grain,
+  no null keys, completeness test empty; Gold 413 rows, 0 duplicates by series_key x date_key, 0 unmatched codes.
+  Buildings: national 17,666,481 = the sum of the 380 powiats, 0 outside the list, every voivodeship's prefix
+  count = the sum of its powiats; powiats 2479 and 3213 answered 0 (left out, Poland and voivodeships 24 and 32
+  flagged). Parcels (national 38,847,375): voivodeship 02 = 1,957,958 = the sum of its 30 powiats (Dev trial
+  45907973386); the full parcel round (about 4.5 hours) was not run in a trial.
 - Left out: geometries and attributes (the geoportal "Pobierz dane" packages), the county WFS services themselves
   (the fallback route, not needed), gmina counts, land-use classes and areas.
