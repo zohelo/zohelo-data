@@ -193,6 +193,7 @@ def _profile_queries() -> dict:
             where r.entity like 'plakat_p%' and r.occupation_name not in
               (select p.occupation_name from {v} p where p.entity not like 'plakat_p%' and p.edition_year = r.edition_year)
             group by 1 order by 1"""),
+        "repeated_lines(entity,item,name)": lambda con: rows(con, f"select entity, item_number, occupation_name from {v} where repeat_of_item is not null"),
         "lowercase_or_odd_names": lambda con: rows(con, f"select occupation_name, count(*) from {v} where not regexp_matches(occupation_name, '^[A-ZĄĆĘŁŃÓŚŹŻ]') or length(occupation_name) > 90 group by 1 limit 20"),
     }
 
