@@ -436,6 +436,30 @@ SOURCES["unctad"] = {
     "lookups": _area_map("unctad"),
     "keyed_by": ("geo_map",),
 }
+# UNESCO UIS, World Bank EdStats and GEM, OWID (#3314): one Silver dbt table each, every series by rule; the curated
+# build_<source> models (EU27 members, one frequency per GEM series, OWID countries from 1900) stay the KPI layer.
+SOURCES.update(
+    {
+        source: {
+            "tables": {table: (("silver", table), f"gold_{source}_build")},
+            "lookups": _area_map(source),
+            "keyed_by": ("geo_map",),
+        }
+        for source, table in (
+            ("unesco_uis", "unesco_uis_observations"),
+            ("world_bank_edstats", "edstats_pisa"),
+            ("world_bank_gem", "gem_observations"),
+        )
+    }
+)
+SOURCES["owid"] = {
+    "tables": {"owid_observations": (("silver", "owid_observations"), "gold_owid_build")},
+    "lookups": {
+        **_area_map("owid"),
+        "charts": ("silver", "owid_charts", ("chart", "short_name", "last_updated"), None),
+    },
+    "keyed_by": ("geo_map",),
+}
 
 
 def table_ids(source: str, namespace: str = "gold") -> dict[str, tuple[str, str]]:
