@@ -21,7 +21,7 @@
 --   geography   = Poland (PL): national figures
 --   status      = `ok`: the workbook carries no flags
 -- Not loaded: a value that is not a finite number (Silver keeps numbers only: an empty cell is no row, nothing is
--- 0-filled), a period end after the day of the download (source_version 20261126T091932Z; a projection, none today).
+-- 0-filled), a period end after the day of the download (source_version 20261126T072120Z; a projection, none today).
 -- The curated stage poc_build_knf_banking (seven items, its own keys) stays the KPI layer.
 with obs as (
     select
@@ -38,7 +38,7 @@ with obs as (
         and not isnan(s.value)
         and not isinf(s.value)
         and s.period_end is not null
-        -- source_version is the download time, 20261126T091932Z (KNF sends no Last-Modified)
+        -- source_version is the download time, 20261126T072120Z (KNF sends no Last-Modified)
         and s.period_end <= coalesce(cast(try_strptime(left(s.source_version, 8), '%Y%m%d') as date), s.period_end)
 )
 
