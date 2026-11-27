@@ -171,17 +171,14 @@ SQLFLUFF = "sqlfluff==4.4.0"  # pinned here so the workflow does not change when
 
 
 # A change to any of these can change how every model lints, so it lints all of them.
-SQLFLUFF_ALL = ("warehouse/macros/", "pyproject.toml", "ops/repo_check.py", ".sqlfluff", ".sqlfluffignore")
+SQLFLUFF_ALL = ("pyproject.toml", "ops/repo_check.py", ".sqlfluff", ".sqlfluffignore")
+MACRO_NAME = re.compile(r"\{%-?\s*macro\s+(\w+)")
 
 
-def changed_paths() -> list[str] | None:
-    """Paths changed against the merge base with the pull request's base branch (GITHUB_BASE_REF in the check job,
-    main locally): committed, uncommitted and untracked. None when there is no base to compare with."""
+def changed_paths() -> tuple[str, list[str]] | None:
+    """The merge base with the pull request's base branch (GITHUB_BASE_REF in the check job, main locally) and the
+    paths changed against it: committed, uncommitted and untracked. None when there is no base to compare with."""
     base = f"origin/{os.environ.get('GITHUB_BASE_REF') or 'main'}"
-
-    def git(*args: str) -> subprocess.CompletedProcess:
-        return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
-
     merge_base = git("merge-base", base, "HEAD")
     if merge_base.returncode:
         return None
@@ -189,18 +186,50 @@ def changed_paths() -> list[str] | None:
     new = git("ls-files", "--others", "--exclude-standard")
     if diff.returncode or new.returncode:
         return None
-    return sorted(set(diff.stdout.splitlines()) | set(new.stdout.splitlines()))
+    return merge_base.stdout.strip(), sorted(set(diff.stdout.splitlines()) | set(new.stdout.splitlines()))
 
 
-def sqlfluff_targets(changed: list[str] | None) -> list[str]:
-    """What sqlfluff lints: the models a change adds or edits, or all of warehouse/models when the change touches the
-    lint settings, the macros or this check (SQLFLUFF_ALL), or when there is no base to compare with. The models on
-    the base branch passed the same check when they merged (the `check` job gates every merge), and the jinja
-    templater compiles every macro again for each file, which made linting all ~540 models take most of the check's
-    10 minutes (Bug #3336)."""
-    if changed is None or any(path.startswith(SQLFLUFF_ALL) for path in changed):
+def git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+
+
+def macro_users(changed_macros: list[str], merge_base: str) -> set[str]:
+    """The models that call a macro of a changed macro file, directly or through other macros. A name defined in
+    the file now or at the merge base (a removed or renamed macro) counts; a mention of the name is a call."""
+    texts = {
+        f.relative_to(ROOT).as_posix(): f.read_text(encoding="utf-8") for f in ROOT.glob("warehouse/macros/**/*.sql")
+    }
+    names = set()
+    for path in changed_macros:
+        before = git("show", f"{merge_base}:{path}")
+        names |= set(MACRO_NAME.findall(texts.get(path, "") + (before.stdout if before.returncode == 0 else "")))
+    while names:
+        mention = re.compile(r"\b(?:" + "|".join(sorted(map(re.escape, names))) + r")\b")
+        more = {name for text in texts.values() if mention.search(text) for name in MACRO_NAME.findall(text)}
+        if more <= names:
+            break
+        names |= more
+    if not names:
+        return set()
+    return {
+        f.relative_to(ROOT).as_posix()
+        for f in ROOT.glob("warehouse/models/**/*.sql")
+        if mention.search(f.read_text(encoding="utf-8"))
+    }
+
+
+def sqlfluff_targets(changed: tuple[str, list[str]] | None) -> list[str]:
+    """What sqlfluff lints: the models a change adds or edits and the models that call a changed macro (macro_users);
+    all of warehouse/models when the change touches the lint settings or this check (SQLFLUFF_ALL), or when there is
+    no base to compare with. The other models passed the same check when they merged (the `check` job gates every
+    merge), and the jinja templater compiles every macro again for each file, which made linting all ~540 models
+    take most of the check's former 10 minutes (Bug #3336)."""
+    if changed is None or any(path.startswith(SQLFLUFF_ALL) for path in changed[1]):
         return ["warehouse/models"]
-    return [p for p in changed if p.startswith("warehouse/models/") and p.endswith(".sql") and (ROOT / p).exists()]
+    merge_base, paths = changed
+    models = {p for p in paths if p.startswith("warehouse/models/") and p.endswith(".sql") and (ROOT / p).exists()}
+    macros = [p for p in paths if p.startswith("warehouse/macros/") and p.endswith(".sql")]
+    return sorted(models | macro_users(macros, merge_base))
 
 
 def sqlfluff() -> list[str]:
