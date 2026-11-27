@@ -466,8 +466,9 @@ sources:
 - id: GL-010
   name: Enterprise Surveys
   short_name: World Bank Enterprise Surveys
+  source_system: world_bank_es
   provider: World Bank
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -10944,7 +10945,8 @@ sources:
   name: Open Patent Services (OPS)
   short_name: EPO Open Patent Services
   provider: European Patent Organisation (EPO)
-  status: approved
+  source_system: epo_statistics
+  status: built
   family: J
   kpi: false
   geography: multicountry
