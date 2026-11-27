@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: gugik_egib
+  description: GUGiK KI EGiB aggregate WFS (register PL-ENV-006), resultType=hits counts of parcels and buildings
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gugik_egib/
+    loaded_by: ingestion/to_bronze/gugik_egib/
+    config: ingestion/sources/gugik_egib.yaml
+  tables:
+  - name: gugik_egib_hits
+    description: >-
+      One row per resultType=hits request of every landed snapshot (entity <feature type>_<YYYYMMDD>, feature types
+      dzialki and budynki): scope (PL, voivodeship, powiat), TERYT code, feature type, filtered property, request
+      time, and numberMatched, numberReturned and timeStamp of the answer as text, with provenance; partitioned by
+      entity. Every snapshot is kept (each is its own entity).
+  - name: gugik_egib_rejected_files
+    description: Snapshots of gugik_egib the Bronze decoder rejected, with the reason.

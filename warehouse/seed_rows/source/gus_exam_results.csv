@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gus_exam_results,PLS-025,GUS Średnie wyniki uczniów na egzaminie ósmoklasisty (dane OKE),GUS mean eighth-grade exam results (OKE data),GUS,cube,file,national-public,gus_copyright_exam_results,"https://stat.gov.pl/obszary-tematyczne/edukacja/edukacja/srednie-wyniki-uczniow-na-egzaminie-osmoklasisty,18,1.html"

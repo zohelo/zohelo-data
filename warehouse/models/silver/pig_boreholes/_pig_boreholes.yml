@@ -1,0 +1,41 @@
+version: 2
+models:
+  - name: pig_boreholes_boreholes
+    description: >-
+      PIG-PIB Central Geological Database (CBDG), subsystem boreholes (register PL-ENV-014; CC BY 4.0 via dane.gov.pl
+      dataset 677, open-conditional): one row per borehole of the newest WFS download of the layer
+      Otwory_wiertnicze_CBDG. Grain: id_cbdg (CBDG borehole id); objectid is unique too. Depth, stratigraphy, drilling
+      purpose and year, elevation, coordinates, location basis, locality and the gmina, powiat and voivodeship names,
+      archive, inventory number, core store, geophysics, analyses and studies as published (Polish, with the English
+      labels the WFS gives), the point in degrees (EPSG:4326); snapshot_date = download date: the register state on
+      that date. Completeness: tests/pig_boreholes_boreholes_complete.sql. History: drilling years 1824-2026 (Dev trial 45899934080).
+    tests:
+      - unique:
+          column_name: id_cbdg
+      - unique:
+          column_name: objectid
+    columns:
+      - name: id_cbdg
+        tests: [not_null]
+      - name: objectid
+        tests: [not_null]
+      - name: drilling_purpose
+        description: Cel wiercenia as published (11 values on 26 Nov 2026, 'brak danych' = the producer's 'no data', 2,917 boreholes); NULL where the producer writes 'null' (6,756).
+        tests: [{accepted_values: {arguments: {values: ['złożowy', 'hydrogeologiczny', 'geologiczno-inżynierski', 'badawczy', 'kartograficzny', 'brak danych', 'geotechniczny', 'technologiczny', 'ciepło Ziemi', 'inny']}}}]
+      - name: voivodeship_name
+        description: Województwo as published (name, no code); NULL where the producer gives none. Not used to place the borehole in Gold.
+        tests: [{accepted_values: {arguments: {values: ['dolnośląskie', 'kujawsko-pomorskie', 'lubelskie', 'lubuskie', 'łódzkie', 'małopolskie', 'mazowieckie', 'opolskie', 'podkarpackie', 'podlaskie', 'pomorskie', 'śląskie', 'świętokrzyskie', 'warmińsko-mazurskie', 'wielkopolskie', 'zachodniopomorskie']}}}]
+      - name: geophysics
+        tests: [not_null, {accepted_values: {arguments: {values: ['tak', 'nie']}}}]
+      - name: analyses
+        tests: [not_null, {accepted_values: {arguments: {values: ['tak', 'nie']}}}]
+      - name: point_lon
+        description: Longitude of the borehole point (WFS geometry, EPSG:4326); places it in a PRG gmina in Gold.
+        tests: [not_null]
+      - name: point_lat
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: raw_sha256
+        description: Landing SHA-256 of the GEOJSON page the row came from (lineage to Landing/Archive).
+        tests: [not_null]

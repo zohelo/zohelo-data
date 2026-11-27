@@ -1,0 +1,68 @@
+source_system: gis_sanitary
+description: "Główny Inspektorat Sanitarny — Stan sanitarny kraju / Raport z działań PIS, annual report (PDF): food samples examined and disqualified"
+
+# Extraction strategy (docs/landing.md). Register PLS-018, Epic #442. No bulk table, API or dane.gov.pl dataset: GIS
+# publishes one PDF per year on a fixed gov.pl page (20 attachments, 2006 to 2025; Dev probe 45894316074, 26 Nov
+# 2026): "Stan Sanitarny Kraju" to 2023, from 2024 "Raport z działań Państwowej Inspekcji Sanitarnej". Each edition
+# is one seed row below (the attachment address on that page); entity = edition (ssk_<year> / pis_<year>),
+# version = the attachment's Last-Modified, written only when the SHA-256 changed. landing.extract HEADs each file
+# and downloads only a missing or newer one, 5 s apart (14 files, 247 MB); every run compares the page's
+# attachments with this list and warns about one in neither list (ingestion/to_landing/gis_sanitary/). Restart
+# unit: one edition. Bronze reads the PDF text layer with pypdf and keeps one table, "Jakość zdrowotna środków
+# spożywczych" (samples examined and per cent disqualified, all, domestic, imported and EU foodstuffs, one row per
+# year), found by title and header and checked against its sums; a file whose table fails a check is rejected
+# with the reason (ingestion/to_bronze/gis_sanitary/tables.py). The 2024 and 2025 reports print the same table
+# with the same columns and the same values for the years they share with the 2023 edition, so they are loaded
+# as further editions. Left out: every other table, all text and figures (docs/sources/gis_sanitary.md).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:  # one row per edition: attachment address on https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
+      - {entity: ssk_2012, url: "https://www.gov.pl/attachment/0c0ea8c7-9c68-4ea7-ac3c-29a9b8594cda", format: raw}
+      - {entity: ssk_2013, url: "https://www.gov.pl/attachment/1d116ca3-080e-4fd0-ab58-6d59dac42dc7", format: raw}
+      - {entity: ssk_2014, url: "https://www.gov.pl/attachment/d24eb786-5521-412e-9197-3b519af292d9", format: raw}
+      - {entity: ssk_2015, url: "https://www.gov.pl/attachment/63984b87-1456-48e5-92e8-cfeac2f9fc29", format: raw}
+      - {entity: ssk_2016, url: "https://www.gov.pl/attachment/727f68f3-bad1-45b0-93fe-b4d750587c05", format: raw}
+      - {entity: ssk_2017, url: "https://www.gov.pl/attachment/69dcf413-8ebc-4f7f-b7a8-5c8b0c747595", format: raw}
+      - {entity: ssk_2018, url: "https://www.gov.pl/attachment/362bcc85-aa21-44bb-bad9-c87123d9281a", format: raw}
+      - {entity: ssk_2019, url: "https://www.gov.pl/attachment/dddb2f61-cb3d-48a5-99a4-bcd359b04689", format: raw}
+      - {entity: ssk_2020, url: "https://www.gov.pl/attachment/002793c2-440d-486c-99aa-5cc7eee866ce", format: raw}
+      - {entity: ssk_2021, url: "https://www.gov.pl/attachment/da777481-ec5e-4150-b1e9-3b2d9e14813b", format: raw}
+      - {entity: ssk_2022, url: "https://www.gov.pl/attachment/55963e09-fa49-4d1b-a379-cc98786d9566", format: raw}
+      - {entity: ssk_2023, url: "https://www.gov.pl/attachment/0ffd2a41-fa00-48f9-960d-6eafce7a84b7", format: raw}
+      - {entity: pis_2024, url: "https://www.gov.pl/attachment/390dc836-228c-4f1d-b571-2a7518784d86", format: raw}
+      - {entity: pis_2025, url: "https://www.gov.pl/attachment/71e14f2f-d475-47bd-a27f-577cb527ef4b", format: raw}
+  excluded:  # attachments on the page left out on purpose (the page check does not warn about them)
+    - {id: "https://www.gov.pl/attachment/3bab0a26-cdf8-49fc-9062-856a487ab606", reason: "Stan Sanitarny Kraju 2011: before the register's 2012 start; its years are reprinted in the 2012-2021 editions"}
+    - {id: "https://www.gov.pl/attachment/9a6eada2-2542-45c8-926f-03a0fd008889", reason: "Stan Sanitarny Kraju 2010: before the register's 2012 start; its years are reprinted in the 2012-2021 editions"}
+    - {id: "https://www.gov.pl/attachment/ac070018-24e4-405b-b839-58dfb3754b16", reason: "Stan Sanitarny Kraju 2009: before the register's 2012 start (2000-2009 history not loaded yet)"}
+    - {id: "https://www.gov.pl/attachment/db1f8d63-8025-4658-ba24-e384c3fcf56d", reason: "Stan Sanitarny Kraju 2008: before the register's 2012 start (2000-2009 history not loaded yet)"}
+    - {id: "https://www.gov.pl/attachment/f685f1b7-1d35-4983-8ec7-02ad79240c37", reason: "Stan Sanitarny Kraju 2007: before the register's 2012 start (2000-2009 history not loaded yet)"}
+    - {id: "https://www.gov.pl/attachment/d05fa0db-1326-4238-ac53-ed7ca4a085d0", reason: "Stan Sanitarny Kraju 2006: before the register's 2012 start (2000-2009 history not loaded yet)"}
+  initial: bulk
+  production: snapshot                  # each edition file as published; a replaced file lands as a new version
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256 of each edition file
+  # UTC; one report a year at no fixed date (Last-Modified: 2022 edition 7 Aug 2023, 2023 edition 8 Nov 2024, 2025
+  # report 10 Aug 2026); a monthly check on the 13th (O46: the run ends with Bronze; the platform's weekly Sunday run
+  # builds Silver and Gold). A new edition needs a seed row (the page check warns), then one run by hand.
+  schedule:
+    - {cron: "50 7 13 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gis_sanitary/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gis_sanitary_cells, bronze.gis_sanitary_rejected_files]
+silver: [silver.gis_sanitary_food_samples]
+gold: [gold.build_gis_sanitary]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  gis_sanitary_food_samples: {rows: 310}  # 206 rows: 14 editions, 103 printed years x 2 origins (Dev trial, #442)
+  poc_build_gis_sanitary: {rows: 84}  # 56 rows: 14 years x 4 measures (Dev trial, #442)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): 14 PDF files, one new a year, under 100 Bronze cells per edition; small,
+# rebuilt in full.
+refresh: {mode: full, decided: "D32 + #442"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

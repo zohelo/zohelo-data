@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: poc_build_lasy_bdl
+    description: >-
+      Build stage — Lasy Państwowe Bank Danych o Lasach snapshot of the forest districts (register PL-ENV-018): count
+      of forest districts and the planar area of their territorial ranges in m² (EPSG:2180, computed from the WFS
+      geometry), Poland and the 16 voivodeships (point on the district's surface in a PRG gmina) and per regional
+      directorate (RDLP) under Poland, plus the area of each district; one date = the download date (frequency D).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

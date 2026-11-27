@@ -7,8 +7,9 @@
    rownowaga, nadwyzka), unit 'occupations', annual, date_key = 1 January of the forecast year (the year the
    forecast is for; the survey ran in the autumn before). Every category an edition uses (any area) gets a row for
    every area of that edition, 0 when the area's poster has no occupation in it: each poster lists every occupation
-   assessed for its area, so 0 is a count, not a missing value. Never merged with vacancy or unemployment counts;
-   the occupation-level table stays in Silver. #}
+   assessed for its area, so 0 is a count, not a missing value. Every row has observation status 'forecast' (as
+   UN WPP projections and Eurostat PROJ_* rows, docs/gold-coverage.md). Never merged with vacancy or unemployment
+   counts; the occupation-level table stays in Silver. #}
 with f as (
     select * from {{ ref('barometr_zawodow_forecasts') }}
 ),
@@ -82,7 +83,7 @@ select
     cast(null as varchar) as sex_code,
     true as is_total,
     cast(coalesce(c.occupations, 0) as double) as value,
-    'ok' as observation_status_key,
+    'forecast' as observation_status_key,  -- counts of a forecast: never presented as an observation
     g.source_version,
     g.raw_sha256
 from grid as g

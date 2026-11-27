@@ -1,0 +1,39 @@
+source_system: gugik_egib
+description: "GUGiK KI EGiB — national integration of the county land and building registers (aggregate WFS): register counts of parcels and buildings per powiat, voivodeship and Poland; no geometry"
+
+# Extraction strategy (docs/landing.md), register PL-ENV-006. No bulk count exists (the geoportal "Pobierz dane"
+# packages are full geometries; their URLs are made inside the map application). Smallest selection: counts read with
+# resultType=hits from the aggregate WFS https://mapy.geoportal.gov.pl/wss/service/PZGIK/EGIB/WFS/UslugaZbiorcza
+# (WFS 2.0.0, Fees and AccessConstraints "none"). No county attribute: a powiat's count is a fes:PropertyIsLike filter
+# '<powiat TERYT>%' on ID_DZIALKI (ms:dzialki) and ID_BUDYNKU (ms:budynki); per feature type a round = the national
+# count, 16 voivodeship and 380 powiat counts (397 requests, one at a time, 1 s apart). A parcel request takes about
+# 40 s at the server (also unfiltered), a building request about 6 s (Dev probes 45897200062, 45898092158), so a round
+# is landed in 17 parts (PL, each voivodeship with its powiats), each its own entity, and may span two runs; restart
+# unit one part (ingestion/to_landing/gugik_egib/). Version = download time; one round per feature type at most every
+# 6 days. Dev trial 45920510130 (docs/sources/gugik_egib.md).
+extraction:
+  initial: api
+  production: snapshot                  # each round is the complete count of its day; rounds accumulate in Bronze
+  incremental_policy: full_refresh      # counts only: every round asks again
+  schedule: # UTC; the aggregate pulls the county services daily, no release calendar; weekly (O46), Wednesday 01:25, at night for the server
+    - {cron: "25 1 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gugik_egib/
+# JSON Lines parts kept zstd-compressed in the Archive; each part is its own entity, so every part is kept.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gugik_egib_hits, bronze.gugik_egib_rejected_files]
+silver: [silver.gugik_egib_counts]
+gold: [gold.build_gugik_egib]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); both grow by one round a week per feature type
+  gugik_egib_counts: {rows: 62000}  # 397 rows a round and feature type (Dev trial 45920510130): 794 a week, 41,300 a year; 1.5 x a year, then incremental
+  poc_build_gugik_egib: {rows: 65000}  # 413 rows a building round (Dev trial 45920510130), at most 415: 830 a week, 43,200 a year; 1.5 x a year
+
+bronze_latest_only: true   # policy #822/#845; each part is its own entity, so no part is superseded
+# Refresh policy for all layers (D32): about 800 rows a week, no changed-since feature (counts of the day); Silver and
+# Gold are rebuilt in full from the accumulated rounds.
+refresh: {mode: full, decided: "D32 + #3299"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

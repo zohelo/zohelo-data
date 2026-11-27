@@ -1,0 +1,23 @@
+version: 2
+sources:
+- name: pse_reports
+  description: PSE Reports API v2 (register PL-ENV-019), one JSON answer per report and business day from api.raporty.pse.pl
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/pse_reports/
+    loaded_by: ingestion/to_bronze/pse_reports/
+    config: ingestion/sources/pse_reports.yaml
+  tables:
+  - name: pse_reports_rce_pln
+    description: >-
+      Report rce-pln (market energy price RCE): one row per 15-minute period of the newest copy of each business day's
+      file, every field as published text (business_date, period, period_utc, dtime, dtime_utc, rce_pln,
+      publication_ts, publication_ts_utc); partitioned by entity (rce_pln_<YYYYMMDD>).
+  - name: pse_reports_his_wlk_cal
+    description: >-
+      Report his-wlk-cal (basic quantities of the national power system): one row per 15-minute period of the newest
+      copy of each business day's file, every field as published text (demand, wi, pv and the generating-unit groups
+      jg*, jnwrb, swm_p, swm_np); partitioned by entity (his_wlk_cal_<YYYYMMDD>).
+  - name: pse_reports_rejected_files
+    description: Files of pse_reports the Bronze decoder rejected, with the reason.
