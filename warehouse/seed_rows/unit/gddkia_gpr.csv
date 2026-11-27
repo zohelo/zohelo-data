@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-veh_per_day,poj./dobę,vehicles per day,pojazdy na dobę,true,veh_per_day,1
-km,km,kilometres,kilometry,false,km,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+veh_per_day,poj./dobę,vehicles per day,pojazdy na dobę,true,veh_per_day,1,vehicles/day
+km,km,kilometres,kilometry,false,km,1,

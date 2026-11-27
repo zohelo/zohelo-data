@@ -1,0 +1,40 @@
+source_system: knf_warnings
+description: "KNF public warning list (Lista ostrzeżeń publicznych KNF): entries by legal-basis section, reduced to section, KRS numbers, prosecutor's office and whether a final ruling is mentioned (no names, no free text)"
+
+# Extraction strategy (docs/landing.md). Register PLG-019, Task #3341. No bulk file, export or API: one fixed page,
+# https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne, holds the whole list (817,615 bytes of HTML, 668 entries
+# in 13 legal-basis sections on 27 Nov 2026, Dev probes 45945506291 and 45945655242); robots.txt allows every agent.
+# One GET per run, timeouts 30 s / 120 s, at most 3 tries; a refusal or an unknown layout stops the run. Reduced before
+# Landing to the fields the register's build limits allow (no names, no free text, no NIP or REGON numbers): one JSON
+# document per run, written only when its SHA-256 changed. The page keeps only the current list, so the source is an
+# accumulating snapshot: every copy is kept in Bronze (all versions) and history starts with the first copy. Code:
+# ingestion/to_landing/knf_warnings/.
+extraction:
+  initial: web
+  production: snapshot                    # each copy is the whole current list
+  incremental_policy: changed_since_last  # the page sends no Last-Modified; written only when the reduced SHA-256 changed
+  schedule: # UTC; the list changes a few times a month at irregular times; weekly (O46)
+    - {cron: "35 14 * * 5", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/knf_warnings/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}  # Bronze holds every copy; the Archive keeps 90 days for reloads
+  prune: report
+bronze: [bronze.knf_warnings_entries, bronze.knf_warnings_rejected_files]
+silver: [silver.knf_warnings_entries]
+gold: [gold.knf_warning, gold.build_knf_warnings]
+# Row ceilings (owner policy #822). Measured on one copy (Dev trial, see the PR): 668 entries per copy, 25 build rows
+# per copy. Silver and the build stage accumulate one copy per changed week: about 1.5 x one year of weekly copies
+# (668 x 52 x 1.5 = 52,000; 25 x 52 x 1.5 = 1,950); raise them with the measured count after a year. The entity table
+# is the newest copy only (668 x 1.5).
+full_rebuild:
+  knf_warnings_entries: {rows: 52000}
+  knf_warning: {rows: 1000}
+  poc_build_knf_warnings: {rows: 2000}
+
+# Refresh policy for all layers (D32): small (one page, under 700 entries, one reduced copy of about 100 KB per change):
+# every run reads the page, a changed list adds a copy, Silver and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3341"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

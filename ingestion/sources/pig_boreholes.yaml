@@ -1,0 +1,39 @@
+source_system: pig_boreholes
+description: "PIG-PIB Central Geological Database (CBDG), subsystem boreholes: one point per borehole with depth, stratigraphy, drilling purpose and year, location and archive, WFS"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-014. The CBDG download manager (dm.pgi.gov.pl) mails its links
+# and, like baza.pgi.gov.pl and www.pgi.gov.pl, answers runners with a bot-protection page: never used. Route: the public
+# WFS that PIG-PIB lists on dane.gov.pl dataset 677 (ArcGIS, WFS 2.0.0, one feature type cbdg_otwory:Otwory_wiertnicze_CBDG,
+# 336,758 features on 26 Nov 2026, ImplementsResultPaging TRUE, no published limits). Dev probes on
+# test/3300-pig-boreholes: 45898339964 (capabilities, hits; SORTBY refused: "parameter 'SORTBY' not supported"),
+# 45898682643 (GEOJSON pages come in OBJECTID order, the same page twice byte-identical; 25,000 features = 24 MB in 27 s).
+# Entity = the layer (boreholes); the WFS gives no version, so version = download time; landed whole as 14 GEOJSON pages,
+# one request at a time, and not at all when every page is unchanged (ingestion/to_landing/pig_boreholes/). Restart unit:
+# the layer. The producer rebuilds its borehole package about daily.
+extraction:
+  initial: api
+  production: snapshot                    # each landed version is the whole current layer
+  incremental_policy: changed_since_last  # SHA-256 of every page (the WFS sends no Last-Modified)
+  schedule: # UTC; the register is edited continuously, no release calendar; a register snapshot a month is enough (O46): the 24th at 04:15, 15 requests, one at a time
+    - {cron: "15 4 24 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/pig_boreholes/
+# GEOJSON pages stored zstd-compressed in the Archive. Newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.pig_boreholes_features, bronze.pig_boreholes_rejected_files]
+silver: [silver.pig_boreholes_boreholes]
+gold: [gold.build_pig_boreholes]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822), measured in the Dev trial of the final code
+  pig_boreholes_boreholes: {rows: 505000}  # 336,758 boreholes (Dev trial 45899934080)
+  poc_build_pig_boreholes: {rows: 4500}  # 2,947: PL 12, voivodeships 165, powiats 2,770 (trial 45899934080)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one layer of about 337,000 points (about 330 MB of GEOJSON, 14 pages), no
+# changed-since filter in the WFS and no stable page boundaries across versions (a borehole added or removed shifts the
+# pages), so each version replaces the layer and Silver (below 1 M rows) and Gold are rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3300"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

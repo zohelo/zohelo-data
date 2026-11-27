@@ -1,0 +1,2 @@
+source_key,register_id,name_pl,name_en,publisher,family,block_kind,provider_type,licence_key,url
+gugik_egib,PL-ENV-006,GUGiK Krajowa Integracja Ewidencji Gruntów i Budynków (liczby działek i budynków),GUGiK national integration of the land and building registers (parcel and building counts),Główny Urząd Geodezji i Kartografii (GUGiK) z powiatowymi organami ewidencji,registry,api,national-public,unresolved,https://www.geoportal.gov.pl/pl/dane/ewidencja-gruntow-i-budynkow-egib/

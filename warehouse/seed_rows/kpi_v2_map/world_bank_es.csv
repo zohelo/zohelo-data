@@ -1,0 +1,4 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+firms_bribery_incidence,economy,A,firms_bribery_incidence,world_bank_es,WB_ES,world_bank_es:wb_es:PT_F:WB_ES_T_GRAFT3,A,PL;EU,,rate,down,ready,"Enterprise Surveys estimate; irregular survey years per economy; licence unresolved (internal)"
+firms_finance_constraint,economy,A,firms_finance_constraint,world_bank_es,WB_ES,world_bank_es:wb_es:PT_F:WB_ES_T_FIN16,A,PL;EU,,rate,down,ready,"Enterprise Surveys estimate; irregular survey years per economy; licence unresolved (internal)"
+operating_licence_days,economy,A,operating_licence_days,world_bank_es,WB_ES,world_bank_es:wb_es:D:WB_ES_T_BUS2,A,PL;EU,,mean,down,ready,"Enterprise Surveys estimate; irregular survey years per economy; licence unresolved (internal)"

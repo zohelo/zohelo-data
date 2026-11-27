@@ -238,6 +238,7 @@
     {
       "unit_key": "persons",
       "symbol": "os.",
+      "symbol_en": "persons",
       "name_en": "persons",
       "name_pl": "osoby",
       "is_rate": false,

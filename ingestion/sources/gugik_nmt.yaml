@@ -1,0 +1,39 @@
+source_system: gugik_nmt
+description: "GUGiK NMT, NMPT and LIDAR — elevation sheet indexes (WFS Skorowidze): one row per sheet edition with year, date, spatial characteristic, errors, CRS, vertical datum and footprint; no rasters or point clouds"
+
+# Extraction strategy (docs/landing.md), register PL-ENV-005. The terrain and surface models (ASCII/GeoTIFF grids) and
+# the LIDAR point clouds (LAS/LAZ, terabytes) are never landed. Smallest valuable selection: the sheet indexes, six WFS
+# 2.0.0 services linked from the producer's pages (GML 3.2 only, paging; no robots.txt: HTTP 404; Dev probe
+# 45813550746): NumerycznyModelTerenu (NMT), NumerycznyModelPokryciaTerenu (NMPT) and DanePomiaroweLidar (LIDAR), each
+# EVRF2007 and KRON86, under https://mapy.geoportal.gov.pl/wss/service/PZGIK/<service>/WFS/Skorowidze, one feature type
+# per data year: 63 service years with 1,653,102 features on 26 Nov 2026 (resultType=hits, Dev probe 45814802349). Entity
+# = one service's year (<product>_<datum>_<YYYY>), version = download time, landed whole as pages of 5,000 features
+# sorted by the download link (unsorted pages are not stable), restart unit one service's year; a year equal to its
+# newest copy writes nothing (ingestion/to_landing/gugik_nmt/).
+extraction:
+  initial: api
+  production: snapshot                    # each landed year is the complete feature type of that service's year
+  incremental_policy: changed_since_last  # hits count per year; the current and previous year also every 28 days
+  schedule: # UTC; sheets are added as deliveries are accepted into PZGiK, no release calendar; weekly (O46), Saturday
+    - {cron: "50 2 * * 6", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gugik_nmt/
+# GML pages kept zstd-compressed in the Archive. Newest version + 90 days.
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+# One file per service's year in Bronze and in Silver, replaced whole (design #875).
+bronze: [bronze.gugik_nmt_sheets, bronze.gugik_nmt_rejected_files]
+silver: [silver.gugik_nmt_sheets]
+gold: [gold.build_gugik_nmt]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  poc_build_gugik_nmt: {rows: 5500}  # 3,658: 1,724 edition rows + 1,934 shares, 6 services, 17 areas, 2000-2026 (Dev trial 45873287115)
+
+bronze_latest_only: true   # policy #822/#845: a new version replaces the service year's file
+# Refresh policy for all layers (D32): 1.65 M index features, over the 1 M rows of a full rebuild; years change
+# independently (new deliveries go to recent years), so a new version replaces that service year's file in Bronze and
+# Silver and nothing else is rewritten (unit = one service's year feature type).
+refresh: {mode: incremental, unit: "service year feature type (<product>_<datum>_<YYYY>)", decided: "D32 + #3103"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

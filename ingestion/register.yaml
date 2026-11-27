@@ -466,8 +466,9 @@ sources:
 - id: GL-010
   name: Enterprise Surveys
   short_name: World Bank Enterprise Surveys
+  source_system: world_bank_es
   provider: World Bank
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -924,8 +925,9 @@ sources:
 - id: GL-018
   name: Global SDG Indicators Database and API
   short_name: UN SDG Indicators
+  source_system: un_sdg
   provider: United Nations Statistics Division
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -935,9 +937,10 @@ sources:
   granularity: Indicator/series/geography/time with SDG disaggregations, nature/status and source attributes.
   coverage: Global reporting for the 2030 Agenda; time and country coverage vary by indicator.
   access:
-    endpoint: https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false
-    kind: api
-    interfaces: ['SDG API v1 (JSON: Goal/List, Series/List, Series/Data per series code)', Swagger, HTML]
+    endpoint: https://unstats.un.org/sdgs/indicators/database/archive
+    kind: bulk_file
+    interfaces: ['bulk CSV ZIP per release state on the database archive page (<release>_AllData_After_<date>_CSV.zip, newest
+        first)', 'SDG API v1 (JSON: Goal/List, Series/List, Series/Data per series code)', Swagger, HTML]
     auth: public
     cost: free
     limits: None published; one series at a time.
@@ -972,8 +975,11 @@ sources:
       https://unstats.un.org/SDGAPI/v1/sdg/Goal/List?includechildren=false HTTP 200 (7,910 bytes JSON); Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
       https://unstats.un.org/SDGAPI/v1/sdg/Series/List?allreleases=false HTTP 200 (181,379 bytes JSON).'
     - 'Licence unresolved: internal only until UNSD states reuse terms for the database (non-blocking owner option: ask statistics@un.org).'
-    - 'Builder: page Series/Data per series code for Poland and EU geoAreaCodes; count the series and rows before scheduling.'
+    - 'Built (#3316, docs/sources/un_sdg.md): the release''s bulk CSV ZIP from the database archive page instead of the API
+      (713 Series/Data requests and 68 minutes for Poland and the EU, Dev probe 45924741004). Release 2026.Q3.G.01: 3,198,008
+      rows, 713 series, 406 areas; Bronze keeps every row, Silver and Gold the 27 EU countries (Poland among them).'
     references:
+    - https://unstats.un.org/sdgs/indicators/database/archive
     - https://unstats.un.org/SDGAPI/swagger/
     - https://unstats.un.org/sdgs/dataportal
     - https://www.un.org/en/about-us/terms-of-use
@@ -1039,8 +1045,9 @@ sources:
 - id: GL-020
   name: WTO Stats
   short_name: WTO Stats
+  source_system: wto_stats
   provider: World Trade Organization
-  status: approved
+  status: built
   family: A
   kpi: true
   geography: worldwide
@@ -1621,6 +1628,11 @@ sources:
       extraction needs IOM''s prior written permission). No API or bulk file is offered. The portal republishes other producers''
       data: migrant stock and remittances are in WDI (GL-005, SM.POP.TOTL, BX.TRF.PWKR.CD.DT), refugees in UNHCR (GL-029);
       re-check the terms page when it answers.'
+    - 'Recheck 27 Nov 2026 (parked re-review, batch 6): still parked, reason unchanged. Dev probe run 45955251368 (job
+      140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py): both
+      https://www.migrationdataportal.org/terms-use and https://migrationdataportal.org/terms-use answered HTTP 503
+      with the page "Site under maintenance | Migration data portal" (37,815 bytes), so the terms of 28 Oct 2026 remain
+      the last reading; nothing on record says the restriction was lifted.'
     - 'Redistribution and derivatives need IOM written permission; use upstream sources'
     references:
     - https://www.migrationdataportal.org/
@@ -3143,7 +3155,8 @@ sources:
   name: Raport – Stan Sanitarny Kraju
   short_name: GIS sanitary state report
   provider: Główny Inspektorat Sanitarny (GIS)
-  status: approved
+  source_system: gis_sanitary
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -3151,7 +3164,7 @@ sources:
   domains: [public health, sanitary inspection, food safety, environmental health]
   entities: [country, inspection-aggregate, establishment-aggregate, sample-aggregate]
   granularity: Annual report table/indicator aggregated from national, voivodeship, powiat and border sanitary inspectorates.
-  coverage: Annual report family; opened page confirms current family but full archive start not verified.
+  coverage: 'Annual reports 2006 to 2025 on the page (Dev probe 45894316074): Stan Sanitarny Kraju 2006-2023, Raport z działań PIS 2024 and 2025; built from 2012 (food-samples table, years 2010-2025).'
   access:
     endpoint: https://www.gov.pl/web/gis/raport---stan-sanitarny-kraju
     kind: bulk_file
@@ -3201,8 +3214,9 @@ sources:
 - id: PLS-019
   name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
   short_name: NIZP-PZH epidemiology bulletins
+  source_system: pzh_epimeld
   provider: Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)
-  status: approved
+  status: built
   family: B
   kpi: true
   geography: Poland and voivodeships, publication-dependent
@@ -3593,7 +3607,8 @@ sources:
   name: National examination results and reports
   short_name: CKE exam results
   provider: Centralna Komisja Egzaminacyjna (CKE)
-  status: approved
+  source_system: gus_exam_results
+  status: built
   family: B
   kpi: true
   geography: Poland; school-location categories and regions, release-dependent
@@ -3850,7 +3865,8 @@ sources:
   name: Barometr Zawodów
   short_name: Barometr Zawodów
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
-  status: approved
+  source_system: barometr_zawodow
+  status: built
   family: B
   kpi: true
   geography: powiat, voivodeship and Poland
@@ -3897,8 +3913,10 @@ sources:
       139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the home page links the national
       publication pages for 2016-2025; the table and map modules load their data by script (no address in custom.js, Dev probe
       run 45815892766 (job 139895407895, same branch, argument `three`, 26 Nov 2026)).'
-    - 'Builder: check that the report tables list every occupation with its category per voivodeship (the 2026 report was
-      read in part); the PDF text layer is the source, one file per year and region.'
+    - 'Built 26 Nov 2026 (#454): the national report has no occupation x voivodeship table; it reprints the 17 posters
+      (with hidden remnants of other posters on some pages, 2018-2023). The source is the posters: the national poster and
+      the poster of each voivodeship page (publication=province&province=<1-16>), each occupation in a coloured block per
+      category with the category name on the block''s tab (docs/sources/barometr_zawodow.md).'
     references:
     - https://barometrzawodow.pl/
     - https://barometrzawodow.pl/modul/publikacje?publication=national&year=2025
@@ -4014,7 +4032,8 @@ sources:
   name: Weekly agricultural market situation reports
   short_name: KOWR agricultural markets
   provider: Krajowy Ośrodek Wsparcia Rolnictwa (KOWR)
-  status: approved
+  source_system: kowr_markets
+  status: built
   family: B
   kpi: true
   geography: Poland
@@ -4059,6 +4078,7 @@ sources:
     evidence: tested
     connection: tested
     blockers:
+    - 'Owner question (27 Nov 2026, PR #3323; asked once): the loaded grain tables are KOWR compilations stated as based on European Commission data (EU purchase prices), KE/EBC/NBP data (FOB quotations) and the Polish commodity exchanges (exchange offers); gov.pl terms say tables taken from others keep their owners'' terms. May they be published under the gov.pl terms (or the Commission''s reuse notice), or must KOWR or the exchanges be asked? Until then `licence_key = unresolved` (internal).'
     - 'Re-review 26 Nov 2026 (Task #2917): approved for internal build. The old parking reason (PDF only, extraction untested)
       is technical (owner rule of 12 Nov 2026); the pipeline reads PDF text layers. Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): Rynek-zboz and Rynek-miesa each
       list 175 attachments (weekly reports back to 2023), raporty-tygodniowe 16 (the latest weeks of grain, meat, dairy and
@@ -4814,7 +4834,7 @@ sources:
   name: Repository of Financial Documents (RDF) viewer
   short_name: KRS financial documents (RDF)
   provider: Ministry of Justice
-  status: parked
+  status: reviewing
   family: I
   kpi: false
   geography: Poland
@@ -4832,7 +4852,11 @@ sources:
     limits: Unknown.
   licence:
     status: restricted
-    notes: Free viewing/download does not establish bulk harvesting or republication rights.
+    notes: 'Terms: no reuse terms found.
+      https://www.gov.pl/web/sprawiedliwosc/bezplatne-wyszukanie-i-pobranie-dokumentu-finansowego-podmiotu-wpisanego-do-rejestru-przedsiebiorcow-krajowego-rejestru-sadowego
+      (read by the runner 27 Nov 2026, HTTP 200) describes the free viewer without account and states "Wyszukiwanie jest
+      zabezpieczone przed działaniem robotów pobierających dokumenty" (the search is protected against robots that
+      download documents). Free single-document viewing does not establish bulk or reuse rights; stays internal.'
   updates: Filing-driven; viewer timestamps are not a CDC contract.
   ingestion:
     history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
@@ -4843,16 +4867,26 @@ sources:
     overlap: Links directly to KRS; primary evidence for filed accounts.
   research:
     priority: conditional
-    evidence: documented
+    evidence: tested
     connection: tested
     blockers:
-    - 'Parked: restricted: free viewing/download of single financial documents only, no bulk or API route, and the browser
-      answers HTTP 403 to scripted requests from a GitHub runner; re-open if the Ministry of Justice offers a bulk export
-      with terms'
-    - No bulk route
-    - clarify reuse and person-data obligations.
+    - 'Owner question (written permission): the Ministry of Justice''s RDF viewer is the only route (no bulk file, no
+      API, nothing on dane.gov.pl found), the Ministry states that its search is protected against robots, and
+      rdf-przegladarka.ms.gov.pl and prs.ms.gov.pl answer robots.txt with HTTP 403 to the runner. Write to the Ministry
+      of Justice asking for bulk access (or written permission for a slow scripted read) to the financial statements in
+      the Repozytorium Dokumentów Finansowych, or park PLG-013? Recommendation: ask once; balance-sheet totals per
+      company would feed the company dimension built from KRS (PLG-012 `ms_krs`). Proposed selection after permission:
+      XML statements of the last two years, totals only (assets, revenue, net result) by KRS number (effort L).'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason mixed a technical refusal (HTTP 403, which never parks an
+      entry) with missing rights; the rights question is the owner''s, so the entry is `reviewing`. Dev probe run
+      45919690568 (job 140247203923, branch test/src-parked2-probe, script dev/src_parked2_probe.py, 27 Nov 2026): the
+      gov.pl service page HTTP 200 (quoted); rdf-przegladarka.ms.gov.pl and prs.ms.gov.pl robots.txt HTTP 403 (recorded,
+      not worked around).'
+    - 'Earlier parking reason: free viewing/download of single financial documents only, no bulk or API route, and the
+      browser answers HTTP 403 to scripted requests from a GitHub runner'
     references:
     - https://rdf-przegladarka.ms.gov.pl/
+    - https://www.gov.pl/web/sprawiedliwosc/bezplatne-wyszukanie-i-pobranie-dokumentu-finansowego-podmiotu-wpisanego-do-rejestru-przedsiebiorcow-krajowego-rejestru-sadowego
 - id: PLG-014
   name: CEIDG and Biznes.gov.pl Data Warehouse/API
   short_name: CEIDG
@@ -4909,7 +4943,7 @@ sources:
   name: Central Register of Beneficial Owners (CRBR)
   short_name: CRBR beneficial owners
   provider: Ministry of Finance
-  status: parked
+  status: reviewing
   family: E
   kpi: false
   geography: Poland
@@ -4927,7 +4961,12 @@ sources:
     limits: Unknown.
   licence:
     status: restricted
-    notes: Identifiable people and control data; public lookup does not authorize bulk profiling or redistribution.
+    notes: 'Terms: no reuse terms found. https://podatki.gov.pl/pozostale/crbr (read by the runner 27 Nov 2026, HTTP
+      200; https://www.podatki.gov.pl/crbr/ redirects there, "Data aktualizacji: 30.09.2026") links the register
+      application https://crbr.podatki.gov.pl/adcrbr/, which answered with an Incapsula bot-protection page (32
+      characters of text). https://www.gov.pl/web/finanse/centralny-rejestr-beneficjentow-rzeczywistych (HTTP 200)
+      offers no download or API. Identifiable beneficial-owner data; a public lookup does not authorise bulk harvesting
+      or republication; stays internal.'
   updates: Submission-driven; service-page dates are not record CDC.
   ingestion:
     history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
@@ -4938,15 +4977,25 @@ sources:
     overlap: Complements KRS but has distinct legal definitions/scope.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: restricted: identifiable beneficial-owner data with access controls; public lookup does not authorise bulk
-      harvesting or republication; no API for third parties'
-    - No bulk API
-    - legal basis, retention and redistribution unresolved.
+    - 'Owner question (legal reading and permission): the CRBR is reachable only through the ADCRBR search application,
+      which sits behind bot protection (never worked around), and it holds names, citizenship and residence of natural
+      persons. Ask the Ministry of Finance for a bulk extract or written permission, with a legal reading of whether
+      zohelo may store beneficial-owner records (or only counts per entity type), or park PLG-015? Recommendation: park;
+      corporate ownership links come from KRS (PLG-012) and GLEIF relationship records (CD-015).'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was restricted personal data with access controls, a legal
+      question, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe,
+      script dev/src_parked2_probe.py, 27 Nov 2026): podatki.gov.pl CRBR page and the Ministry of Finance CRBR page HTTP
+      200 (quoted); crbr.podatki.gov.pl robots.txt HTTP 404, /adcrbr/ HTTP 200 with an Incapsula bot-protection page
+      (recorded, not worked around).'
+    - 'Earlier parking reason: identifiable beneficial-owner data with access controls; public lookup does not authorise
+      bulk harvesting or republication; no API for third parties'
     references:
-    - https://www.podatki.gov.pl/crbr/
+    - https://podatki.gov.pl/pozostale/crbr
+    - https://crbr.podatki.gov.pl/adcrbr/
+    - https://www.gov.pl/web/finanse/centralny-rejestr-beneficjentow-rzeczywistych
 - id: PLG-016
   name: Supervised-entity registers and search
   short_name: KNF supervised entities
@@ -5212,7 +5261,8 @@ sources:
   name: KNF Public Warning List
   short_name: KNF public warning list
   provider: Polish Financial Supervision Authority (KNF)
-  status: parked
+  source_system: knf_warnings
+  status: built
   family: E
   kpi: false
   geography: Poland
@@ -5223,35 +5273,58 @@ sources:
   coverage: Cumulative list; first date/history not verified.
   access:
     endpoint: https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne
-    kind: web
+    kind: bulk_file
     interfaces: [HTML]
-    auth: public browsing
+    auth: none
     cost: free
-    limits: Unknown.
+    limits: 'None stated; robots.txt of www.knf.gov.pl allows all agents (read 27 Nov 2026). One fixed page holds the
+      whole list (about 800 KB HTML, 668 entries on 27 Nov 2026): one GET per run.'
   licence:
-    status: restricted
-    notes: 'Terms: none for reuse on https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne (page read 11 Nov 2026 from
-      a GitHub runner); the list states notifications of suspected offences and criminal proceedings (some with convictions);
-      context and status must be preserved. Not reusable: stays internal.'
-  updates: Updated with notifications and proceeding information; no feed documented.
+    status: unresolved
+    notes: 'Terms: none for reuse on https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne (read by the runner 27
+      Nov 2026, HTTP 200; the page links only the privacy policy and an RSS feed). The page states: "Na Liście ostrzeżeń
+      publicznych KNF publikujemy informacje o: złożonych przez Komisję zawiadomieniach o podejrzeniu popełnienia
+      przestępstwa" and criminal proceedings in which the KNF Chair acts as the injured party, and "Brak podmiotu na
+      liście ostrzeżeń publicznych KNF nie zwalnia z powinności sprawdzenia go w wiarygodnych źródłach informacji".
+      Entries are notifications of suspected offences, not findings of guilt. Commercial reuse and modification: not
+      stated. Internal only (licence gate).'
+  updates: Updated with notifications and proceeding information, irregularly; no feed or entry dates (page read 27 Nov
+    2026).
   ingestion:
-    history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
-    incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
-    identifiers: KRS/NIP/REGON where present + subject + legal basis
+    history: 'No history at source: the page shows the current list only; history starts with the first snapshot.'
+    incremental: 'Snapshot, weekly (O46), one GET of the page; version = download time, a new Landing file only when the
+      SHA-256 changed; Bronze keeps the reduced columns only (build limits in research.blockers).'
+    identifiers: Section (legal basis) + row number within the snapshot; KRS number where the identifier is one
   modelling:
     notes: Never infer final liability; model allegation and procedural status over time.
     overlap: Must not overwrite KRS/CEIDG registry status.
   research:
     priority: specialist
-    evidence: documented
+    evidence: tested
     connection: tested
     blockers:
-    - 'Parked: restricted: list of public warnings about alleged offences naming entities and people, HTML only, no export;
-      republishing risks defamation and context loss'
-    - High reputational/person-data risk
-    - no bulk rights verified.
+    - 'Build limits (data minimisation, decided in this review): store no names and no free text (entity names can name
+      natural persons and the entries are allegations). Per entry keep only: the section (legal basis of the
+      notification, e.g. art. 171 Prawo bankowe), the identifier only when it is a KRS number, the prosecutor''s office,
+      and whether a final judgment is mentioned. Gold: counts of entries by legal basis and prosecutor''s office per
+      weekly snapshot (Poland); the KRS numbers link to the KRS company dimension (PLG-012) as a flag, never by name.
+      Non-blocking owner question: may these counts ever be published? Until then internal (licence `unresolved`).'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was person-data and defamation risk, not a missing route;
+      a fixed public page holds the whole list, so the entry is approved for an internal build within the limits above.
+      Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script dev/src_parked2_probe.py, 27
+      Nov 2026): https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne HTTP 200, 805,623 bytes of HTML, "Liczba
+      znalezionych ostrzeżeń : 668", tables with columns Lp., entity name, identifier (KRS, NIP or REGON), prosecutor''s
+      office, mentions of final judgments, important information; robots.txt allows all; no CSV or XLS export link on
+      the page. The new KNF warning application lop.knf.gov.pl reset the connection (robots.txt unreadable) and was not
+      used. Shape: no entry date is shown, so history accumulates from weekly snapshots; an entry leaves the list when
+      removed (removal = absent in the next snapshot). Size: one page, about 0.8 MB, 668 rows (measured). Not measured:
+      whether every entry is in the first HTML answer without paging (the count line and the 231,629 characters of text
+      suggest it is; the builder checks rows = the count line). Effort S.'
+    - 'Earlier parking reason: list of public warnings about alleged offences naming entities and people, HTML only, no
+      export; republishing risks defamation and context loss'
     references:
     - https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne
+    - https://lop.knf.gov.pl/
 - id: PLG-020
   name: Database of decisions of the President of UOKiK
   short_name: UOKiK decisions
@@ -5676,7 +5749,9 @@ sources:
     limits: Unknown.
   licence:
     status: unresolved
-    notes: Bibliographic database and scan reuse rights not verified.
+    notes: 'Terms: none read; https://isap.sejm.gov.pl/ robots.txt (read by the runner 27 Nov 2026) allows only
+      Googlebot and Nekstbot ("User-agent: * Disallow: /"), so no ISAP page was opened. The same records are served by
+      the Sejm ELI API (PLG-026, licence unresolved there too). Internal only.'
   updates: Updated with publications/text versions; no machine feed verified.
   ingestion:
     history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
@@ -5687,16 +5762,25 @@ sources:
     overlap: Use as archive/fallback where ELI is incomplete.
   research:
     priority: specialist
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: superseded by PLG-026: ISAP is the web interface of the same legal-act database that the Sejm ELI API serves
-      as JSON and PDF; no separate bulk or API route; re-open only for scans not in ELI'
-    - No bulk/API route
-    - clarify overlap and rights.
+    - 'Contained in: PLG-026 `eli_pl` (built; Silver `eli_pl_acts`, Gold entity table `legal_acts`,
+      docs/sources/eli_pl.md). ISAP is the web front of the Sejm''s legal-act database; the ELI API serves the same
+      records with the same addresses: ISAP''s example act WDU20070500331 is
+      https://api.sejm.gov.pl/eli/acts/DU/2007/331 (address "WDU20070500331", Dz.U. 2007 nr 50 poz. 331), and `eli_pl`
+      loads every journal year of Dziennik Ustaw (from 1918, 76 acts) and Monitor Polski (Dz.U. 2007: 1,887 acts; M.P.
+      2007: 1,092). Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+      dev/src_parked2_probe.py, 27 Nov 2026). ISAP''s robots.txt disallows every other agent, so it is not a route in
+      any case. The act texts (PDF/HTML) are left out of `eli_pl` by choice and are served by the same API.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the earlier reason "superseded by PLG-026" is restated in the `Contained in:`
+      form.'
+    - 'Earlier parking reason: superseded by PLG-026: ISAP is the web interface of the same legal-act database that the
+      Sejm ELI API serves as JSON and PDF; no separate bulk or API route'
     references:
-    - https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=wdu20070500331
     - https://isap.sejm.gov.pl/
+    - https://api.sejm.gov.pl/eli/acts/DU/2007/331
+    - https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=wdu20070500331
 - id: PLG-028
   name: NIK audit-results database
   short_name: NIK audit results
@@ -6396,7 +6480,8 @@ sources:
   name: NMT, NMPT and airborne laser-scanning elevation products
   short_name: GUGiK elevation (NMT)
   provider: GUGiK
-  status: approved
+  source_system: gugik_nmt
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -6439,7 +6524,8 @@ sources:
   name: Krajowa Integracja Ewidencji Gruntów i Budynków (KI EGiB) aggregate WFS
   short_name: GUGiK KI EGiB
   provider: GUGiK with county cadastral authorities
-  status: approved
+  source_system: gugik_egib
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -6740,7 +6826,8 @@ sources:
   name: Surface-water monitoring results (Państwowy Monitoring Środowiska)
   short_name: GIOŚ surface water
   provider: GIOŚ
-  status: approved
+  source_system: gios_surface_water
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -6910,7 +6997,8 @@ sources:
   name: Hydroportal / water-management spatial data
   short_name: Wody Polskie Hydroportal
   provider: Państwowe Gospodarstwo Wodne Wody Polskie
-  status: approved
+  source_system: wody_polskie_apgw
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -6980,7 +7068,8 @@ sources:
   name: 'Central Geological Database: boreholes (CBDG Otwory)'
   short_name: PIG-PIB boreholes
   provider: Państwowy Instytut Geologiczny–PIB (PIG-PIB)
-  status: approved
+  source_system: pig_boreholes
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -7248,7 +7337,8 @@ sources:
   name: Bank Danych o Lasach (BDL) OGC services
   short_name: Lasy Państwowe forest data
   provider: Lasy Państwowe
-  status: approved
+  source_system: lasy_bdl
+  status: built
   family: G
   kpi: false
   geography: Poland
@@ -7308,7 +7398,8 @@ sources:
   name: PSE Reports API v2 and market/system reports
   short_name: PSE reports
   provider: Polskie Sieci Elektroenergetyczne (PSE)
-  status: approved
+  source_system: pse_reports
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -7324,15 +7415,17 @@ sources:
     interfaces: [REST-API, OData-style JSON, HTML]
     auth: Public, no key.
     cost: Free.
-    limits: None published; the responses carry no rate-limit headers. The old API v1 was announced to close at the end of
-      2025.
+    limits: 'None published; the responses carry no rate-limit headers. Pages of 100 rows continued through nextLink ($after
+      cursor); $top, $skip and $count answer 400. robots.txt: none on api.raporty.pse.pl (404); raporty.pse.pl disallows its
+      own /api/ path, not used. The old API v1 was announced to close at the end of 2025.'
   licence:
     status: unresolved
     notes: 'Terms: none found. The PSE announcement https://www.pse.pl/-/najwazniejsze-dane-o-pracy-systemu-elektroenergetycznego-i-rynku-bilansujacego-w-nowej-odslonie
       (read 12 Nov 2026) offers "możliwość pobierania danych liczbowych czy wykorzystania API według potrzeb użytkownika"
       but states no licence, attribution wording, or rule on commercial reuse and modification; the pse.pl front page links
-      only a cookie policy and https://www.pse.pl/nota-prawna could not be opened. The source stays internal until PSE terms
-      are found. Attribution if used: "Źródło: PSE S.A., raporty.pse.pl".'
+      only a cookie policy and https://www.pse.pl/nota-prawna answers 404 (Dev probe 45790352597, 26 Nov 2026);
+      raporty.pse.pl is a single-page app whose page and script bundle name no terms or licence (Dev probe 45790863668).
+      The source stays internal until PSE terms are found. Attribution if used: "Źródło: PSE S.A., raporty.pse.pl".'
   updates: 'Daily and intraday: each row has publication_ts; day-ahead values such as RCE are published the day before, operational
     values after the day.'
   ingestion:
@@ -7341,17 +7434,20 @@ sources:
       rce-pln (balancing energy price, PLN/MWh: business_date, dtime, dtime_utc, period, rce_pln, publication_ts) 96 rows
       and about 25 KB a day; his-wlk-cal (demand, wi = wind, pv = photovoltaics, generating-unit groups jg*) 96 rows and about
       49 KB a day; no nextLink at this size. Full load = one request per entity and day from 2024-06-14: 882 days to 12 Nov
-      2026, so about 1,800 requests and 65 MB for the two entities, half an hour at one request a second. The entity catalogue
-      was not read (https://api.raporty.pse.pl/api/ answers 404); date-range filters and paging were not tested.'
-    incremental: 'Entity = report x business day, version = max publication_ts; daily request of yesterday and today and a
-      re-read of the last 7 days for corrections (delta, append_only by day with replacement of a re-published day). About
-      35,000 rows a year per entity: small source, refresh full.'
+      2026, so about 1,800 requests and 65 MB for the two entities, half an hour at one request a second. Dev probes
+      45790352597 and 45790863668 (test/2870-pse-probe, 26 Nov 2026): no entity catalogue (/api/ and /api/$metadata answer
+      404); a date-range filter (business_date ge ... and le ...) works but pages by 100 rows (nextLink), so a month costs
+      as many requests as its days; a DST day (92 or 100 rows) fits one page without nextLink; a repeated request returns
+      identical bytes; his-wlk-cal has one row (its last period) for 2024-06-13, left out.'
+    incremental: 'Entity = report x business day, version = max publication_ts_utc; weekly run lands the missing days up to
+      yesterday (Warsaw) and asks the newest 7 days again; unchanged bytes are not written (snapshot, changed_since_last).
+      About 35,000 rows a year per report: small source, refresh full (D32 + #2870).'
     identifiers: Report/dataset ID, business_date, dtime_utc, publication_ts.
   modelling:
     notes: 'Preserve Europe/Warsaw local time with the UTC column (DST days have 92 or 100 periods), settlement interval and
-      publication time. Grain: 15 minutes, Poland only (geography PL), PLN/MWh and MW. Smallest Gold selection, aggregated
-      to the day in Silver (fact_daily): average balancing energy price RCE (PLN/MWh), electricity demand, and wind and photovoltaic
-      generation with their share of demand, as new KPIs in environment.energy.'
+      publication time. Grain: 15 minutes, Poland only (geography PL), PLN/MWh and MW. Built (#2870): Silver at 15 minutes;
+      Gold build_pse_reports (fact_daily) holds daily means of complete days of the market energy price RCE (PLN/MWh) and
+      of demand, wind and photovoltaic generation (MW), draft KPIs in environment.energy; shares of demand not built.'
     overlap: No KPI of kpi.csv is published here yet. ENTSO-E Transparency and Eurostat/Ember carry the EU comparison for
       load and generation; URE price indicators (PL-ENV-020) are quarterly averages of a different market.
   research:
@@ -7360,7 +7456,6 @@ sources:
     connection: tested
     blockers:
     - 'PSE reuse terms not found: internal only until the owner or PSE confirms them.'
-    - Entity catalogue, date-range filters and paging not tested; inventory in the Landing trial.
     - History before 2024-06-14 (old reports) has no route in API v2.
     references:
     - https://api.raporty.pse.pl/
@@ -7369,7 +7464,8 @@ sources:
   name: Energy price indicators and small-renewable-installation reports
   short_name: URE energy prices
   provider: Urząd Regulacji Energetyki (URE)
-  status: approved
+  source_system: ure_prices
+  status: built
   family: G
   kpi: true
   geography: Poland
@@ -7377,9 +7473,10 @@ sources:
   domains: [electricity prices, renewable energy, regulation]
   entities: [market indicator, installation aggregate, technology]
   granularity: Quarterly/annual price indicators and annual aggregates for small renewable installations.
-  coverage: 'Average electricity price on the competitive market: yearly from 2008, quarterly from Q2 2015, newest Q2 2026
-    (table read 12 Nov 2026). Other indicators differ; small-installation reports are annual since 2016, with a definition
-    change from 2021.'
+  coverage: 'Built: average electricity price on the competitive market yearly 2008-2025 and quarterly 2015 Q2-2026 Q2 (page
+    7852), average household electricity price yearly 2012-2025 (page 7853), imported gas purchase prices quarterly, EU/EFTA
+    states 2013 Q3-2026 Q3 and other states 2023 Q1-2026 Q3 (page 7859); tables read 26 Nov 2026 (Dev probe 45790234209).
+    Small-installation reports are annual since 2016, with a definition change from 2021 (not built).'
   access:
     endpoint: https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
     kind: bulk_file
@@ -7393,7 +7490,8 @@ sources:
       and the privacy policy https://www.ure.gov.pl/pl/wolnytekst/5192,dok.html) state no licence, no attribution wording
       and nothing on reuse, commercial use or modification of the content; the footer has only privacy, accessibility, RSS
       and BIP links. The source stays internal. Attribution if used: "Źródło: Urząd Regulacji Energetyki, www.ure.gov.pl"
-      with the page''s modification date.'
+      with the page''s modification date. Dev probe 45790234209 (26 Nov 2026) read robots.txt (empty), both list pages, the
+      privacy policy and the two auction-rule pages linked there: no licence or reuse wording.'
   updates: 'Per indicator: quarterly prices are added to the same page after each quarter (page 7852: "Data modyfikacji: 25.09.2026"
     with Q2 2026), yearly values once a year.'
   ingestion:
@@ -7404,9 +7502,9 @@ sources:
       averages 10600, capacity charge 9165 and others) and the gas page https://www.ure.gov.pl/pl/paliwa-gazowe/ceny-wskazniki/7859
       (quarterly gas purchase prices). Under 1 MB in total. The small-installation report is a document on bip.ure.gov.pl,
       not a table (not included).'
-    incremental: Entity = indicator page, version = the page's modification date; fetch each page monthly and keep it when
-      the bytes change (snapshot, changed_since_last); the HTML table is parsed in Bronze and an unknown layout rejects the
-      file. Refresh full.
+    incremental: Entity = indicator page; Landing version = download time (no Last-Modified), the page's modification date
+      is kept in Bronze; fetched monthly and landed when the bytes without the request-time trailer change (snapshot,
+      changed_since_last); the HTML tables are parsed in Bronze and an unknown layout rejects the file. Refresh full.
     identifiers: Indicator name, period, unit, tariff/customer scope and report year.
   modelling:
     notes: 'Keep legal definition/version with each indicator; do not compare redefined installation classes without adjustment.
@@ -7420,7 +7518,8 @@ sources:
     connection: tested
     blockers:
     - 'URE reuse terms not found: internal only until the owner or URE confirms them.'
-    - Table layouts of the other nine indicator pages and of the gas page were not opened.
+    - 'Left out of the build: eight other electricity indicator pages (12418, 11063, 7851, 10600, 8425, 7854, 9165, 9962;
+      layouts in Dev probe 45790234209) and the small-installation reports; docs/sources/ure_prices.md.'
     references:
     - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
     - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html
@@ -9506,7 +9605,7 @@ sources:
   name: YouTube Data API v3
   short_name: YouTube Data API
   provider: YouTube / Google
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: worldwide
@@ -9524,9 +9623,13 @@ sources:
     limits: Quota units apply per project; avoid hard-coding current allowance.
   licence:
     status: restricted
-    notes: 'Terms: https://developers.google.com/youtube/terms/api-services-terms-of-service (terms page not re-read in this
-      review; the restriction is as recorded at registration). Restricted API-client licence: no audiovisual downloading;
-      storage, refresh, display, derived-metric and aggregation rules apply. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://developers.google.com/youtube/terms/api-services-terms-of-service and
+      https://developers.google.com/youtube/terms/developer-policies (both read by the runner 27 Nov 2026, HTTP 200):
+      "If you disagree with any aspect of the Agreement, you do not have our permission to, and you must not, access or
+      use any of the YouTube API Services"; the developer policies require API clients to "bring significant additional
+      value to the YouTube ecosystem" and say "Don''t store user data indefinitely, and provide a clear, straightforward
+      process for them to delete data in your possession". No permission to republish API data is stated. Not reusable
+      for public display: stays internal.'
   updates: Live resource state; stored non-authorized data generally must be refreshed or deleted within policy windows.
   ingestion:
     history: 'PROPOSAL: no warehouse onboarding until retention and derived-metric design passes policy review.'
@@ -9537,23 +9640,32 @@ sources:
     overlap: May overlap creator dashboards and web search; API policy remains controlling.
   research:
     priority: conditional
-    evidence: documented
-    connection: not-tested
+    evidence: tested
+    connection: tested
     blockers:
-    - 'Parked: YouTube API Services terms restrict storage, refresh, derived metrics and aggregation; no audiovisual download;
-      no routine bulk ingestion'
-    - Policy/legal review
-    - Design deletion and refresh controls
-    - Limit to approved API-client use
+    - 'Owner question (account and terms): the YouTube Data API needs a Google Cloud project with an API key that the
+      owner creates (the runner''s unauthenticated call https://www.googleapis.com/youtube/v3/videos?part=id&id=...
+      answered HTTP 403), and its terms limit storage and require deletion processes. Create the project and key and
+      accept the YouTube API Services Terms for zohelo, or park CD-017? Recommendation: park. The eight social-platform
+      APIs CD-017 to CD-024 can be answered in one reply (''park CD-017 to CD-024''); none offers official statistics
+      for Poland, and each needs an account, an application or a paid plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was a terms restriction, which is an owner question, so
+      the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+      dev/src_parked2_probe.py, 27 Nov 2026): the terms of service, developer policies, the policies guide, required
+      minimum functionality and the Data API getting-started page HTTP 200 (quoted in licence.notes); the API call
+      without key HTTP 403 (expected: key required); robots.txt of developers.google.com and www.googleapis.com allowed
+      the reads.'
+    - 'Earlier parking reason: YouTube API Services terms restrict storage, refresh, derived metrics and aggregation; no
+      audiovisual download; no routine bulk ingestion'
     references:
-    - https://developers.google.com/youtube/v3/getting-started
-    - https://developers.google.com/youtube/terms/developer-policies
     - https://developers.google.com/youtube/terms/api-services-terms-of-service
+    - https://developers.google.com/youtube/terms/developer-policies
+    - https://developers.google.com/youtube/v3/getting-started
 - id: CD-018
   name: Meta Content Library and API
   short_name: Meta Content Library
   provider: Meta
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: multicountry
@@ -9571,9 +9683,14 @@ sources:
     limits: Contract/workspace specific; no numerical limit relied on.
   licence:
     status: restricted
-    notes: 'Terms: https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/ (terms page not re-read in
-      this review; the restriction is as recorded at registration). Research-only governed access; not eligible for routine
-      commercial product ingestion. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://developers.facebook.com/docs/content-library-and-api (read by the runner 27 Nov 2026, HTTP
+      200): "Content Library and API are controlled-access environments. The functionality to download the public data
+      subset is only available in the Content Library user interface (not in the API), and only if the Inter-university
+      Consortium for Political and Social Research (ICPSR) or the Secure Data Access Center (CASD) has approved your
+      Meta Content Library application and you or your institution has consented to the appropriate contract terms (Meta
+      Research Tools Terms and Conditions, Information Sharing Agreement)"; the API runs only "in Meta''s Secure
+      Research Environment ... or in an approved third-party cleanroom". transparency.meta.com is disallowed to the
+      probe by robots.txt and was not read. Research-only: stays internal.'
   updates: Near real time, subject to platform removals and research controls.
   ingestion:
     history: 'PROPOSAL: catalogue only unless a qualifying research project is approved.'
@@ -9584,20 +9701,30 @@ sources:
     overlap: Broader than owner-authorized APIs but narrower in purpose and export rights.
   research:
     priority: specialist
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - 'Parked: research-only governed access (Meta Content Library); not eligible for product ingestion'
-    - Research eligibility
-    - ICPSR approval
-    - Institutional security/ethics review
+    - 'Owner question (eligibility and agreement): access needs an approved application through ICPSR or CASD by a
+      research institution, contract terms with Meta, and analysis only inside Meta''s cleanroom; zohelo is not such an
+      institution. Seek a partnership with an eligible institution, or park CD-018? Recommendation: park. The eight
+      social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017 to CD-024''); none offers
+      official statistics for Poland, and each needs an account, an application or a paid plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was research-only governed access, an eligibility and
+      agreement question for the owner, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch
+      test/src-parked2-probe, script dev/src_parked2_probe.py, 27 Nov 2026): the developer documentation page HTTP 200
+      (quoted), https://developers.facebook.com/terms/dfc_platform_terms/ and https://developers.facebook.com/devpolicy/
+      HTTP 200; https://transparency.meta.com/researchtools/meta-content-library robots.txt disallow (recorded, not
+      worked around).'
+    - 'Earlier parking reason: research-only governed access (Meta Content Library); not eligible for product ingestion'
     references:
+    - https://developers.facebook.com/docs/content-library-and-api
+    - https://transparency.meta.com/researchtools/meta-content-library
     - https://about.fb.com/news/2023/11/new-tools-to-support-independent-research/
 - id: CD-019
   name: Instagram API
   short_name: Instagram API
   provider: Meta
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: worldwide
@@ -9615,9 +9742,13 @@ sources:
     limits: Permission and app-tier specific; unknown here.
   licence:
     status: restricted
-    notes: 'Terms: https://developers.facebook.com/docs/instagram-platform/overview (terms page not re-read in this review;
-      the restriction is as recorded at registration). Owner-authorized integration terms apply; authorization does not grant
-      worldwide public-account collection or redistribution. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://developers.facebook.com/terms/ (Meta Platform Terms, read by the runner 27 Nov 2026, HTTP
+      200; it refers to the Meta Terms of Service, the Instagram Terms of Use and the Meta Commercial Terms, whose pages
+      on facebook.com are disallowed to the probe by robots.txt and were not read). The platform overview
+      https://developers.facebook.com/docs/instagram-platform/overview says: "The Instagram Platform is a collection of
+      APIs that allows your app to access data for Instagram professional accounts, including business and creator
+      accounts. You can build an app that serves only an account you own or manage, or an app that serves app users''
+      Instagram professional accounts." No reuse right for public accounts at large is stated: stays internal.'
   updates: Account events/metrics update continuously; retention and deletion rules apply.
   ingestion:
     history: 'PROPOSAL: onboard only consenting business/creator accounts after policy review.'
@@ -9628,21 +9759,28 @@ sources:
     overlap: Overlaps Content Library only for approved research/public scope.
   research:
     priority: conditional
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - 'Parked: owner-authorised integrations only; no collection of public accounts at scale'
-    - Confirm exact API variant
-    - App review and permissions
-    - Retention/reuse assessment
+    - 'Owner question (account): the Instagram API serves only professional accounts that the app owner owns or manages,
+      or whose users connect them; it gives no public statistics. Connect a zohelo Instagram professional account
+      through a Meta app (owner-created), or park CD-019? Recommendation: park. The eight social-platform APIs CD-017 to
+      CD-024 can be answered in one reply (''park CD-017 to CD-024''); none offers official statistics for Poland, and
+      each needs an account, an application or a paid plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was owner-authorised access only, an account question, so
+      the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+      dev/src_parked2_probe.py, 27 Nov 2026): the platform overview and Meta Platform Terms HTTP 200 (quoted);
+      facebook.com/legal/terms and facebook.com/legal/commercial_terms robots.txt disallow (recorded).'
+    - 'Earlier parking reason: owner-authorised integrations only; no collection of public accounts at scale'
     references:
     - https://developers.facebook.com/docs/instagram-platform/overview
+    - https://developers.facebook.com/terms/
     - https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
 - id: CD-020
   name: X API v2
   short_name: X API
   provider: X Corp.
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: worldwide
@@ -9660,9 +9798,13 @@ sources:
     limits: Pay-per-use and endpoint limits; no figures encoded.
   licence:
     status: restricted
-    notes: 'Terms: https://docs.x.com/x-api/introduction (terms page not re-read in this review; the restriction is as recorded
-      at registration). X Developer Agreement and product terms govern storage, display, redistribution and deletion compliance.
-      Not reusable for public display: stays internal.'
+    notes: 'Terms: https://docs.x.com/developer-terms/agreement (X Developer Agreement) and
+      https://developer.x.com/en/developer-terms/agreement-and-policy (X Developer Policy), both read by the runner 27
+      Nov 2026, HTTP 200; the policy "outlines acceptable use of the X API, including rules around content, automation,
+      privacy, security, and prohibited behaviors", under the Developer Agreement or a Master License Agreement. Pricing
+      https://docs.x.com/x-api/getting-started/pricing: "The X API uses pay-per-usage pricing. No subscriptions—pay only
+      for what you use"; "Purchase credits upfront in the Developer Console." No public redistribution right is stated:
+      stays internal.'
   updates: Recent/search/stream behavior differs; deleted or withheld content must be handled.
   ingestion:
     history: 'PROPOSAL: approve a narrow endpoint/use case before any history purchase.'
@@ -9673,22 +9815,30 @@ sources:
     overlap: Overlaps social listening vendors and public web, but terms follow API route.
   research:
     priority: conditional
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - 'Parked: X Developer Agreement and paid product terms govern storage, display and redistribution; no public redistribution
-      right'
-    - Budget entitlement
-    - Legal/policy review
-    - Deletion-compliance design
+    - 'Owner question (paid credits): the X API is paid per request (credits bought upfront in the Developer Console,
+      per-endpoint rates shown only there) under the X Developer Agreement. Buy credits for a narrow use case, or park
+      CD-020? Recommendation: park. The eight social-platform APIs CD-017 to CD-024 can be answered in one reply (''park
+      CD-017 to CD-024''); none offers official statistics for Poland, and each needs an account, an application or a
+      paid plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was a paid product under the developer agreement, an owner
+      question, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe,
+      script dev/src_parked2_probe.py, 27 Nov 2026): the API introduction, pricing, developer terms, Developer Agreement
+      and Developer Policy HTTP 200 (quoted); help.x.com answered HTTP 403 (recorded, not retried).'
+    - 'Earlier parking reason: X Developer Agreement and paid product terms govern storage, display and redistribution;
+      no public redistribution right'
     references:
     - https://docs.x.com/x-api/introduction
-    - https://docs.x.com/x-api/posts/search/introduction
+    - https://docs.x.com/x-api/getting-started/pricing
+    - https://docs.x.com/developer-terms/agreement
+    - https://developer.x.com/en/developer-terms/agreement-and-policy
 - id: CD-021
   name: LinkedIn Community Management API
   short_name: LinkedIn API
   provider: LinkedIn / Microsoft
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: worldwide
@@ -9706,9 +9856,12 @@ sources:
     limits: Product/permission specific.
   licence:
     status: restricted
-    notes: 'Terms: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/ (terms page not re-read in this
-      review; the restriction is as recorded at registration). Restricted to approved use case and authorized roles; no blanket
-      commercial redistribution right. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://legal.linkedin.com/api-terms-of-use (read by the runner 27 Nov 2026, HTTP 200, "Last revised
+      on December 13th, 2022") and the Marketing API terms https://www.linkedin.com/legal/l/marketing-api-terms (HTTP
+      200). The API terms bind "Applications" registered by a developer acting for an entity and list conditions such as
+      "your Application DOES NOT rely on access to the APIs as a fundamental aspect of your business"; the Community
+      Management app review page says to "Read the LinkedIn Marketing API Terms" and asks for a screen recording of the
+      application before access. No republication right is stated: stays internal.'
   updates: Current platform state and notifications where supported.
   ingestion:
     history: 'PROPOSAL: ingest only pages administered by consenting customers.'
@@ -9719,22 +9872,29 @@ sources:
     overlap: May overlap company websites and social-listening tools, with different rights.
   research:
     priority: conditional
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - 'Parked: restricted to approved use cases and authorised roles; no public-data route'
-    - App review
-    - Verify page super-admin
-    - Confirm retention/redistribution
+    - 'Owner question (account and app review): the Community Management API serves only organisation pages that the
+      app''s users administer, after LinkedIn''s app review of a registered organisation. Register a LinkedIn app for
+      zohelo and pass the review, or park CD-021? Recommendation: park. The eight social-platform APIs CD-017 to CD-024
+      can be answered in one reply (''park CD-017 to CD-024''); none offers official statistics for Poland, and each
+      needs an account, an application or a paid plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was restricted approved-use access, an account question,
+      so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+      dev/src_parked2_probe.py, 27 Nov 2026): the API terms, Marketing API terms, Community Management overview and app
+      review pages HTTP 200 (quoted).'
+    - 'Earlier parking reason: restricted to approved use cases and authorised roles; no public-data route'
     references:
+    - https://legal.linkedin.com/api-terms-of-use
+    - https://www.linkedin.com/legal/l/marketing-api-terms
     - https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview
     - https://learn.microsoft.com/en-us/linkedin/marketing/community-management-app-review
-    - https://learn.microsoft.com/en-us/linkedin/marketing/community-management/
 - id: CD-022
   name: Reddit Data API
   short_name: Reddit Data API
   provider: Reddit
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: worldwide
@@ -9753,9 +9913,12 @@ sources:
     limits: Reddit may set and enforce limits; no number encoded.
   licence:
     status: restricted
-    notes: 'Terms: https://redditinc.com/policies/data-api-terms (terms page not re-read in this review; the restriction is
-      as recorded at registration). User content remains user-owned; default licence permits limited app display. Commercial
-      use, excess research and AI use need additional rights. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://redditinc.com/policies/data-api-terms and https://redditinc.com/policies/developer-terms
+      (both answered the runner HTTP 200 on 27 Nov 2026; the probe log kept only the first 20,000 characters of each
+      page, which hold the site navigation and version list, so no sentence is quoted from this review). The restriction
+      stands as recorded at registration: user content remains user-owned, the default licence permits limited app
+      display, and commercial use needs a separate agreement (unverified in this review). Not reusable for public
+      display: stays internal.'
   updates: Platform state changes; removals and termination require deletion handling.
   ingestion:
     history: 'PROPOSAL: no commercial warehouse ingestion without separate agreement.'
@@ -9769,17 +9932,26 @@ sources:
     evidence: documented
     connection: not-tested
     blockers:
-    - 'Parked: Reddit Data API terms: commercial use and research above limits need an agreement; user content stays user-owned'
-    - Separate commercial agreement
-    - Approved use case
-    - Removal/deletion controls
+    - 'Owner question (account and agreement): the Reddit Data API needs a registered app with OAuth credentials
+      (oauth.reddit.com is disallowed to the probe by robots.txt), and commercial use needs a separate agreement with
+      Reddit. Register an app and ask Reddit for a commercial agreement, or park CD-022? Recommendation: park. The eight
+      social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017 to CD-024''); none offers
+      official statistics for Poland, and each needs an account, an application or a paid plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was a terms and agreement restriction, an owner question,
+      so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+      dev/src_parked2_probe.py, 27 Nov 2026): the Data API terms and developer terms HTTP 200 (text not captured beyond
+      navigation, see licence.notes); support.reddithelp.com answered HTTP 403 and oauth.reddit.com robots.txt disallows
+      the probe (both recorded, not worked around).'
+    - 'Earlier parking reason: Reddit Data API terms: commercial use and research above limits need an agreement; user
+      content stays user-owned'
     references:
     - https://redditinc.com/policies/data-api-terms
+    - https://redditinc.com/policies/developer-terms
 - id: CD-023
   name: TikTok Research API
   short_name: TikTok Research API
   provider: TikTok
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: multicountry
@@ -9797,9 +9969,12 @@ sources:
     limits: Approved-project limits; no figures encoded.
   licence:
     status: restricted
-    notes: 'Terms: https://developers.tiktok.com/products/research-api/ (terms page not re-read in this review; the restriction
-      is as recorded at registration). Research-only and project-bound; security, ethics and platform terms restrict reuse.
-      Not reusable for public display: stays internal.'
+    notes: 'Terms: https://developers.tiktok.com/products/research-api/ (read by the runner 27 Nov 2026, HTTP 200):
+      "Qualified researchers in the U.S., Europe, Canada, and Brazil can apply"; "To qualify for access, applicants must
+      ... Be located in an eligible region and be affiliated with an eligible organization: Academic institutions in the
+      U.S., EEA, UK, Canada, or Switzerland; or Not-for-profit and/or independent research institution, organization,
+      association, or body in the EU." The Research API terms on www.tiktok.com are disallowed to the probe by
+      robots.txt and were not read. Research-only: stays internal.'
   updates: Platform data updates; removals and approved access period apply.
   ingestion:
     history: 'PROPOSAL: catalogue only unless an eligible study is approved.'
@@ -9810,20 +9985,27 @@ sources:
     overlap: Broader public-content purpose than owner APIs, but unavailable for routine commercial use.
   research:
     priority: specialist
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - 'Parked: research-only, project-bound access; platform terms forbid reuse for products'
-    - Research eligibility
-    - Application approval
-    - Ethics and security plan
+    - 'Owner question (eligibility): only researchers affiliated with an academic institution or an EU not-for-profit
+      research body can apply; zohelo does not qualify on its own. Seek such an affiliation, or park CD-023?
+      Recommendation: park. The eight social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017
+      to CD-024''); none offers official statistics for Poland, and each needs an account, an application or a paid
+      plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was research-only access, an eligibility question, so the
+      entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe, script
+      dev/src_parked2_probe.py, 27 Nov 2026): the product page HTTP 200 (quoted);
+      https://www.tiktok.com/legal/page/global/terms-of-service-research-api/en robots.txt disallow (recorded).'
+    - 'Earlier parking reason: research-only, project-bound access; platform terms forbid reuse for products'
     references:
     - https://developers.tiktok.com/products/research-api/
+    - https://www.tiktok.com/legal/page/global/terms-of-service-research-api/en
 - id: CD-024
   name: TikTok Commercial Content API
   short_name: TikTok Commercial Content API
   provider: TikTok
-  status: parked
+  status: reviewing
   family: J
   kpi: false
   geography: multicountry-Europe
@@ -9841,9 +10023,12 @@ sources:
     limits: Approved-app limits; no figures encoded.
   licence:
     status: restricted
-    notes: 'Terms: https://developers.tiktok.com/products/commercial-content-api/ (terms page not re-read in this review;
-      the restriction is as recorded at registration). Use is bounded by developer terms and commercial-content transparency
-      purpose; creative rights remain separate. Not reusable for public display: stays internal.'
+    notes: 'Terms: https://developers.tiktok.com/products/commercial-content-api/ (read by the runner 27 Nov 2026, HTTP
+      200): ad data "will be accessible for the period when the advertisement is run and until one year since the
+      advertisement was last shown to any user"; "These APIs are made available globally and will include ads data from
+      EU to begin with"; access: "create a TikTok for Developers account using your official email address", then an
+      application form. The TikTok developer terms on www.tiktok.com and library.tiktok.com are disallowed to the probe
+      by robots.txt and were not read, so reuse terms are not known: stays internal.'
   updates: Ads appear/update with platform transparency records and have bounded retention.
   ingestion:
     history: 'PROPOSAL: backfill approved EU ads by bounded dates after terms review.'
@@ -9854,15 +10039,23 @@ sources:
     overlap: Overlaps EU transparency repositories and social ad libraries.
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: not-tested
     blockers:
-    - 'Parked: bounded by developer terms for ad transparency; creative rights stay with advertisers'
-    - Application approval
-    - Confirm allowed commercial analytics
-    - Design expiry handling
+    - 'Owner question (account and application): the Commercial Content API needs a TikTok for Developers account
+      registered with the owner''s official e-mail and an approved application; its developer terms could not be read
+      (robots.txt). Apply for access for zohelo (ad counts for Poland and the EU), or park CD-024? Recommendation: park.
+      The eight social-platform APIs CD-017 to CD-024 can be answered in one reply (''park CD-017 to CD-024''); none
+      offers official statistics for Poland, and each needs an account, an application or a paid plan.'
+    - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was the developer terms and an application, an owner
+      question, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe,
+      script dev/src_parked2_probe.py, 27 Nov 2026): the product page HTTP 200 (quoted);
+      https://www.tiktok.com/legal/page/global/tik-tok-developer-terms-of-service/en and https://library.tiktok.com/ads
+      robots.txt disallow; https://open.tiktokapis.com/v2/research/adlib/ad/query/ without a token HTTP 403 (expected).'
+    - 'Earlier parking reason: bounded by developer terms for ad transparency; creative rights stay with advertisers'
     references:
     - https://developers.tiktok.com/products/commercial-content-api/
+    - https://www.tiktok.com/legal/page/global/tik-tok-developer-terms-of-service/en
 - id: CD-025
   name: Wikimedia MediaWiki Action APIs and dumps
   short_name: Wikimedia
@@ -10780,7 +10973,8 @@ sources:
   name: Open Patent Services (OPS)
   short_name: EPO Open Patent Services
   provider: European Patent Organisation (EPO)
-  status: approved
+  source_system: epo_statistics
+  status: built
   family: J
   kpi: false
   geography: multicountry
@@ -11341,82 +11535,156 @@ sources:
   name: 'NBP calendars: MPC meetings and statistics publications'
   short_name: NBP calendars
   provider: Narodowy Bank Polski (NBP)
+  source_system: sdds_calendar
   current: true
-  status: parked
+  status: built
   family: J
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [release-calendar, official-statistics]
   entities: [release]
-  granularity: 'MPC meeting dates; statistics publication dates.'
-  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  granularity: 'Statistics publication dates: one expected release date per NBP data category and month, with the
+    reference period in brackets (SDDS advance release calendar). MPC meeting dates are not in this route (see
+    research.blockers).'
+  coverage: 'The current calendar year, January to December (the 2026 file read 27 Nov 2026); one file per year.'
   access:
-    endpoint: 'https://nbp.pl/polityka-pieniezna/decyzje-rpp/'
-    kind: api
-    interfaces: [HTML]
-    auth: public
+    endpoint: 'https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych'
+    kind: bulk_file
+    interfaces: [XLSX, HTML]
+    auth: none
     cost: free
-    limits: 'Not landed.'
+    limits: 'None stated; robots.txt of stat.gov.pl is "User-agent: * Allow: /*" (read by the runner 27 Nov 2026). One
+      page GET to find the link and one XLSX GET (about 27 KB) per run. The file name carries the update date
+      (sdds_kalendarz_upowszechniania_danych_w_2026_r_25_11_2026.xlsx), so the link is read from the page at run time
+      (url_from, as mf_state_budget).'
   licence:
-    status: unresolved
-    notes: 'Not reachable: nbp.pl answers automated clients with a bot-protection page ("Pardon Our Interruption", Dev probe 42784902820); never circumvented. NBP terms as PLG-006. MPC dates stay in the manual seed release_calendar.csv.'
-  updates: Calendars change when dates are announced or moved.
+    status: open-conditional
+    notes: 'Terms: https://stat.gov.pl/copyright (read 27 Nov 2026; the calendar file is published by GUS, the SDDS
+      national coordinator, on stat.gov.pl, so the GUS terms apply as for TP-011, D23). The page reads: "nie ma
+      zastrzeżeń co do kopiowania plików i stron oraz dokonywania wydruków" and "w tym do własnych opracowań, pod
+      warunkiem, że będzie podane ich źródło"; no named licence. Attribution: "Źródło: GUS, SDDS Kalendarz
+      Upowszechniania Danych" (source to be given, no exact wording prescribed). Commercial reuse: not stated.
+      Modification: own analyses allowed with the source given. The NBP terms (PLG-006) do not apply: nothing is read
+      from nbp.pl.'
+  updates: 'The file is replaced when dates change ("Ostatnia aktualizacja: 25.11.2026 r." on the Polish page; the
+    English page showed 10/23/2026 in a desk reading the same day, so the two language copies are not updated
+    together). Every cell is an expected date: "Wszystkie daty są oczekiwanymi datami publikacji i mogą ulec zmianie."'
   ingestion:
-    history: None needed; forthcoming dates.
-    incremental: Daily re-download; written only when the SHA-256 changed.
-    identifiers: publisher + date + title
+    history: 'None at source beyond the current year''s file; past release dates of the year stay in it, so the Bronze
+      copies of each version are the history.'
+    incremental: 'Snapshot, weekly with release_calendars (O46); version = download time (the XLSX has no
+      Last-Modified); a new Landing file only when the SHA-256 changed; Bronze latest-only.'
+    identifiers: 'Table (sector) + data category label + month column; publisher derived from the category (NBP:
+      monetary financial institutions balance, NBP balance sheet, official reserves, foreign-currency liquidity,
+      balance of payments, international investment position, external debt).'
   modelling:
-    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
-    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+    notes: 'Use the Polish file (cleaner dates). Cells are text "DD.MM.YYYY\n(MM YYYY)" or "(Q1 2026)" / "(4 kw.
+      2025)"; one cell can hold two releases ("02.03.2026 (12 2025) 20.03.2026\n(01 2026)"); "-" = no release;
+      "dziennie" = daily (interest rates, exchange rates, WIG: no dated rows); the "Ostatnia aktualizacja" column is an
+      Excel date serial (46332 = 2026-11-06). The file has visible slips that must be rejected or flagged, never
+      guessed: official reserves for 05 2026 dated 07.04.2026 (the English copy says 07/05/26), international
+      investment position and external debt March cells dated 31.03.2025 for 4 kw. 2024. Silver: one row per
+      category × reference period × expected date, publisher NBP, GUS or MF by category (one parser serves TP-012 and
+      TP-013). Release dates of a topic''s main KPIs add to its heat (release bonus) and give topics.json next_release.'
+    overlap: 'GUS rows (real sector, population) are already in the GUS kalendarium (TP-011): keep only the NBP and MF
+      tables, or keep all and mark GUS rows as the second channel. MPC dates stay in the manual seed
+      warehouse/seeds/release_calendar.csv.'
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: tested
     blockers:
-    - Parked: no reachable route without circumventing bot protection or a blocked host.
+    - 'MPC meeting dates (not blocking the approval): they are not in the SDDS calendar, the Monetary Policy Council does
+      not publish its schedule in Monitor Polski (MP 2026/943 and MP 2025/1013 are the policy assumptions, no dates),
+      and every nbp.pl page still answers the runner with the bot-protection page "Pardon Our Interruption" (5,996
+      bytes; never worked around). The 12 dates a year stay in the manual seed release_calendar.csv, read by a person
+      from https://nbp.pl/en/monetary-policy/schedule-of-mpc-meetings, which lists the 2026 dates and says "Narodowy
+      Bank Polski will advise on any changes".'
+    - 'Re-review 27 Nov 2026 (parked re-review, batch 6): the parking reason (bot protection) was technical, which the
+      owner rule of 12 Nov does not accept; an official republisher carries the NBP statistics release dates. Dev
+      probe run 45955251368 (job 140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py, 27
+      Nov 2026): https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych HTTP 200 (redirected to
+      /banki-i-bazy-danych/sdds/), linking the XLSX above, HTTP 200, 26,882 bytes, 6 sheets, 56 non-empty rows; the
+      financial and external sector tables list 9 NBP categories with monthly or quarterly dates for January to
+      December 2026 (e.g. "Wybrane dane z bilansu NBP | 07.01.2026 (12 2025) | 06.02.2026 (01 2026) | …"). English copy
+      at https://stat.gov.pl/en/databases/sdds, same layout, 25,540 bytes. nbp.pl: /en/monetary-policy/schedule-of-mpc-meetings,
+      /polityka-pieniezna/decyzje-rpp/ and /en/statistic-and-financial-reporting/calendar all HTTP 200 with the
+      bot-protection page. Effort S (one entity in release_calendars, shared with TP-013).'
+    - 'Earlier parking reason (10 Nov 2026): no reachable route without circumventing bot protection or a blocked host.'
     references:
+    - https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych
+    - https://stat.gov.pl/en/databases/sdds
+    - https://stat.gov.pl/copyright
+    - https://nbp.pl/en/monetary-policy/schedule-of-mpc-meetings
     - https://nbp.pl/polityka-pieniezna/decyzje-rpp/
 - id: TP-013
   name: Ministry of Finance publication calendar
   short_name: MF calendar
   provider: Ministerstwo Finansów
+  source_system: sdds_calendar
   current: true
-  status: parked
+  status: built
   family: J
   kpi: false
   geography: Poland
   provider_type: national-public
   domains: [release-calendar, official-statistics]
   entities: [release]
-  granularity: 'Budget execution and public debt publication dates.'
-  coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+  granularity: 'Budget execution and public debt publication dates: one expected release date per Ministry of Finance
+    data category and month, with the reference period in brackets (SDDS advance release calendar, fiscal sector).'
+  coverage: 'The current calendar year plus January and February of the next (the fiscal table of the 2026 file runs to
+    "2 2027"; read 27 Nov 2026).'
   access:
-    endpoint: 'https://www.gov.pl/web/finanse'
-    kind: api
-    interfaces: [HTML]
-    auth: public
+    endpoint: 'https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych'
+    kind: bulk_file
+    interfaces: [XLSX, HTML]
+    auth: none
     cost: free
-    limits: 'Not landed.'
+    limits: 'Same file and limits as TP-012: robots.txt of stat.gov.pl allows all; one page GET and one XLSX GET (about
+      27 KB) per run; the link is read from the page at run time because the file name carries the update date.'
   licence:
-    status: unresolved
-    notes: 'Not reachable: www.gov.pl refuses connections from GitHub runners (Dev probe 42784902820); the MF sources PLG-007/008/009 may need another route too. No machine-readable calendar found.'
-  updates: Calendars change when dates are announced or moved.
+    status: open-conditional
+    notes: 'Terms: https://stat.gov.pl/copyright (read 27 Nov 2026; the file is GUS''s, so the GUS terms apply as for
+      TP-011, D23): "nie ma zastrzeżeń co do kopiowania plików i stron oraz dokonywania wydruków" and "w tym do własnych
+      opracowań, pod warunkiem, że będzie podane ich źródło"; no named licence. Attribution: "Źródło: GUS, SDDS
+      Kalendarz Upowszechniania Danych" (no exact wording prescribed). Commercial reuse: not stated. Modification: own
+      analyses allowed with the source given. Nothing is read from gov.pl for this entry.'
+  updates: 'As TP-012: the file is replaced when dates change (Polish page "Ostatnia aktualizacja: 25.11.2026 r.");
+    every date is expected and "może ulec zmianie".'
   ingestion:
-    history: None needed; forthcoming dates.
-    incremental: Daily re-download; written only when the SHA-256 changed.
-    identifiers: publisher + date + title
+    history: 'Current year''s file only; Bronze copies of each version are the history.'
+    incremental: 'One entity with TP-012 (snapshot, weekly with release_calendars, O46; version = download time; new
+      Landing file only when the SHA-256 changed; Bronze latest-only).'
+    identifiers: 'Table "Sektor podatkowo-budżetowy" + category label + month column; publisher MF for: "Operacje
+      szczebla centralnego sektora instytucji rządowych i samorządowych" (state budget execution, monthly, about the
+      20th), "Dług krajowy Skarbu Państwa" and "Dług zagraniczny Skarbu Państwa" (monthly), "Państwowy dług publiczny"
+      (quarterly). "Operacje sektora instytucji rządowych i samorządowych" has no dated cell in 2026.'
   modelling:
-    notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
-    overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+    notes: 'Parsed with TP-012 (cell rules and slips there; in this table the June Treasury debt cells give the
+      period as "(04 2026)" in the Polish copy and "(03.26)" in the English one, so the Polish copy is read). The categories match loaded sources: mf_state_budget (PLG-007), mf_treasury_debt and
+      mf_public_debt (PLG-008/009), so a release row can link to their KPIs for the topic release bonus and
+      topics.json next_release.'
+    overlap: 'The manual seed warehouse/seeds/release_calendar.csv holds MF dates by hand today; the seed rows for these
+      categories can go once this entity is loaded.'
   research:
     priority: review-next
-    evidence: documented
+    evidence: tested
     connection: tested
     blockers:
-    - Parked: no reachable route without circumventing bot protection or a blocked host.
+    - 'Re-review 27 Nov 2026 (parked re-review, batch 6): the parking reason (www.gov.pl refusing runners) no longer
+      holds and was technical; the MF release dates are published by GUS in the SDDS advance release calendar. Dev
+      probe run 45955251368 (job 140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py, 27
+      Nov 2026): the calendar XLSX (see TP-012) has a fiscal-sector sheet with the four MF categories above, e.g.
+      "Dług krajowy Skarbu Państwa | 20.01.2026 (11 2025) | - | 02.03.2026 (12 2025) 20.03.2026 (01 2026) | …"; www.gov.pl
+      now answers the runner (robots.txt "User-agent: * Allow: /"; /web/finanse/zapowiedzi, /web/finanse/zadluzenie
+      and /web/finanse/dane-fiskalne-na-potrzeby-nadzoru-budzetowego-ue HTTP 200), but none of them names a
+      publication calendar or schedule (no "harmonogram" or "kalendarz" text or link). Effort S (with TP-012).'
+    - 'Earlier parking reason (10 Nov 2026): no reachable route without circumventing bot protection or a blocked host.'
     references:
-    - https://www.gov.pl/web/finanse
+    - https://stat.gov.pl/banki-i-bazy-danych/sdds/kalendarz-upowszechniania-danych
+    - https://stat.gov.pl/copyright
+    - https://www.gov.pl/web/finanse/zapowiedzi
 - id: TP-014
   name: ECB statistical calendar and Governing Council meetings
   short_name: ECB calendars

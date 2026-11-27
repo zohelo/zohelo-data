@@ -1,2 +1,2 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-decisions,decyzje,decisions,decyzje,false,decisions,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+decisions,decyzje,decisions,decyzje,false,decisions,1,decisions

@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+exam8_polish,gus_exam_results,gus_exam_results:exam8:pct_max_points:polish,"GUS republication of the OKE results, % of the maximum number of points, Poland and voivodeships, both sexes and by sex",1,
+exam8_mathematics,gus_exam_results,gus_exam_results:exam8:pct_max_points:mathematics,"GUS republication of the OKE results, % of the maximum number of points, Poland and voivodeships, both sexes and by sex",1,
+exam8_english,gus_exam_results,gus_exam_results:exam8:pct_max_points:english,"GUS republication of the OKE results, % of the maximum number of points, Poland and voivodeships, both sexes and by sex",1,

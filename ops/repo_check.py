@@ -43,7 +43,7 @@ ROOT_ALLOWED = {
     ".python-version",
     ".node-version",
 }
-WORKFLOWS = ["branch-cleanup.yml", "deploy-portal.yml", "dev.yml", "ops.yml", "pipeline.yml"]
+WORKFLOWS = ["batch-labels.yml", "branch-cleanup.yml", "deploy-portal.yml", "dev.yml", "ops.yml", "pipeline.yml"]
 FORBIDDEN_SUFFIXES = {
     ".parquet",
     ".ipynb",
@@ -170,9 +170,78 @@ def alert_job() -> list[str]:
 SQLFLUFF = "sqlfluff==4.4.0"  # pinned here so the workflow does not change when the version does
 
 
+# A change to any of these can change how every model lints, so it lints all of them.
+SQLFLUFF_ALL = ("pyproject.toml", "ops/repo_check.py", ".sqlfluff", ".sqlfluffignore")
+MACRO_NAME = re.compile(r"\{%-?\s*macro\s+(\w+)")
+
+
+def changed_paths() -> tuple[str, list[str]] | None:
+    """The merge base with the pull request's base branch (GITHUB_BASE_REF in the check job, main locally) and the
+    paths changed against it: committed, uncommitted and untracked. None when there is no base to compare with."""
+    base = f"origin/{os.environ.get('GITHUB_BASE_REF') or 'main'}"
+    merge_base = git("merge-base", base, "HEAD")
+    if merge_base.returncode:
+        return None
+    diff = git("diff", "--name-only", "--no-renames", merge_base.stdout.strip())
+    new = git("ls-files", "--others", "--exclude-standard")
+    if diff.returncode or new.returncode:
+        return None
+    return merge_base.stdout.strip(), sorted(set(diff.stdout.splitlines()) | set(new.stdout.splitlines()))
+
+
+def git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+
+
+def macro_users(changed_macros: list[str], merge_base: str) -> set[str]:
+    """The models that call a macro of a changed macro file, directly or through other macros. A name defined in
+    the file now or at the merge base (a removed or renamed macro) counts; a mention of the name is a call."""
+    texts = {
+        f.relative_to(ROOT).as_posix(): f.read_text(encoding="utf-8") for f in ROOT.glob("warehouse/macros/**/*.sql")
+    }
+    names = set()
+    for path in changed_macros:
+        before = git("show", f"{merge_base}:{path}")
+        names |= set(MACRO_NAME.findall(texts.get(path, "") + (before.stdout if before.returncode == 0 else "")))
+    while names:
+        mention = re.compile(r"\b(?:" + "|".join(sorted(map(re.escape, names))) + r")\b")
+        more = {name for text in texts.values() if mention.search(text) for name in MACRO_NAME.findall(text)}
+        if more <= names:
+            break
+        names |= more
+    if not names:
+        return set()
+    return {
+        f.relative_to(ROOT).as_posix()
+        for f in ROOT.glob("warehouse/models/**/*.sql")
+        if mention.search(f.read_text(encoding="utf-8"))
+    }
+
+
+def sqlfluff_targets(changed: tuple[str, list[str]] | None) -> list[str]:
+    """What sqlfluff lints: the models a change adds or edits and the models that call a changed macro (macro_users);
+    all of warehouse/models when the change touches the lint settings or this check (SQLFLUFF_ALL), or when there is
+    no base to compare with. The other models passed the same check when they merged (the `check` job gates every
+    merge), and the jinja templater compiles every macro again for each file, which made linting all ~540 models
+    take most of the check's former 10 minutes (Bug #3336)."""
+    if changed is None or any(path.startswith(SQLFLUFF_ALL) for path in changed[1]):
+        return ["warehouse/models"]
+    merge_base, paths = changed
+    models = {p for p in paths if p.startswith("warehouse/models/") and p.endswith(".sql") and (ROOT / p).exists()}
+    macros = [p for p in paths if p.startswith("warehouse/macros/") and p.endswith(".sql")]
+    return sorted(models | macro_users(macros, merge_base))
+
+
 def sqlfluff() -> list[str]:
-    """dbt models pass sqlfluff (settings in pyproject.toml), with the pinned version."""
+    """dbt models pass sqlfluff (settings in pyproject.toml), with the pinned version: the models the change adds or
+    edits (sqlfluff_targets)."""
     from importlib import metadata
+
+    targets = sqlfluff_targets(changed_paths())
+    scope = "every model" if targets == ["warehouse/models"] else f"{len(targets)} changed models"
+    print(f"     sqlfluff lints {scope}", flush=True)
+    if not targets:
+        return []
 
     try:
         installed = metadata.version("sqlfluff")
@@ -184,9 +253,7 @@ def sqlfluff() -> list[str]:
         )
         if result.returncode:
             return [f"could not install {SQLFLUFF}: {result.stderr.strip()[-500:]}"]
-    return tool(
-        [sys.executable, "-m", "sqlfluff", "lint", "warehouse/models", "--processes", "2", "--disable-progress-bar"]
-    )
+    return tool([sys.executable, "-m", "sqlfluff", "lint", *targets, "--processes", "2", "--disable-progress-bar"])
 
 
 def tool(command: list[str]) -> list[str]:
@@ -231,6 +298,31 @@ def configuration(files: list[Path]) -> list[str]:
     problems += value_ranges(files)
     problems += source_declarations(files)
     problems += optional_parents(files)
+    problems += sql_code_cases()
+    return problems
+
+
+def sql_code_cases() -> list[str]:
+    """warehouse/changed.py reads shared SQL without comments and layout (sql_code) for the build fingerprint; a pair
+    of texts that render different SQL but read the same would skip a needed rebuild and leave Gold stale. Asserts
+    the cases listed next to sql_code(): SQL_CODE_DIFFER read differently, SQL_CODE_SAME the same, SQL_CODE_NONE
+    as None (the file counts by its bytes)."""
+    from warehouse import changed
+
+    def reading(text: str) -> str:
+        code = changed.sql_code(text)
+        return "bytes:" + text if code is None else code
+
+    problems = []
+    for one, other in changed.SQL_CODE_DIFFER:
+        if reading(one) == reading(other):
+            problems.append(f"warehouse/changed.py: sql_code() reads {one!r} and {other!r} the same")
+    for one, other in changed.SQL_CODE_SAME:
+        if changed.sql_code(one) is None or changed.sql_code(one) != changed.sql_code(other):
+            problems.append(f"warehouse/changed.py: sql_code() reads {one!r} and {other!r} differently")
+    for text in changed.SQL_CODE_NONE:
+        if changed.sql_code(text) is not None:
+            problems.append(f"warehouse/changed.py: sql_code() must read {text!r} as None (count the bytes)")
     return problems
 
 
@@ -326,8 +418,8 @@ def gold_list(files: list[Path]) -> list[str]:
 
 
 GOLD_BLOCK_TAG = re.compile(r"tags\s*=\s*\[[^\]]*['\"]gold_block['\"]")
-GOLD_BLOCK_LIST = re.compile(r"macro poc_legacy_block_models\(\).*?endmacro", re.S)
-GOLD_ACTIVATED = re.compile(r"macro poc_legacy_activated_blocks\(\).*?endmacro", re.S)
+# The shared block lists of macros/poc_blocks.sql, emptied into the sources' own files on 27 November; they stay gone.
+GOLD_SHARED_LISTS = re.compile(r"macro\s+(poc_legacy_block_models|poc_legacy_activated_blocks)\s*\(")
 GOLD_BLOCK_EXEMPT = {"poc_build_check"}  # reads the blocks; not a block
 # Per-source registration (docs/source-registration.md): warehouse/macros/sources/<source_system>.sql
 SOURCE_MACROS = Path("warehouse/macros/sources")
@@ -415,11 +507,11 @@ def value_ranges(files: list[Path]) -> list[str]:
 
 def gold_blocks(files: list[Path]) -> list[str]:
     """Every Gold build stage model (models/gold/poc_build_*.sql except poc_build_check) is tagged `gold_block`
-    and declared exactly once: registered by its source (poc_source__<source_system>() in
-    warehouse/macros/sources/<source_system>.sql) or, for sources older than D34, listed in
-    `poc_legacy_block_models()` (warehouse/macros/poc_blocks.sql); the tagged models are exactly the declared
-    ones, and each declared source_system has activated blocks. warehouse/changed.py lets a waiting block's
-    children build; poc_observations() unions only the declared blocks."""
+    and declared exactly once, registered by its source (poc_source__<source_system>() in
+    warehouse/macros/sources/<source_system>.sql); the tagged models are exactly the declared ones, and each
+    registration has activated blocks. The shared lists of macros/poc_blocks.sql (poc_legacy_block_models,
+    poc_legacy_activated_blocks) do not come back. warehouse/changed.py lets a waiting block's children build;
+    poc_observations() unions only the declared blocks."""
     stages, tagged = set(), set()
     for f in files:
         if f.parts[:3] != ("warehouse", "models", "gold") or f.suffix != ".sql" or not (ROOT / f).exists():
@@ -428,21 +520,19 @@ def gold_blocks(files: list[Path]) -> list[str]:
             stages.add(f.stem)
         if GOLD_BLOCK_TAG.search((ROOT / f).read_text()):
             tagged.add(f.stem)
-    macros = (ROOT / "warehouse/macros/poc_blocks.sql").read_text()
-    macro = GOLD_BLOCK_LIST.search(macros)
-    legacy = dict(re.findall(r"^\s*(\w+):(\w+)\s*$", macro.group(0), re.M)) if macro else {}
-    activated = GOLD_ACTIVATED.search(macros)
     registered, problems = registrations(files)
-    entries = dict(legacy)
+    for f in files:
+        if f.parts[:2] == ("warehouse", "macros") and f.suffix == ".sql" and (ROOT / f).exists():
+            problems += [
+                f"{f}: macro {name}: a Gold block is registered in {SOURCE_MACROS}/<source_system>.sql, not in a "
+                "shared list (docs/source-registration.md)"
+                for name in GOLD_SHARED_LISTS.findall((ROOT / f).read_text())
+            ]
+    entries: dict[str, str] = {}
     for source, entry in sorted(registered.items()):
         model = entry["block_model"]
         if model is None:
             continue
-        if source in legacy.values():
-            problems.append(
-                f"poc_source__{source}: {source} already has a Gold block in poc_legacy_block_models(); a source "
-                "is declared in one of the two places"
-            )
         if model in entries:
             problems.append(f"Gold block {model} is declared twice (poc_source__{source} and {entries[model]})")
         entries[model] = source
@@ -453,11 +543,6 @@ def gold_blocks(files: list[Path]) -> list[str]:
     problems += [f"{m} is a Gold build stage but not declared: {declare}" for m in stages - set(entries)]
     problems += [f"{m} is tagged gold_block but not declared: {declare}" for m in tagged - set(entries)]
     problems += [f"{m} is declared a Gold block but not tagged gold_block" for m in set(entries) - tagged]
-    problems += [
-        f"poc_legacy_activated_blocks(): no blocks of {source} ({m})"
-        for m, source in legacy.items()
-        if not activated or f"'{source}'" not in activated.group(0)
-    ]
     problems += scoped_metrics(files, entries)
     return sorted(problems)
 
@@ -1186,6 +1271,7 @@ SEED_KEYS = {
     "kpi_measure": ["kpi_key", "source_system", "measure_key_pattern"],
     "kpi_v2_map": ["v2_key", "source_key"],
     "licence": ["licence_key"],
+    "measure_name": ["measure_key"],
     "news_outlet": ["outlet_key"],
     "sex": ["sex_key"],
     "source": ["source_key"],
@@ -1203,6 +1289,12 @@ SEED_ROW_OWNER = {
     "kpi_measure": "source_system",
     "kpi_v2_map": "source_key",
     "unit_map": "source_system",
+}
+# Optional trailing columns of a list kept per source: a file may leave them out (its rows then have none), so a
+# column added to the published contract does not fail the source pull requests opened before it. A file that has
+# the column has it at the end of the header, as _shared.csv does.
+SEED_ROWS_OPTIONAL = {
+    "unit": ["symbol_en"],  # #2556: English symbol where `symbol` is a Polish word or abbreviation
 }
 # Rows of _shared.csv when each list was split: the file holds the rows from before the split and takes no new
 # ones (two pull requests appending to it would conflict again). Lower a number when rows leave the file.
@@ -1316,11 +1408,22 @@ def seed_rows_problems(name: str, texts: dict[str, str], sources: set[str], mode
                 value = tuple(row[i] for i in at_key)
                 if keys.setdefault(value, stem) != stem:
                     problems.append(f"{where}: {', '.join(value)} is also in {folder}/{keys[value]}.csv")
+        if name == "unit" and "symbol_en" in table[0]:
+            at_symbol, at_en = table[0].index("symbol"), table[0].index("symbol_en")
+            problems += [
+                f"{where} row {number}: symbol {row[at_symbol]!r} is a Polish abbreviation; give symbol_en (#2556)"
+                for number, row in enumerate(table[1:], start=2)
+                if row[at_symbol].endswith(".") and not row[at_en]
+            ]
+    optional = SEED_ROWS_OPTIONAL.get(name, [])
     first = headers.get(seed_rows.SHARED) or next(iter(headers.values()), [])
+    base = [column for column in first if column not in optional]
     problems += [
-        f"{folder}/{stem}.csv: the header differs from the other files of the list ({','.join(first)})"
+        f"{folder}/{stem}.csv: the header differs from the other files of the list ({','.join(first)}"
+        + (f"; {', '.join(optional)} may be left out" if optional else "")
+        + ")"
         for stem, header in headers.items()
-        if header != first
+        if header[: len(base)] != base or any(column not in optional for column in header[len(base) :])
     ]
     return problems
 

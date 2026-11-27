@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-institutions,inst.,institutions,instytucje,false,institutions,1
-study_programmes,kier.,study programmes,kierunki studiów,false,study_programmes,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+institutions,inst.,institutions,instytucje,false,institutions,1,institutions
+study_programmes,kier.,study programmes,kierunki studiów,false,study_programmes,1,programmes

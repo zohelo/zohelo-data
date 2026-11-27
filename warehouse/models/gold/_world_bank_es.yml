@@ -1,0 +1,24 @@
+version: 2
+models:
+  - name: poc_build_world_bank_es
+    description: >-
+      Build stage — World Bank Enterprise Surveys (register GL-010) via World Bank Data360 WB_ES, block wb_es: the
+      all-firms indicators (WB_ES_T_*) of every economy and survey year, totals only (sector, firm size and other
+      breakdowns '_T'), one measure per indicator and published unit (% of firms, %, days, index, score, count,
+      years, hours, weeks, months), annual with irregular survey years, values as published; breakdowns and the
+      manufacturing- or services-only indicators stay in Silver; licence unresolved (internal).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_firms_bribery_incidence
+    description: KPI firms_bribery_incidence (draft) from gold.build_world_bank_es (macros/poc_metrics.sql).
+  - name: poc_metrics_firms_finance_constraint
+    description: KPI firms_finance_constraint (draft) from gold.build_world_bank_es (macros/poc_metrics.sql).
+  - name: poc_metrics_operating_licence_days
+    description: KPI operating_licence_days (draft) from gold.build_world_bank_es (macros/poc_metrics.sql).

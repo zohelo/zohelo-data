@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: un_sdg
+  description: UN Global SDG Indicators Database (register GL-018), the release's bulk CSV from the database archive page
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/un_sdg/
+    loaded_by: ingestion/to_bronze/un_sdg/
+    config: ingestion/sources/un_sdg.yaml
+  tables:
+  - name: un_sdg_observations
+    description: >-
+      Every row of the newest copy of entity alldata_csv (<release>_AllData_After_<date>_CSV.zip): one per series record
+      x indicator it is listed under, all areas, years and disaggregations, values as published text (the CSV's empty
+      mark NA included); the disaggregation columns as one JSON text `dimensions` (name -> code, sorted, NA left out);
+      partitioned by entity.
+  - name: un_sdg_rejected_files
+    description: Files of un_sdg the Bronze decoder rejected, with the reason.

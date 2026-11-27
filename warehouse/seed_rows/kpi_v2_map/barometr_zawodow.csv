@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+occupations_deficit_forecast,labour,A,occupations_deficit_forecast,barometr_zawodow,national and voivodeship posters,barometr_zawodow:forecast:occupations:deficyt,A,PL;VOIV,,none,neutral,ready,"forecast years 2016 on; voivodeship counts do not add up to Poland (own list); count of published forecast classifications, not an observation; licence unresolved (internal)"

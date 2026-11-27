@@ -26,3 +26,21 @@ faostat as (
     left join geo as g on g.level_name = 'country' and m.iso2 = g.geography_key
 )
 {% endmacro %}
+
+{# FAOSTAT blocks (gold.build_faostat): one per domain item × element; areas: EU27 members (M49, macro
+   poc_m49_eu27), FAO aggregates 5707 European Union (27) and 5000 World. #}
+{% macro poc_faostat_blocks() %}
+    select * from (
+        values
+        ('emissions_totals', '6829', '723113', 'GHG emissions, all sectors without LULUCF, CO2eq (AR5) (FAOSTAT)'),
+        ('land_use', '6601', '5110', 'Land area (FAOSTAT)')
+    ) as t (entity, item_code, element_code, block_name)
+{% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__faostat() %}
+    {{ return({
+        'block_model': 'poc_build_faostat',
+        'activated': "select 'faostat', entity || ':' || item_code || '.' || element_code, block_name from (" ~ poc_faostat_blocks() ~ ")",
+    }) }}
+{% endmacro %}

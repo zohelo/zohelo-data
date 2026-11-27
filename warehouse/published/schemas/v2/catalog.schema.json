@@ -272,6 +272,10 @@
           "symbol": {
             "type": "string"
           },
+          "symbol_en": {
+            "type": "string",
+            "minLength": 1
+          },
           "name_en": {
             "type": "string"
           },

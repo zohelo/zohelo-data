@@ -198,7 +198,8 @@ def dbw_block(entity: str) -> str:
 # small tables the build stage reads (relation -> (namespace, table, columns, filter); the filter keeps
 # the rows of one source: a value of `source_system`, or (column, value); the column is then dropped).
 # Optional: `map_model` (a model run once per run over the lookups; its rows replace `geo_map`, so a
-# source can map its codes by rule and the build stage and the changed-map check read the same map),
+# source can map its codes by rule and the build stage and the changed-map check read the same map; `map_views`
+# names models created as views for it, view -> model: a shared code list such as gold_iso3166_numeric.sql),
 # `local_input` (the block's Silver files, and its files of the `with` tables, are downloaded once and
 # every step reads the local copy: one GET per file instead of range requests from each step),
 # `not_loaded` (a model that counts the Silver rows the build stage leaves out, by reason, for the run
@@ -380,6 +381,53 @@ SOURCES.update(
         )
     }
 )
+# NBP balance of payments and UN WPP: one Silver dbt table each, every series by rule; the curated build_nbp_bop and
+# build_un_wpp stay the KPI layer. NBP BOP is Poland's own accounts (geography PL, no lookup, as NBP's rates); UN WPP
+# maps its locations as the curated stage does.
+SOURCES.update(
+    {
+        "nbp_bop": {
+            "tables": {"nbp_bop_observations": (("silver", "nbp_bop_observations"), "gold_nbp_bop_build")},
+            "lookups": {},
+            "keyed_by": (),
+        },
+        "un_wpp": {
+            "tables": {
+                "un_wpp_demographic_indicators": (("silver", "un_wpp_demographic_indicators"), "gold_un_wpp_build")
+            },
+            "lookups": _area_map("un_wpp"),
+            "keyed_by": ("geo_map",),
+        },
+    }
+)
+# Polish public finance from the Ministry of Finance: the public debt and State Treasury debt workbooks (every sheet,
+# block and item) and the state budget execution reports (every line of table 1), one Silver dbt table each, every
+# series by rule; the curated build_public_finance (hand-picked sheets and lines, with KRUS, which it holds whole)
+# stays the KPI layer. Poland's own accounts: geography PL, no lookup, as NBP's balance of payments.
+SOURCES.update(
+    {
+        source: {"tables": {table: (("silver", table), f"gold_{source}_build")}, "lookups": {}, "keyed_by": ()}
+        for source, table in (
+            ("mf_public_debt", "public_debt"),
+            ("mf_treasury_debt", "treasury_debt"),
+            ("mf_state_budget", "budget_execution"),
+        )
+    }
+)
+# MF local-government budget summaries (every item of each unit type's DW and ZN workbook; Poland's national totals per
+# unit type, geography PL, no lookup) and ENTSOG physical gas flows (every point and direction of GAZ-SYSTEM, area by
+# the operator's map row): one Silver dbt table each, every series by rule; the curated build_mf_jst_budgets (four
+# totals) and build_entsog (direction totals, point groups, monthly sums) stay the KPI layer.
+SOURCES["mf_jst_budgets"] = {
+    "tables": {"mf_jst_budget_summary": (("silver", "mf_jst_budget_summary"), "gold_mf_jst_budgets_build")},
+    "lookups": {},
+    "keyed_by": (),
+}
+SOURCES["entsog"] = {
+    "tables": {"entsog_physical_flow": (("silver", "entsog_physical_flow"), "gold_entsog_build")},
+    "lookups": _area_map("entsog"),
+    "keyed_by": ("geo_map",),
+}
 SOURCES["world_bank_wgi"] = {
     "tables": {"wgi_observations": (("silver", "wgi_observations"), "gold_world_bank_wgi_build")},
     "lookups": {
@@ -396,6 +444,7 @@ SOURCES["undata"] = {
     },
     "keyed_by": ("geo_map",),
     "map_model": "gold_undata_map",  # M49 country codes through ISO 3166-1 (numeric -> alpha-3 -> country)
+    "map_views": {"iso3166_numeric": "gold_iso3166_numeric"},
 }
 # UNCTAD Data Hub: nine Silver dbt tables of one shape (macros/unctad.sql), each one block, all through one build
 # stage; every measure by rule. The curated build_unctad stays the KPI layer.
@@ -416,6 +465,45 @@ SOURCES["unctad"] = {
     },
     "lookups": _area_map("unctad"),
     "keyed_by": ("geo_map",),
+}
+# UNESCO UIS, World Bank EdStats and GEM, OWID (#3314): one Silver dbt table each, every series by rule; the curated
+# build_<source> models (EU27 members, one frequency per GEM series, OWID countries from 1900) stay the KPI layer.
+SOURCES.update(
+    {
+        source: {
+            "tables": {table: (("silver", table), f"gold_{source}_build")},
+            "lookups": _area_map(source),
+            "keyed_by": ("geo_map",),
+        }
+        for source, table in (
+            ("unesco_uis", "unesco_uis_observations"),
+            ("world_bank_edstats", "edstats_pisa"),
+            ("world_bank_gem", "gem_observations"),
+        )
+    }
+)
+SOURCES["owid"] = {
+    "tables": {"owid_observations": (("silver", "owid_observations"), "gold_owid_build")},
+    "lookups": {
+        **_area_map("owid"),
+        "charts": ("silver", "owid_charts", ("chart", "short_name", "last_updated"), None),
+    },
+    "keyed_by": ("geo_map",),
+}
+
+
+# WHO data.who.int: one Silver dbt table (two indicator files), every series and area by rule; areas by M49 code
+# through ISO 3166-1 like UNdata (gold_who_map.sql: the curated map keys the EU27 members and World only). The
+# curated build_who (EU27 members and World) stays the KPI layer.
+SOURCES["who"] = {
+    "tables": {"who_observations": (("silver", "who_observations"), "gold_who_build")},
+    "lookups": {
+        **_area_map("who"),
+        "areas": ("gold", "dim_geography", ("geography_key", "iso3", "level_name"), None),
+    },
+    "keyed_by": ("geo_map",),
+    "map_model": "gold_who_map",
+    "map_views": {"iso3166_numeric": "gold_iso3166_numeric"},
 }
 
 
@@ -449,6 +537,8 @@ def export_lookups(cat, source: str, directory: Path) -> tuple[dict[str, str], d
         try:
             for name, path in paths.items():
                 con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{path.replace(chr(39), '')}')")
+            for name, model in spec.get("map_views", {}).items():
+                con.execute(f"CREATE VIEW {name} AS\n" + (MODELS / f"{model}.sql").read_text(encoding="utf-8"))
             data = con.sql((MODELS / f"{spec['map_model']}.sql").read_text(encoding="utf-8")).to_arrow_table()
         finally:
             con.close()
@@ -603,7 +693,7 @@ def model_digest(source: str) -> str:
     digest = sha256()
     spec = SOURCES[source]
     stages = sorted(set(build_stages(source).values()))
-    rules = (spec.get("map_model"), *spec.get("prepare", {}).values(), *stages)
+    rules = (spec.get("map_model"), *spec.get("map_views", {}).values(), *spec.get("prepare", {}).values(), *stages)
     for model in (*(m for m in rules if m), *(t["model"] for t in TABLES.values())):
         digest.update((MODELS / f"{model}.sql").read_bytes())
     return digest.hexdigest()[:12]

@@ -1,9 +1,9 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-subscriptions,abon.,subscriptions,abonamenty,false,subscriptions,1
-pct_households,% gosp. dom.,% of households,% gospodarstw domowych,true,pct,1
-kbit_s,kbit/s,kilobits per second,kilobity na sekundę,false,kbit_s,1
-mbit_s,Mbit/s,megabits per second,megabity na sekundę,false,kbit_s,1000
-gb_per_subscription,GB/abon.,gigabytes per subscription,gigabajty na abonament,false,gb_per_subscription,1
-eb_per_year,EB/rok,exabytes per year,eksabajty na rok,false,eb_per_year,1
-ppp_usd,$ PPP,PPP international dollars,dolary międzynarodowe PPP,false,ppp_usd,1
-pct_gni_per_capita,% DNB na os.,% of GNI per person,% DNB na osobę,true,pct,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+subscriptions,abon.,subscriptions,abonamenty,false,subscriptions,1,subscriptions
+pct_households,% gosp. dom.,% of households,% gospodarstw domowych,true,pct,1,% households
+kbit_s,kbit/s,kilobits per second,kilobity na sekundę,false,kbit_s,1,
+mbit_s,Mbit/s,megabits per second,megabity na sekundę,false,kbit_s,1000,
+gb_per_subscription,GB/abon.,gigabytes per subscription,gigabajty na abonament,false,gb_per_subscription,1,GB/subscription
+eb_per_year,EB/rok,exabytes per year,eksabajty na rok,false,eb_per_year,1,EB/year
+ppp_usd,$ PPP,PPP international dollars,dolary międzynarodowe PPP,false,ppp_usd,1,
+pct_gni_per_capita,% DNB na os.,% of GNI per person,% DNB na osobę,true,pct,1,% GNI per capita

@@ -244,7 +244,7 @@
     }
   ],
   "units": [
-    {"unit_key": "persons", "symbol": "os.", "name_en": "persons", "name_pl": "osoby", "is_rate": false},
+    {"unit_key": "persons", "symbol": "os.", "symbol_en": "persons", "name_en": "persons", "name_pl": "osoby", "is_rate": false},
     {
       "unit_key": "mln_ncu",
       "symbol": "mln",

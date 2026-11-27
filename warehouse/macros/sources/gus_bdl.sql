@@ -111,3 +111,60 @@ gus_bdl as (
     select * from gus_bdl_terc
 )
 {% endmacro %}
+
+{% macro poc_bdl_blocks() %}
+    select * from (
+        values
+        ('P2137', 'Ludność wg grup wieku i płci', 'LUDNOŚĆ / STAN LUDNOŚCI'),
+        ('P1873', 'Ruch naturalny wg płci', 'LUDNOŚĆ / URODZENIA I ZGONY'),
+        ('P2425', 'Gęstość zaludnienia oraz wskaźniki', 'LUDNOŚĆ / STAN LUDNOŚCI'),
+        ('P2392', 'Stopa bezrobocia rejestrowanego', 'RYNEK PRACY / BEZROBOCIE REJESTROWANE'),
+        ('P2497', 'Przeciętne miesięczne wynagrodzenia brutto', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / WYNAGRODZENIA'),
+        ('P3824', 'Mieszkania oddane do użytkowania', 'PRZEMYSŁ I BUDOWNICTWO / BUDOWNICTWO MIESZKANIOWE'),
+        ('P1410', 'Powierzchnia', 'PODZIAŁ TERYTORIALNY / POWIERZCHNIA GEODEZYJNA KRAJU (DANE GUGIK)'),
+        -- zohelo-bi first slice, every source per KPI (O31, #2592): Poland and voivodeships only
+        ('P2955', 'Wskaźnik cen towarów i usług konsumpcyjnych (COICOP 1999, do 2025)', 'CENY / WSKAŹNIKI CEN'),
+        ('P2496', 'Wskaźnik cen towarów i usług konsumpcyjnych (COICOP 1999, kwartalne, do 2025)', 'CENY / WSKAŹNIKI CEN'),
+        ('P4635', 'Wskaźniki cen towarów i usług konsumpcyjnych (COICOP 2018, kwartalne, od 2026)', 'CENY / WSKAŹNIKI CEN'),
+        ('P2359', 'Współczynnik aktywności zawodowej (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2360', 'Wskaźnik zatrudnienia (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2361', 'Stopa bezrobocia (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2961', 'Bezrobotni zarejestrowani wg płci (dane miesięczne)', 'RYNEK PRACY / BEZROBOCIE REJESTROWANE'),
+        ('P4334', 'Zarejestrowani bezrobotni na 1 ofertę pracy', 'RYNEK PRACY / BEZROBOCIE REJESTROWANE'),
+        ('P2730', 'Przeciętne dalsze trwanie życia', 'LUDNOŚĆ / TRWANIE ŻYCIA'),
+        ('P2346', 'Współczynnik dzietności i reprodukcji brutto', 'LUDNOŚĆ / URODZENIA I ZGONY'),
+        ('P2426', 'Wskaźniki obciążenia demograficznego', 'LUDNOŚĆ / STAN LUDNOŚCI'),
+        ('P1869', 'Przeciętny miesięczny dochód rozporządzalny na 1 osobę', 'BUDŻETY GOSPODARSTW DOMOWYCH'),
+        ('P2861', 'Emeryci i renciści', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
+        ('P2860', 'Przeciętna miesięczna emerytura i renta brutto', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / EMERYTURY I RENTY'),
+        ('P2862', 'Nakłady inwestycyjne i wartość brutto środków trwałych', 'INWESTYCJE I ŚRODKI TRWAŁE'),
+        ('P3502', 'Produkt krajowy brutto ogółem, dynamika', 'RACHUNKI REGIONALNE / PRODUKT KRAJOWY BRUTTO'),
+        -- slice needs-block rows (O36, #2743): Poland and voivodeships only
+        ('P2656', 'Osoby dorosłe (25-64) uczestniczące w kształceniu lub szkoleniu (BAEL, średnioroczne)', 'RYNEK PRACY / AKTYWNOŚĆ EKONOMICZNA (BAEL)'),
+        ('P2713', 'Wskaźniki zasięgu ubóstwa - % osób w gosp. dom. o wydatkach poniżej granicy ubóstwa', 'BUDŻETY GOSPODARSTW DOMOWYCH / UBÓSTWO'),
+        ('P2692', 'Produkcja sprzedana przemysłu wg PKD 2007 (dane kwartalne)', 'PRZEMYSŁ I BUDOWNICTWO / PRODUKCJA PRZEMYSŁOWA'),
+        ('P2721', 'Produkcja sprzedana budownictwa wg PKD 2007 (dane kwartalne)', 'PRZEMYSŁ I BUDOWNICTWO / BUDOWNICTWO'),
+        ('P2837', 'Pracujący w sektorze przedsiębiorstw (dane krótkookresowe)', 'RYNEK PRACY / PRACUJĄCY'),
+        ('P4610', 'Mediana wynagrodzeń miesięcznych brutto (Rozkład wynagrodzeń w gospodarce narodowej)', 'WYNAGRODZENIA I ŚWIADCZENIA SPOŁECZNE / WYNAGRODZENIA'),
+        ('P3788', 'Średnia cena za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych', 'GOSPODARKA MIESZKANIOWA / CENY LOKALI MIESZKALNYCH'),
+        ('P3794', 'Średnia cena za 1 m2 lokali mieszkalnych sprzedanych w ramach transakcji rynkowych (kwartalne)', 'GOSPODARKA MIESZKANIOWA / CENY LOKALI MIESZKALNYCH')
+    ) as t (subgroup_id, block_name, subject_path)
+{% endmacro %}
+
+{# BDL label positions (after the period label is taken out) that name the measure although some variables
+   say "ogółem" there: the market of the dwelling prices, so the secondary market is a measure of its own. #}
+{% macro poc_bdl_measure_positions() %}
+    select * from (
+        values
+        ('P3788', 1),
+        ('P3794', 1)
+    ) as t (subgroup_id, position)
+{% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__gus_bdl() %}
+    {{ return({
+        'block_model': 'poc_build_bdl',
+        'activated': "select 'gus_bdl', subgroup_id, block_name from (" ~ poc_bdl_blocks() ~ ")",
+    }) }}
+{% endmacro %}

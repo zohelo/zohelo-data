@@ -1,0 +1,41 @@
+source_system: kowr_markets
+description: "KOWR weekly grain market reports — FOB export prices, EU purchase prices by member state and Polish commodity exchange offers (PDF tables, gov.pl)"
+
+# Extraction strategy (docs/landing.md). Register PLS-033. KOWR publishes its weekly market reports only as PDF
+# attachments of gov.pl pages: https://www.gov.pl/web/kowr/raporty-tygodniowe (latest four weeks of grain, meat, dairy
+# and the combined report) and the archive https://www.gov.pl/web/kowr/Rynek-zboz (175 grain reports, March 2023 to
+# about five weeks back); no spreadsheet, no dane.gov.pl dataset (Dev probes 45826667517, 45895465874). Entity = one
+# grain report week (grain_<Monday yyyymmdd>), version = the server's Last-Modified; a week is landed once, the latest
+# page's weeks are read again each run (a replaced file lands as a new version). 5 s between attachment requests.
+# Restart unit: one file (ingestion/to_landing/kowr_markets/). Bronze reads three tables of the text layer with pypdf
+# (ingestion/to_bronze/kowr_markets/). Left out: the meat, dairy and combined reports, the ZSRIR weekly price table of
+# the grain report (in mrirw_zsrir's source), its charts and narrative (MATIF from Kaack Terminhandel, GUS prices).
+extraction:
+  initial: bulk
+  production: snapshot                    # one file per report week; a replaced file is a new version of the week
+  incremental_policy: changed_since_last  # weeks not landed, plus the latest page's weeks (SHA-256)
+  schedule: # UTC; the grain report of week N appears on Monday of week N+2 (~14 UTC, Last-Modified of weeks 41 and 45
+    # of 2026); one run a week on Tuesday morning (O46; the run ends with Bronze, Silver and Gold on Sunday)
+    - {cron: "25 9 * * 2", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/kowr_markets/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.kowr_markets_cells, bronze.kowr_markets_rejected_files]
+silver: [silver.kowr_markets_fob_prices, silver.kowr_markets_eu_prices, silver.kowr_markets_exchange_offers]
+gold: [gold.build_kowr_markets]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); about 1.5 x the rows of Dev trial 45920665418 (Mar 2023 to
+  # Nov 2026, 149 of 179 reports loaded); growth about 9 FOB rows, 84 EU rows and 5 exchange rows a week
+  kowr_markets_fob_prices: {rows: 1750}  # 1,158
+  kowr_markets_eu_prices: {rows: 18500}  # 12,096
+  kowr_markets_exchange_offers: {rows: 1100}  # 710
+  poc_build_kowr_markets: {rows: 1650}  # 1,090
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): about 180 PDFs of under 1 MB and some 90,000 Bronze cells, one new file a week;
+# small, so every layer is rebuilt in full.
+refresh: {mode: full, decided: "D32 + #457"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
