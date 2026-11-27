@@ -579,7 +579,11 @@ def kpi_entry(
 def catalog_json(entries: list[dict[str, Any]], generated_at: str) -> dict[str, Any]:
     """catalog/catalog.json from the KPI entries and the seeds domain, unit, source, licence; pure (no R2)."""
     domains = [{**d, "parent_key": d["parent_key"] or None, "sort": int(d["sort"])} for d in seed("domain")]
-    units = [{**u, "is_rate": u["is_rate"] == "true"} for u in seed("unit")]
+    # symbol_en (#2556, optional): only where `symbol` is a Polish word; left out when empty or not in the row's file.
+    units = [
+        {**{k: v for k, v in u.items() if k != "symbol_en" or v}, "is_rate": u["is_rate"] == "true"}
+        for u in seed("unit")
+    ]
     licences = [
         {**lic, "commercial_ok": lic["commercial_ok"] == "true", "share_alike": lic.get("share_alike") == "true"}
         for lic in seed("licence")

@@ -1,0 +1,55 @@
+id: CD-003
+name: Financial Modeling Prep API
+short_name: Financial Modeling Prep
+provider: Financial Modeling Prep
+status: reviewing
+family: I
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [financial-markets, company-fundamentals, corporate-filings]
+entities: [security, enterprise, filing]
+granularity: Security quotes, statements, company profiles, estimates, news and filing-related endpoints by plan.
+coverage: History varies by endpoint and subscription; no blanket depth should be assumed.
+access:
+  endpoint: https://site.financialmodelingprep.com/developer/docs
+  kind: api
+  interfaces: [API, WebSocket]
+  auth: Account and API key; licensed tier/order form governs use.
+  cost: mixed
+  limits: Plan and endpoint specific; unknown until order form review.
+licence:
+  status: restricted
+  notes: 'Terms: https://site.financialmodelingprep.com/terms-of-service (not readable on 26 Nov 2026: robots.txt of
+    site.financialmodelingprep.com answered HTTP 403 to the GitHub runner, not worked around). By the registration
+    reading, the default terms restrict personal plans and redistribution, and public apps, client dashboards and
+    derived products need a separate licence. No reuse right or attribution sentence is known. Not reusable for public
+    display: stays internal.'
+updates: Endpoint-specific market updates; fundamentals follow filings and may be restated.
+ingestion:
+  history: 'PROPOSAL: licensed endpoint inventory first, then bounded historical loads.'
+  incremental: 'PROPOSAL: poll updated filings/quotes and restate recent periods.'
+  identifiers: Symbol/CIK/ISIN when present; preserve filing accession and vendor company IDs.
+modelling:
+  notes: Separate reported facts, vendor-normalized statements and estimates.
+  overlap: Overlaps SEC, exchange feeds and other financial aggregators.
+research:
+  priority: conditional
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - 'Owner question (paid licence): Financial Modeling Prep sells its API by plan, and by the registration reading
+    its personal plans exclude redistribution while public apps need a separate licence; its pages now refuse GitHub
+    runners (robots.txt HTTP 403), so the terms cannot be re-read automatically. Buy an FMP commercial licence for
+    zohelo, or park CD-003? Recommendation: park; Polish issuers'' reports come from KNF ESPI and GPW EBI (CD-006,
+    CD-007, built) and entity data from GLEIF (CD-015) and KRS (PLG-012).'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a paid licence, which is an owner question, so the
+    entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+    dev/src_parked1_probe.py, 26 Nov 2026): https://site.financialmodelingprep.com/robots.txt answered HTTP 403, so
+    the terms page, the pricing page and the licensing article were not requested (refusal recorded, not worked
+    around).'
+  - 'Earlier parking reason: vendor API whose default plans restrict redistribution and public display'
+  references:
+  - https://site.financialmodelingprep.com/developer/docs
+  - https://site.financialmodelingprep.com/terms-of-service
+  - https://site.financialmodelingprep.com/insights/platform/can-you-use-fmp-data-in-a-public-app-website-or-client-dashboard

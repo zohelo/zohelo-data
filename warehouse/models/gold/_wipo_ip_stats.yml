@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: poc_build_wipo_ip_stats
+    description: >-
+      Build stage — WIPO IP Statistics (register GL-032), annual 2000-2022 in the files of 2024: patent publications
+      and grants per technology field (with a total of the fields) and industrial designs in applications and
+      registrations per Locarno class, each by filing office and, as a separate measure, by applicant origin; counts
+      as published, summed over the other side (origins or offices); licence restricted (internal).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_patent_grants_filing_office
+    description: KPI patent_grants_filing_office (draft) from gold.build_wipo_ip_stats (macros/poc_metrics.sql).
+  - name: poc_metrics_patent_grants_applicant_origin
+    description: KPI patent_grants_applicant_origin (draft) from gold.build_wipo_ip_stats (macros/poc_metrics.sql).

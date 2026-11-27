@@ -1,0 +1,58 @@
+id: PLG-014
+name: CEIDG and Biznes.gov.pl Data Warehouse/API
+short_name: CEIDG
+provider: Ministry of Economic Development and Technology
+status: approved
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [business registry, entrepreneurship]
+entities: [sole trader, enterprise]
+granularity: Registered entrepreneur/activity records, reports and statistics.
+coverage: Current warehouse; history/change retention require verification.
+access:
+  endpoint: https://dane.biznes.gov.pl/
+  kind: api
+  interfaces: [REST API (CEIDG data warehouse API v2), JSON, HTML]
+  auth: Free account on the CEIDG and Biznes.gov.pl data warehouse is required; API v2 uses a token (see the integrator
+    documentation).
+  cost: free
+  limits: 'API v2: more than 50 requests in 180 s triggers a 180 s pause (HTTP 429); documented optimal interval 3.6 s between
+    requests; page size via limit (default 50).'
+licence:
+  status: unresolved
+  notes: 'Terms: no data licence found. https://dane.biznes.gov.pl/ says "Aby skorzystać z Hurtowni danych CEIDG i Biznes.gov.pl
+    musisz posiadać konto" (an account is required) and its footer says articles on the service without other copyright
+    information "należą do informacji publicznych i udostępniamy je bezpłatnie" (this covers the articles, not the warehouse
+    data). Integrator guide v3.1 (PDF, 3 Sep 2026) states the request limit above. Licence stays unresolved (internal only)
+    until the Ministry of Development and Technology states reuse terms for the warehouse data; sole-trader records carry
+    personal data (public-field allowlist).'
+updates: Current-data service; no CDC guarantee assumed.
+ingestion:
+  history: 'PROPOSAL: after registration/key and terms review, backfill only through documented CEIDG warehouse/API filters;
+    avoid personal/contact fields by default.'
+  incremental: 'PROPOSAL: use documented modification filters as candidates, then reconcile entity snapshots because change
+    retention and CDC guarantees remain unverified.'
+  identifiers: NIP/REGON + CEIDG identifiers
+modelling:
+  notes: Separate person from activity/establishment and minimize personal/contact fields.
+  overlap: Complements KRS; cross-register matches need effective dating.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (26 Nov 2026, sources lane, #2873): will you create the account on the CEIDG and Biznes.gov.pl data
+    warehouse (https://dane.biznes.gov.pl/), obtain an API v2 token and add it as the repository secret SOURCE_CEIDG_API_TOKEN?
+    Every route to the data needs that account: the API v2 takes a token and the site says "Aby skorzystać z Hurtowni danych
+    CEIDG i Biznes.gov.pl musisz posiadać konto"; no workflow passes a CEIDG secret (.github/workflows/dev.yml and
+    pipeline.yml on main, 26 Nov 2026), so nothing can be extracted or proven. The route is approved; the build starts
+    when the secret exists and keeps business attributes and counts only (no names or addresses of natural persons).
+    Open issue for this question: #3049.'
+  - 'Licence unresolved: no reuse terms for the data; personal-data allowlist for natural persons'
+  - Document change semantics (current-state service, no CDC)
+  references:
+  - https://dane.biznes.gov.pl/
+  - https://www.biznes.gov.pl/en/portal/034100
+  - https://pliki.biznes.gov.pl/akademia/Hurtownia_danych/HD%20CEIDG%20-%20API%20v2%20Hurtowni%20Danych%20-%20Dokumentacja%20dla%20integrator%C3%B3w%20v3.1.pdf

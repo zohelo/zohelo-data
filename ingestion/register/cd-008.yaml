@@ -1,0 +1,54 @@
+id: CD-008
+name: PAP Biznes ESPI/EBI dissemination portal
+short_name: PAP Biznes ESPI/EBI
+provider: Polish Press Agency (PAP)
+status: parked
+family: I
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [corporate-filings, business-news]
+entities: [issuer, filing, security]
+granularity: Browsable report lists, source reports and company profiles.
+coverage: Current and historical discovery is visible; completeness and retention are undocumented.
+access:
+  endpoint: https://biznes.pap.pl/espi
+  kind: web
+  interfaces: [HTML]
+  auth: Public browser access; full PAP products may require commercial terms.
+  cost: mixed
+  limits: No public API or bulk allowance documented.
+licence:
+  status: restricted
+  notes: 'Terms: https://biznes.pap.pl/regulamin (read by the runner 26 Nov 2026): a guest may use the content only for
+    personal use ("Gość uprawniony jest jedynie do skorzystania z Treści na osobisty użytek") and acquires no rights
+    "do kopiowania w całości lub części, wprowadzania zmian, przesyłania i publicznego odtwarzania, dalszego
+    udostępniania w sieci Internet, jak i prezentowania lub wykorzystywania Treści, Aplikacji w celach komercyjnych".
+    No reuse right; attribution sentence: none given. Not reusable.'
+updates: Near publication-time display; downstream latency unknown.
+ingestion:
+  history: 'PROPOSAL: use only for metadata reconciliation after permission review.'
+  incremental: 'PROPOSAL: poll cautiously only if authorized; compare with authoritative report IDs.'
+  identifiers: Issuer and ESPI/EBI report identifiers; retain PAP URLs.
+modelling:
+  notes: Mirror dimension only; attachments belong to the filing event.
+  overlap: Downstream copy of ESPI/EBI, so never count it as a second filing.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Contained in: CD-006 `knf_espi` (ESPI reports from KNF''s OAM list; Silver `silver.knf_espi_reports`, Gold
+    `gold.filing_knf_espi`) and CD-007 `gpw_ebi` (EBI reports from GPW''s report list; Gold `gold.filing_gpw_ebi`),
+    both `built` on main (docs/sources/knf_espi.md, docs/sources/gpw_ebi.md). PAP Biznes''s ESPI/EBI pages are a
+    downstream copy of the same reports, and its terms allow personal use only.'
+  - 'Re-review 26 Nov 2026 (Task #2913): still parked, now as contained. Dev probe run 45879796136 (job
+    140115959895, branch test/src-parked-probe, script dev/src_parked1_probe.py, 26 Nov 2026):
+    https://biznes.pap.pl/espi HTTP 200 (report list, "Copyright © PAP SA 2026"); https://biznes.pap.pl/regulamin
+    HTTP 200 (quoted in licence.notes); robots.txt of biznes.pap.pl disallows /api and /node/ among others. No API,
+    bulk file or reuse licence is offered.'
+  - 'Earlier parking reason: news-agency redistribution of company announcements, display only, no automated
+    extraction or republication right'
+  references:
+  - https://biznes.pap.pl/espi
+  - https://biznes.pap.pl/regulamin

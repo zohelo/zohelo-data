@@ -1,0 +1,62 @@
+id: PLG-025
+name: Senate legislative process, sittings, votes and members
+short_name: Senate data
+provider: Chancellery of the Senate
+status: approved
+family: F
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [parliament, legislation]
+entities: [senator, committee, bill, vote]
+granularity: Term, sitting/day, vote, print, senator and legislative-stage records.
+coverage: Current and archived terms; completeness varies.
+access:
+  endpoint: https://www.senat.gov.pl/prace/proces-legislacyjny-w-senacie/
+  kind: web
+  interfaces: [HTML]
+  auth: public browsing; no API, export or feed found
+  cost: free
+  limits: 'None published. robots.txt, read in full by the probe: "User-agent: * Disallow: /gfx/ Disallow: /pdf/ Allow:
+    /*.pdf$ Allow: /*.doc$ Allow: /*.xls$ Allow: /*.rtf$" and "User-agent: Fasterfox Disallow: /". The pages of this route
+    are allowed for every agent.'
+licence:
+  status: unresolved
+  notes: 'Terms: https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/ (read by the probe 12
+    Nov 2026; 9,600 characters). The part captured describes the request procedure (after a request the Head of the Chancellery
+    may make an offer with conditions or fees: "może złożyć wnioskodawcy ofertę zawierającą warunki ponownego wykorzystywania
+    lub informację o wysokości opłat za ponowne wykorzystywanie") and personal-data information. The sentence that sets
+    the conditions for information published on the website was not in the captured part, so reuse is not quoted as allowed:
+    unresolved, internal use only.'
+updates: Event-driven around sittings and legislative work.
+ingestion:
+  history: 'Web route, server-rendered HTML read with plain requests (no browser session): votes per sitting day at /prace/posiedzenia/przebieg,<sitting>,<day>,glosowania.html
+    with a print page per vote (/prace/posiedzenia/glosowanie-drukuj,<vote id>.html); senators at /sklad/senatorowie/senator,<id>,<term>,<slug>.html
+    (102 links for term 11). The home page, the sittings page and the legislative-process page link no API, open-data page,
+    XML, JSON, CSV or RSS. Request pattern: one connection, one request per second, term 11 only, never /gfx/ or /pdf/.
+    The number of sittings and votes of term 11 was not counted: size is measured at the build. Entity = vote (vote id);
+    version = download time.'
+  incremental: New sitting days only (the sittings page lists them); one request per second; senator pages once per month.
+  identifiers: Term, sitting number, day, vote id; senator id.
+modelling:
+  notes: 'kpi false. Smallest Gold selection: votes per sitting and senator attendance for term 11, Poland only, no regional
+    grain. Low value next to the Sejm API (PLG-024). Effort M.'
+  overlap: Same bill appears across Sejm, Senate and ELI stages.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Route decided: polite crawl of public pages that robots.txt allows, following the orchestrator verdict on PR #2878
+    under the owner rule of 12 Nov 2026 (issue #2873). A verdict is not an owner decision: the builder writes the D row
+    in docs/decisions.md, or obtains an owner decision, in the build pull request before any activities entry for this source
+    merges (AGENTS.md "Authorizations").'
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): www.senat.gov.pl answered 200
+    on the home, sittings, votes and senators pages; bip.senat.gov.pl was not readable. Dev probe run 43288930412 (job 131429683337,
+    branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026): robots.txt read in full; the re-use page answered
+    200.'
+  - 'Licence unresolved: the re-use conditions for website content are not quoted yet. Internal build only.'
+  references:
+  - https://www.senat.gov.pl/prace/posiedzenia/
+  - https://www.senat.gov.pl/sklad/senatorowie/
+  - https://www.senat.gov.pl/ponowne-wykorzystywanie-informacji-sektora-publicznego/

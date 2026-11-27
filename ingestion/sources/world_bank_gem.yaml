@@ -23,7 +23,11 @@ archive_policy:
   prune: report
 bronze: [bronze.gem_observations, bronze.gem_rejected_files]
 silver: [silver.gem_observations]
-gold: [gold.build_world_bank_gem]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.gem_observations by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table gem_observations.
+gold: [gold.build_world_bank_gem,
+       gold.world_bank_gem_observations, gold.world_bank_gem_series, gold.world_bank_gem_measures, gold.world_bank_gem_geography,
+       gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   gem_observations: {rows: 127000}  # 84,618: 8 series × EU27 × A/Q/M periods 1987-2026 (Dev trial 43283254888)
   poc_build_world_bank_gem: {rows: 116000}  # 77,656: 8 series × up to 27 members, monthly (GDP quarterly), 1987-2026 (Dev trial 43283254888)
@@ -33,4 +37,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # updated, no changed-since filter; rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2373"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

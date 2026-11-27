@@ -1,0 +1,58 @@
+version: 2
+models:
+  - name: epo_statistics_counts
+    description: >-
+      EPO patent statistics (register EX-004), EPO Technology Dashboard workbooks: European patent applications and
+      granted European patents by country of residence of the first-named applicant (ISO 3166-1 alpha-2 as published),
+      by field of technology (35 WIPO IPC concordance fields and 'Unclassified', all origins), by field and country
+      (named in the header) for each year, and Poland's applications by NUTS 2 region; 2016-2025 in the 2025 edition.
+      Grain: edition x table_code x area_label x field_name (null = all fields) x period_year; every landed edition
+      is kept (editions overlap in years; Gold takes the newest). Residual rows and columns ('Not classified', 'Other
+      countries', 'Unclassified', 'Total') kept as published. Counts as published; empty cells kept with a null value
+      and cell_status. History, counts and trial run: ingestion/sources/epo_statistics.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', edition, table_code, area_label, coalesce(field_name, '_T'), period_year)"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: edition
+        tests: [not_null]
+      - name: table_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [applications_by_country, grants_by_country, applications_by_field, grants_by_field,
+                         applications_by_field_country, grants_by_field_country, poland_regions]
+      - name: indicator
+        tests: [not_null, {accepted_values: {arguments: {values: [applications, grants]}}}]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [applications, patents]}}}]
+      - name: area_label
+        tests: [not_null]
+      - name: sector_name
+        tests:
+          - accepted_values:
+              arguments:
+                values: [Electrical engineering, Instruments, Chemistry, Mechanical engineering, Other fields]
+      - name: field_name
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Electrical machinery, apparatus, energy', Audio-visual technology, Telecommunications,
+                         Digital communication, Basic communication processes, Computer technology,
+                         IT methods for management, Semiconductors, Optics, Measurement,
+                         Analysis of biological materials, Control, Medical technology, Organic fine chemistry,
+                         Biotechnology, Pharmaceuticals, 'Macromolecular chemistry, polymers', Food chemistry,
+                         Basic materials chemistry, 'Materials, metallurgy', 'Surface technology, coating',
+                         Micro-structural and nano-technology, Chemical engineering, Environmental technology,
+                         Handling, Machine tools, 'Engines, pumps, turbines', Textile and paper machines,
+                         Other special machines, Thermal processes and apparatus, Mechanical elements, Transport,
+                         'Furniture, games', Other consumer goods, Civil engineering, Unclassified]
+      - name: period_year
+        tests: [not_null]
+      - name: cell_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, ok_text, missing]}}}]
+      - name: raw_sha256
+        tests: [not_null]

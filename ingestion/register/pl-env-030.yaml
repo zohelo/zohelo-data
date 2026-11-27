@@ -1,0 +1,53 @@
+id: PL-ENV-030
+name: Poznań GTFS and GTFS-Realtime open data
+short_name: Poznań GTFS
+provider: Zarząd Transportu Miejskiego w Poznaniu / Miasto Poznań
+source_system: gtfs_poznan
+status: built
+family: H
+kpi: false
+geography: Poznań service area, Poland
+provider_type: subnational-public
+domains: [public transport, municipal open data]
+entities: [route, trip, stop, vehicle]
+granularity: Static GTFS of ZTM Poznań (9 text files); GTFS-Realtime feeds are live snapshots.
+coverage: The feed covers about two weeks ahead (12-27 Nov 2026 on the probe day); the portal lists earlier files.
+access:
+  endpoint: https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/
+  kind: bulk_file
+  interfaces: [GTFS, ZIP, GTFS-Realtime, protobuf]
+  auth: Public download URLs.
+  cost: Free public access.
+  limits: None published; robots.txt disallows only /wp-admin/.
+licence:
+  status: open-conditional
+  notes: 'Terms: stated on https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/ (read by the probe 12 Nov 2026), section
+    "Zasady udostępniania": "Treści udostępniane są bezwnioskowo i bezpłatnie, na zasadach powszechnego dostępu i stanowią
+    źródło informacji. Warunkami ponownego wykorzystania są: 1. poinformowanie o źródle pozyskania informacji, 2. poinformowanie
+    o ostatniej aktualizacji danych, 3. poinformowanie o przetworzeniu pozyskanych danych." Stated aim: "powszechny i bezpłatny
+    dostęp" for building software for public-transport users. Commercial reuse is not excluded; modification is allowed
+    when stated. Attribution: "Źródło: ZTM Poznań, aktualizacja danych <data>" plus a note when the data were processed.'
+updates: A new file for each timetable period (file name 20261112_20261127.zip); checked daily by third-party catalogues.
+ingestion:
+  history: 'Bulk feature, one stable URL: https://www.ztm.poznan.pl/pl/dla-deweloperow/getGTFSFile (tested: 11,644,722 bytes,
+    application/zip, attachment name 20261112_20261127.zip, no Last-Modified header; 9 text files, 91 MB unzipped; feed_info:
+    "ZTM Poznań", 20261112-20261127). Archive listing: https://www.ztm.poznan.pl/otwarte-dane/gtfsfiles/ (the old paths
+    /pl/dla-deweloperow/index and /gtfsFiles answer 404). GTFS-Realtime: https://www.ztm.poznan.pl/otwarte-dane/gtfs-rt/
+    (out of scope).'
+  incremental: Snapshot; version = attachment file name (validity period); a weekly check is enough.
+  identifiers: feed version, route_id, stop_id, trip_id, service date.
+modelling:
+  notes: kpi false; low Gold value (one city). Same city-GTFS selection and Gold use as PL-ENV-029 (stops, routes, scheduled
+    trips per day). Effort S after the shared pattern exists.
+  overlap: Poznań portal may catalogue the same ZTM producer feeds.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the GTFS file was downloaded
+    and read on a GitHub runner; terms section read.'
+  references:
+  - https://www.ztm.poznan.pl/otwarte-dane/dla-deweloperow/
+  - https://www.ztm.poznan.pl/otwarte-dane/gtfsfiles/
+  - https://www.ztm.poznan.pl/otwarte-dane/gtfs-rt/

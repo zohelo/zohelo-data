@@ -1,0 +1,65 @@
+id: GL-020
+name: WTO Stats
+short_name: WTO Stats
+source_system: wto_stats
+provider: World Trade Organization
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [trade, tariffs, services]
+entities: [country, country-pair, commodity]
+granularity: Dataset-specific economy/partner/product/flow/period observation; tariff grain differs from trade
+  time series.
+coverage: WTO members and broader economies depending dataset; histories vary.
+access:
+  endpoint: https://www.wto.org/english/res_e/statis_e/trade_datasets_e.htm
+  kind: bulk_file
+  interfaces: ['Bulk ZIP/CSV/XLSX files on www.wto.org (OECD-WTO BaTIS, TiSMoS)', 'Timeseries API (api.wto.org, key required:
+      HTTP 401 without)', 'HTML']
+  auth: None for the bulk files; a free API key from apiportal.wto.org for the Timeseries API (not used).
+  cost: free
+  limits: None published for the files.
+licence:
+  status: unresolved
+  notes: 'Terms: WTO "Copyright and permissions" https://www.wto.org/english/info_e/copyrights_permissions_e.htm (linked from
+    apiportal.wto.org, read by the runner 26 Nov 2026): "This site and its contents are the copyright of the World Trade
+    Organization."; "Other material such as official publications can be reproduced for non-commercial purposes provided
+    attribution is given to the WTO and the WTO is informed. Commercial use of materials from the website requires written
+    permission from the WTO." No terms specific to the data files; BaTIS is a joint OECD-WTO dataset. Commercial reuse:
+    not allowed without permission; modification: not stated. Unresolved: internal only. Attribution if published: "Source:
+    WTO, <dataset> (OECD-WTO BaTIS / TiSMoS)".'
+updates: Release calendars and revisions vary; no common cadence found.
+ingestion:
+  history: 'Bulk: the "Bulk download of select statistics" page lists nine files (Dev probe run 45855054117): OECD-WTO_BATIS_data_BPM6-1.zip
+    (534,470,198 bytes, Last-Modified 25 Nov 2026), OECD-WTO_BATIS_codes_BPM6-1.zip (31,374 bytes), the older BPM5 OECD-WTO_BATIS_data.zip
+    (104,034,363 bytes, 2017) and its codes, Tismos_imports.zip, Tismos_exports.zip, Tismos_codes.xlsx, Tismos_addendum_FATS.csv
+    and Tismos.zip ("Download all"; sizes not measured).'
+  incremental: 'Snapshot per file version (Last-Modified/ETag); the BaTIS BPM6 file is rebuilt on update (25 Nov 2026); the
+    BPM5 file is frozen (2017) and loaded once if at all.'
+  identifiers: Reporter, partner, service item (EBOPS 2010), year, flow; TiSMoS adds mode of supply.
+modelling:
+  notes: 'Smallest Gold selection: Poland''s trade in services by partner and EBOPS main item (exports, imports), annual,
+    from BaTIS BPM6; then TiSMoS services trade by mode of supply for Poland. Balanced (estimated) values are not reported
+    statistics: keep the flag. The goods time series of the Timeseries API stay out (key).'
+  overlap: Overlaps UNCTAD services trade (GL-021), Eurostat and OECD trade-in-services data; BaTIS is the reconciled OECD-WTO
+    matrix.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2916): approved for internal build through the bulk files on www.wto.org; the parking
+    reason (terms) does not stop an internal build. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): https://www.wto.org/english/res_e/statis_e/statis_e.htm
+    links "Bulk download of select statistics"; stats.wto.org is a JavaScript shell; https://api.wto.org/timeseries/v1/indicators
+    HTTP 401 (key). Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026): the bulk page lists nine files; HEAD of the first three HTTP 200
+    (sizes above); the copyright page read.'
+  - 'Licence unresolved: non-commercial reproduction with attribution and informing the WTO; internal only until the WTO
+    grants more (non-blocking owner option: write to the WTO, and a free Timeseries API key for goods trade).'
+  - 'Builder: BaTIS BPM6 is 534 MB zipped: stream it and keep Poland as reporter or partner (and EU aggregates) in Silver.'
+  references:
+  - https://timeseries.wto.org/
+  - https://www.wto.org/english/res_e/statis_e/statis_e.htm
+  - https://apiportal.wto.org/
+  - https://ttd.wto.org/docs/Terms_of_Use_WTO_Tariff_and_Trade_Data.pdf

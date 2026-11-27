@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-votings,gł.,votings,głosowania,false,votings,1
-prints,druki,prints,druki,false,prints,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+votings,gł.,votings,głosowania,false,votings,1,votings
+prints,druki,prints,druki,false,prints,1,prints

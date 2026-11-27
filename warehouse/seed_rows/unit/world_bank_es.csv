@@ -1,0 +1,7 @@
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+pct_firms,% firm,% of firms,% firm,true,pct,1,% of firms
+index_0_100,pkt,"index, 0 to 100","indeks, od 0 do 100",true,index_0_100,1,points
+score_0_100,pkt,"score, 0 to 100","wynik, od 0 do 100",true,score_0_100,1,points
+number,,number,liczba,false,number,1,
+hours,godz.,hours,godziny,false,hours,1,hours
+weeks,tyg.,weeks,tygodnie,false,days,7,weeks

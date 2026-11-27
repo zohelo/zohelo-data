@@ -1,0 +1,52 @@
+id: PLG-023
+name: TED Search API and Open Data — Poland-filtered notices
+short_name: TED notices (Poland)
+provider: Publications Office of the European Union
+source_system: ted_notices
+status: built
+family: D
+kpi: true
+geography: multicountry-Europe
+provider_type: international-public
+domains: [public procurement]
+entities: [contracting authority, supplier, procurement notice]
+granularity: EU notice, procedure and lot; filter Poland by buyer/place/country fields.
+coverage: Legacy XML and eForms; eForms apps entered production 2022-11-14.
+access:
+  endpoint: https://api.ted.europa.eu/v3/notices/search
+  kind: api
+  interfaces: [REST API (POST /v3/notices/search), JSON, XML]
+  auth: 'Public: "The Search API does not require a key." (https://docs.ted.europa.eu/api/latest/index.html); keys are only
+    needed to publish notices.'
+  cost: free
+  limits: 'Measured in Dev trial 43344674034: at most 250 notices a page, page x limit at most 15,000, fields x limit at
+    most 10,000; rate limits not published (one request at a time, 1.5 s pause).'
+licence:
+  status: unresolved
+  notes: 'Terms: https://docs.ted.europa.eu/api/latest/search.html names commercial organisations among the users of the
+    Search API and says TED API "allows anonymous access to all services manipulating published notices"; the legal notice
+    page https://ted.europa.eu/en/legal-notice returned HTTP 202 with an empty body from the runner, so the reuse licence
+    and attribution text could not be quoted. Licence stays unresolved until the legal notice is read (expected: Publications
+    Office reuse under Decision 2011/833/EU; do not rely on it before quoting). Restrict the load to Poland (place of performance
+    / buyer country PL).'
+updates: Publication/change notices are event based and version-linked.
+ingestion:
+  history: 'PROPOSAL: use anonymous Search API/bulk access for published Poland-relevant notices; partition legacy XML and
+    post-2022 eForms schemas.'
+  incremental: 'PROPOSAL: retrieve new/change notices by documented query fields and preserve parent/version links; unpublished-notice
+    APIs remain out of scope.'
+  identifiers: publication number + notice/version + procedure/lot IDs
+modelling:
+  notes: Model lifecycle, lots, buyers, winners and values separately.
+  overlap: Overlaps BZP; publication scope/thresholds differ.
+research:
+  priority: review-first
+  evidence: tested
+  connection: not-tested
+  blockers:
+  - Read https://ted.europa.eu/en/legal-notice (browser or another route) and record the licence and attribution text
+  - 'Review person fields in notices: buyer names are not requested until then (a subsidised buyer, legal types org-sub*,
+    can be a natural person running a business, art. 6 Pzp); no review done yet'
+  references:
+  - https://docs.ted.europa.eu/api/latest/index.html
+  - https://docs.ted.europa.eu/api/latest/search.html

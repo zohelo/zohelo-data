@@ -24,7 +24,7 @@ deliverables:
   - Register entry PLG-009 has licence.notes with the terms URL and attribution; status approved
   state: done
   notes:
-  - 'Evidence: licence #1754, register decision #1755 (ingestion/register.yaml status approved)'
+  - 'Evidence: licence #1754, register decision #1755 (ingestion/register/plg-009.yaml status approved)'
 - key: data/src-plg-009/development
   title: MF public debt · Development
   done_when:
@@ -44,7 +44,7 @@ deliverables:
       (stage 4) comes later: quarterly releases.'
     files:
     - create: ingestion/sources/mf_public_debt.yaml
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/plg-009.yaml
     - edit: .github/workflows/pipeline.yml
     - edit: docs/sources.md
     steps:
@@ -57,7 +57,7 @@ deliverables:
       pattern: "/attachment/"}, format raw, version last_modified. When the page links more than one workbook (national and
       EU methodology), declare one entity per workbook (public_debt_national, public_debt_eu) with pick first/last as the
       Dev trial''s link list shows.'
-    - 'Add `source_system: mf_public_debt` to register entry PLG-009 in ingestion/register.yaml.'
+    - 'Add `source_system: mf_public_debt` to register entry PLG-009 in ingestion/register/plg-009.yaml.'
     - Add mf_public_debt to the `source` options list of the workflow_dispatch inputs in .github/workflows/pipeline.yml (alphabetical
       place).
     - 'docs/sources.md: a `mf_public_debt` section like world_bank_wdi''s (route, entity, version, restart unit).'

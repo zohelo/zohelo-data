@@ -1,0 +1,58 @@
+version: 2
+models:
+  - name: wto_stats_services_trade
+    description: >-
+      OECD-WTO Balanced Trade in Services (BaTIS, BPM6; register GL-020; licence unresolved, internal): annual trade in
+      services in millions of US dollars by reporter, partner, flow (X, M) and EBOPS 2010 service item, as published in
+      the newest BaTIS BPM6 release on www.wto.org, for the rows with Poland as reporter or partner and the
+      country-group reporters. Reported, final (with its methodology code) and balanced values side by side, never
+      combined. final_value_methodology_label is null for the three codes the codes workbook does not list (R_OECD,
+      E3, E4: 3,215 rows in Dev trial 45935187389). Grain: reporter_code x partner_code x flow x item_code x year.
+    tests:
+      - unique:
+          column_name: "reporter_code || '|' || partner_code || '|' || flow || '|' || item_code || '|' || year"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [batis_bpm6]}}}]
+      - name: release
+        tests: [not_null]
+      - name: reporter_code
+        tests: [not_null]
+      - name: reporter_name
+        tests: [not_null]
+      - name: reporter_type
+        tests: [not_null, {accepted_values: {arguments: {values: [c, g]}}}]
+      - name: partner_code
+        tests: [not_null]
+      - name: partner_name
+        tests: [not_null]
+      - name: partner_type
+        tests: [not_null, {accepted_values: {arguments: {values: [c, g]}}}]
+      - name: flow
+        tests: [not_null, {accepted_values: {arguments: {values: [X, M]}}}]
+      - name: item_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [S, SA, SB, SC, SC1, SC2, SC3, SC4, SD, SDA, SDB, SE, SF, SG, SH, SI, SI1, SI2, SI3, SJ, SJ1, SJ2,
+                         SJ3, SK, SK1, SK2, SL, SOX, SOX1, SPX1, SPX4]
+      - name: item_name
+        tests: [not_null]
+      - name: item_type
+        tests: [not_null, {accepted_values: {arguments: {values: [s, d]}}}]
+      - name: year
+        tests: [not_null]
+      - name: final_value
+        tests: [not_null]
+      - name: final_value_methodology
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [A, E0, E1, E2, E3, E4, E5, E6, E8.0, E8.1, E8.2, M1.1, M1.2, M1.3, M1.4, M1.5, M2.0, M2.1,
+                         M2.2, M2.3, M8.0, M8.2, M8.3, R_EU_EBOP, R_EU_ITS, R_IMF, R_NAT, R_OECD, W0]
+      - name: balanced_value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

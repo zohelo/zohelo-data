@@ -1,0 +1,49 @@
+id: GL-009
+name: Global Findex Database
+short_name: World Bank Global Findex
+provider: World Bank
+source_system: world_bank_findex
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [financial-inclusion, digital-connectivity, survey]
+entities: [country]
+granularity: Country/indicator/wave and respondent microdata where supplied.
+coverage: Survey waves since 2011; 2025 adds Digital Connectivity Tracker; economy participation varies.
+access:
+  endpoint: https://www.worldbank.org/en/publication/globalfindex
+  kind: bulk_file
+  interfaces: [HTML, bulk-files]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0 for the country-level indicators, https://datacatalog.worldbank.org/search/dataset/0039935
+    ("This dataset is licensed under Creative Commons Attribution 4.0"; World Bank dataset terms https://www.worldbank.org/ext/en/legal/terms-conditions/datasets):
+    copy, modify and distribute for any purpose including commercial use; indicate changes; provided as is. Microdata
+    (https://microdata.worldbank.org/catalog/global-findex) are under the Research Data License: no redistribution
+    or sale, research use only — never ingested or published. Attribution: "Source: The World Bank, Global Findex
+    Database (Demirgüç-Kunt, Klapper, Singer, Ansar)". Indicate changes.'
+updates: Periodic survey waves, not annual; later releases may revise indicators.
+ingestion:
+  history: Archive complete named releases with metadata and vintage.
+  incremental: Reload a named release or affected period after publication; no CDC.
+  identifiers: Use published economy and indicator IDs; preserve survey/round/vintage where applicable.
+modelling:
+  notes: Model observations at stated grain; retain uncertainty, status, unit, source and methodology fields.
+  overlap: Overlaps WDI financial-inclusion indicators and ITU connectivity measures; survey demand-side concepts
+    differ.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Use country-level indicators only; microdata may not be redistributed'
+  references:
+  - https://www.worldbank.org/en/publication/globalfindex
+  - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets
+  - https://datacatalog.worldbank.org/search/dataset/0039935
+  - https://www.worldbank.org/ext/en/legal/terms-conditions/datasets

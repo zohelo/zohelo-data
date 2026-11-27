@@ -22,3 +22,10 @@ total, the bank groups the breakdown `bank_group`. Terms: the KNF site asks for 
 ("Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z linkiem do serwisu
 www.knf.gov.pl."); reuse is not stated, so the licence is `unresolved` and the source stays internal. Schedule:
 Thursdays 09:15 UTC (O46).
+
+**Gold, full coverage (#3371).** Every value of `silver.knf_banking_series` by rule in `gold.knf_banking_*`
+(`gold.observations`, D35; rule in [gold-coverage.md](../gold-coverage.md)): measure = sheet × item path × unit ×
+frequency, the bank group as the breakdown (the whole sector is the total), Poland only, values and units as published
+(`%` cells as stored fractions, unit `share`). Dev trial 46039337512 (Silver built in scratch from production Bronze):
+193,909 rows = Silver, 1,940 series, 536 measures, 0 duplicates by series_key × date_key; every row of the curated
+`build_knf_banking` (2,307) found with the same value.

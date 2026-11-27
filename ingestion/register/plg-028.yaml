@@ -1,0 +1,64 @@
+id: PLG-028
+name: NIK audit-results database
+short_name: NIK audit results
+provider: Supreme Audit Office (NIK)
+status: reviewing
+family: F
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [public audit, government performance]
+entities: [audit, public institution, government programme]
+granularity: Audit result by publication date, division, unit, number and document type.
+coverage: Search offers all-time/chosen periods; first record not stated.
+access:
+  endpoint: https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
+  kind: web
+  interfaces: [HTML search, PDF]
+  auth: public browsing
+  cost: free
+  limits: None published. robots.txt of www.nik.gov.pl and bip.nik.gov.pl disallows /szukaj/, /p/, /g2/, /logowanie/, /cms/
+    and /do_druku/ for every agent. Both sites sit behind Imperva Incapsula bot protection.
+licence:
+  status: open-conditional
+  notes: 'Terms: NIK re-use page https://www.nik.gov.pl/kontakt/ponowne-wykorzystywanie-informacji/ (desk fetch 12 Nov 2026;
+    the tool returned the sentence in fragments, joined here): "Warunkiem ponownego wykorzystywania informacji sektora publicznego
+    zamieszczonych na stronach internetowych NIK oraz udostępnionych na wniosek, jest obowiązek poinformowania o źródle,
+    czasie wytworzenia i pozyskania informacji od NIK oraz obowiązek poinformowania o przetworzeniu informacji ponownie
+    wykorzystywanej." and "NIK nie ponosi odpowiedzialności za treści informacji powstałej w wyniku przetworzenia uzyskanej
+    informacji." Commercial reuse is not excluded and no fee is charged for website content; modification must be stated.
+    Attribution: "Źródło: Najwyższa Izba Kontroli, <tytuł>, pozyskano <data>". The copyright page https://www.nik.gov.pl/zasady/prawa-autorskie.html
+    returned only the bot-protection page to the desk fetch; re-read the wording before any publication.'
+updates: Publication date differs from the audited period; continuous.
+ingestion:
+  history: 'No machine route found: one HTML record and PDF per audit (e.g. /kontrole/wyniki-kontroli-nik/pobierz,<id>,typ,kj.pdf
+    and /plik/id,<n>.pdf, seen in web search results). A plain request for https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
+    (and the same path on bip.nik.gov.pl) gets HTTP 200 with the page frame (about 6,100 characters of text, three forms,
+    the Incapsula script) and no audit records or record links; HEAD of https://www.nik.gov.pl/plik/id,31066.pdf returned
+    HTTP 500. The results page links no RSS, XML, API, CSV or dane.gov.pl set, and https://www.nik.gov.pl/rss/ returned
+    a 389-byte XML stub. dane.gov.pl could not be searched from a runner (timeout).'
+  incremental: None until the owner question is answered.
+  identifiers: Audit number (e.g. P/25/001), publication date, unit.
+modelling:
+  notes: 'kpi false. If a list of audits is obtained: an entity table of audits (number, title, publication date, unit)
+    and the count of audits per year, national scope; no statistical series. Effort S from a file.'
+  overlap: May cite agency statistics; cited figures are not independent NIK observations.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Owner question: NIK publishes audit results only as one web record and one PDF per audit, behind Imperva Incapsula
+    bot protection that we never work around; plain requests get the page frame without the list of audits, and no file,
+    feed or dane.gov.pl set was found. Do you want a re-use request sent to NIK (text drafted for you) for a machine-readable
+    list of audits (number, title, publication date, unit, link), or do you decide that NIK stays out because it has no
+    statistical series (kpi false)?'
+  - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
+    robots.txt of both hosts read; results page on both hosts HTTP 200 with the Incapsula script, no audit records; PDF
+    HEAD HTTP 500. Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the same pages
+    answered 200; the desk fetch of the copyright page and of one report PDF got the protection page only.'
+  - Terms are recorded (open-conditional, NIK re-use page); the copyright page is still to be re-read before any publication.
+  references:
+  - https://www.nik.gov.pl/kontrole/wyniki-kontroli-nik/
+  - https://www.nik.gov.pl/kontakt/ponowne-wykorzystywanie-informacji/
+  - https://www.nik.gov.pl/zasady/prawa-autorskie.html

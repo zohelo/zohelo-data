@@ -1,0 +1,43 @@
+id: GL-005
+name: World Development Indicators (WDI)
+short_name: World Bank WDI
+provider: World Bank
+source_system: world_bank_wdi
+status: silver
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [development, economy, population, health, education, environment]
+entities: [country, country-group]
+granularity: Indicator/economy/year, with source-specific metadata and occasional aggregates.
+coverage: 1,400 series for 217 economies and 40+ groups; many indicators exceed 50 years, with uneven gaps.
+access:
+  endpoint: https://datatopics.worldbank.org/world-development-indicators/
+  kind: bulk_file
+  interfaces: [HTML, DataBank, REST API, CSV bulk, Excel bulk]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 4.0, https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators.
+    Attribution: "Source: World Bank, World Development Indicators" plus the indicator code. Indicate changes.'
+updates: Bulk files are revised whenever WDI updates; source-series frequencies and revisions vary.
+ingestion:
+  history: Load full bulk data and metadata; retain download vintage.
+  incremental: Refresh published bulk package or changed indicator-period windows; no CDC.
+  identifiers: World Bank indicator code + economy code + year; map country codes with Bank metadata, not name matching.
+modelling:
+  notes: Country-indicator-period fact. Units, aggregation method and source notes determine additivity.
+  overlap: Broad downstream compilation overlaps nearly every specialist source; preserve original source and
+    do not prefer WDI blindly.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers:
+  - Decide specialist-source precedence by indicator
+  references:
+  - https://datatopics.worldbank.org/world-development-indicators/
+  - https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets

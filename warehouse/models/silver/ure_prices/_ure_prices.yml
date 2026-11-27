@@ -1,0 +1,44 @@
+version: 2
+models:
+  - name: ure_prices_indicators
+    description: >-
+      URE energy price indicators (register PL-ENV-020, #2870), Poland, values and units as published: average
+      electricity sale price on the competitive market (yearly from 2008, quarterly from 2015 Q2, PLN/MWh), average
+      household electricity price (yearly from 2012, PLN/kWh) and the average purchase prices of imported natural gas
+      from EU/EFTA states (quarterly from 2013 Q3; PLN/m3 to 2014, PLN/MWh from 2015) and from other states (quarterly
+      from 2023, PLN/MWh). Grain: indicator_code x period_label (a year '2025' and its quarters '2025-Q1' are separate
+      periods). Empty cells and the dash keep value null (value_status 'empty', 'dash'), never 0. Newest copy of each
+      page; layout and Dev trial: the model header and docs/sources/ure_prices.md.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', indicator_code, period_label)"
+    columns:
+      - name: entity
+        tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [electricity_competitive_market, electricity_households, gas_import_prices]}
+      - name: indicator_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [electricity_competitive_market, electricity_households, gas_import_eu_efta, gas_import_non_eu_efta]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: [A, Q]}}}]
+      - name: period_year
+        tests: [not_null]
+      - name: period_quarter
+        tests: [{accepted_values: {arguments: {values: [1, 2, 3, 4], quote: false}}}]
+      - name: period_label
+        tests: [not_null]
+      - name: period_start
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null, {accepted_values: {arguments: {values: [pln_per_mwh, pln_per_kwh, pln_per_m3]}}}]
+      - name: value_status
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, empty, dash]}}}]
+      - name: page_modified
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

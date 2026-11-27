@@ -1,0 +1,54 @@
+id: PLS-013
+name: API Statystyki NFZ – Refundacja apteczna
+short_name: 'NFZ statistics: pharmacy refunds'
+provider: Narodowy Fundusz Zdrowia (NFZ)
+source_system: nfz_pharmacy_refunds
+status: built
+family: B
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [pharmaceutical reimbursement, prescriptions, medicines]
+entities: [medicine, prescription-aggregate, patient-aggregate, pharmacy-settlement aggregate]
+granularity: Published reimbursement table by product/substance/category and period; exact dimensions are endpoint-specific.
+coverage: Available tables/years exposed by API; exact start not verified.
+access:
+  endpoint: https://api.nfz.gov.pl/app-stat-api-ra/
+  kind: api
+  interfaces: [REST API, JSON, XML, Swagger]
+  auth: Public API; no key indicated on root documentation.
+  cost: free
+  limits: 10 requests/second per IP (terms v1.0, section III).
+licence:
+  status: open-conditional
+  notes: 'Terms: API regulations (Regulamin) of "API Statystyki NFZ - Refundacja Apteczna" v1.0, https://api.nfz.gov.pl/app-stat-api-ra/terms
+    (section II): users must state the source by giving the address https://api.nfz.gov.pl/; the user may not modify the
+    data ("Niedozwolone jest modyfikowanie danych przez Usługobiorcę"); no use for software that breaks the law or third-party
+    rights, misleads users or acts maliciously; no overloading (10 requests/second per IP); NFZ may block users for breaches
+    and may change the API and its terms. No licence name and no clause on commercial reuse; public display of the published
+    values is allowed with attribution. Show values as published; any figure we derive (rates, sums, shares) is labelled
+    as a zohelo calculation. Disclaimer: use is at the user''s own risk, NFZ is not liable for lost profits. Attribution:
+    "Źródło: Narodowy Fundusz Zdrowia, API Statystyki NFZ – Refundacja Apteczna (https://api.nfz.gov.pl/)" / "Source: National
+    Health Fund (NFZ), NFZ Statistics API – Pharmacy Refunds (https://api.nfz.gov.pl/)".'
+updates: Release schedule and revision policy unknown.
+ingestion:
+  history: Enumerate table index/years and snapshot selected aggregates.
+  incremental: Poll table index and reload revised/new tables.
+  identifiers: Table ID + reimbursed product identifiers + period/category.
+modelling:
+  notes: Separate reimbursed quantity, prescriptions and expenditure; prices/amounts are not interchangeable.
+  overlap: May overlap CeZ e-prescription counts and NFZ Zdrowe Dane; populations and concepts differ.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Reading of the no-modification clause for derived figures (rates, sums): decide before publishing derived values; published
+    values are shown unchanged'
+  - 'Built (#2930): /monthly-provisions for Poland and the 16 voivodeships x (no ATC filter + 14 ATC main groups), 2017-01
+    to 2024-12 in Nov 2026, plus the /atc dictionary. Not loaded: package-level /provisions, gender, age-group, 75+ and
+    announcement splits, top lists, /yearly-provisions'
+  - Resolve medicine-code crosswalks (package level, when /provisions is loaded)
+  references:
+  - https://api.nfz.gov.pl/app-stat-api-ra/
+  - https://api.nfz.gov.pl/app-stat-api-ra/terms

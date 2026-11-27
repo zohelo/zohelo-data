@@ -1,0 +1,49 @@
+id: GL-028
+name: Human Development Data Center
+short_name: UNDP Human Development
+provider: United Nations Development Programme
+source_system: undp_hdr
+status: built
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [human-development, inequality, gender, poverty]
+entities: [country, country-group]
+granularity: Country/year/index and component; some thematic indices have different country/time coverage.
+coverage: 193 countries and territories in Country Insights; index histories vary. HDI series is recalculated
+  annually.
+access:
+  endpoint: https://hdr.undp.org/data-center/documentation-and-downloads
+  kind: bulk_file
+  interfaces: [HTML, bulk-files]
+  auth: public
+  cost: free
+  limits: No numeric quota published; one page and one file request per run (HDR25 composite indices
+    CSV 2.0 MB; Dev probe 43086552621, 11 Nov 2026).
+licence:
+  status: open-conditional
+  notes: 'Terms: CC BY 3.0 IGO, https://hdr.undp.org/en/content/copyright-and-terms-use ("All materials provided on
+    this website are copyrighted under the Creative Commons Attribution 3.0 IGO license"): adapt for any purpose,
+    even commercially; give credit, link the licence, indicate changes; provided without warranty; interpretation
+    is the reader''s responsibility. Attribution: "Source: UNDP Human Development Reports, Human Development Data
+    Center, https://hdr.undp.org/data-center (CC BY 3.0 IGO)".'
+updates: Entire HDI values/rankings time series is recalculated yearly using current methodology/data.
+ingestion:
+  history: Archive every annual release and technical notes.
+  incremental: Append release vintage and replace within vintage only for corrections.
+  identifiers: Index code + country/territory + year + release vintage.
+modelling:
+  notes: Composite indices/rankings are non-additive; compare values only within a common release vintage.
+  overlap: Components originate from international agencies and overlap WDI/UIS/WHO; preserve component lineage.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Enforce vintage-aware comparisons'
+  - 'Check licences of externally sourced components'
+  references:
+  - https://hdr.undp.org/data-center
+  - https://hdr.undp.org/terms-use
+  - https://hdr.undp.org/en/content/copyright-and-terms-use

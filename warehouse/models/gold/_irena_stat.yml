@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: poc_build_irena_stat
+    description: >-
+      Build stage — IRENASTAT (register GL-035), block elecstat: installed electrical capacity (MW, stock) and
+      electricity generation (GWh, flow) by country, one measure per data type and technology (26 technologies,
+      parents and children side by side, never summed), grid connection as the breakdown (All = total), annual, values
+      as published; licence unresolved (internal).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_renewable_capacity
+    description: KPI renewable_capacity (draft) from gold.build_irena_stat (macros/poc_metrics.sql).
+  - name: poc_metrics_renewable_generation
+    description: KPI renewable_generation (draft) from gold.build_irena_stat (macros/poc_metrics.sql).

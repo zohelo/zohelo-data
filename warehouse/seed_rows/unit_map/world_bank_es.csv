@@ -1,0 +1,11 @@
+source_system,unit_code,measure_key_pattern,unit_key
+world_bank_es,PT_F,,pct_firms
+world_bank_es,PT,,pct
+world_bank_es,D,,days
+world_bank_es,IX,,index_0_100
+world_bank_es,SCORE,,score_0_100
+world_bank_es,COUNT,,number
+world_bank_es,YR,,years
+world_bank_es,H,,hours
+world_bank_es,WK,,weeks
+world_bank_es,M,,months

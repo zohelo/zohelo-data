@@ -1,0 +1,42 @@
+id: TP-010
+name: Eurostat euro indicators release calendar
+short_name: Eurostat release calendar
+provider: Eurostat
+source_system: release_calendars
+current: true
+status: silver
+family: J
+kpi: false
+geography: multicountry-Europe
+provider_type: international-public
+domains: [release-calendar, official-statistics]
+entities: [release]
+granularity: 'One euro-indicator release: date and time (UTC), title, reference period, dataset codes, theme.'
+coverage: Forthcoming releases; past days of the window kept in Bronze (latest copy per page).
+access:
+  endpoint: 'https://ec.europa.eu/eurostat/o/calendars/eventsJson?start={from}&end={to}&isEuroindicator=true'
+  kind: api
+  interfaces: [JSON (the page's event feed), HTML]
+  auth: public
+  cost: free
+  limits: 'Window 14 days back to 90 days ahead, one request per run.'
+licence:
+  status: open
+  notes: 'Eurostat reuse policy (Commission Decision 2011/833/EU, CC BY 4.0) covers the website content; the feed is the one the public calendar page loads. The documented ICS address (cache/RELEASE_CALENDAR/calendar_EN.ics) answers 404.'
+updates: Calendars change when dates are announced or moved.
+ingestion:
+  history: None needed; forthcoming dates.
+  incremental: Daily re-download; written only when the SHA-256 changed.
+  identifiers: publisher + date + title
+modelling:
+  notes: Release dates of a topic's main KPIs add to its heat (release bonus) and give topics.json next_release.
+  overlap: The manual seed release_calendar.csv; NBP and MF dates stay there while their calendars are parked.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - Calendar layout changes reject the file (decoder checks); watch bronze.release_calendars_rejected_files.
+  references:
+  - https://ec.europa.eu/eurostat/news/euro-indicators/release-calendar
+  - https://ec.europa.eu/eurostat/web/main/help/copyright-notice

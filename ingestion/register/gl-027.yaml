@@ -1,0 +1,57 @@
+id: GL-027
+name: UNICEF Data Warehouse Explorer and SDMX API
+short_name: UNICEF Data Warehouse
+provider: United Nations Children’s Fund
+status: reviewing
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [children, women, health, education, nutrition, poverty]
+entities: [country, person-aggregate]
+granularity: Dataflow observation keyed by reference area, indicator and flow-specific dimensions such as sex
+  and time.
+coverage: Global; history and disaggregation vary by dataflow.
+access:
+  endpoint: https://data.unicef.org/sdmx-api-documentation/
+  kind: api
+  interfaces: [HTML, SDMX REST API, JSON, XML, CSV]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: unresolved
+  notes: 'No data licence found (28 Oct 2026): data.unicef.org/open-data and the SDMX API documentation state none;
+    the only terms found are the UNICEF site terms https://www.unicef.org/legal ("provided ... for personal use and
+    educational purposes only"; reproduction of more than a de minimis portion needs UNICEF''s express prior written
+    permission). Owner decision needed (noted on the Epic issue): ask UNICEF (data@unicef.org) for written reuse terms,
+    or treat as restricted. Attribution if allowed: "Source: UNICEF, UNICEF Data Warehouse, <dataset>".'
+updates: No common release cadence documented; dataflow versions and source updates can change data.
+ingestion:
+  history: Snapshot dataflows, DSDs, codelists and full data with version.
+  incremental: Query slices only after key discovery; refresh changed flows, not labels-only CSV.
+  identifiers: Agency + dataflow + version + dimensional key.
+modelling:
+  notes: Use codes from JSON/structure; UNICEF warns CSV labels may be non-unique. Retain attributes and sources.
+  overlap: Overlaps WHO, UIS, WDI and SDG database; UNICEF may be custodian or downstream.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: UNICEF states no data licence that the platform can read: data.unicef.org (its terms, open-data and
+    SDMX documentation pages) refuses GitHub runners (robots.txt HTTP 403, not worked around), and the UNICEF legal page
+    https://www.unicef.org/legal (read by the runner 26 Nov 2026) says "The use of UNICEF Internet material for any purpose,
+    including repackaging in hard copy or compilation for CD-ROM or any other electronic media, is prohibited unless prior
+    written permission is obtained." The SDMX API itself answers (https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/all/all/latest
+    HTTP 200). Do you want to ask UNICEF (data@unicef.org) for written permission to load child-related indicators for
+    Poland and the EU from the SDMX API and show them, or leave UNICEF out (most series come from WHO, UNESCO, ILO and
+    the World Bank, which are loaded)?'
+  - 'Re-review 26 Nov 2026 (Task #2916): Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): data.unicef.org robots.txt HTTP 403 for
+    /open-data/, /terms-of-use/ and /sdmx-api-documentation/; www.unicef.org/legal 48,308 characters; the SDMX dataflow
+    list HTTP 200 (25,687 bytes). Route known (SDMX REST, one dataflow at a time); the licence is the open item.'
+  - Avoid labels-only CSV as exchange key
+  references:
+  - https://data.unicef.org/sdmx-api-documentation/
+  - https://www.unicef.org/legal
+  - https://data.unicef.org/open-data/

@@ -8,10 +8,10 @@
                                        'blocks': [[block_id, block_name], ...]
      poc_geography__<source_system>()  the source's CTEs for poc_map_geography: one named <source_system>
                                        (source_system, source_code, geography_key), helpers <source_system>_<x>.
-   Sources registered before D34 stay in the lists of macros/poc_blocks.sql and models/gold/poc_map_geography.sql.
-   Registered sources follow them in name order, so the compiled SQL does not depend on merge order.
-   sqlfluff lints the models with plain Jinja, where `context` is not defined: there the four macros the
-   models call render the lists of poc_blocks.sql only. #}
+   Every source with a Gold block is registered this way (the sources older than D34 moved here from the lists
+   of macros/poc_blocks.sql on 27 November). Sources follow in name order, so the compiled SQL does not depend
+   on merge order. sqlfluff lints the models with plain Jinja, where `context` is not defined: there the block
+   list is empty and poc_activated_blocks() renders an empty select of the same columns. #}
 
 {# The names (the part after `prefix`) of the project's macros that start with `prefix`, sorted. dbt gives a
    macro every macro of the project by name in `context`; if a dbt version stops doing that, this macro does
@@ -43,20 +43,17 @@
     {{- return(out) -}}
 {% endmacro %}
 
-{# The Gold blocks (build stage models) as `model:source_system`, one per line: the list of
-   poc_legacy_block_models() and then every registered source's block. A block model carries the tag
+{# The Gold blocks (build stage models) as `model:source_system`, one per line: every registered source's
+   block, in name order. A block model carries the tag
    `gold_block` (ops/repo_check.py checks the tags, the list and the registrations agree): its children do not
    wait for it in the changed-only build (warehouse/changed.py), they read it only once its table exists. #}
 {% macro poc_block_models() %}
-    {%- set legacy = poc_legacy_block_models() -%}
-    {{- legacy -}}
     {%- set listed = [] -%}
-    {%- for entry in legacy.split() -%}{%- do listed.append(entry.split(':')[0]) -%}{%- endfor -%}
     {%- for source, registration in (poc_registrations().items() if context is defined else []) -%}
         {%- if registration.block_model in listed -%}
             {%- do exceptions.raise_compiler_error(
                 'Gold block ' ~ registration.block_model ~ ' is declared twice (poc_source__' ~ source
-                ~ ' and another registration or poc_legacy_block_models)'
+                ~ ' and another registration)'
             ) -%}
         {%- endif -%}
         {%- do listed.append(registration.block_model) %}
@@ -65,16 +62,19 @@
 {% endmacro %}
 
 {# Every activated block of every source: the list build_check reports against, so a block that
-   yields no rows (not in Silver yet, or filtered out) is visible. The list of
-   poc_legacy_activated_blocks(), then each registered source's blocks. #}
+   yields no rows (not in Silver yet, or filtered out) is visible. Each registered source's blocks, in name
+   order, under the column names source_system, block_id, block_name (a registration's select need not name
+   its columns). #}
 {% macro poc_activated_blocks() %}
-    {{- poc_legacy_activated_blocks() -}}
-    {%- for source, registration in (poc_registrations().items() if context is defined else []) -%}
-        {%- if registration.activated %}
+    {%- set registrations = poc_registrations() if context is defined else {} %}
+    select * from (
+    {%- for source, registration in registrations.items() -%}
+        {%- if not loop.first %}
     union all
+        {%- endif -%}
+        {%- if registration.activated %}
     {{ registration.activated | trim }}
         {%- elif registration.blocks %}
-    union all
     select * from (
         values
             {%- for block in registration.blocks %}
@@ -87,7 +87,10 @@
                 'poc_source__' ~ source ~ ': a registration needs `activated` (a select) or `blocks` (a list)'
             ) -%}
         {%- endif -%}
-    {%- endfor -%}
+    {%- else %}
+    select null, null, null where false
+    {%- endfor %}
+    ) as activated (source_system, block_id, block_name)
 {% endmacro %}
 
 {# poc_map_geography: the CTEs of every registered source (poc_geography__<source_system>()), each followed

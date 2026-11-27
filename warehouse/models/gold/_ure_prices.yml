@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: poc_build_ure_prices
+    description: >-
+      Build stage — URE energy price indicators (register PL-ENV-020, #2870), Poland, block energy_prices: average
+      electricity sale price on the competitive market (yearly and quarterly, separate measures), average household
+      electricity price (yearly) and average purchase prices of imported natural gas (quarterly, EU/EFTA and other
+      states); values and units as published (PLN/MWh, PLN/kWh, PLN/m3).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: [PL]}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: [A, Q]}}}]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_electricity_price_competitive_annual
+    description: KPI electricity_price_competitive_annual (draft) from gold.build_ure_prices (macros/poc_metrics.sql).
+  - name: poc_metrics_electricity_price_competitive_quarterly
+    description: KPI electricity_price_competitive_quarterly (draft) from gold.build_ure_prices (macros/poc_metrics.sql).
+  - name: poc_metrics_electricity_price_households
+    description: KPI electricity_price_households (draft) from gold.build_ure_prices (macros/poc_metrics.sql).
+  - name: poc_metrics_gas_import_price_eu_efta
+    description: KPI gas_import_price_eu_efta (draft) from gold.build_ure_prices (macros/poc_metrics.sql).

@@ -1,0 +1,2 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+occupations_deficit_forecast,barometr_zawodow,barometr_zawodow:forecast:occupations:deficyt,"Barometr Zawodów posters, occupations in the block DEFICYT (Poland: national poster; voivodeships: their own posters)",1,

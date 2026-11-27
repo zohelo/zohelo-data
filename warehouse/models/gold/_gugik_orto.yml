@@ -1,0 +1,22 @@
+version: 2
+models:
+  - name: poc_build_gugik_orto
+    description: >-
+      Build stage — GUGiK orthophoto sheet index: sheet editions (index features) by data year, in total and by
+      pixel-size class, and the share of each class (%), for Poland (every feature) and each voivodeship (features
+      whose footprint centroid lies inside its PRG boundary; area code mapped in poc_map_geography), from
+      silver.gugik_orto_sheets. Rule in the model header. Grain: measure_key x geography_key x breakdown x date_key.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

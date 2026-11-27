@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: wipo_ip_stats
+  description: WIPO IP Statistics bulk ZIPs of https://www.wipo.int/en/web/ip-statistics (register GL-032), patent and industrial design counts by office, origin, class and year
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/wipo_ip_stats/
+    loaded_by: ingestion/to_bronze/wipo_ip_stats/
+    config: ingestion/sources/wipo_ip_stats.yaml
+  tables:
+  - name: wipo_ip_stats_counts
+    description: >-
+      Rows of the newest copy of each ZIP (entities patent_indicators, design_indicators), values as published text:
+      one per CSV row (member, indicator, year, office, origin, class column and id, count) and one per technology
+      field of patent_technology_field_names.xlsx (class_id, class_label = field_en); partitioned by entity.
+  - name: wipo_ip_stats_rejected_files
+    description: Files of wipo_ip_stats the Bronze decoder rejected, with the reason.

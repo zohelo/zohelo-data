@@ -1,0 +1,57 @@
+id: PLG-015
+name: Central Register of Beneficial Owners (CRBR)
+short_name: CRBR beneficial owners
+provider: Ministry of Finance
+status: reviewing
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [beneficial ownership, business registry, anti-money laundering]
+entities: [enterprise, person]
+granularity: Entity submission and beneficial-owner/control relationships.
+coverage: Current register; history/retained amendments not established.
+access:
+  endpoint: https://www.podatki.gov.pl/crbr/
+  kind: web
+  interfaces: [HTML lookup]
+  auth: public lookup; no bulk/API method documented
+  cost: free
+  limits: Unknown.
+licence:
+  status: restricted
+  notes: 'Terms: no reuse terms found. https://podatki.gov.pl/pozostale/crbr (read by the runner 27 Nov 2026, HTTP
+    200; https://www.podatki.gov.pl/crbr/ redirects there, "Data aktualizacji: 30.09.2026") links the register
+    application https://crbr.podatki.gov.pl/adcrbr/, which answered with an Incapsula bot-protection page (32
+    characters of text). https://www.gov.pl/web/finanse/centralny-rejestr-beneficjentow-rzeczywistych (HTTP 200)
+    offers no download or API. Identifiable beneficial-owner data; a public lookup does not authorise bulk harvesting
+    or republication; stays internal.'
+updates: Submission-driven; service-page dates are not record CDC.
+ingestion:
+  history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
+  incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
+  identifiers: KRS/NIP where present + entity + beneficiary/control
+modelling:
+  notes: High-risk person data; retain only fields necessary for an approved purpose.
+  overlap: Complements KRS but has distinct legal definitions/scope.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (legal reading and permission): the CRBR is reachable only through the ADCRBR search application,
+    which sits behind bot protection (never worked around), and it holds names, citizenship and residence of natural
+    persons. Ask the Ministry of Finance for a bulk extract or written permission, with a legal reading of whether
+    zohelo may store beneficial-owner records (or only counts per entity type), or park PLG-015? Recommendation: park;
+    corporate ownership links come from KRS (PLG-012) and GLEIF relationship records (CD-015).'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was restricted personal data with access controls, a legal
+    question, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe,
+    script dev/src_parked2_probe.py, 27 Nov 2026): podatki.gov.pl CRBR page and the Ministry of Finance CRBR page HTTP
+    200 (quoted); crbr.podatki.gov.pl robots.txt HTTP 404, /adcrbr/ HTTP 200 with an Incapsula bot-protection page
+    (recorded, not worked around).'
+  - 'Earlier parking reason: identifiable beneficial-owner data with access controls; public lookup does not authorise
+    bulk harvesting or republication; no API for third parties'
+  references:
+  - https://podatki.gov.pl/pozostale/crbr
+  - https://crbr.podatki.gov.pl/adcrbr/
+  - https://www.gov.pl/web/finanse/centralny-rejestr-beneficjentow-rzeczywistych

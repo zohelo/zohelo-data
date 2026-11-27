@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: gis_sanitary_food_samples
+    description: >-
+      GIS annual report (register PLS-018), table "Jakość zdrowotna środków spożywczych": food samples examined by
+      the State Sanitary Inspection laboratories and the per cent disqualified (not meeting health-quality
+      requirements), Poland, all foodstuffs (total) and domestic. Grain: entity (edition) x reference_year x
+      origin_code; every year an edition prints is kept, is_report_year marks the edition's own year. Editions
+      Stan sanitarny kraju 2012-2023 and Raport z działań PIS 2024-2025 (same table and columns); reference years
+      2010 to 2025. Trial run: see ingestion/sources/gis_sanitary.yaml.
+    tests:
+      - unique:
+          column_name: "concat_ws('|', entity, reference_year, origin_code)"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: reference_year
+        tests: [not_null]
+      - name: origin_code
+        tests: [not_null, {accepted_values: {arguments: {values: [total, domestic]}}}]
+      - name: edition_family
+        tests: [not_null, {accepted_values: {arguments: {values: [Stan sanitarny kraju, Raport z działań PIS]}}}]
+      - name: samples_examined
+        tests: [not_null]
+      - name: disqualified_pct
+        tests: [not_null]
+      - name: raw_sha256
+        tests: [not_null]

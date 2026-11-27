@@ -1,0 +1,57 @@
+id: GL-030
+name: Global Migration Data Portal
+short_name: IOM Migration Data Portal
+provider: International Organization for Migration
+status: parked
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [migration, remittances, displacement, policy]
+entities: [country, person-aggregate]
+granularity: Indicator/country/time as presented; much content is narrative and links to external producers.
+coverage: Global single-access-point ambition; coverage and history vary by indicator/source.
+access:
+  endpoint: https://www.migrationdataportal.org/
+  kind: web
+  interfaces: [HTML, interactive visualizations, links]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: restricted
+  notes: 'Terms: https://migrationdataportal.org/terms-use (no named licence; "All materials are copyright of the
+    International Organization for Migration, unless otherwise stated"): personal, non-commercial use only; no derivative
+    works; extraction, reproduction and distribution need IOM''s prior written permission; third-party materials need
+    their owner''s permission; provided without warranty. Public display is not allowed without permission; use the
+    upstream sources instead. Attribution if permitted: "Source: IOM Migration Data Portal, https://www.migrationdataportal.org/".'
+updates: Indicators/pages update irregularly; no machine-readable release contract found.
+ingestion:
+  history: Use primarily as discovery metadata; onboard original source instead where available.
+  incremental: Periodic catalog review only; no inferred incremental feed.
+  identifiers: Portal topic/indicator URL + cited source; map country only with source identifiers.
+modelling:
+  notes: Store catalog/link metadata separately from observations unless an explicit downloadable dataset is licensed.
+  overlap: Strong overlap with UNHCR, UN DESA, ILO, World Bank and national sources; prefer upstream.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Parked: IOM terms forbid redistribution and derivatives without written permission; use the upstream sources'
+  - 'Re-review 26 Nov 2026 (Task #2916): still parked. Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026) and Dev probe run 45855054117 (job 140031128405, same branch and script, argument `two`, 26 Nov 2026):
+    https://www.migrationdataportal.org/terms-use answered HTTP 503 twice (the portal home page answered and still links
+    "Terms of use"), so the terms of 28 Oct 2026 are the last reading (personal, non-commercial use; no derivative works;
+    extraction needs IOM''s prior written permission). No API or bulk file is offered. The portal republishes other producers''
+    data: migrant stock and remittances are in WDI (GL-005, SM.POP.TOTL, BX.TRF.PWKR.CD.DT), refugees in UNHCR (GL-029);
+    re-check the terms page when it answers.'
+  - 'Recheck 27 Nov 2026 (parked re-review, batch 6): still parked, reason unchanged. Dev probe run 45955251368 (job
+    140360139693, branch test/src-calendars-probe, script dev/src_calendars_probe.py): both
+    https://www.migrationdataportal.org/terms-use and https://migrationdataportal.org/terms-use answered HTTP 503
+    with the page "Site under maintenance | Migration data portal" (37,815 bytes), so the terms of 28 Oct 2026 remain
+    the last reading; nothing on record says the restriction was lifted.'
+  - 'Redistribution and derivatives need IOM written permission; use upstream sources'
+  references:
+  - https://www.migrationdataportal.org/
+  - https://www.migrationdataportal.org/terms-use
+  - https://migrationdataportal.org/terms-use

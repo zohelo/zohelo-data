@@ -1,0 +1,70 @@
+source_system: ure_prices
+description: "URE — energy price indicators: competitive-market and household electricity prices, imported gas purchase prices (HTML tables on ure.gov.pl)"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-020, Task #2870. No export, API or file: each indicator is a
+# fixed public page of ure.gov.pl holding one HTML table with the whole series, edited in place when URE publishes a
+# new value ("Data modyfikacji"). Smallest valuable selection (Dev probe 45790234209, 26 Nov 2026): page 7852
+# (average electricity sale price on the competitive market, yearly from 2008 and quarterly from 2015 Q2, PLN/MWh),
+# page 7853 (average household electricity price, yearly from 2012, PLN/kWh) and page 7859 (average purchase prices
+# of imported natural gas, quarterly: EU/EFTA states from 2013 Q3, other states from 2023). robots.txt of
+# www.ure.gov.pl is empty (200, no rules). Entity = the page; one request per page, 5 s apart. The server sends no
+# Last-Modified, so the Landing version is the download time and a copy is landed only when its SHA-256 changed;
+# the page's own modification date is kept in Bronze. Every page ends with request-time comments (render time,
+# buffer digest) that differ on every download: reduce: ure_prices (ingestion/to_landing/ure_prices) removes exactly
+# that trailer, so an unchanged page lands nothing. Restart unit: the page. Not declared (docs/sources/ure_prices.md):
+# the eight other electricity indicator pages and the small-installation reports.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: electricity_competitive_market
+        url: https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html
+        format: raw                # HTML page, exact bytes up to </html>
+        version: last_modified     # no Last-Modified from the server: the download time
+        reduce: ure_prices
+        probe: get
+      - entity: electricity_households
+        url: https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7853,Srednia-cena-energii-elektrycznej-dla-gospodarstw-domowych.html
+        format: raw
+        version: last_modified
+        reduce: ure_prices
+        probe: get
+      - entity: gas_import_prices
+        url: https://www.ure.gov.pl/pl/paliwa-gazowe/ceny-wskazniki/7859,Srednie-kwartalne-ceny-zakupu-gazu-ziemnego-sprowadzanego-z-panstw-czlonkowskich.html
+        format: raw
+        version: last_modified
+        reduce: ure_prices
+        probe: get
+  initial: bulk
+  production: snapshot                  # each page is the whole series to date
+  incremental_policy: changed_since_last  # SHA-256 of the page without the request-time trailer
+  schedule: # UTC; releases: quarterly prices about 6-12 weeks after the quarter (7852 Q2 2026 on 25 Sep, 7859 Q3 2026 on 12 Nov), household price yearly in March; monthly check
+    - {cron: "35 7 17 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/ure_prices/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report   # each copy is the whole page; a correction of past values replaces them
+bronze: [bronze.ure_prices_cells, bronze.ure_prices_rejected_files]
+silver: [silver.ure_prices_indicators]
+gold:
+  - gold.build_ure_prices
+  - gold.metrics_electricity_price_competitive_annual
+  - gold.metrics_electricity_price_competitive_quarterly
+  - gold.metrics_electricity_price_households
+  - gold.metrics_gas_import_price_eu_efta
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); rows measured by dbt on the pages of Dev probe 45790234209
+  ure_prices_indicators: {rows: 280}  # 181: 7852 19 years x 5 cells, 7853 14, 7859 14 x 4 + 4 x 4 (empty and dash cells kept)
+  poc_build_ure_prices: {rows: 220}  # 145: 6 measures, rows with a value only
+  poc_metrics_electricity_price_competitive_annual: {rows: 30}  # 18 (2008-2025)
+  poc_metrics_electricity_price_competitive_quarterly: {rows: 70}  # 45 (2015 Q2-2026 Q2)
+  poc_metrics_electricity_price_households: {rows: 25}  # 14 (2012-2025)
+  poc_metrics_gas_import_price_eu_efta: {rows: 75}  # 47 (2015 Q1-2026 Q3)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): three pages of 20-60 KB, a few hundred cells, edited a few times a year; small,
+# rebuilt in full.
+refresh: {mode: full, decided: "D32 + #2870"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

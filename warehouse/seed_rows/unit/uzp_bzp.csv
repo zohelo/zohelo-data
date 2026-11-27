@@ -1,16 +1,16 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-chf,CHF,Swiss francs,franki szwajcarskie,false,chf,1
-byn,BYN,Belarusian roubles,ruble białoruskie,false,byn,1
-sek,SEK,Swedish kronor,korony szwedzkie,false,sek,1
-kwd,KWD,Kuwaiti dinars,dinary kuwejckie,false,kwd,1
-xof,XOF,West African CFA francs,franki CFA (Afryka Zachodnia),false,xof,1
-mxn,MXN,Mexican pesos,pesos meksykańskie,false,mxn,1
-czk,CZK,Czech korunas,korony czeskie,false,czk,1
-gbp,GBP,pounds sterling,funty szterlingi,false,gbp,1
-inr,INR,Indian rupees,rupie indyjskie,false,inr,1
-cny,CNY,Chinese yuan renminbi,juany chińskie,false,cny,1
-cad,CAD,Canadian dollars,dolary kanadyjskie,false,cad,1
-aud,AUD,Australian dollars,dolary australijskie,false,aud,1
-try,TRY,Turkish liras,liry tureckie,false,try,1
-cop,COP,Colombian pesos,pesos kolumbijskie,false,cop,1
-qar,QAR,Qatari riyals,riale katarskie,false,qar,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+chf,CHF,Swiss francs,franki szwajcarskie,false,chf,1,
+byn,BYN,Belarusian roubles,ruble białoruskie,false,byn,1,
+sek,SEK,Swedish kronor,korony szwedzkie,false,sek,1,
+kwd,KWD,Kuwaiti dinars,dinary kuwejckie,false,kwd,1,
+xof,XOF,West African CFA francs,franki CFA (Afryka Zachodnia),false,xof,1,
+mxn,MXN,Mexican pesos,pesos meksykańskie,false,mxn,1,
+czk,CZK,Czech korunas,korony czeskie,false,czk,1,
+gbp,GBP,pounds sterling,funty szterlingi,false,gbp,1,
+inr,INR,Indian rupees,rupie indyjskie,false,inr,1,
+cny,CNY,Chinese yuan renminbi,juany chińskie,false,cny,1,
+cad,CAD,Canadian dollars,dolary kanadyjskie,false,cad,1,
+aud,AUD,Australian dollars,dolary australijskie,false,aud,1,
+try,TRY,Turkish liras,liry tureckie,false,try,1,
+cop,COP,Colombian pesos,pesos kolumbijskie,false,cop,1,
+qar,QAR,Qatari riyals,riale katarskie,false,qar,1,

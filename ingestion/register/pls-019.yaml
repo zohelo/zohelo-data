@@ -1,0 +1,68 @@
+id: PLS-019
+name: Biuletyny, meldunki i informacje epidemiologiczne (EPIMELD)
+short_name: NIZP-PZH epidemiology bulletins
+source_system: pzh_epimeld
+provider: Narodowy Instytut Zdrowia Publicznego PZH – PIB (NIZP PZH)
+status: built
+family: B
+kpi: true
+geography: Poland and voivodeships, publication-dependent
+provider_type: national-public
+domains: [infectious disease surveillance, vaccination, HIV/AIDS, influenza]
+entities: [case-aggregate, vaccination-aggregate, territorial unit, disease]
+granularity: Disease/period/geography aggregate in fortnightly notices and annual bulletins; definitions are versioned.
+coverage: Fortnightly notices 1996-2026; annual disease/vaccination bulletins at least from 1999.
+access:
+  endpoint: https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html
+  kind: bulk_file
+  interfaces: [fixed HTML index, PDF (text layer)]
+  auth: None.
+  cost: free
+  limits: None published; robots.txt absent (HTTP 404). One file per period.
+licence:
+  status: unresolved
+  notes: 'Terms: none found. The index https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html (read by the runner 26 Nov
+    2026) and the bulletins show no licence or reuse statement; a fortnightly notice (2024/INF_24_04B.pdf) names its authors
+    "Zakład Epidemiologii Chorób Zakaźnych i Nadzoru NIZP PZH - PIB Departament Przeciwepidemiczny i Ochrony Sanitarnej
+    Granic GIS" and no terms. Commercial reuse and modification not stated: unresolved, internal (licence gate). The annual
+    counts are also republished by GUS as "Zachorowania na niektóre choroby zakaźne" (dane.gov.pl dataset 1776, "CC BY 4.0",
+    resource https://stat.gov.pl/obszary-tematyczne/zdrowie/zdrowie/publikacja,20.html, read by the runner 26 Nov 2026)
+    under the GUS terms; that table''s content was not opened.'
+updates: Fortnightly notices plus annual bulletins and occasional corrections.
+ingestion:
+  history: Backfill annual bulletins first; add fortnightly PDFs if parsing value warrants cost.
+  incremental: Poll index; ingest new notices and separately apply published updates as new versions.
+  identifiers: Disease/surveillance category + period + geography; ICD/case-definition versions change and are first-class
+    dimensions.
+modelling:
+  notes: 'Smallest Gold selection: annual cases and incidence per 100,000 by disease for Poland from the annual bulletin
+    "Choroby zakaźne i zatrucia w Polsce" (Ch_<year>.pdf, 2006-2025 on the index), voivodeships where the bulletin tables
+    give them (unverified); later the fortnightly notices (INF_<yy>_<nn>A/B.pdf, cumulative year-to-date with the same period
+    of the previous year, about 155 rows per notice) as a separate frequency. Preliminary values ("wstępne dane") are flagged;
+    denominators differ by row (population, live births, children) and must stay with the measure. Cumulative notices are
+    never summed.'
+  overlap: CeZ infectious-disease dashboard and GIS reports may use related upstream data; methodology and refresh differ.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915): approved for internal build. The old parking reason (PDF only) is technical (owner
+    rule of 12 Nov 2026, O44); the pipeline already reads PDF text layers (pypdf: NID, ULC, ARiMR, ZUS). Dev probe run 45813307617
+    (job 139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the index answered HTTP
+    200 (95,278 bytes, Last-Modified 31 Oct 2026) with 104 PDF links, among them Ch_2006.pdf to Ch_2025.pdf and corrections
+    (Ch_<year>a.pdf). INF_24_04B.pdf has a text layer (session read, 26 Nov 2026).'
+  - 'Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026): the index
+    links the annual bulletins Ch_1999 to Ch_2025 and corrections Ch_1999a to Ch_2013a (no corrections listed after 2013).
+    Text layer confirmed with pypdf: Ch_2024.pdf (1,364,130 bytes, 196 pages, Last-Modified 31 Oct 2025) and Ch_2005.pdf
+    (1,282,959 bytes, 179 pages) gave text on all of the first 60 pages; the Ch_2024 contents list tables "Liczba zachorowań
+    ..., zapadalność oraz liczba i procent hospitalizowanych wg województw" per disease, so voivodeship tables exist. The
+    extracted text splits Polish diacritics ("zachorowan´"): the builder normalises them before matching labels. Scope:
+    start with 2006-2025 (the KPI years); 1999-2005 and the corrections (a correction replaces its year) follow.'
+  - 'Licence unresolved: internal until NIZP PZH states reuse terms; the GUS republication (dataset 1776) is the licensed
+    alternative for the annual counts if the builder finds the same breakdowns there.'
+  references:
+  - https://wwwold.pzh.gov.pl/oldpage/epimeld/index_p.html
+  - https://wwwold.pzh.gov.pl/oldpage/epimeld/2024/INF_24_04B.pdf
+  - https://dane.gov.pl/pl/dataset/1776
+  - https://stat.gov.pl/obszary-tematyczne/zdrowie/zdrowie/publikacja,20.html

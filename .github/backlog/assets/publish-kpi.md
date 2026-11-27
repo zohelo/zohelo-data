@@ -14,11 +14,14 @@ fixture values; everything else is this recipe.
    rows for `<k>`, rounded up to the next 10,000.
 3. `warehouse/semantic_models/gold.yml`: a semantic model `poc_<k>` shaped like `poc_unemployment` on
    `ref('poc_metrics_<k>')` (description: the KPI's name_en and `(gold.metrics_<k>)`; entity `<k>_row`), whose one
-   measure is named and aggregated as the Task says; then a metric `poc_<k>` (type simple, label name_en,
-   one-sentence description) at the end of `metrics:`.
+   measure is named and aggregated as the Task says; then a metric `poc_<k>` (type simple, label name_en) at the end
+   of `metrics:`. The metric's one-sentence description names what one query may combine, as `poc_population`
+   does ("… of ONE geography level, one source, one definition"): the measure has no unit dimension and no required
+   filter, so a query over several sources, units or geography levels sums or averages them (#2509).
 4. `warehouse/macros/value_range/<source_system>.sql` of each source of the KPI: the Task's bounds in `bounds`
    and the model in `models` (docs/source-registration.md; `tests/metrics_value_range.sql` takes no new rows).
-5. `warehouse/seeds/kpi.csv` and the status table of `.github/backlog/assets/catalogue-seeds.md`: `published`.
+5. The KPI's row in `warehouse/seed_rows/kpi/` (D36: edited in place, in `_shared.csv` or in the file of the source
+   whose pull request added it) and the status table of `.github/backlog/assets/catalogue-seeds.md`: `published`.
 6. `warehouse/published/fixtures/catalog/catalog.json`: a `kpis[]` entry shaped like `population`, with the KPI's
    kpi.csv fields, `source_keys` and `geo_levels` as the Task says, periods `1990`–`2024`, status `published`.
 7. `warehouse/published/fixtures/manifest.json`: a `metrics[]` entry shaped like `inflation`, with

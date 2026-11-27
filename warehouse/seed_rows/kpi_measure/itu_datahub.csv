@@ -1,0 +1,4 @@
+kpi_key,source_system,measure_key_pattern,definition,priority,unit_key
+internet_users,itu_datahub,itu_datahub:itu_dh:PT_POP:IT_NET_USER,"ITU DataHub IT_NET_USER (World Bank Data360 ITU_DH), % of population, total of sex, age and urbanisation",1,
+fixed_broadband_subscriptions,itu_datahub,itu_datahub:itu_dh:SB_10P2_HB:IT_NET_BBND,"ITU DataHub IT_NET_BBND (World Bank Data360 ITU_DH), subscriptions per 100 inhabitants",1,
+mobile_broadband_subscriptions,itu_datahub,itu_datahub:itu_dh:SB_10P2_HB:ACT_MOB_SB,"ITU DataHub ACT_MOB_SB (World Bank Data360 ITU_DH), subscriptions per 100 inhabitants",1,

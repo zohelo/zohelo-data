@@ -1,0 +1,46 @@
+id: PLS-006
+name: Powszechny Spis Rolny 2020 (PSR 2020) results
+short_name: GUS PSR 2020
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_psr2020
+status: built
+family: B
+kpi: true
+geography: Poland to local agricultural geographies, table-dependent
+provider_type: national-public
+domains: [agricultural census, farms, land use, livestock]
+entities: [farm-aggregate, territorial unit, crop, livestock category]
+granularity: Published aggregate census cell; geography and farm-size/classification dimensions vary.
+coverage: Reference year 2020; publication releases followed census.
+access:
+  endpoint: https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF, interactive tables]
+  auth: Public aggregate results.
+  cost: free
+  limits: Unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+    and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+    licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+    summaries or reworked text. Attribution: "Źródło: GUS, Powszechny Spis Rolny 2020" / "Source: Statistics Poland,
+    Agricultural Census 2020".'
+updates: Decennial census release with corrections/thematic additions.
+ingestion:
+  history: Load all chosen aggregate tables with source files and notes.
+  incremental: Poll catalogue for corrected or newly released tables.
+  identifiers: Table/category + territorial code + reference year; link 2020 TERYT and agricultural classification versions.
+modelling:
+  notes: Keep farm counts, area, livestock and holder characteristics in separate facts with universes/units.
+  overlap: Overlaps annual GUS agriculture statistics and administrative ARiMR data; definitions and populations
+    differ.
+research:
+  priority: review-next
+  evidence: catalogue-only
+  connection: tested
+  blockers:
+  - 'Curated tables only: holdings 2010 and 2020, agricultural land, average agricultural land per holding, cattle and pigs by voivodeship from part 2 of Charakterystyka gospodarstw rolnych w 2020 r.; part 1 (area groups, legal forms, economic size) and the Raport z wyników annex (.xls): Task #2922.'
+  references:
+  - https://stat.gov.pl/spisy-powszechne/powszechny-spis-rolny-2020/
+  - https://stat.gov.pl/en/copyright/

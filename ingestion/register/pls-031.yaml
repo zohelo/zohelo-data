@@ -1,0 +1,50 @@
+id: PLS-031
+name: Social assistance and family-support statistical reports
+short_name: MRPiPS social assistance
+provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej
+source_system: mrpips_social_assistance
+status: built
+family: B
+kpi: true
+geography: Poland and voivodeships, report-dependent
+provider_type: national-public
+domains: [social assistance, family benefits, care services, poverty policy]
+entities: [beneficiary aggregate, household aggregate, facility aggregate, territorial unit]
+granularity: Annual programme/report indicator by benefit/service and geography; exact granularity varies.
+coverage: Multiple programme/report cycles; no unified archive boundary verified.
+access:
+  endpoint: https://www.gov.pl/web/rodzina/analizy-i-raporty
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF]
+  auth: Public materials.
+  cost: free
+  limits: Unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie, quoted: "Treści tekstowe
+    publikowane w serwisie (z wyłączeniem treści audiowizualnych), są udostępniane na licencji uznanie autorstwa - na
+    tych samych warunkach 4.0 (CC BY-SA 4.0)"; "Korzystanie przez użytkowników z materiałów urzędowych
+    opublikowanych w serwisie Gov.pl nie wymaga zgody Ministra Cyfryzacji"; for third-party works: "Ich
+    wykorzystanie przez internautów wymaga zgody właścicieli tych materiałów." The report files carry no licence of
+    their own, so the CC BY-SA 4.0 terms apply with share-alike (commercial reuse allowed), as for gov_pl_terms.
+    Attribution: "Źródło: Ministerstwo Rodziny, Pracy i Polityki Społecznej, <report title> (<year>)" / "Source:
+    Ministry of Family, Labour and Social Policy, <report title> (<year>)".'
+updates: Usually annual reporting, programme-dependent.
+ingestion:
+  history: Curate named stable report families; backfill files and retain form definitions.
+  incremental: Poll annual report pages and version revisions.
+  identifiers: Programme/form + reference year + benefit/service category + geography.
+modelling:
+  notes: Beneficiaries, families, decisions, places and expenditure are not interchangeable; eligibility changes
+    break trends.
+  overlap: May overlap GUS social assistance publications sourced from ministry returns.
+research:
+  priority: specialist
+  evidence: catalogue-only
+  connection: tested
+  blockers:
+  - 'Curated table only (Dev probes 43270285788, 43288193321): MRPiPS-03 DZIAŁ 2 row 1 by voivodeship (persons granted a benefit by decision, families, persons in families), years from 2019; the files are .xls only (read with xlrd). Other sections (benefit forms 1A-1D, reasons 3, family types 4) and the MRPiPS-05/-06 reports are not modelled; legislative breaks before 2019 not mapped.'
+  references:
+  - https://www.gov.pl/web/rodzina/analizy-i-raporty
+  - https://www.gov.pl/web/rodzina/sprawozdawczosc
+  - https://www.gov.pl/web/gov/prawa-autorskie

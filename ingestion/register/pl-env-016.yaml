@@ -1,0 +1,57 @@
+id: PL-ENV-016
+name: Mapa Hydrogeologiczna Polski (MHP) data
+short_name: PIG-PIB hydrogeological map
+provider: PIG-PIB / Państwowa Służba Hydrogeologiczna
+status: reviewing
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [hydrogeology, groundwater]
+entities: [hydrogeological unit, map sheet]
+granularity: Map sheets and hydrogeological vector/database layers.
+coverage: National map editions; dates vary by sheet/layer.
+access:
+  endpoint: https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8888-dane-hydrogeologiczne-mhp.html
+  kind: web
+  interfaces: [JPG, PDF, SHP-by-request, MDB-by-request]
+  auth: JPG/PDF public; database/SHP available on user request.
+  cost: Free for public-purpose bodies and for teaching and research; other requests priced individually.
+  limits: None published.
+licence:
+  status: restricted
+  notes: 'Terms: the GIS data of the map are released only on a written request (MHP page, read 12 Nov 2026; www.pgi.gov.pl
+    now answers runners with bot protection): "Dane z bazy GIS MHP udostępniane są standardowo w formacie .mdb (GeoMedia
+    Warehouse) i shp", "na wniosek użytkownika"; free only for public-purpose bodies and teaching and research, with terms
+    set per request. dane.gov.pl dataset 1740 "Mapa Hydrogeologiczna Polski w skali 1:50 000" carries "CC BY 4.0" (read
+    by the runner 26 Nov 2026), but its resources are only WMS view services and the e-PSH portal. The PSH data portal terms
+    https://spd.pgi.gov.pl/docs/termsOfService.pdf forbid "wykorzystywanie kodów komputerowych, skryptów lub programów automatyzujących
+    korzystanie z usług" (read 26 Nov 2026), so no automated download there.'
+updates: Edition/sheet based; cadence unknown.
+ingestion:
+  history: 'No machine route: sheet images (JPG) and explanations (PDF) are public in the HydroGeoPortal viewer (https://epsh.pgi.gov.pl/epsh/);
+    the vector database (.mdb, SHP; GUPW in the 1992 system, PPW layers in the 1942 system, by sheet) is released on a paper
+    request sent to PIG-PIB, Rakowiecka 4, Warszawa.'
+  incremental: 'PROPOSAL: request versioned sheets/layers and refresh by edition.'
+  identifiers: Map sheet number, layer/theme and edition.
+modelling:
+  notes: Images are not analytical data; vector/database access requires a separate route. kpi false and no Gold use today.
+  overlap: Overlaps other PSH hydrogeological bases and the groundwater bodies in the CBDG download manager (PL-ENV-014).
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: the hydrogeological map''s data (main aquifer extent, yield and vulnerability per sheet) exist as files
+    only on a signed paper request to PIG-PIB, free only for public-purpose, teaching or research use, and the PSH portal
+    forbids automated downloads; online there are only WMS images. Do you want to send PIG-PIB a written request for the
+    MHP GIS data (SHP) with permission to publish derived figures, or leave the map out?'
+  - 'Dev probe run 45815140983 (job 139892828435, same branch, argument `two`, 26 Nov 2026): dane.gov.pl dataset 1740 resources
+    are WMS GetCapabilities and https://epsh.pgi.gov.pl/epsh/ only. Dev probe run 45813307617 (job 139886485577, branch
+    test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the MHP page on www.pgi.gov.pl answered an Incapsula
+    page. Not parked: the request is a legitimate route.'
+  references:
+  - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/947-bazy-danych-hydrogeologiczne/8888-dane-hydrogeologiczne-mhp.html
+  - https://www.pgi.gov.pl/psh/dane-hydrogeologiczne-psh/8850-jak-zamowic-dane-hydrogeologiczne.html
+  - https://dane.gov.pl/pl/dataset/1740
+  - https://spd.pgi.gov.pl/docs/termsOfService.pdf

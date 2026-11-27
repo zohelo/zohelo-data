@@ -1,0 +1,58 @@
+version: 2
+models:
+  - name: sdds_calendar_releases
+    description: >-
+      SDDS advance release calendar of Poland (registers TP-012 NBP, TP-013 Ministry of Finance), from
+      bronze.sdds_calendar_cells: one row per expected release in the newest copy of each calendar year's workbook.
+      Grain: entity x category x reference_period x release_date. Table (sector sheet), data category, publisher
+      (nbp, mf or gus, by category), last update of the category row, the month column, release date, reference
+      period as published with its frequency (M, Q), start and end, and check_status for the slips of the file
+      (kept, never corrected). The 2026 workbook (Dev trial, see the PR) runs from 2025-03-31 (a slip) to 2027-02-22.
+      Completeness: tests/sdds_calendar_releases_complete.sql.
+    tests:
+      - unique:
+          column_name: "entity || '|' || category || '|' || reference_period || '|' || release_date"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: calendar_year
+        tests: [not_null]
+      - name: sector
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Sektor podstawowy', 'Sektor podatkowo-budżetowy', 'Sektor finansowy', 'Sektor zagraniczny',
+                         'Ludność']
+      - name: category
+        tests: [not_null]
+      - name: publisher
+        description: nbp, mf or gus by category; NULL (test failure) for a category nobody has mapped yet.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['nbp', 'mf', 'gus']
+      - name: column_month
+        tests: [not_null]
+      - name: release_date
+        tests: [not_null]
+      - name: reference_period
+        tests: [not_null]
+      - name: period_frequency
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['M', 'Q']
+      - name: period_start
+        tests: [not_null]
+      - name: check_status
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ok', 'before_period_end', 'outside_column', 'mixed_period_kind', 'period_repeated']
+      - name: raw_sha256
+        description: Landing SHA-256 of the workbook copy (lineage to Landing/Archive).
+        tests: [not_null]

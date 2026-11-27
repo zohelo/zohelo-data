@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-t_co2_per_person,t CO2/os.,tonnes of CO2 per person,tony CO2 na osobę,false,t_co2_per_person,1
-intl_usd_2011_per_person,$ 2011/os.,international-$ in 2011 prices per person,dolary międzynarodowe w cenach z 2011 r. na osobę,false,intl_usd_2011_per_person,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+t_co2_per_person,t CO2/os.,tonnes of CO2 per person,tony CO2 na osobę,false,t_co2_per_person,1,t CO2/person
+intl_usd_2011_per_person,$ 2011/os.,international-$ in 2011 prices per person,dolary międzynarodowe w cenach z 2011 r. na osobę,false,intl_usd_2011_per_person,1,$ 2011/person

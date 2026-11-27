@@ -1,0 +1,59 @@
+id: EX-003
+name: Fire-service intervention statistics and current casualty summaries
+short_name: PSP fire-service statistics
+provider: Headquarters of the State Fire Service (KG PSP)
+source_system: kgpsp_interventions
+status: built
+family: F
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [public-safety, emergency-services]
+entities: [region, incident-aggregate]
+granularity: 'Per year: one ZIP of data from incident reports and one ZIP of standard summary tables; the casualty page
+  is a current national and voivodeship summary.'
+coverage: Annual archives 2016-2025 (both series).
+access:
+  endpoint: https://www.gov.pl/web/kgpsp/interwencje-psp
+  kind: bulk_file
+  interfaces: [ZIP, HTML]
+  auth: public download
+  cost: free
+  limits: None published. Attachments are https://www.gov.pl/attachment/<uuid>.
+licence:
+  status: open-conditional
+  notes: 'Terms: stated on the data page https://www.gov.pl/web/kgpsp/interwencje-psp (section LICENCJA, read by the probe
+    12 Nov 2026): "Dane statystyczne KG PSP, zostały zamieszczone na portalu dane.gov.pl Rodzaj licencji: CC BY 4.0 Link
+    do licencji: https://creativecommons.org/licenses/by/4.0/legalcode.pl"; "Adaptacje - remiksuj, zmieniaj i twórz na bazie
+    utworu dla dowolnego celu, także komercyjnego."; "Uznanie autorstwa - Utwór należy odpowiednio oznaczyć, podać link
+    do licencji i wskazać jeśli zostały dokonane w nim zmiany." Commercial reuse and modification allowed with attribution,
+    a link to the licence and a note of changes. Attribution: "Źródło: Komenda Główna Państwowej Straży Pożarnej, <nazwa
+    zestawienia> <rok>, CC BY 4.0, pobrano <data>".'
+updates: 'Annual: the 2025 archives were online on 12 Nov 2026; the casualty summary page states daily updates.'
+ingestion:
+  history: 'Bulk files linked from the stable page https://www.gov.pl/web/kgpsp/interwencje-psp: 20 attachments, per year
+    2016-2025 one "zestawienie danych z informacji ze zdarzeń" ZIP (about 37-45 MB as labelled on the page) and one "tabele
+    stałych zestawień" ZIP (about 8-11 MB). Attachment UUIDs change per release, so the page is the entry. Content
+    (Dev probes 45745935044, 45746735646): .xlsx workbooks, 2016-2022 a voivodeship, powiat and gmina copy of each
+    table, from 2023 one gmina-level workbook per table; tables 1 and 10 are loaded (docs/sources/kgpsp_interventions.md).'
+  incremental: Snapshot per year file; version = Last-Modified; a closed year does not change, the newest year is re-checked
+    monthly.
+  identifiers: Year, table name, voivodeship (names), incident type.
+modelling:
+  notes: 'Smallest Gold selection: the standard tables. New KPIs: fires, local emergencies and false alarms (count), fire
+    deaths and injured, annual, Poland and voivodeships, 2016-2025. The incident-report archives are a later step (size,
+    possible address detail to check). Effort M (ZIP content to be read at the Landing trial).'
+  overlap: Local fire reports and national totals may describe the same interventions.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): page and attachments answered
+    200 to a GitHub runner; licence section read; ZIP content not inspected.'
+  - Check the incident-report archives for address-level or personal detail before loading them; start with the standard
+    tables.
+  references:
+  - https://www.gov.pl/web/kgpsp/interwencje-psp
+  - https://www.gov.pl/web/kgpsp/ofiary-polska
+  - https://creativecommons.org/licenses/by/4.0/legalcode.pl

@@ -29,3 +29,13 @@ gleif as (
     ) as t (letters, terc_code)
 )
 {% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__gleif() %}
+    {{ return({
+        'block_model': 'poc_build_gleif',
+        'blocks': [
+            ['lei2', 'GLEIF LEI records (golden copy)'],
+        ],
+    }) }}
+{% endmacro %}

@@ -32,13 +32,13 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry PL-ENV-001 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry PL-ENV-001 in ingestion/register/pl-env-001.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl,
       https://www.geoportal.gov.pl/pl/dane/.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/pl-env-001.yaml
     steps:
     - Open https://www.gov.pl/web/gugik/dane-udostepniane-bez-platnie-do-pobrania-z-serwisu-wwwgeoportalgovpl and
       the licence notice inside a downloaded PRG package description on geoportal.gov.pl; record the reuse terms
@@ -52,8 +52,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='PL-ENV-001'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/pl-env-001.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

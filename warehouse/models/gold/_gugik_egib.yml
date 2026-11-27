@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: poc_build_gugik_egib
+    description: >-
+      Build stage — GUGiK KI EGiB aggregate WFS register counts (register PL-ENV-006, licence unresolved, internal):
+      parcels and buildings per powiat, voivodeship (sum of its powiats) and Poland (sum of powiats; also the
+      service total and the records outside the powiat list), one date per snapshot = the run date (frequency D).
+      The count is what the county services supplied on the day, not a census.
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

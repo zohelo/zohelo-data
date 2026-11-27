@@ -27,7 +27,10 @@ archive_policy:
   prune: report
 bronze: [bronze.entsog_operational_data, bronze.entsog_rejected_files]
 silver: [silver.entsog_physical_flow, silver.entsog_points]
-gold: [gold.build_entsog]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.entsog_physical_flow by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table entsog_physical_flow.
+gold: [gold.build_entsog, gold.entsog_observations, gold.entsog_series,
+       gold.entsog_measures, gold.entsog_geography, gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   entsog_physical_flow: {rows: 150000}  # 97,222: 49 point-directions × gas days 2021-01-01..2026-11-30 (Dev trial 43799477692); grows about 18,000 a year
   entsog_points: {rows: 100}  # 49 point-directions (Dev trial 43799477692)
@@ -38,4 +41,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # year), a new version replaces its month whole, and the API offers no changed-since filter; small, rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2962"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]

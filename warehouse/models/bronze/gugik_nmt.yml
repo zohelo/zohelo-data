@@ -1,0 +1,70 @@
+version: 2
+sources:
+- name: gugik_nmt
+  description: >-
+    GUGiK elevation sheet indexes (register PL-ENV-005), WFS Skorowidze of NMT, NMPT and the LIDAR measurement data,
+    EVRF2007 and KRON86 services, one feature type per data year; one file per service's year, replaced whole (design
+    #875). No rasters or point clouds.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gugik_nmt/
+    loaded_by: ingestion/to_bronze/gugik_nmt/entities.py
+    config: ingestion/sources/gugik_nmt.yaml
+  tables:
+  - name: gugik_nmt_sheets
+    description: >-
+      Every feature of the newest complete version of each service's year as published: gml_id, the 16 properties of
+      DescribeFeatureType as text (godlo, akt_rok, asortyment, format, char_przestrz, blad_sr_wys, uklad_xy,
+      modul_archiwizacji, uklad_h, nr_zglosz, akt_data, czy_ark_wypelniony, url_do_pobrania, zrodlo_danych, dt_pzgik,
+      blad_sr_syt), the footprint (geometry type, srsName, first posList, ring count), provenance (raw_sha256 of the
+      page, source_version, ingested_at), part_index and source_row_number; partitioned by entity
+      (<product>_<datum>_<YYYY>).
+  - name: gugik_nmt_rejected_files
+    description: Service-year versions of gugik_nmt the decoder or the Silver checks rejected, with the reason.
+- name: gugik_nmt_entities
+  description: >-
+    Silver table of gugik_nmt written per service's year by the loader, not by dbt (design #875): exactly the newest
+    version of every entity, from warehouse/entity/gugik_nmt_sheets.sql, checked per entity before it is accepted
+    (feature_id unique, keys not null, data_year = the feature type's year).
+  database: r2
+  schema: silver
+  tables:
+  - name: gugik_nmt_sheets
+    description: >-
+      GUGiK elevation sheet indexes, one row per index feature = sheet x product x edition x file format (entity,
+      feature_id): product (nmt, nmpt, lidar) and service datum (evrf2007, kron86), sheet id (godło), data year and
+      date, assortment, file format, spatial characteristic as published (grid size or point density), mean height
+      and position errors (m), CRS, vertical datum as published, archive scale, submission number, partially filled
+      flag, download link (not followed), data source, PZGiK date, and the footprint's centroid (EPSG:2180
+      easting/northing) and planar area (km2). Trial run in docs/sources/gugik_nmt.md.
+    tests:
+      - unique:
+          column_name: "entity || '|' || cast(feature_id as varchar)"
+    columns:
+      - name: entity
+        tests: [not_null]
+      - name: feature_id
+        tests: [not_null]
+      - name: sheet_id
+        tests: [not_null]
+      - name: data_year
+        tests: [not_null]
+      - name: product
+        tests: [not_null, {accepted_values: {arguments: {values: [nmt, nmpt, lidar]}}}]
+      - name: service_datum
+        tests: [not_null, {accepted_values: {arguments: {values: [evrf2007, kron86]}}}]
+      - name: vertical_datum
+        tests: [{accepted_values: {arguments: {values: [PL-EVRF2007-NH, PL-KRON86-NH]}}}]
+      - name: assortment
+        tests: [{accepted_values: {arguments: {values: [NMT, NMPT, chmura punktow]}}}]
+      - name: data_source
+        tests: [{accepted_values: {arguments: {values: [Skaning laserowy, Zdj. lotnicze, Zdj. cyfrowe]}}}]
+      - name: crs_xy
+        tests: [{accepted_values: {arguments: {values: [PL-1992, 'PL-2000:S5', 'PL-2000:S6', 'PL-2000:S7', 'PL-2000:S8']}}}]
+      - name: sheet_filled
+        tests: [{accepted_values: {arguments: {values: [TAK, NIE]}}}]
+      - name: geometry_type
+        tests: [{accepted_values: {arguments: {values: [Polygon]}}}]
+      - name: raw_sha256
+        tests: [not_null]

@@ -1,0 +1,56 @@
+id: PLS-023
+name: RAD-on public data and POL-on APIs
+short_name: RAD-on / POL-on
+provider: Ośrodek Przetwarzania Informacji – Państwowy Instytut Badawczy (OPI PIB)
+source_system: radon
+status: built
+family: B
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [higher education, science, research institutions, research outputs]
+entities: [university, research institution, study programme, researcher, doctoral school, project]
+granularity: Entity/relationship records from POL-on public services; resource-specific grain.
+coverage: POL-on 2.0-era APIs with documented releases at least from 2022; per-resource history varies.
+access:
+  endpoint: https://radon.nauka.gov.pl/api
+  kind: api
+  interfaces: [REST API, HTML, interactive reports]
+  auth: Public portal; current account/API conditions and quotas need specification review.
+  cost: free
+  limits: 'Not published on the pages read (help centre searched for "limit", "regulamin", "licencja", 12 Nov 2026). The
+    open-data API is https://radon.nauka.gov.pl/opendata/polon/<resource>?resultNumbers=<n>&token=<cursor>, no key; the
+    swagger page and the /api catalogue are single-page apps without a reachable OpenAPI file (Dev probe 43328619935).'
+licence:
+  status: unresolved
+  notes: 'Terms: https://polon.nauka.gov.pl/en/public-data/ says "We make part of the data from the POL-on system publicly
+    available in accordance with the law. Most of it is provided through the RAD-on system"; no licence name and no attribution
+    text on the pages read; licence stays unresolved (internal only) until the RAD-on terms (radon.nauka.gov.pl, help centre)
+    are found or OPI PIB confirms them.'
+updates: Operational updates plus periodic reports; resource-specific.
+ingestion:
+  history: 'Start with the non-person resources listed under https://polon.nauka.gov.pl/en/public-data/: institutions of
+    higher education and science, private universities register, branches, doctoral schools, study programmes, evaluation
+    of scientific activity, disciplines, projects, investments, patents. Skip scientists and staff, promotion documents
+    and publication-author affiliations (personal data).'
+  incremental: Use supported update filters only if documented; otherwise snapshot and diff.
+  identifiers: POL-on resource ID; REGON may link institutions; programme identity needs institution and version.
+modelling:
+  notes: Separate organizations, programmes and annual aggregates; omit unnecessary personal data.
+  overlap: ELA derives from POL-on plus ZUS; avoid duplicating ELA outcomes as raw POL-on measures.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Built for institutions and study programmes (courses with their launches), #2990; branches, doctoral schools,
+    evaluation, projects, investments and patents are not loaded yet. Persons (staff, doctoral students, project managers,
+    promotion procedures, publication authors) are out of scope.'
+  - 'Licence unresolved: no licence text on the public-data page or in the RAD-on help centre pages read (Dev probe
+    43328619935); internal only until OPI PIB states terms'
+  - 'No quota and no changed-since filter documented: full snapshot weekly'
+  references:
+  - https://radon.nauka.gov.pl/api
+  - https://radon.nauka.gov.pl/pomoc/tag/api/page/2/
+  - https://polon.nauka.gov.pl/en/public-data/
+  - https://radon.nauka.gov.pl/dane/instytucje-systemu-szkolnictwa-wyzszego-i-nauki

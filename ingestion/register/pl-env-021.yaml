@@ -1,0 +1,111 @@
+id: PL-ENV-021
+name: Gas transmission transparency data
+short_name: GAZ-SYSTEM transparency
+provider: Operator Gazociągów Przesyłowych GAZ-SYSTEM S.A.
+source_system: entsog
+status: built
+family: G
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [natural gas, transmission infrastructure, operations]
+entities: [interconnection point, gas-day measure, maintenance event]
+granularity: Capacity, nominations, actual flows, calorific value and planned-work disclosures by relevant point/time.
+coverage: GAZ-SYSTEM (operatorKey PL-TSO-0002) on the ENTSOG Transparency Platform, launched 1 October 2014 (TP User Manual
+  v4.5); daily physical flows read for a rolling window of about five years (1 January 2021 answered, 1 January 2020 did
+  not); 47 point-direction series per gas day in October and November 2026.
+access:
+  endpoint: https://transparency.entsog.eu/api/v1/operationaldatas
+  kind: api
+  interfaces: [REST API (ENTSOG Transparency Platform), JSON, XML, CSV, XLSX]
+  auth: 'None: no key or account for the public ENTSOG API. GAZ-SYSTEM''s shipper imbalance information needs an authenticated
+    SWI account (not used).'
+  cost: Free.
+  limits: 'No numeric quota published. ENTSOG TP API User Manual v3.0 (https://transparency.entsog.eu/api/archiveDirectories/8/api-manual/ENTSOG_TP_API_UserManual_v3.0.pdf,
+    read 12 Nov 2026): "As the API is publicly accessible, usage restrictions apply to ensure fair access and platform stability.";
+    "All queries are subject to a maximum execution time of 60 seconds."; "If no limit parameter is provided, API calls
+    return a maximum of 100 records by default." (limit=-1 returns all records); "Monthly ranges are strongly recommended
+    instead of broad multi-month or multi-year queries."; "When handling failed or timed-out requests, implement reasonable
+    back-off intervals." "Do not send aggressive, rapid retries." Terms Art. 5.6: access may be blocked for "executing unproportioned
+    downloads (7.5 times more than the average User of the same category)". robots.txt of transparency.entsog.eu allows
+    everything ("User-agent: *", empty Disallow; Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe,
+    12 Nov 2026)).'
+licence:
+  status: unresolved
+  notes: 'Terms: ENTSOG TP "Privacy & T&C of Use", TRA0394-16, Rev_3, 24 May 2018, https://transparency.entsog.eu/pdf/TRA0394_20161115_ENTSOG_TP_TC_of_Use_Rev_2_KNS_LG_KNS.pdf
+    (read 12 Nov 2026); it is the document the platform itself links in its forms as "Privacy Policy and Terms of Use" (found
+    in the site''s scripts by Dev probe run 43288071987 (job 131426672054, branch test/src-env-probe, 12 Nov 2026); the
+    older 8 Feb 2016 file https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf is still on the host but is
+    not linked). Art. 5.1: "you may download, store and use the contents of the ENTSOG TP in good faith", subject to "always
+    complying with good business practices regarding the re-use of publicly available data" and "provided you keep intact
+    all trademark, copyright and other proprietary notices indicated." Attribution (Art. 5.2): "you shall at least indicate
+    the source, and the date of data download/extraction", in the form "ENTSOG TP [DD-MM-YYYY] https://transparency.entsog.eu/".
+    Automated access: Art. 5.6 "ENTSOG does not permit automatic extraction of data or other usage that reduces the performance
+    of the ENTSOG TP." and Art. 5.7 "The automate download of data is possible via the API tool of the ENTSOG TP" (within
+    the limits of the API User Manual), so loading through the API is allowed. Commercial reuse: not stated (Art. 6 only
+    forbids to "advertise or perform any commercial solicitation" on the platform). Modification: not stated as a permission;
+    disclaimer Art. 5.5 "ENTSOG disclaims any responsibility or liability should you alter, modify, summarize, or process
+    in any manner the data". Art. 3: the contents are "the exclusive property of ENTSOG, its members, or such third party
+    credited as provider of the contents". Because commercial reuse and modification are not stated, the status is unresolved
+    and the source stays internal. GAZ-SYSTEM''s own site states no data terms that the probe could find: its English home
+    page links no legal notice, terms or copyright page, and its data-transparency page (200, no file downloads) only links
+    the SWI application and the ENTSOG platform (Dev probe run 43295514703 (job 131452664788, same branch, second pass)).
+    The quotes were returned by the fetch tool in fragments of up to 125 characters; re-read the PDF before any publication.'
+updates: 'Daily gas-day values, first Provisional and later Confirmed (flowStatus), with lastUpdateDateTime per record.
+  Observed on 12 Nov 2026: every gas day of October 2026 was Confirmed (newest lastUpdateDateTime 12 Nov 2026 18:21 UTC)
+  and 1 November 2026 was still Provisional (last updated 2 Nov 07:05 UTC), so a month is confirmed after it ends. The API
+  documents no changed-since filter (API User Manual v3.0).'
+ingestion:
+  history: 'Route: GET https://transparency.entsog.eu/api/v1/operationaldatas?operatorKey=PL-TSO-0002&indicator=Physical%20Flow&periodType=day&timezone=WET&limit=-1&from=<date>&to=<date>
+    returns JSON (meta + operationaldatas, 35 fields per record). Tested from a GitHub runner, Dev probe run 43288071987
+    (job 131426672054, branch test/src-env-probe, 12 Nov 2026): one gas day (1 Nov 2026) 200, 47 rows, 46,663 bytes, 1.1
+    s (meta count 47, total 72: the difference is not explained by the manual); the month of October 2026 200, 1,457 rows,
+    1,417,652 bytes, 1.8 s, 47 point-direction series, no repeated pointKey + directionKey + periodFrom; 1 January 2021
+    answered 200 (40,846 bytes), while 1 January 2020 and every earlier day tried back to October 2013 answered 404 with
+    the message "Data on the TP is archived on a rolling basis. If you are looking for data more than 5 years old, please
+    check the TP Archives" (Dev probe run 43295514703 (job 131452664788, same branch, second pass)), so the API serves a
+    rolling window of about five years; the TP Archives were not opened. Size: about 1.4 MB and 1,500 rows per month for
+    this indicator, so about 17 MB and 17,500 rows per year (measured month times twelve). Without limit=-1 the API returns
+    100 rows (the first probe, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026), read
+    such a capped answer). Other formats by appending .csv, .xml or .xlsx to the endpoint (manual; not tested). GAZ-SYSTEM''s
+    own public tables are in https://swi.gaz-system.pl/mir/, a JavaScript application (736-byte shell, Dev probe run 43203166665
+    (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)), which the pipeline does not support, and are not needed:
+    the same disclosures are on the ENTSOG platform.'
+  incremental: 'Entity = indicator x gas month; version = newest lastUpdateDateTime in the month''s answer. Daily run: request
+    the current and the previous month (two requests per indicator, monthly windows as the manual recommends) and keep the
+    answer when the bytes change (snapshot, changed_since_last); a month stops being re-read once every row is Confirmed.
+    Backfill one month per request, spread out, oldest last. Refresh full (small source).'
+  identifiers: ENTSOG pointKey + directionKey + indicator + periodType + periodFrom; record id; operatorKey PL-TSO-0002;
+    tsoEicCode; tsoItemIdentifier.
+modelling:
+  notes: 'Separate capacity, nomination, allocation, flow, quality and outage facts; gas-day conventions matter. Grain:
+    point x direction x gas day, kWh/d. Frequencies: day (tested); the API has other periodType values (manual, not tested),
+    and each frequency needs its own measure_key. Gas day in the answer: periodFrom 05:00 UTC to 05:00 UTC next day with
+    timezone=WET (06:00 Polish winter time); some points start at 03:00 UTC, so the gas day is taken from periodFrom per
+    point, not assumed. Missing values: 11 of the 47 series per day come with an empty value, isNA = 1 and an empty flowStatus
+    (341 of 1,457 rows in October 2026); they are missing, never zero. Provisional and Confirmed share one key and are told
+    apart by flowStatus and lastUpdateDateTime; the newest wins. Indicator names are case-sensitive ("Physical Flow"). Smallest
+    Gold selection: daily physical flow into and out of Poland by point group (proposed: LNG terminal, Baltic Pipe, interconnectors,
+    domestic gas fields; the groups are built from pointLabel and pointType) and the entry total, Poland only (no voivodeship
+    grain exists), as new KPIs in environment.energy; monthly sums as a second frequency for comparison with Eurostat.'
+  overlap: No KPI of kpi.csv is about gas flows (checked 12 Nov 2026). Eurostat monthly gas balances carry the official
+    EU comparison; ENTSOG holds the same points for every EU operator, so the same build can later take other operators.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Licence unresolved: the ENTSOG terms allow download, storage, use and automated API download with the citation "ENTSOG
+    TP [DD-MM-YYYY] https://transparency.entsog.eu/", but do not state commercial reuse or modification; internal only until
+    the owner decides or ENTSOG answers.'
+  - The API holds a rolling window of about five years; older gas days are in the TP Archives, which were not opened. The
+    meaning of meta.total against meta.count is not documented; other period types and the other indicators (nominations,
+    allocations, capacities, GCV) were not tested.
+  references:
+  - https://www.gaz-system.pl/en/for-customers/market-information/data-transparency.html
+  - https://swi.gaz-system.pl/mir/
+  - https://transparency.entsog.eu/
+  - https://transparency.entsog.eu/pdf/TRA0394_20161115_ENTSOG_TP_TC_of_Use_Rev_2_KNS_LG_KNS.pdf
+  - https://transparency.entsog.eu/pdf/Terms_and_Conditions_of_Use.pdf
+  - https://transparency.entsog.eu/api/archiveDirectories/8/api-manual/ENTSOG_TP_API_UserManual_v3.0.pdf
+  - https://www.entsog.eu/sites/default/files/2021-07/ENTSOG%20-%20TP%20User%20Manual_v_4.5.pdf

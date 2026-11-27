@@ -1,0 +1,58 @@
+id: GL-024
+name: Global Health Observatory (GHO) OData API
+short_name: WHO GHO
+provider: World Health Organization
+status: reviewing
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [health, mortality, disease, health-systems]
+entities: [country, region, person-aggregate]
+granularity: Indicator/location/time with indicator-specific dimensions such as sex, age and residence.
+coverage: Worldwide; period and completeness vary by indicator; some time dimensions span multiple years.
+access:
+  endpoint: https://www.who.int/data/gho/info/gho-odata-api
+  kind: api
+  interfaces: [HTML, OData API, XML, JSON]
+  auth: public
+  cost: free
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: open-conditional
+  notes: 'Terms: WHO terms for data compilations, https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions
+    (no named licence): royalty-free right to use, reproduce and extract the datasets for public health purposes only;
+    not for or with the promotion of a commercial enterprise; no alteration beyond minor style changes without WHO
+    written authorization; third-party data excluded; provided without warranty. Attribution: "WHO, <title of dataset>,
+    <year>, accessed <date>" plus credit to the reporting countries. The same indicators on data.who.int (GL-025)
+    are CC BY 4.0 — prefer that route.'
+updates: Indicator revisions are possible; no platform-wide schedule documented.
+ingestion:
+  history: Snapshot indicator catalog, dimensions and all selected observations.
+  incremental: Filter by time only as a refresh window, then upsert full keys; it is not CDC.
+  identifiers: Indicator code + spatial dimension + time begin/end + all Dim fields.
+modelling:
+  notes: Keep numeric, display and low/high values distinct. Estimates, crude/standardized rates and counts are
+    non-additive.
+  overlap: Overlaps WDI, UNICEF, SDG database and data.who.int; migration path must avoid duplicate canonicals.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: the GHO terms (https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions, read by
+    the runner 26 Nov 2026) grant a right "to use, reproduce, extract, download, copy, distribute, display or include the
+    Datasets and data contained therein in other products for public health purposes", and say that changes beyond minor
+    style edits "may be made only with the prior written authorization of WHO"; the same WHO indicators published on
+    data.who.int are CC BY 4.0 and loaded (GL-025, `who`). Do you want to ask WHO for written authorization to load the
+    GHO indicators that are not on data.who.int and show them on zohelo.com and bi.zohelo.com, or keep GHO out and use
+    only data.who.int?'
+  - 'Re-review 26 Nov 2026 (Task #2916): Dev probe run 45854123045 (job 140027895910, branch test/src-parked-probe, script dev/src_parked4_probe.py, 26 Nov 2026): the GHO terms page (9,208 characters),
+    the data.who.int terms page https://data.who.int/about/data/terms-and-conditions (8,411 characters, links CC BY 4.0)
+    and the GHO OData API page answered. Not "contained": data.who.int does not yet carry every GHO indicator, so the entry
+    waits for the owner instead of being parked as contained.'
+  - 'Prefer data.who.int (GL-025, CC BY 4.0) for overlapping series.'
+  references:
+  - https://www.who.int/data/gho/info/gho-odata-api
+  - https://data.who.int/about/data/terms-and-conditions
+  - https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions

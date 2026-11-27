@@ -32,12 +32,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry PLS-007 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry PLS-007 in ingestion/register/pls-007.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/pls-007.yaml
     steps:
     - Open https://eteryt.stat.gov.pl/eteryt/rejestr_teryt/udostepnianie_danych/baza_teryt/baza_teryt.aspx and the
       'Warunki korzystania' / regulations page it links; find whether downloaded TERYT files may be republished
@@ -55,8 +55,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='PLS-007'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/pls-007.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

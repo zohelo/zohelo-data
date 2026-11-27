@@ -1,0 +1,56 @@
+version: 2
+models:
+  - name: itu_datahub_observations
+    description: >-
+      ITU DataHub ICT indicators (register GL-031; licence unresolved, internal) as the World Bank republishes them in
+      Data360 dataset ITU_DH (file ITU_DH.csv): subscriptions, internet use, households with access, coverage,
+      bandwidth, traffic, prices and ICT skills by economy (ISO3 as published) and year, annual, with the
+      indicator-specific breakdowns sex, age, urbanisation and skill level as published ('_T' total, '_Z' not
+      applicable) and the unit as published (one indicator can be published in several units). Text values of the
+      IT_COMP_* indicators stay in value_text with value null, never 0. Grain: indicator x ref_area x sex x age x
+      urbanisation x comp_breakdown_1 x comp_breakdown_2 x comp_breakdown_3 x unit_measure x time_period. Dev trial
+      45874151208: 144,549 rows, 39 indicators, 236 economies, 2000-2025.
+    tests:
+      - unique:
+          column_name: "indicator || '|' || ref_area || '|' || sex || '|' || age || '|' || urbanisation || '|' || comp_breakdown_1 || '|' || comp_breakdown_2 || '|' || comp_breakdown_3 || '|' || unit_measure || '|' || time_period"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [itu_dh]}}}]
+      - name: database_id
+        tests: [not_null, {accepted_values: {arguments: {values: [ITU_DH]}}}]
+      - name: indicator
+        tests: [not_null]
+      - name: ref_area
+        tests: [not_null]
+      - name: sex
+        tests: [not_null, {accepted_values: {arguments: {values: ['_T', '_Z', 'F', 'M']}}}]
+      - name: age
+        tests: [not_null, {accepted_values: {arguments: {values: ['_T', '_Z', 'Y0T14', 'Y15T24', 'Y25T74', 'Y_GE75']}}}]
+      - name: urbanisation
+        tests: [not_null, {accepted_values: {arguments: {values: ['_T', '_Z', 'URB', 'RUR']}}}]
+      - name: comp_breakdown_1
+        tests: [not_null, {accepted_values: {arguments: {values: ['_Z', 'BASIC', 'ABOVE_BASIC']}}}]
+      - name: comp_breakdown_2
+        tests: [not_null, {accepted_values: {arguments: {values: ['_Z']}}}]
+      - name: comp_breakdown_3
+        tests: [not_null, {accepted_values: {arguments: {values: ['_Z']}}}]
+      - name: unit_measure
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [SB, SB_10P2_HB, PT_POP, PT_HH, KBPS, MBIT_S, GB_SB, XB_Y, CAT, USD, PPP, PT_GNI_PS]
+      - name: unit_mult
+        tests: [not_null, {accepted_values: {arguments: {values: [0], quote: false}}}]
+      - name: freq
+        tests: [not_null, {accepted_values: {arguments: {values: [A]}}}]
+      - name: time_period
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: obs_status
+        tests: [{accepted_values: {arguments: {values: [A]}}}]
+      - name: obs_conf
+        tests: [{accepted_values: {arguments: {values: [PU]}}}]
+      - name: raw_sha256
+        tests: [not_null]

@@ -1,0 +1,38 @@
+source_system: gios_surface_water
+description: "GIOŚ surface-water monitoring (PMŚ): status classification of the surface water bodies (JCWP), assessment 2019-2024, rivers, dam reservoirs, lakes, transitional and coastal waters, from the public ArcGIS services of the PJWP portal"
+
+# Extraction strategy (docs/landing.md). Register PL-ENV-011. The status assessment is published only as the portal's
+# public ArcGIS MapServer services https://wody.gios.gov.pl/arcgis/rest/services/PJWP/Ocena_stanu_JCWP_<category>_2019_2024
+# (Map,Query,Data; 19 layers, 14,906 features, no water body in two services; Dev probes 45922872272, 45924431424). They
+# answer no pagination and at most 1,000 features a query, so ingestion/to_landing/gios_surface_water/ reads each
+# layer's object ids and lands the features in pages of 1,000 ids (objectIds, attributes only) through the shared
+# bulk_file pattern, 3 s apart. Entity = one page of one layer (<category>_<assessment>_p<nn>); version = download
+# time; a page lands only when its SHA-256 changed. Restart unit: one page. The yearly physico-chemical workbooks of
+# publication 367 are left out (docs/sources/gios_surface_water.md).
+extraction:
+  initial: bulk
+  production: snapshot                  # each page is the current state of its features
+  incremental_policy: changed_since_last  # SHA-256 of the answer (the services send no Last-Modified)
+  schedule: # UTC; the assessment changes once per six-year cycle (2019-2024 published 2025); a weekly check (O46), about
+    # 50 small requests: Thursdays 05:35
+    - {cron: "35 5 * * 4", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/gios_surface_water/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.gios_surface_water_features, bronze.gios_surface_water_rejected_files]
+silver: [silver.gios_surface_water_status]
+gold: [gold.build_gios_surface_water, gold.metrics_surface_water_good_status_share]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev probe 45924431424 and the trial (PR body)
+  gios_surface_water_status: {rows: 22400}  # 14,906 water body x assessment rows in 19 layers
+  poc_build_gios_surface_water: {rows: 220}  # 145: 20 category x assessment totals, class counts and shares, 12 good
+  poc_metrics_surface_water_good_status_share: {rows: 10}  # 1: Poland, assessment 2019-2024
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a page
+# Refresh policy for all layers (D32): about 30 answers of under 200 kB, 14,906 rows, unchanged within a six-year
+# cycle and no changed-since filter; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #3312"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

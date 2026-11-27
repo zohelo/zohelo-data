@@ -1,0 +1,18 @@
+version: 2
+sources:
+- name: kowr_markets
+  description: KOWR weekly grain market reports (register PLS-033), PDF "Raport o sytuacji na rynku zbóż" on gov.pl
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/kowr_markets/
+    loaded_by: ingestion/to_bronze/kowr_markets/
+    config: ingestion/sources/kowr_markets.yaml
+  tables:
+  - name: kowr_markets_cells
+    description: >-
+      One row per cell of three tables of the report's text layer (FOB export prices, EU purchase prices by member
+      state, national commodity exchange offers): table, period or quote date and stated source as printed, group,
+      row and column label, value as printed; newest copy of each landed report week; partitioned by entity.
+  - name: kowr_markets_rejected_files
+    description: Report files of kowr_markets the Bronze decoder rejected (a table or header not recognised), with the reason.

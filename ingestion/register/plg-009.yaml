@@ -1,0 +1,49 @@
+id: PLG-009
+name: Public finance sector debt statistics
+short_name: MF public debt
+provider: Ministry of Finance
+source_system: mf_public_debt
+current: true
+status: built
+family: D
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [public debt, public finance]
+entities: [country, government sector]
+granularity: Debt by subsector, instrument and consolidation/methodology.
+coverage: 'Workbook Dlug_publiczny_<q>.xlsx: public finance sector debt before/after consolidation by subsector (2000-12-31 on), by instrument (place of issue; residency), general government EDP debt by ESA 2010 instrument, PDP–EDP bridge, and debt to GDP (2001-12-31, quarterly from 2003); Dev probes 43084312730, 43085156243, 11 Nov 2026.'
+access:
+  endpoint: https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych
+  kind: bulk_file
+  interfaces: [XLSX, PDF, HTML]
+  auth: public download
+  cost: free
+  limits: Unknown.
+licence:
+  status: open-conditional
+  notes: 'Terms: gov.pl copyright page https://www.gov.pl/web/gov/prawa-autorskie (terms of use
+    https://www.gov.pl/web/gov/warunki-korzystania): text content of gov.pl is CC BY-SA 4.0
+    (https://creativecommons.org/licenses/by-sa/4.0/), which allows commercial reuse and modification with
+    attribution and share-alike; use of official materials (materiały urzędowe) published on gov.pl needs no
+    consent; third-party works need their owners'' consent; audiovisual material is CC BY-NC-ND 4.0 (not used).
+    The XLSX/PDF attachments carry no licence of their own; an attachment marked with other terms keeps them.
+    Attribution: "Źródło: Ministerstwo Finansów, Zadłużenie sektora finansów publicznych (<period>)" / "Source:
+    Ministry of Finance, Public finance sector debt (<period>)".'
+updates: Quarterly with revisions; national and EU methodologies can coexist.
+ingestion:
+  history: 'Full history in the one workbook (each quarterly release holds the whole series).'
+  incremental: 'Weekly re-download; written only when the SHA-256 changed; Bronze keeps the newest copy.'
+  identifiers: period + methodology + consolidation + subsector + instrument
+modelling:
+  notes: Keep EDP/ESA and national definitions distinct; stocks are non-additive.
+  overlap: Overlaps NBP and Eurostat; never sum with Treasury debt.
+research:
+  priority: review-first
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'National (PDP) and EDP definitions sit side by side in the workbook; Gold keeps them as separate measures (SP, PDP, GG).'
+  references:
+  - https://www.gov.pl/web/finanse/zadluzenie-sektora-finansow-publicznych
+  - https://www.gov.pl/web/gov/prawa-autorskie

@@ -1,0 +1,77 @@
+id: CD-028
+name: OpenAlex
+short_name: OpenAlex
+provider: OurResearch
+source_system: openalex
+status: built
+family: J
+kpi: false
+geography: worldwide
+provider_type: community-academic
+domains: [scholarly-communications, entity-resolution]
+entities: [work, author, institution, source, publisher, funder]
+granularity: Linked scholarly entities and citation relationships with source-derived metadata.
+coverage: Broad scholarly index; exact retrospective completeness varies by source, field, language and entity
+  type.
+access:
+  endpoint: https://api.openalex.org/works
+  kind: api
+  interfaces:
+  - API
+  - JSON
+  - bulk-files
+  - Parquet
+  auth: 'No key for small queries: the API answered without one and said "No API key, so this request shares one free daily
+    budget ($0.10) with everyone on your network''s IP address." A free key ($1 of usage a day) needs an account the owner
+    would create; not needed for the selection.'
+  cost: free
+  limits: 'https://help.openalex.org/access/pricing/ (runner, 12 Nov 2026): "Every account gets $1 of API usage per day
+    for free"; without a key $0.10 a day shared per IP address (API notice). A group_by request returns at most 200 groups
+    per page. The polite pool and the mailto parameter no longer exist (desk reading). robots.txt of api.openalex.org (23
+    characters) does not forbid the API.'
+licence:
+  status: open
+  notes: 'Terms: https://help.openalex.org/access/pricing/ (read by the runner 12 Nov 2026, page last updated 3 Nov 2026):
+    "Every record is released under a CC0 public-domain license, with no “personal use only” carve-out and no permission
+    to ask." The snapshot bucket carries the licence text: https://openalex.s3.amazonaws.com/LICENSE.txt begins "Creative
+    Commons Legal Code CC0 1.0 Universal" (runner, 7,047 bytes). Commercial reuse: allowed (CC0). Modification: allowed
+    (CC0). Attribution: not required; shown as a courtesy: "Source: OpenAlex (CC0)".'
+updates: The index changes daily; counts for past years keep moving as works are added and merged. Public snapshot quarterly,
+  on the second Wednesday of January, April, July and October (RELEASE_NOTES.txt, latest release 2026-10-14).
+ingestion:
+  history: 'API aggregates, tested: https://api.openalex.org/works?filter=authorships.countries:PL&group_by=publication_year
+    (200, JSON, 11,435 bytes, 177 year groups, count 1,807,832 works) and the same with open_access.is_oa:true (200, 11,264
+    bytes). Two to four requests per run. The bulk snapshot (s3://openalex, about 750 GB per format by the provider''s figure)
+    is far beyond the free storage tier and is not used.'
+  incremental: Full re-read of the few aggregate responses each run (weekly or monthly); every response is kept as a new
+    version because past counts are revised.
+  identifiers: Country code ISO 3166-1 alpha-2 (PL), publication year; institution ids with ROR for a later regional split.
+modelling:
+  notes: 'kpi false today (register-fields table); the selection is aggregate statistics, so the flag may be reviewed after
+    the build. Smallest Gold selection, Poland first: scholarly works with at least one author affiliated in Poland per
+    publication year, and the open-access share of those works; then the same for other countries for comparison. Voivodeships:
+    possible later through institutions mapped to regions (not verified, effort M). Frequency A only. No suppression markers:
+    works without an affiliation are simply not counted; year groups with few works exist for early years. Duplicates: none
+    within a response; counts change between runs (revisions), the fetch date tells versions apart. No overlap with published
+    KPIs (gerd_gdp is a draft KPI of the same domain). Size: about 23 KB per run (measured). Effort S.'
+  overlap: Built on Crossref (CD-029) and other inputs; OpenAlex adds affiliations and open-access status that Crossref
+    does not have.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): both group_by requests answered
+    200 without a key; LICENSE.txt (CC0 1.0) and RELEASE_NOTES.txt answered 200 from openalex.s3.amazonaws.com; the pricing
+    page answered 200.'
+  - 'Risk: the keyless budget is shared per IP address, and GitHub runners share addresses; if runs meet a refusal, the
+    next step is an owner question for a free OpenAlex account and key, not a retry pattern.'
+  - 'Not verified: the cost of one group_by request against the $0.10 budget, coverage of Polish-language works, the institution-to-region
+    mapping.'
+  references:
+  - https://help.openalex.org/access/pricing/
+  - https://help.openalex.org/api/grouping.md
+  - https://help.openalex.org/data/countries.md
+  - https://help.openalex.org/access/snapshot/
+  - https://openalex.s3.amazonaws.com/LICENSE.txt
+  - https://openalex.s3.amazonaws.com/RELEASE_NOTES.txt

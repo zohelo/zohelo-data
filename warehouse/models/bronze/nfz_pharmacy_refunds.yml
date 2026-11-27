@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+- name: nfz_pharmacy_refunds
+  description: NFZ statistics API, pharmacy refunds (app-stat-api-ra v1.0) — /monthly-provisions per area x ATC group
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/nfz_pharmacy_refunds/
+    loaded_by: ingestion/to_bronze/nfz_pharmacy_refunds/
+    config: ingestion/sources/nfz_pharmacy_refunds.yaml
+  tables:
+  - name: nfz_ra_monthly_provisions
+    description: >-
+      One row per record of every page of the newest download of each entity (<area>_<atc>, 255 entities):
+      area_code (PL or NFZ voivodeship code 01-16), atc_code (A ... V, _T without ATC filter), atc_name (the group
+      name sent), year, month, quantity, refund, donation, contribution_of_patient, value (exact JSON number text),
+      meta_count (rows announced for the selection), page; partitioned by entity.
+  - name: nfz_pharmacy_refunds_rejected_files
+    description: NFZ pharmacy-refund Landing files the Bronze decoder rejected, with the reason.
