@@ -1,0 +1,273 @@
+name: Batch labels · measure names
+
+# Bilingual measure names through the Anthropic Message Batches API (owner request of 27 Nov 2026, O47;
+# ops/measure_names.py). Two manual steps from main:
+#   submit  reads gold.dim_measure read-only, sends the batch and keeps its manifest as the artifact
+#           measure-names-<batch id> (29 days, as long as the API keeps the results);
+#   collect reads that manifest (the newest one, or the one of input batch_id), stops while the batch has not
+#           ended, validates the results, writes warehouse/seed_rows/measure_name/<source_system>.csv and opens a
+#           pull request with the org bot app (a pull request opened by GITHUB_TOKEN would start no check).
+# Authenticates with Workload Identity Federation (no stored key): each job exchanges GitHub's OIDC token for a
+# short-lived Anthropic token. Needs the variables ANTHROPIC_FEDERATION_RULE_ID, ANTHROPIC_ORGANIZATION_ID,
+# ANTHROPIC_SERVICE_ACCOUNT_ID and ANTHROPIC_WORKSPACE_ID (owner, org level); the federation rule accepts only
+# manual runs from main of this repository. Both steps fail with a clear message without them. anthropic is installed here only, from ops/measure_names.requirements.txt (hashes), not
+# from requirements.txt. No schedule, no push trigger.
+
+on:
+  workflow_dispatch:
+    inputs:
+      step:
+        description: "submit (send the batch) or collect (read the results, open a pull request)"
+        required: true
+        type: choice
+        options: [submit, collect]
+      scope:
+        description: "submit: activated (status activated or waiting) or all (every measure)"
+        required: false
+        type: choice
+        options: [activated, all]
+        default: activated
+      model:
+        description: "submit: Claude model id"
+        required: false
+        default: claude-sonnet-5-5
+      batch_id:
+        description: "collect: batch id (msgbatch_…); empty = the newest submitted batch"
+        required: false
+        default: ""
+      issue:
+        description: "collect: open Task the pull request closes (number)"
+        required: false
+        default: ""
+
+run-name: "batch labels: ${{ inputs.step }}"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zohelo-batch-labels
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    if: github.ref == 'refs/heads/main' && inputs.step == 'submit'
+    name: "batch labels · submit"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write  # GitHub OIDC token for Workload Identity Federation
+    env:
+      PYTHONPATH: .
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+      ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
+    # The R2 read secrets are given only to the step that reads, not to checkout, setup-python or the installs.
+    steps:
+      - name: Federation variables present
+        run: |
+          for v in ANTHROPIC_FEDERATION_RULE_ID ANTHROPIC_ORGANIZATION_ID ANTHROPIC_SERVICE_ACCOUNT_ID ANTHROPIC_WORKSPACE_ID; do
+            if [ -z "${!v}" ]; then
+              echo "::error title=$v missing::The variable $v is not set (Settings, Secrets and variables, Actions, Variables); this workflow cannot authenticate without it."
+              exit 1
+            fi
+          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            ops/measure_names.requirements.txt
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --require-hashes -r requirements.txt
+          python -m pip install --require-hashes -r ops/measure_names.requirements.txt
+      - name: Fetch the GitHub OIDC token (Workload Identity Federation)
+        run: |
+          set -euo pipefail
+          curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          # The claims a federation rule matches (payload only, no signature: not a usable credential).
+          python3 -c 'import base64,json,os,sys; p=open(os.environ["ANTHROPIC_IDENTITY_TOKEN_FILE"]).read().split(".")[1]; c=json.loads(base64.urlsafe_b64decode(p+"="*(-len(p)%4))); print(json.dumps({k:c.get(k) for k in ("iss","aud","sub","ref","event_name","repository","repository_owner","repository_owner_id","workflow_ref")}))' || true
+      - name: ops/measure_names.py submit
+        id: submit
+        env:
+          SCOPE: ${{ inputs.scope }}
+          MODEL: ${{ inputs.model }}
+          # Read-only credentials: gold.dim_measure is attached READ_ONLY.
+          STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN }}
+          STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY }}
+          STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY }}
+          STORAGE_LAKEHOUSE_CATALOG_URL: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_URL }}
+          STORAGE_LAKEHOUSE_CATALOG_NAME: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_NAME }}
+          STORAGE_ENDPOINT_URL: ${{ vars.STORAGE_ENDPOINT_URL }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$MODEL" | grep -Eq '^[a-z0-9][a-z0-9.-]{2,63}$'; then
+            echo "::error title=model::not a model id: $MODEL" >&2
+            exit 2
+          fi
+          python -m ops.measure_names submit --scope "$SCOPE" --model "$MODEL" --out /tmp/measure-names
+          echo "batch_id=$(jq -r .batch_id /tmp/measure-names/manifest.json)" >> "$GITHUB_OUTPUT"
+      - name: Keep the manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: measure-names-${{ steps.submit.outputs.batch_id }}
+          path: /tmp/measure-names/manifest.json
+          if-no-files-found: error
+          retention-days: 29
+
+  collect:
+    if: github.ref == 'refs/heads/main' && inputs.step == 'collect'
+    name: "batch labels · collect"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read  # finds and downloads the manifest artifact of the submit run
+      id-token: write  # GitHub OIDC token for Workload Identity Federation
+    env:
+      PYTHONPATH: .
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+      ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
+      BATCH_ID: ${{ inputs.batch_id }}
+      ISSUE: ${{ inputs.issue }}
+    steps:
+      - name: Federation variables and inputs
+        run: |
+          for v in ANTHROPIC_FEDERATION_RULE_ID ANTHROPIC_ORGANIZATION_ID ANTHROPIC_SERVICE_ACCOUNT_ID ANTHROPIC_WORKSPACE_ID; do
+            if [ -z "${!v}" ]; then
+              echo "::error title=$v missing::The variable $v is not set (Settings, Secrets and variables, Actions, Variables); this workflow cannot authenticate without it."
+              exit 1
+            fi
+          done
+          if ! printf '%s' "$ISSUE" | grep -Eq '^[0-9]+$'; then
+            echo "::error title=issue::collect needs input issue: the number of the open Task the pull request closes" >&2
+            exit 2
+          fi
+          if [ -n "$BATCH_ID" ] && ! printf '%s' "$BATCH_ID" | grep -Eq '^msgbatch_[A-Za-z0-9]+$'; then
+            echo "::error title=batch_id::not a batch id: $BATCH_ID" >&2
+            exit 2
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            ops/measure_names.requirements.txt
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --require-hashes -r requirements.txt
+          python -m pip install --require-hashes -r ops/measure_names.requirements.txt
+      - name: Manifest of the batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          query="per_page=100"
+          [ -n "$BATCH_ID" ] && query="$query&name=measure-names-$BATCH_ID"
+          # Newest first, page by page until a manifest turns up (Dev runs add many other artifacts); expired
+          # artifacts (older than 29 days) cannot be collected any more. At most 50 pages (5,000 artifacts).
+          id=""
+          for page in $(seq 1 50); do
+            gh api "repos/$REPO/actions/artifacts?$query&page=$page" > /tmp/artifacts.json
+            id=$(jq -r '[.artifacts[] | select(.name | startswith("measure-names-")) | select(.expired | not)][0].id // empty' /tmp/artifacts.json)
+            if [ -n "$id" ] || [ "$(jq '.artifacts | length' /tmp/artifacts.json)" -lt 100 ]; then break; fi
+          done
+          if [ -z "$id" ]; then
+            echo "::error title=no manifest::no artifact measure-names-${BATCH_ID:-*} from a submit run (or it expired): run step submit first" >&2
+            exit 1
+          fi
+          mkdir -p /tmp/measure-names/in
+          gh api "repos/$REPO/actions/artifacts/$id/zip" > /tmp/measure-names/manifest.zip
+          unzip -q -o /tmp/measure-names/manifest.zip -d /tmp/measure-names/in
+          echo "::notice title=manifest::$(jq -c '{batch_id, model, scope, created_at, measures, requests}' /tmp/measure-names/in/manifest.json)"
+      - name: Fetch the GitHub OIDC token (Workload Identity Federation)
+        run: |
+          set -euo pipefail
+          curl -sS --fail -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -re .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          test -s "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          # The claims a federation rule matches (payload only, no signature: not a usable credential).
+          python3 -c 'import base64,json,os,sys; p=open(os.environ["ANTHROPIC_IDENTITY_TOKEN_FILE"]).read().split(".")[1]; c=json.loads(base64.urlsafe_b64decode(p+"="*(-len(p)%4))); print(json.dumps({k:c.get(k) for k in ("iss","aud","sub","ref","event_name","repository","repository_owner","repository_owner_id","workflow_ref")}))' || true
+      - name: ops/measure_names.py collect
+        id: collect
+        run: |
+          set -uo pipefail
+          python -m ops.measure_names collect --manifest /tmp/measure-names/in/manifest.json --out /tmp/measure-names/out
+          status=$?
+          # 0 every measure passed, 1 some did not (left out and listed), 2 bad input or an unexpected error,
+          # 3 batch not ended. Only 0 and 1 go on to the pull request, and only with the report written.
+          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then exit "$status"; fi
+          if [ ! -s /tmp/measure-names/out/report.md ]; then
+            echo "::error title=measure names::collect ended $status without its report; no pull request" >&2
+            exit 2
+          fi
+          echo "problems=$status" >> "$GITHUB_OUTPUT"
+          if [ -z "$(git status --porcelain -- warehouse/seed_rows/measure_name)" ]; then
+            echo "::warning title=measure names::no row changed; no pull request"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Bot token
+        id: app
+        if: steps.collect.outputs.changed == 'true'
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
+        with:
+          client-id: ${{ vars.ORG_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.ORG_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: zohelo-data
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Open the pull request
+        if: steps.collect.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_SLUG: ${{ steps.app.outputs.app-slug }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          batch=$(jq -r .batch_id /tmp/measure-names/in/manifest.json)
+          branch="chore/$ISSUE-measure-names-${{ github.run_id }}"
+          bot_id=$(gh api "users/${APP_SLUG}[bot]" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add -- warehouse/seed_rows/measure_name
+          git commit -q -m "Measure names from batch $batch (batch-labels.yml)" -m "Refs #$ISSUE"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$branch"
+          {
+            printf 'Lane: structure\n\nCloses #%s\n\n' "$ISSUE"
+            printf 'Written by [batch-labels.yml run](%s) (step collect). Seed rows only: the model `gold.measure_name` reads `warehouse/seed_rows/measure_name/`; nothing joins it to `dim_measure` yet (a separate pull request).\n\n' "$RUN_URL"
+            cat /tmp/measure-names/out/report.md
+          } > /tmp/measure-names/body.md
+          head -c 60000 /tmp/measure-names/body.md > /tmp/measure-names/body-cut.md
+          url=$(gh api "repos/$REPO/pulls" -f title="Measure names (PL, EN) from batch $batch" \
+            -f head="$branch" -f base=main -F body=@/tmp/measure-names/body-cut.md --jq .html_url)
+          echo "::notice title=pull request::$url"
+      - name: Problems
+        if: steps.collect.outputs.problems == '1'
+        run: |
+          echo "::error title=measure names::some measures did not pass validation; they are left out and listed in the job summary (and the pull request body)"
+          exit 1

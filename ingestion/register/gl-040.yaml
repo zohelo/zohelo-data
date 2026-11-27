@@ -1,0 +1,56 @@
+id: GL-040
+name: UNIDO Statistics Data Portal / INDSTAT
+short_name: UNIDO INDSTAT
+provider: United Nations Industrial Development Organization
+status: reviewing
+family: A
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [manufacturing, industry, employment, production]
+entities: [country, industry, enterprise-aggregate]
+granularity: Country/ISIC industry/year/indicator; product access and industry detail vary.
+coverage: Multicountry industrial statistics; editions, history and geography depend on product.
+access:
+  endpoint: https://stat.unido.org/
+  kind: bulk_file
+  interfaces: [HTML, download files]
+  auth: mixed; some UNIDO statistical products require account/subscription
+  cost: mixed
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: restricted
+  notes: 'Terms: UNIDO Statistics Portal Terms and Conditions https://stat.unido.org/content/legal/Terms%20and%20Conditions
+    (session read, 26 Nov 2026; last updated 15 Aug 2016): "Extracts from Material contained on this Portal may be freely
+    used elsewhere provided that acknowledgement of the source is made."; "When using data, you must give appropriate credit
+    to UNIDO by citing as described in the FAQ."; "There are no restrictions on how data extracted from the Portal is used
+    in publications." but "secondary data dissemination" rights are only granted to users that have licensed a database
+    with this option. Commercial reuse: not stated; modification: not stated. Showing INDSTAT tables on zohelo.com or bi.zohelo.com
+    is secondary dissemination, so the data stay internal without that licence. Data provided "as is" and "as available".
+    Attribution: "Source: UNIDO, <database> (<edition>), https://stat.unido.org/."'
+updates: Annual editions and national revisions; no public CDC or common schedule established.
+ingestion:
+  history: Only ingest licensed named edition, metadata and ISIC version.
+  incremental: Replace licensed edition or revised country-industry periods.
+  identifiers: UNIDO product + country + ISIC revision/code + indicator + year.
+modelling:
+  notes: Value added, output, establishments and employment use different units; ISIC revisions need bridges.
+  overlap: Overlaps national statistics, WDI manufacturing aggregates and UNdata legacy INDSTAT mirror.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: stat.unido.org refuses GitHub runners (its robots.txt answers HTTP 403, so no page or download was requested),
+    and its terms grant "secondary data dissemination" only with a licensed database. Do you want us to write to UNIDO''s Statistics Division (the contact on stat.unido.org)
+    asking for automated access to the free INDSTAT 2 data for internal use and for the price of a database licence with
+    the secondary-dissemination option, or leave UNIDO out?'
+  - 'Re-review 26 Nov 2026 (Task #2917): Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): robots.txt of stat.unido.org HTTP 403; the "databases for free" page, the
+    terms page and the home page were therefore not requested by the runner (the terms were read from this session). Not
+    worked around. Lead for the builder if access is granted: UNIDO is the custodian of SDG 9.2.1 and 9.2.2 (manufacturing
+    value added and employment), which the UN SDG API (GL-018, parked) republishes.'
+  - Obtain ISIC concordances
+  references:
+  - https://stat.unido.org/
+  - https://stat.unido.org/content/general/databases-for-free
+  - https://stat.unido.org/content/legal/Terms%20and%20Conditions

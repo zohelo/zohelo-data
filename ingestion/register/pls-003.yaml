@@ -1,0 +1,54 @@
+id: PLS-003
+name: STRATEG indicators and API
+short_name: GUS STRATEG
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+source_system: gus_strateg
+status: built
+family: B
+kpi: true
+geography: Poland and regional Poland; selected EU comparisons
+provider_type: national-public
+domains: [sustainable development, public policy, regional development]
+entities: [country, NUTS region, voivodeship, powiat, gmina]
+granularity: Strategic-policy indicator by territory and period; finest level is indicator-dependent.
+coverage: Historical depth varies by indicator; current portal and API are live.
+access:
+  endpoint: https://strateg.stat.gov.pl/
+  kind: api
+  interfaces: [REST API, HTML, JSON]
+  auth: 'None for reading; an optional API key (STRATEG account) raises the quota. API base https://strateg.stat.gov.pl/api/
+    (spec https://strateg.stat.gov.pl/strateg_en.json).'
+  cost: free
+  limits: 'Spec strateg_en.json: anonymous 5 requests/s and 100 per 15 min; with key 10/s and 500 per 15 min.'
+licence:
+  status: open-conditional
+  notes: 'Terms: GUS terms https://stat.gov.pl/en/copyright/ (PL https://stat.gov.pl/copyright): no objection to copying
+    and printing data and pages, including own changes and summaries, on condition that the source is given; no named
+    licence (CC BY 4.0 is stated only for BDL, D23); commercial reuse not addressed; GUS is not liable for users''
+    summaries or reworked text. The STRATEG API page (https://api.stat.gov.pl/Home/StrategApi?lang=en) states no
+    licence, only "Copyright Statistics Poland" and quotas (anonymous 5 req/s, 100/15 min; with key 10 req/s, 500/15
+    min). Attribution: "Źródło: GUS, STRATEG" / "Source: Statistics Poland, STRATEG" plus the indicator id. The STRATEG
+    API spec itself (https://strateg.stat.gov.pl/strateg_en.json, info.license, read by Dev probe 43800593902 and the
+    trial of #2430) names "Creative Commons Attribution 4.0 International Public License",
+    https://creativecommons.org/licenses/by/4.0/legalcode: licence key cc_by_4_0_gus_strateg.'
+updates: Indicator-dependent and revision-prone; no universal schedule verified.
+ingestion:
+  history: Snapshot indicator catalogue, metadata and full selected histories.
+  incremental: Poll catalogue/version metadata and recent periods; diff revisions.
+  identifiers: Indicator ID + territorial code + period; link strategy/objective metadata and TERYT/NUTS vintage.
+modelling:
+  notes: Store target/observed values separately; rates and target gaps are non-additive.
+  overlap: May reproduce BDL/Eurostat values; preserve source field and do not sum across frameworks.
+research:
+  priority: review-next
+  evidence: catalogue-only
+  connection: not-tested
+  blockers:
+  - 'Resolved (#2430): the spec is https://strateg.stat.gov.pl/strateg_en.json and the API answers at
+    https://strateg.stat.gov.pl/api/ from GitHub runners (Dev probes 43800593902, 45746504682); api-strateg.stat.gov.pl
+    still does not resolve and is not used.'
+  references:
+  - https://strateg.stat.gov.pl/
+  - https://api.stat.gov.pl/Home/Index?lang=en
+  - https://api.stat.gov.pl/Home/StrategApi?lang=en
+  - https://stat.gov.pl/en/copyright/

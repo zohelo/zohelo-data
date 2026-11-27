@@ -17,3 +17,24 @@
 {% macro poc_geography__world_bank_wdi() %}
 world_bank_wdi as ({{ poc_world_bank_economies('world_bank_wdi') }})
 {% endmacro %}
+
+{% macro poc_wdi_blocks() %}
+    select * from (
+        values
+        ('SP.POP.TOTL'), ('SP.DYN.LE00.IN'), ('SM.POP.NETM'), ('NY.GDP.MKTP.CD'), ('NY.GDP.PCAP.CD'),
+        ('NY.GDP.MKTP.KD.ZG'), ('FP.CPI.TOTL.ZG'), ('SL.UEM.TOTL.ZS'), ('SL.EMP.TOTL.SP.ZS'), ('AG.LND.TOTL.K2'),
+        -- zohelo-bi first slice, every source per KPI (O31, #2592)
+        ('SL.TLF.ACTI.ZS'), ('SL.UEM.1524.ZS'), ('SL.UEM.NEET.ZS'), ('GB.XPD.RSDV.GD.ZS'), ('SP.DYN.TFRT.IN'),
+        ('SP.POP.DPND.OL'), ('SE.TER.CUAT.BA.ZS'), ('GC.NLD.TOTL.GD.ZS'), ('EN.GHG.ALL.MT.CE.AR5'),
+        ('BN.CAB.XOKA.GD.ZS'), ('BX.KLT.DINV.CD.WD'), ('SI.POV.GINI'), ('NE.GDI.FTOT.ZS'), ('PX.REX.REER'),
+        ('NY.GDP.PCAP.PP.CD'), ('NY.GDP.MKTP.CN')
+    ) as t (indicator_code)
+{% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__world_bank_wdi() %}
+    {{ return({
+        'block_model': 'poc_build_wdi',
+        'activated': "select 'world_bank_wdi', indicator_code, 'WDI ' || indicator_code from (" ~ poc_wdi_blocks() ~ ")",
+    }) }}
+{% endmacro %}

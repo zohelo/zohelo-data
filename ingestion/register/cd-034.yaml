@@ -1,0 +1,89 @@
+id: CD-034
+name: Raport Rynkowy OTOMOTO
+short_name: OTOMOTO market report
+provider: OTOMOTO / OLX Group
+source_system: otomoto
+status: built
+family: J
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [automotive-market]
+entities: [vehicle-segment, region, listing, registration-aggregate]
+granularity: 'Monthly edition of the report as one Infogram page; each chart carries its data table (month by segment: listings
+  of used, imported and new cars, price bands, fuel shares, demand indices).'
+coverage: The August 2026 edition holds monthly series from 2025-01 to 2026-08 (one series from 2023-01); earlier editions
+  go back to about 2024. Raw listing history is not offered.
+access:
+  endpoint: https://www.otomoto.pl/news/raport-rynkowy-otomoto
+  kind: web
+  interfaces:
+  - HTML
+  - JSON
+  - interactive-report
+  - PDF
+  auth: Public, no login.
+  cost: free
+  limits: infogram.com robots.txt (97 characters) does not forbid the edition page; one request per edition per month. www.otomoto.pl
+    answered HTTP 403 to the runner's robots.txt request, so no page of that host is read (12 Nov 2026).
+licence:
+  status: unresolved
+  notes: 'Terms: none found for https://www.otomoto.pl/news/raport-rynkowy-otomoto. The report page (desk reading 12 Nov
+    2026) has a footer link "Zasady Serwisu" that points to "#", no OTOMOTO regulamin was found by search, and www.otomoto.pl
+    refused the runner (HTTP 403 on robots.txt), so no terms page of the publisher is quoted. The annual report PDF carries
+    "© OTOMOTO INSIGHTS". The edition itself (Dev probe 45814610880, #3264) says under "Źródła danych" "Wszystkie
+    wizualizacje należą do Grupy OLX i są przygotowywane przez zespół analityków biznesowych" (all visualisations belong
+    to OLX Group) and in its footer "Wszelkie informacje i dane zawarte w raporcie mają charakter informacyjno-edukacyjny
+    i przeznaczone są wyłącznie do ogólnej prezentacji sytuacji na rynku motoryzacyjnym w Polsce" (information and
+    education only); no reuse terms. The terms of infogram.com (https://infogram.com/terms, read by the same probe) do
+    not mention scraping, crawling, robots or automated access. Commercial reuse: not stated. Modification: not stated. Attribution sentence: none given (working text: "Źródło: OTOMOTO Insights, Raport
+    Rynkowy OTOMOTO"). Stays internal.'
+updates: Monthly ("aktualizowane co miesiąc"); the report page was modified 2026-10-19 (desk reading). Each edition is a
+  new Infogram page with its own address.
+ingestion:
+  history: 'Web route, built (decision D41, #3264): the monthly edition is a public Infogram page (August 2026:
+    https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v, 953,383 bytes) whose HTML holds the report as JSON
+    (window.infographicData: 12 tabs, 27 charts, 62 sheets). The table "data, Używane, Importowane, Nowe" (2025-01 229888,
+    69209, 43666 to 2026-08 224196, 63815, 45226) is CEPiK registrations, not listings (tab "Rejestracje samochodów CEPiK";
+    the commentary gives 224 196 used and 45 226 new registrations in August). Listings are the charts "Średnia dzienna
+    liczba aktywnych ogłoszeń" (rok, 2025, 2026, r/r by month) of the tabs used cars, new cars, motorcycles and heavy
+    machinery. Annual and quarterly PDF reports hold charts only and are not used.'
+  incremental: 'One edition per month; an edition repeats about 20 months of history, so a missed month is recovered from
+    the next one. The address of a new edition is linked from the report page on www.otomoto.pl, which refuses the runner:
+    until that is solved without touching the refusal, the new address is added by hand to the source''s configuration each
+    month (a seed row in ingestion/sources/otomoto.yaml; landing.inspect warns 45 days after a month without one). The page
+    differs on every request outside the JSON (a cookie id, an image time stamp), so Landing keeps the JSON only (reduce:
+    otomoto).'
+  identifiers: Edition (month in the page title, for example 08_26), chart id (UUID in the JSON), sheet, month (YYYY-MM),
+    segment label in Polish.
+modelling:
+  notes: 'kpi false. Built selection (#3264), Poland, monthly: average daily active listings of the segments used cars, new
+    cars, motorcycles and heavy machinery, and the traffic indices (monthly users and buyers, January 2025 = 100) of the
+    segments that show them; registrations (CEPiK), price medians and bands, fuel and body shares later. One map of median
+    asking prices by voivodeship exists (tab "Ceny aut używanych"), not loaded.
+    Frequency M only. Values are text with a decimal comma and some carry the change in brackets ("19,4% (0,6 p.p.)"): parse,
+    never coerce; empty cells are null, not zero. Duplicates: every edition repeats earlier months, possibly revised; the
+    edition tells versions apart, keep the newest. No overlap with published KPIs. Size: about 1 MB of HTML and 6,000 cells
+    per edition (measured). Effort M (chart ids and layouts can change between editions).'
+  overlap: Demand figures blend CEPiK registrations (PL-ENV-024) with platform data; listings and asking prices are OTOMOTO's
+    own and are in no loaded source.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Route decision: D41 (#3264), a read of one public Infogram page per edition, which robots.txt does not forbid; www.otomoto.pl
+    is never read.'
+  - 'Dev probe run 43304076522 (job 131482594214, branch test/src-cd-probe, 12 Nov 2026): the August 2026 Infogram edition
+    answered 200 (953,532 bytes) with the chart data in the HTML; infogram.com robots.txt 200 with no rule against it. Earlier
+    run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): https://www.otomoto.pl/robots.txt answered
+    HTTP 403, so the report page was not requested from the runner. The refusal is recorded, not worked around.'
+  - 'Open: how a run learns the address of a new monthly edition without the refused host (by hand for now; infogram.com
+    robots.txt names a sitemap index of 237 files, Dev probe 45814610880, not searched); the addresses of the editions before
+    August 2026; whether older editions stay online.'
+  - 'Publication needs permission: the question to Grupa OLX under CD-033 covers this report too.'
+  references:
+  - https://www.otomoto.pl/news/raport-rynkowy-otomoto
+  - https://infogram.com/0826otomotoinsights-1hxj48mj9m8o52v
+  - https://www.otomoto.pl/news/otomoto-insights-2025-podsumowanie
+  - https://otomoto.pl/news/uploads/2024/02/Otomoto-Insights-Raport-2024-v7.pdf

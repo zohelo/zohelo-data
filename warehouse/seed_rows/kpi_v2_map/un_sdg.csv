@@ -1,0 +1,2 @@
+v2_key,dashboards,frequency,concept_key,source_key,dataset,measure_key_pattern,frequency_available,geographies,dimensions,aggregation,polarity,status,note
+women_in_parliament,poland,A,women_in_parliament,un_sdg,SG_GEN_PARL,un_sdg:sdg_observations:PERCENT:SG_GEN_PARL,A,PL;EU,,rate,up,ready,"UN Global SDG Indicators Database, newest release; IPU state early in the year; licence unresolved (internal)"

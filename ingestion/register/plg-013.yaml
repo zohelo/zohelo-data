@@ -1,0 +1,57 @@
+id: PLG-013
+name: Repository of Financial Documents (RDF) viewer
+short_name: KRS financial documents (RDF)
+provider: Ministry of Justice
+status: reviewing
+family: I
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [company filings, financial statements]
+entities: [enterprise]
+granularity: Filed document by KRS entity, reporting period and document type.
+coverage: Shows documents filed through RDF; first filing year not verified.
+access:
+  endpoint: https://rdf-przegladarka.ms.gov.pl/
+  kind: web
+  interfaces: [HTML lookup, XML, XAdES, PDF]
+  auth: public viewer; search by KRS; no bulk API documented
+  cost: free
+  limits: Unknown.
+licence:
+  status: restricted
+  notes: 'Terms: no reuse terms found.
+    https://www.gov.pl/web/sprawiedliwosc/bezplatne-wyszukanie-i-pobranie-dokumentu-finansowego-podmiotu-wpisanego-do-rejestru-przedsiebiorcow-krajowego-rejestru-sadowego
+    (read by the runner 27 Nov 2026, HTTP 200) describes the free viewer without account and states "Wyszukiwanie jest
+    zabezpieczone przed działaniem robotów pobierających dokumenty" (the search is protected against robots that
+    download documents). Free single-document viewing does not establish bulk or reuse rights; stays internal.'
+updates: Filing-driven; viewer timestamps are not a CDC contract.
+ingestion:
+  history: 'PROPOSAL: backfill only through documented public interfaces/files; retain source vintage and native labels.'
+  incremental: 'PROPOSAL: poll documented release or date filters and reconcile keys; do not describe this as source CDC.'
+  identifiers: KRS + document ID + reporting period + type
+modelling:
+  notes: Preserve signed filing; derived facts need taxonomy, sign and unit controls.
+  overlap: Links directly to KRS; primary evidence for filed accounts.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (written permission): the Ministry of Justice''s RDF viewer is the only route (no bulk file, no
+    API, nothing on dane.gov.pl found), the Ministry states that its search is protected against robots, and
+    rdf-przegladarka.ms.gov.pl and prs.ms.gov.pl answer robots.txt with HTTP 403 to the runner. Write to the Ministry
+    of Justice asking for bulk access (or written permission for a slow scripted read) to the financial statements in
+    the Repozytorium Dokumentów Finansowych, or park PLG-013? Recommendation: ask once; balance-sheet totals per
+    company would feed the company dimension built from KRS (PLG-012 `ms_krs`). Proposed selection after permission:
+    XML statements of the last two years, totals only (assets, revenue, net result) by KRS number (effort L).'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason mixed a technical refusal (HTTP 403, which never parks an
+    entry) with missing rights; the rights question is the owner''s, so the entry is `reviewing`. Dev probe run
+    45919690568 (job 140247203923, branch test/src-parked2-probe, script dev/src_parked2_probe.py, 27 Nov 2026): the
+    gov.pl service page HTTP 200 (quoted); rdf-przegladarka.ms.gov.pl and prs.ms.gov.pl robots.txt HTTP 403 (recorded,
+    not worked around).'
+  - 'Earlier parking reason: free viewing/download of single financial documents only, no bulk or API route, and the
+    browser answers HTTP 403 to scripted requests from a GitHub runner'
+  references:
+  - https://rdf-przegladarka.ms.gov.pl/
+  - https://www.gov.pl/web/sprawiedliwosc/bezplatne-wyszukanie-i-pobranie-dokumentu-finansowego-podmiotu-wpisanego-do-rejestru-przedsiebiorcow-krajowego-rejestru-sadowego

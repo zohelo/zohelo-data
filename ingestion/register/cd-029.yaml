@@ -1,0 +1,61 @@
+id: CD-029
+name: Crossref REST API
+short_name: Crossref
+provider: Crossref
+source_system: crossref
+status: built
+family: J
+kpi: false
+geography: worldwide
+provider_type: community-academic
+domains: [scholarly-communications, identifier-registry]
+entities: [work, journal, publisher, funder, licence]
+granularity: Member-deposited work metadata keyed primarily by DOI, with relations, dates, funders and licences when deposited.
+coverage: Historical DOI metadata follows member deposits; completeness and field history vary by publisher.
+access:
+  endpoint: https://www.crossref.org/documentation/retrieve-metadata/rest-api/
+  kind: api
+  interfaces: [API, JSON]
+  auth: Public; polite pool identification is recommended and no signup is required for basic access.
+  cost: free
+  limits: 'Public pool measured on 12 Nov 2026 (Dev probe 43326689827): x-rate-limit-limit 1 per 1s for /works list
+    queries (pool public-array), 5 per 1s for /funders; the route sends one request at a time, 2 s apart, and retries
+    429 and 5xx with a growing wait. No contact address is sent (polite pool not used).'
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.crossref.org/documentation/retrieve-metadata/rest-api/ (read 11 Nov 2026 from a GitHub runner,
+    re-read 12 Nov 2026): "All this metadata is openly shared with the global scholarly community through our free APIs";
+    "almost none of the metadata is subject to copyright, and you may use it for any purpose."; "Some abstracts contained
+    in the metadata may be subject to copyright by publishers or authors." No licence is named for the metadata (the page
+    footer CC BY 4.0 covers the website content). Commercial reuse and modification: allowed for the bibliographic metadata
+    (any purpose); abstracts and linked full text are excluded (copyright of publishers or authors). Bulk route: "Public
+    data files and snapshots" on the same page. Attribution (courtesy, not required by the page): "Source: Crossref metadata,
+    crossref.org".'
+updates: Deposits update continuously; records can be corrected.
+ingestion:
+  history: 'PROPOSAL: backfill DOI prefixes/filters in resumable cursor batches.'
+  incremental: 'PROPOSAL: use indexed/update date filters with overlap, then reconcile.'
+  identifiers: DOI, member, prefix, ISSN, ORCID and funder IDs.
+modelling:
+  notes: Metadata statement with deposited dates; publication dates can have multiple meanings.
+  overlap: Upstream of OpenAlex and many bibliographic services; retain deposited source.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Built scope (#553): aggregate counts only, no work records (so no abstracts, author names or ORCIDs): works
+    whose deposited author affiliation names Poland or Polska (query.affiliation, rows=0) by publication year, and
+    per year from 2000 by type, publisher and funder; plus the Funder Registry entries located in Poland. Left out:
+    work-level records, licences, ROR affiliation ids, Polish members (the members route has no country filter).'
+  - 'Dev probe 43326689827 (12 Nov 2026): /works list queries answer x-rate-limit-limit 1 per 1s (pool
+    public-array), /funders and /members 5 per 1s (public-single); facets stop at 1,000 values; 302,513 works
+    matched Poland or Polska; 183 funders located in Poland. The annual public data file was not used (full
+    metadata of every work, abstracts included).'
+  - 'Coverage limit: only works whose publisher deposits affiliations are counted, so the count is a lower bound.'
+  - 'Dev trial 43336945209 (13 Nov 2026): 29 answers, 854,848 bytes, a second run landed and loaded nothing new;
+    Silver 17,802 counts (publication years 1804..2027) and 183 funders, Gold 17,756 rows (total 1907..2026, 2026
+    provisional), 0 duplicates by series and date; PL 2024 = 26,973 works. The funder facet stops at 1,000 values
+    in 2019..2026.'
+  references:
+  - https://www.crossref.org/documentation/retrieve-metadata/rest-api/

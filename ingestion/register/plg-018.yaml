@@ -1,0 +1,70 @@
+id: PLG-018
+name: Insurance, pension and other financial-sector information
+short_name: KNF insurance and pensions data
+provider: Polish Financial Supervision Authority (KNF)
+source_system: knf_pensions
+status: built
+family: C
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [insurance, pensions, financial services]
+entities: [financial institution, financial sector]
+granularity: Sector tables/reports by institution type and period.
+coverage: 'Insurance: quarterly bulletin (parts A-D), newest 2/2026. Pensions: monthly OFE data (newest September 2026),
+  IKE and IKZE yearly (31 December 2025), PPK net assets. First years per series not established; older releases are separate
+  articles of the listing (421 results).'
+access:
+  endpoint: https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne
+  kind: bulk_file
+  interfaces: [HTML, XLSX, PDF]
+  auth: public download
+  cost: free
+  limits: None published.
+licence:
+  status: unresolved
+  notes: 'Terms: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read 12 Nov 2026, also from a
+    GitHub runner): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z linkiem
+    do serwisu www.knf.gov.pl." No licence is named, and the notice grants no reuse (re-read 12 Nov 2026): commercial reuse
+    and modification are not stated (neither allowed nor forbidden in words), so the terms are unresolved (playbook: terms
+    not stated → unresolved; the source stays internal until KNF states them). Disclaimer: the UKNF "nie ponosi żadnej
+    odpowiedzialności za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło: Komisja Nadzoru Finansowego, www.knf.gov.pl".'
+updates: 'OFE monthly: "Dane miesięczne zamieszczane są w terminie do 20-go dnia miesiąca następującego po miesiącu, którego
+  dotyczą dane" (September 2026 updated 21 October 2026). Insurance bulletin quarterly, about three months after the quarter
+  (2/2026 updated 29 September 2026). IKE/IKZE yearly.'
+ingestion:
+  history: 'Bulk by release: every release is its own article of the statistics listing with one to four .xlsx files, so
+    the file URL changes per release and the stable page is the listing (paged, 421 results on 12 Nov 2026). Checked from
+    a GitHub runner (Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe, 12 Nov 2026)): insurance 2/2026
+    part A https://www.knf.gov.pl/knf/pl/komponenty/img/A_informacje_IIQ2026_99684.xlsx (64,312 bytes) and part D (statistical
+    report, 28,925 bytes); OFE September 2026 https://www.knf.gov.pl/knf/pl/komponenty/img/WWW_OFE_dane_mies_2026_09_100266.xlsx
+    (38,552 bytes). Each file holds one period, so history = one file per past release (OFE about 12 a year, insurance 4
+    x 4 a year). No Last-Modified or ETag.'
+  incremental: Entity = series (ofe_monthly, insurance_bulletin part A-D, ike, ikze, ppk), version = period in the article
+    title; read the first listing page after each release, land new articles only (accumulating source, all versions kept).
+    Backfill by walking the listing pages once, one request at a time.
+  identifiers: period + series + table + item (+ fund or insurer where published)
+modelling:
+  notes: 'One period per file: build the time series in Silver. Grain: item x period, with fund-level rows for OFE and insurer-level
+    rows in bulletin part A; Poland only; PLN, persons, percent. Smallest Gold selection: OFE net assets and number of members
+    (monthly), gross written premium life and non-life (quarterly; which bulletin part holds it is to be confirmed), IKE
+    and IKZE accounts and assets (yearly) as new KPIs in finance.insurance_pensions.'
+  overlap: ZUS (PLS-009/010) and KRUS pension KPIs are the public pillar; these are the funded pillar and stay separate
+    series. EIOPA and Eurostat give the EU comparison for insurance; no KPI of kpi.csv is published here yet.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Built (#2871), smallest selection: source knf_pensions, the newest quarterly PPK release found on the listing
+    (ingestion/to_landing/knf_pensions), Tabela 2 in Silver and Gold (net asset value of PPK target-date funds by
+    managing institution and the total, thousand PLN, 2020 Q1 on). Not built yet: monthly OFE data, the OFE and
+    insurance quarterly bulletins, IKE and IKZE (one file per period each; an accumulating entity per series).'
+  - Listing paging parameters and the first year of each series are not established; inventory them in the Landing trial.
+  - Workbook layouts were not opened; confirm sheets and item codes before Silver.
+  references:
+  - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne
+  - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=100267&p_id=18
+  - https://www.knf.gov.pl/publikacje_i_opracowania/dane_statystyczne?articleId=99688&p_id=18
+  - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
+  - https://www.knf.gov.pl/dla_rynku/Informacje_sektorowe

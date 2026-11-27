@@ -1,0 +1,45 @@
+id: PLG-003
+name: International investment position and external statistics
+short_name: NBP investment position
+provider: Narodowy Bank Polski (NBP)
+source_system: nbp_bop
+current: true
+status: built
+family: C
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [macroeconomics, external sector, investment]
+entities: [country]
+granularity: 'International investment position: assets and liabilities by functional category, instrument and
+  sector, end of quarter, in million PLN, EUR and USD (iip_q). Other external statistics (external debt, reserves)
+  are a separate, not yet built scope.'
+coverage: Quarterly from 2004 (Dev probe 43085930329, 11 Nov 2026).
+access:
+  endpoint: https://static.nbp.pl/dane/bilans-platniczy/iip_q.xlsx
+  kind: bulk_file
+  interfaces: [XLSX, PDF]
+  auth: public download
+  cost: free
+  limits: One workbook (~170 kB) at a fixed URL, landed with PLG-002 by source_system nbp_bop.
+licence:
+  status: unresolved
+  notes: 'Terms: same NBP website Terms of Use as PLG-002
+    (https://static.nbp.pl/dokumenty/regulaminy/regulamin_nbppl_en.pdf); unresolved under the owner decision of 14
+    Oct 2026.'
+updates: Quarterly, about three months after the quarter; positions revised (Last-Modified 29 Sep 2026 at the probe).
+ingestion:
+  history: Full history in the workbook; landed whole (bulk_file pattern).
+  incremental: Weekday re-download; written only when the SHA-256 changed.
+  identifiers: currency sheet + item (row label, block, section) + quarter
+modelling:
+  notes: Stocks are non-additive through time; separate transactions and valuation changes.
+  overlap: Related to BOP flows but not interchangeable; overlaps Eurostat BOP_IIP6_Q and TIPSII10.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - Confirm NBP reuse terms.
+  references:
+  - https://static.nbp.pl/dane/bilans-platniczy/iip_q.xlsx

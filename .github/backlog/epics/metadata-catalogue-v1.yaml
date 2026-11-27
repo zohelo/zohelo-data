@@ -169,7 +169,7 @@ deliverables:
             expect: all checks ok
           - workflow: Dev · branch runs, script catalogue_seeds_trial, on the branch
             expect: "notice 'rows: licence 8, source 10, dim_source 10', then 'dropped zz_dev_licence_source'"
-        out_of_scope: [ingestion/register.yaml, other catalogue models]
+        out_of_scope: [ingestion/register/, other catalogue models]
       - key: data/metadata/catalogue-v1/models/dim-dataset
         type: Task
         title: Build gold.dim_dataset from gold.coverage

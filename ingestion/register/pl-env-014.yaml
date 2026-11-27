@@ -1,0 +1,71 @@
+id: PL-ENV-014
+name: 'Central Geological Database: boreholes (CBDG Otwory)'
+short_name: PIG-PIB boreholes
+provider: Państwowy Instytut Geologiczny–PIB (PIG-PIB)
+source_system: pig_boreholes
+status: built
+family: G
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [geology, boreholes]
+entities: [borehole, geological record]
+granularity: Individual boreholes and associated thematic attributes.
+coverage: Records from the late nineteenth century to present; completeness varies by source and period.
+access:
+  endpoint: https://cbdgmapa.pgi.gov.pl/arcgis/services/cbdg_otwory/MapServer/WFSServer
+  kind: api
+  interfaces: [WFS 2.0.0 (ArcGIS), WMS, 'download manager (dm.pgi.gov.pl, e-mailed links)']
+  auth: None for the WFS; the download manager mails links to an address.
+  cost: free
+  limits: None published for the WFS; paging limit to be read from the capabilities by the builder. dm.pgi.gov.pl, baza.pgi.gov.pl
+    and www.pgi.gov.pl now answer GitHub runners with an Incapsula bot-protection page, which is not worked around; cbdgmapa.pgi.gov.pl
+    answers.
+licence:
+  status: open-conditional
+  notes: 'Terms: dane.gov.pl dataset 677 "Centralna Baza Danych Geologicznych – podsystem Otwory wiertnicze" (PIG-PIB) is
+    published under "CC BY 4.0" and lists the WFS https://cbdgmapa.pgi.gov.pl/arcgis/services/cbdg_otwory/MapServer/WFSServer
+    as a resource (API record read by the runner 26 Nov 2026, resource dated 2026-11-25). PIG-PIB rules for re-use https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html
+    (read 12 Nov 2026; the page now answers runners with bot protection): information is provided for re-use "co do zasady,
+    bezpłatnie"; the user must give the source, the time it was produced and obtained, and whether it was processed. Commercial
+    reuse and modification allowed (CC BY 4.0). Limit named on the borehole page (read 12 Nov 2026): "Dostęp do niektórych
+    informacji, takich jak np. pomiary geofizczne wymaga uzyskania zgody." Only what the public WFS serves is used; the
+    consent-bound information (e.g. geophysical measurements) stays out. Attribution: "Źródło: Państwowy Instytut Geologiczny
+    - PIB, Centralna Baza Danych Geologicznych" with the download date.'
+updates: The download manager lists a dated package cbdg_otwory_2026_11_12.zip, so the borehole package is rebuilt about
+  daily.
+ingestion:
+  history: 'Bulk: https://dm.pgi.gov.pl/ lists 93 ZIP packages, among them cbdg_otwory_<date>.zip (boreholes, 30.71 MB);
+    the manager does not show file URLs, it sends the links by e-mail (Dev probe run 43203166665 (job 131131537831, branch
+    test/src-cg-probe, 12 Nov 2026)). Map services: https://cbdgmapa.pgi.gov.pl/arcgis/rest/services lists cbdg_otwory (200
+    from a runner); whether it offers WFS or a query endpoint for a full load was not tested. http://uslugi_gis.pgi.gov.pl
+    answered 503.'
+  incremental: 'PROPOSAL: full dated snapshot and diff by borehole ID; no public change feed is documented.'
+  identifiers: CBDG borehole identifier/name plus coordinates and theme.
+modelling:
+  notes: 'Smallest Gold selection: the number of boreholes per gmina, powiat and voivodeship (by the borehole''s TERYT attribute
+    or by point-in-polygon with PRG) and by purpose and depth class, one snapshot per run; the borehole points themselves
+    as an entity table without the restricted measurements. Feeds an environment and resources measure of dim_geography.'
+  overlap: Overlaps MIDAS (PL-ENV-015), hydrogeological and geophysical subsystems by location but not definition.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Re-review 26 Nov 2026 (Task #2915): approved for internal and public build through the WFS that PIG-PIB lists on dane.gov.pl.
+    Dev probe run 45815892766 (job 139895407895, same branch, argument `three`, 26 Nov 2026): GetCapabilities of cbdg_otwory
+    WFSServer HTTP 200 (13,751 bytes, GetFeature offered). Dev probe run 45813307617 (job 139886485577, branch test/src-parked-probe,
+    script dev/src_parked_probe.py, 26 Nov 2026): dm.pgi.gov.pl and baza.pgi.gov.pl answered an Incapsula page (212 bytes),
+    not used.'
+  - 'Builder (Dev probe run 45851940348 (job 140020286051, branch test/src-parked-probe, script dev/src_parked3fix_probe.py, argument `one`, 26 Nov 2026)): the only
+    feature type is cbdg_otwory:Otwory_wiertnicze_CBDG with 336,758 features (resultType=hits); page through with startIndex,
+    one request at a time. Its fields are OBJECTID, Nazwa (borehole name), Głębokość__m_, Stratygrafia/Stratigraphy, Cel_wiercenia/Drilling_purpose,
+    Rok_wiercenia, Rzędna__m_n.p.m._, coordinates (geographic and PL-1992), Podstawa_lokalizacji, Miejscowość, Gmina, Powiat,
+    Województwo, Archiwum, Nr_inwentarzowy, ID_CBDG, and flags Rdzeń, Geofizyka, Analizy, Badania. No investor, owner or
+    other personal field is served, so no natural person is stored; borehole names of private wells are kept only as
+    the producer publishes them and are not needed for the Gold counts (keep them out of Gold). Consent-bound information
+    (geophysical measurements) is not in the WFS and stays out.'
+  references:
+  - https://dane.gov.pl/pl/dataset/677
+  - https://cbdgmapa.pgi.gov.pl/arcgis/services/cbdg_otwory/MapServer/WFSServer?service=wfs&request=GetCapabilities&version=2.0.0
+  - https://www.pgi.gov.pl/rejestry-i-bazy-danych-geologicznych/zasady-korzystania-z-isp.html

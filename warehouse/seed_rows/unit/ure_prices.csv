@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-pln_per_kwh,zł/kWh,PLN per kilowatt-hour,zł za kilowatogodzinę,true,pln_per_mwh,1000
-pln_per_m3,zł/m³,PLN per cubic metre,zł za metr sześcienny,true,pln_per_m3,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+pln_per_kwh,zł/kWh,PLN per kilowatt-hour,zł za kilowatogodzinę,true,pln_per_mwh,1000,PLN/kWh
+pln_per_m3,zł/m³,PLN per cubic metre,zł za metr sześcienny,true,pln_per_m3,1,PLN/m³

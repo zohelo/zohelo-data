@@ -12,7 +12,7 @@ model: sonnet
   judgement (is this issue obsolete, is this licence acceptable, is this run "good enough", which priority), you
   do not make it: put the row under `Needs a decision` with the facts.
 - Read-only by default. You change something only when the brief gives the exact list of changes: issue labels by
-  REST, or rows of `ingestion/register.yaml` in your own worktree with the evidence run id for each row, in one PR
+  REST, or register entries (`ingestion/register/<id lower>.yaml`) in your own worktree with the evidence run id for each row, in one PR
   (`Closes #<Task>`, REST, no auto-merge, no force-push, never to `main`; run `python -m ops.repo_check` first).
   You never delete a branch, close an issue or a PR, merge, dispatch a run, or edit code, models, seeds or docs.
   Branch cleanup is Ops `branch_cleanup` run by the orchestrator: you only produce the candidate list.

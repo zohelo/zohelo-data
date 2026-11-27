@@ -1,0 +1,58 @@
+id: CD-020
+name: X API v2
+short_name: X API
+provider: X Corp.
+status: reviewing
+family: J
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [social-media]
+entities: [post, user, space, list, conversation]
+granularity: Post/user/conversation resources and metrics according to endpoint entitlement.
+coverage: Recent search covers a short rolling window; full-archive search reaches platform history only on paid entitlement.
+access:
+  endpoint: https://docs.x.com/x-api/introduction
+  kind: api
+  interfaces: [API, stream]
+  auth: Developer account/project and paid credits or enterprise agreement; OAuth for user context.
+  cost: paid
+  limits: Pay-per-use and endpoint limits; no figures encoded.
+licence:
+  status: restricted
+  notes: 'Terms: https://docs.x.com/developer-terms/agreement (X Developer Agreement) and
+    https://developer.x.com/en/developer-terms/agreement-and-policy (X Developer Policy), both read by the runner 27
+    Nov 2026, HTTP 200; the policy "outlines acceptable use of the X API, including rules around content, automation,
+    privacy, security, and prohibited behaviors", under the Developer Agreement or a Master License Agreement. Pricing
+    https://docs.x.com/x-api/getting-started/pricing: "The X API uses pay-per-usage pricing. No subscriptions—pay only
+    for what you use"; "Purchase credits upfront in the Developer Console." No public redistribution right is stated:
+    stays internal.'
+updates: Recent/search/stream behavior differs; deleted or withheld content must be handled.
+ingestion:
+  history: 'PROPOSAL: approve a narrow endpoint/use case before any history purchase.'
+  incremental: 'PROPOSAL: stream/poll under entitlement and reconcile compliance events.'
+  identifiers: Post/user/conversation IDs; handle reposts and quoted posts explicitly.
+modelling:
+  notes: Snapshot metrics by observed_at; do not treat audience as population-representative.
+  overlap: Overlaps social listening vendors and public web, but terms follow API route.
+research:
+  priority: conditional
+  evidence: tested
+  connection: not-tested
+  blockers:
+  - 'Owner question (paid credits): the X API is paid per request (credits bought upfront in the Developer Console,
+    per-endpoint rates shown only there) under the X Developer Agreement. Buy credits for a narrow use case, or park
+    CD-020? Recommendation: park. The eight social-platform APIs CD-017 to CD-024 can be answered in one reply (''park
+    CD-017 to CD-024''); none offers official statistics for Poland, and each needs an account, an application or a
+    paid plan.'
+  - 'Re-review 27 Nov 2026 (Task #2914): the parking reason was a paid product under the developer agreement, an owner
+    question, so the entry is `reviewing`. Dev probe run 45919690568 (job 140247203923, branch test/src-parked2-probe,
+    script dev/src_parked2_probe.py, 27 Nov 2026): the API introduction, pricing, developer terms, Developer Agreement
+    and Developer Policy HTTP 200 (quoted); help.x.com answered HTTP 403 (recorded, not retried).'
+  - 'Earlier parking reason: X Developer Agreement and paid product terms govern storage, display and redistribution;
+    no public redistribution right'
+  references:
+  - https://docs.x.com/x-api/introduction
+  - https://docs.x.com/x-api/getting-started/pricing
+  - https://docs.x.com/developer-terms/agreement
+  - https://developer.x.com/en/developer-terms/agreement-and-policy

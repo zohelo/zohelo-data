@@ -1,2 +1,2 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-vehicles,poj.,vehicles,pojazdy,false,vehicles,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+vehicles,poj.,vehicles,pojazdy,false,vehicles,1,vehicles

@@ -1,0 +1,45 @@
+source_system: wto_stats
+description: "WTO Stats: OECD-WTO Balanced Trade in Services (BaTIS, BPM6), annual services trade by reporter, partner, EBOPS 2010 item and flow; bulk ZIP from www.wto.org (register GL-020)"
+
+# Extraction strategy (docs/landing.md). Register GL-020. Bulk feature: the WTO page "Bulk download of select
+# statistics" (https://www.wto.org/english/res_e/statis_e/trade_datasets_e.htm; robots.txt allows it) links the
+# BaTIS BPM6 ZIP at a fixed URL with Last-Modified and ETag: 534,470,198 bytes (Last-Modified 25 Nov 2026), holding
+# the bulk CSV (3,127,349,390 bytes, 52,096,926 rows: 202 reporters x 203 partners x 2 flows x 31 items x 2005-2025),
+# the codes workbook and the methodology PDF (Dev probes 45924414022, 45927582193, 27 Nov 2026; the download takes
+# 12 to 22 minutes). Entity = the ZIP (batis_bpm6); version = Last-Modified; an unchanged file (same SHA-256) is not
+# written again. Bronze keeps the rows with Poland as reporter or partner and those of the country-group reporters
+# (ingestion/to_bronze/wto_stats/load.py). Left out: the frozen BPM5 BaTIS (2017), the codes ZIP (the same workbook
+# is in the data ZIP), TiSMoS (services trade by mode of supply: next selection) and the key-only Timeseries API.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: batis_bpm6   # OECD-WTO BaTIS, BPM6 (EBOPS 2010), the whole balanced matrix
+        url: https://www.wto.org/english/res_e/statis_e/daily_update_e/OECD-WTO_BATIS_data_BPM6-1.zip
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                  # each ZIP is the complete matrix of one release
+  incremental_policy: changed_since_last  # Last-Modified, then SHA-256
+  schedule: # UTC; BaTIS BPM6 is released about once a year (November 2026 release, codes of December 2025); monthly
+    # check on the 16th (one 534 MB download; the run ends with Silver, the platform's Sunday run builds Gold, O46)
+    - {cron: "45 4 16 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/wto_stats/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.wto_stats_batis, bronze.wto_stats_batis_codes, bronze.wto_stats_rejected_files]
+silver: [silver.wto_stats_services_trade]
+gold: [gold.build_wto_stats]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in Dev trial 45935187389 (27 Nov 2026), 1.5 x
+  wto_stats_services_trade: {rows: 785000}  # 523,466: 261,082 PL reporter, 258,478 PL partner, 3,906 EU and WL reporter
+  poc_build_wto_stats: {rows: 330000}  # 218,972: PL x 203 partners x 13 items x 2 flows x 2 value kinds, 2005-2025
+
+bronze_latest_only: true   # policy #822/#845
+# Refresh policy for all layers (D32): one file replaced whole about once a year, no changed-since; the selection
+# kept in Bronze and Silver is about half a million rows, rebuilt in full when the file's bytes change.
+refresh: {mode: full, decided: "D32 + #3317"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]

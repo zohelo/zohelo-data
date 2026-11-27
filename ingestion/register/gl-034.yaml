@@ -1,0 +1,57 @@
+id: GL-034
+name: IEA Data Explorer
+short_name: IEA Data Explorer
+provider: International Energy Agency
+status: reviewing
+family: G
+kpi: true
+geography: worldwide
+provider_type: international-public
+domains: [energy, emissions, prices, balances]
+entities: [country, fuel, sector]
+granularity: Country/fuel/product/flow/sector/year at dataset-specific energy-balance grain.
+coverage: Global/multicountry datasets with different coverage and history; substantial products may be subscriber-only.
+access:
+  endpoint: https://www.iea.org/data-and-statistics/data-tools
+  kind: bulk_file
+  interfaces: [HTML, CSV download]
+  auth: mixed public and subscription access
+  cost: mixed
+  limits: Unknown; no explicit numeric quota found in reviewed documentation.
+licence:
+  status: restricted
+  notes: 'Terms: IEA Terms of Use https://www.iea.org/terms: CC BY 4.0 covers IEA text, reports and standalone figures,
+    but not standalone datasets, data explorers and databases, which fall under the Terms of Use for Non-CC Material
+    https://www.iea.org/terms/terms-of-use-for-non-cc-material: no sharing or enabling access to the material; only
+    insubstantial amounts in own public work (more than five numerical data points only as graphics or aggregates,
+    never downloadable); no substitutable derived database; no commercial advantage, financial-decision use or
+    sale; anything else needs a rights request to rights@iea.org (separate licence, possibly paid). Public display
+    in zohelo explorers is not allowed. No IEA endorsement may be implied. Attribution (aggregated or graphical
+    data): "Based on IEA data from IEA (<year>) <database title>, https://www.iea.org/data-and-statistics, All rights
+    reserved; as modified by <legal entity>."'
+updates: Annual/monthly schedules and revisions vary by product.
+ingestion:
+  history: Onboard only a specifically licensed product/release; archive its terms and methodology.
+  incremental: Refresh per licensed release; no generic portal ingestion.
+  identifiers: IEA dataset + country + product/flow/sector + period.
+modelling:
+  notes: Energy balances require signed transformation conventions; avoid double counting primary/secondary energy
+    and aggregates.
+  overlap: Overlaps IRENA, Eurostat, UN energy, FAOSTAT emissions and WDI; methods and access rights differ.
+research:
+  priority: conditional
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: IEA datasets are "Non-CC Material" (https://www.iea.org/terms/terms-of-use-for-non-cc-material, as
+    recorded in this entry''s licence notes): no sharing, only insubstantial amounts in public work, anything more needs a separate licence from rights@iea.org,
+    possibly paid; www.iea.org also refuses GitHub runners (robots.txt answers HTTP 403). Do you want us to ask IEA (rights@iea.org)
+    for a licence and automated access to named datasets (for example World Energy Balances or Monthly Electricity Statistics),
+    knowing it may be paid, or leave IEA out and rely on Eurostat energy, UNdata SYB 263 and OWID (loaded)?'
+  - 'Re-review 26 Nov 2026 (Task #2917): Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): robots.txt of www.iea.org HTTP 403, so neither the terms page nor the Monthly
+    Electricity Statistics product page was requested; not worked around. No official republisher of IEA balances with open
+    terms was found.'
+  references:
+  - https://www.iea.org/data-and-statistics/data-tools
+  - https://www.iea.org/terms
+  - https://www.iea.org/terms/terms-of-use-for-non-cc-material

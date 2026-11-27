@@ -33,12 +33,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry PLG-011 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry PLG-011 in ingestion/register/plg-011.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat, https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/plg-011.yaml
     steps:
     - Open https://www.gov.pl/web/kas/api-wykazu-podatnikow-vat and the flat-file description at https://www.podatki.gov.pl/wykaz-podatnikow-vat-wyszukiwarka;
       record the reuse terms of the flat file.
@@ -53,8 +53,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='PLG-011'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/plg-011.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

@@ -16,3 +16,13 @@ mrpips_unemployment as (
         'PL' as geography_key
 )
 {% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__mrpips_unemployment() %}
+    {{ return({
+        'block_model': 'poc_build_mrpips_unemployment',
+        'blocks': [
+            ['registered_unemployment', 'MRPiPS registered unemployment (end of month)'],
+        ],
+    }) }}
+{% endmacro %}

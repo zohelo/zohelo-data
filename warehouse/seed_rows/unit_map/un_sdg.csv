@@ -1,0 +1,10 @@
+source_system,unit_code,measure_key_pattern,unit_key
+un_sdg,PERCENT,,pct
+un_sdg,PER_100000_POP,,per_100k_population
+un_sdg,PER_10000_POP,,per_10k_population
+un_sdg,PER_100_POP,,per_100
+un_sdg,KMSQ,,km2
+un_sdg,TONNES,,tonnes
+un_sdg,CU_USD,,usd
+un_sdg,CU_USD_M,,mln_usd
+un_sdg,CON_USD_M,,mln_usd

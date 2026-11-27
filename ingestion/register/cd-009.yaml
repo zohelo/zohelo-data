@@ -1,0 +1,64 @@
+id: CD-009
+name: Stooq historical quotations
+short_name: Stooq quotations
+provider: Stooq
+status: reviewing
+family: I
+kpi: false
+geography: worldwide
+provider_type: commercial
+domains: [financial-markets]
+entities: [security, index, currency-pair, commodity]
+granularity: Symbol-frequency price series exposed through website download patterns.
+coverage: History and market scope appear symbol-specific; official browsable documentation was blocked.
+access:
+  endpoint: https://stooq.pl/db/h/
+  kind: bulk_file
+  interfaces:
+  - HTML
+  - CSV
+  - ZIP
+  auth: 'Not read on the site (robots.txt). Third-party reports only, unverified: "As March 2026, Stooq requires an API
+    key for data downloads" (https://github.com/pydata/pandas-datareader/issues/1012); the key and the bulk ZIPs are behind
+    a captcha (https://www.quantstart.com/articles/an-introduction-to-stooq-pricing-data).'
+  cost: unknown
+  limits: stooq.pl robots.txt (200, 96 characters) disallows /, /db/h/ and /q/d/l/ for the generic agent and for the Claude
+    agents, so nothing was fetched. A daily hit limit is reported by third parties ("Exceeded the daily hits limit"), number
+    unknown.
+licence:
+  status: unresolved
+  notes: 'No terms were read: stooq.pl robots.txt disallows automated access to every path probed (12 Nov 2026) and the
+    session could not open stooq.pl or stooq.com, so no terms or regulamin page of Stooq is quoted. Commercial reuse: not
+    stated (not read). Modification: not stated (not read). Automated download: refused by robots.txt. Attribution sentence:
+    none. Stays internal; nothing is loaded.'
+updates: Not verified (daily series by third-party accounts).
+ingestion:
+  history: 'None without permission. Third-party descriptions (unverified): per-symbol CSV at /q/d/l/?s=<symbol>&i=d and
+    bulk ZIPs per market and frequency at /db/h/.'
+  incremental: None without permission.
+  identifiers: Stooq symbol and date; mapping to ISIN and MIC would be needed.
+modelling:
+  notes: kpi false. If permission is ever given, the smallest selection is daily closes of about ten Polish series (WIG,
+    WIG20, mWIG40, sWIG80, 10-year government bond yield); PLN exchange rates already come from NBP. Frequency D; closes
+    are adjusted (third-party account); gaps are missing rows; revisions after splits unknown. No overlap with published
+    KPIs. Effort M.
+  overlap: Index values originate from GPW (CD-005, CD-011, both licensed). The 10-year government bond yield is published
+    monthly by the ECB (GL-016) and Eurostat (GL-001) as the long-term interest rate for convergence purposes, and PLN exchange
+    rates by NBP, so only the stock indices and daily frequency would be new.
+research:
+  priority: conditional
+  evidence: catalogue-only
+  connection: not-tested
+  blockers:
+  - 'Owner question (written permission): Stooq''s robots.txt forbids automated access to its download pages and, by third-party
+    reports, downloads need a key issued behind a captcha. Ask Stooq in writing for permission and a key for a daily download
+    of about ten Polish series (WIG, WIG20, 10-year bond yield), or park CD-009? Recommendation: park; PLN exchange rates
+    already come from NBP.'
+  - 'Dev probe run 43291903826 (job 131440022642, branch test/src-cd-probe, 12 Nov 2026): stooq.pl/robots.txt answered 200
+    (96 characters) and disallows https://stooq.pl/, /db/h/ and /q/d/l/?s=wig20&i=d for every agent tested; none of the
+    three was fetched. The refusal is recorded, not worked around.'
+  - 'Not verified: everything about the download interface, the key requirement, the terms, history depth and update time.'
+  references:
+  - https://stooq.pl/db/h/
+  - https://stooq.pl/q/d/?s=aapl.us
+  - https://stooq.pl/t/?i=10

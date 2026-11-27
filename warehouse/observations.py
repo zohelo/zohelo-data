@@ -400,6 +400,42 @@ SOURCES.update(
         },
     }
 )
+# Polish public finance from the Ministry of Finance: the public debt and State Treasury debt workbooks (every sheet,
+# block and item) and the state budget execution reports (every line of table 1), one Silver dbt table each, every
+# series by rule; the curated build_public_finance (hand-picked sheets and lines, with KRUS, which it holds whole)
+# stays the KPI layer. Poland's own accounts: geography PL, no lookup, as NBP's balance of payments.
+SOURCES.update(
+    {
+        source: {"tables": {table: (("silver", table), f"gold_{source}_build")}, "lookups": {}, "keyed_by": ()}
+        for source, table in (
+            ("mf_public_debt", "public_debt"),
+            ("mf_treasury_debt", "treasury_debt"),
+            ("mf_state_budget", "budget_execution"),
+        )
+    }
+)
+# MF local-government budget summaries (every item of each unit type's DW and ZN workbook; Poland's national totals per
+# unit type, geography PL, no lookup) and ENTSOG physical gas flows (every point and direction of GAZ-SYSTEM, area by
+# the operator's map row): one Silver dbt table each, every series by rule; the curated build_mf_jst_budgets (four
+# totals) and build_entsog (direction totals, point groups, monthly sums) stay the KPI layer.
+SOURCES["mf_jst_budgets"] = {
+    "tables": {"mf_jst_budget_summary": (("silver", "mf_jst_budget_summary"), "gold_mf_jst_budgets_build")},
+    "lookups": {},
+    "keyed_by": (),
+}
+SOURCES["entsog"] = {
+    "tables": {"entsog_physical_flow": (("silver", "entsog_physical_flow"), "gold_entsog_build")},
+    "lookups": _area_map("entsog"),
+    "keyed_by": ("geo_map",),
+}
+# KNF monthly banking-sector data (every item of every sheet and bank group of the current workbook; national
+# figures, geography PL, no lookup): one Silver dbt table, every series by rule; the curated build_knf_banking (seven
+# items) stays the KPI layer.
+SOURCES["knf_banking"] = {
+    "tables": {"knf_banking_series": (("silver", "knf_banking_series"), "gold_knf_banking_build")},
+    "lookups": {},
+    "keyed_by": (),
+}
 SOURCES["world_bank_wgi"] = {
     "tables": {"wgi_observations": (("silver", "wgi_observations"), "gold_world_bank_wgi_build")},
     "lookups": {

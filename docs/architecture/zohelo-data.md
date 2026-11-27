@@ -156,7 +156,7 @@ Thresholds marked *proposed* are decided by the Task or ADR that builds the chec
 | Orphan files | none older than 48 h | Ops `orphan_files --delete`, Mondays | yes |
 | Snapshots | 1 kept, older expired after 1 h (#822) | catalog maintenance; `expire_snapshots` | yes |
 | Scheduler clock | ≥ 40 dispatches in 24 h | Ops `scheduler_trigger heartbeat`, daily | yes |
-| Workflows | exactly five; actions pinned to a commit; hashed pip installs | `repo_check` | yes |
+| Workflows | exactly six (O47); actions pinned to a commit; hashed pip installs | `repo_check` | yes |
 | Secrets and dependency alerts | every open alert has a Bug | Ops `security_alerts apply`, Mondays | yes |
 | Portal accessibility | no serious or critical axe-core element outside the baseline; every baseline entry cites a Bug | `check-portal` (`portal/app/a11y`, #2499) | yes |
 | Shared files identical across repos | same blob as zohelo-data's copy | each repo's `check` (G7) | no |

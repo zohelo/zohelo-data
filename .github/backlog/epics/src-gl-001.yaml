@@ -32,12 +32,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry GL-001 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry GL-001 in ingestion/register/gl-001.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://ec.europa.eu/eurostat/web/main/help/copyright-notice.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/gl-001.yaml
     steps:
     - 'Open https://ec.europa.eu/eurostat/web/main/help/copyright-notice and copy the reuse conditions: attribution,
       indication of changes, the disclaimer text, and the exceptions (third-party data, non-EU/EFTA/candidate data,
@@ -54,8 +54,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='GL-001'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/gl-001.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

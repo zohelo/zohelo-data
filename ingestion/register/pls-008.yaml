@@ -1,0 +1,53 @@
+id: PLS-008
+name: BIR1 – Internet Database of REGON API
+short_name: GUS REGON BIR1
+provider: Główny Urząd Statystyczny (GUS / Statistics Poland)
+status: reviewing
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [organization register]
+entities: [enterprise, legal unit, local unit]
+granularity: Public REGON entity or local-unit record, found by REGON, NIP, or KRS.
+coverage: API v1 from 2015; v1.1 from 2019; v1.2 from December 2024.
+access:
+  endpoint: https://api.stat.gov.pl/Home/RegonApi
+  kind: api
+  interfaces: [SOAP API, technical manuals]
+  auth: Free key by email; applicant identity and use required. Public bodies may request extended scope.
+  cost: free
+  limits: '08:00-16:59: 6,000/hour, 120/min, 3/s; 06:00-07:59 and 17:00-21:59: 8,000/hour, 150/min, 3/s; 22:00-05:59:
+    10,000/hour, 200/min, 4/s.'
+licence:
+  status: restricted
+  notes: 'Terms: none published. The BIR1 page https://api.stat.gov.pl/Home/RegonApi says the service and data are free of
+    charge and open to public bodies and commercial entities (production user key on request to regon_bir@stat.gov.pl
+    with IP addresses and expected monthly volume); it states no licence and does not address republication. Records
+    of natural persons running a business are personal data (GDPR), so record-level public display is not allowed
+    without a legal and privacy review; aggregates only. Attribution: "Źródło: GUS, rejestr REGON (BIR1)" / "Source:
+    Statistics Poland, REGON register (BIR1)".'
+updates: Live register; history undocumented.
+ingestion:
+  history: Seed an approved entity list after key approval.
+  incremental: Re-query known REGONs conservatively; diff public fields.
+  identifiers: REGON is primary; NIP and KRS are lookup keys. Review local-unit relationships.
+modelling:
+  notes: Versioned entity dimension; omit unnecessary sole-proprietor contacts.
+  overlap: Cross-links sector entities; preserve sector identifiers.
+research:
+  priority: conditional
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Owner question: the BIR1 API needs a production user key that GUS issues by e-mail (regon_bir@stat.gov.pl) to a named
+    applicant who states the calling IP addresses and the expected monthly volume (as recorded in this entry''s licence notes); GitHub-hosted runners
+    have no fixed IP addresses, and REGON records of natural persons running a business are personal data. Do you want to
+    apply for a BIR1 production key (and, if GUS requires fixed IPs, decide where the calls would run), or keep REGON out
+    and rely on KRS (ms_krs) and CEIDG for entity data?'
+  - 'Re-review 26 Nov 2026 (Task #2917): Dev probe run 45826667517 (job 139932480070, branch test/src-parked-probe, script dev/src_parked5_probe.py, 26 Nov 2026): https://api.stat.gov.pl/Home/RegonApi answered HTTP 503 (robots.txt also 503)
+    at the time of the probe; the key requirement is unchanged in the register''s earlier reading. Field allowlist (no
+    natural persons'' names or addresses) to be defined before any build.'
+  references:
+  - https://api.stat.gov.pl/Home/RegonApi
+  - https://api.stat.gov.pl/Home/RegonApi?lang=en

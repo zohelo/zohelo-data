@@ -1,0 +1,46 @@
+version: 2
+models:
+  - name: sdds_release
+    description: >-
+      Entity table (release calendar events): one row per expected release of the NBP (register TP-012) and the
+      Ministry of Finance (TP-013) in the SDDS advance release calendar of Poland, keyed by release_key = category x
+      reference_period x release_date. Each release year comes from one workbook (that year's calendar when held,
+      else the newest one listing the year). Publisher, table, category, reference period with frequency, start and
+      end, the month column, last update, check_status (slips kept and flagged, not counted in the build stage),
+      copy_date. GUS rows of the workbook are left out. Terms: GUS copyright terms, source required.
+    tests:
+      - unique:
+          column_name: release_key
+    columns:
+      - name: release_key
+        tests: [not_null]
+      - name: release_date
+        tests: [not_null]
+      - name: publisher
+        tests: [not_null, {accepted_values: {arguments: {values: ['nbp', 'mf']}}}]
+      - name: category
+        tests: [not_null]
+      - name: check_status
+        tests: [not_null]
+  - name: poc_build_sdds_calendar
+    description: >-
+      Build stage - expected releases of NBP and Ministry of Finance statistics in the SDDS advance release calendar
+      per month of the release date (frequency M, Poland): in total and by publisher. One measure_key per breakdown;
+      only rows with check_status 'ok'; a month without a release has no row; 'provisional' for months not yet over
+      when the workbook was downloaded.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || breakdown_json || '|' || date_key"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: frequency
+        tests: [not_null, {accepted_values: {arguments: {values: ['M']}}}]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['PL']}}}]
+      - name: observation_status_key
+        tests: [not_null, {accepted_values: {arguments: {values: ['ok', 'provisional']}}}]
+      - name: value
+        tests: [not_null]

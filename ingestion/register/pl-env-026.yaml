@@ -1,0 +1,64 @@
+id: PL-ENV-026
+name: Airport traffic statistics
+short_name: ULC airport traffic
+provider: Urząd Lotnictwa Cywilnego (ULC)
+source_system: ulc_airports
+status: built
+family: H
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [aviation, passenger traffic, airports]
+entities: [airport, quarter, traffic metric]
+granularity: Passengers and aircraft operations per Polish airport, per quarter, with the two previous years and the change
+  (PDF table of about 15 airports and a total).
+coverage: 65 quarterly PDFs from Q1 2010 to Q1 2026.
+access:
+  endpoint: https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych
+  kind: bulk_file
+  interfaces: [PDF, HTML]
+  auth: Public downloads.
+  cost: Free public access.
+  limits: None published. robots.txt has 15 Disallow lines (/administrator/, /api/, /bin/, /cache/ and others), none on
+    /_download/. The site carries Imperva Incapsula bot protection.
+licence:
+  status: unresolved
+  notes: 'Terms: none stated. The statistics page shows only "© 2026 Urząd Lotnictwa Cywilnego"; its footer links accessibility,
+    cookie and competition-rules pages, none with a reuse sentence (probe 12 Nov 2026); https://ulc.gov.pl/udostepnianie-informacji-w-celach-naukowych
+    has no reuse sentence (desk fetch). Attribution if used: "Źródło: Urząd Lotnictwa Cywilnego".'
+updates: Quarterly with a lag of three to six months (page updated 23 Oct 2026 with Q1 2026; Q4 2025 file dated 22 Apr 2026).
+ingestion:
+  history: 'Bulk PDF: https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych links 65 PDFs, no XLSX or CSV
+    (e.g. /_download/2026/statystyki_2026/_pl/wg_portow_lotniczych_1kw2026.pdf, 442,042 bytes; /_download/statystyki/2025/q4/wg_portow_lotniczych_4kw2025.pdf;
+    the oldest /_download/regulacja_rynku/statystyki/1ql_2010.pdf, 139,818 bytes). Paths differ per release, so the listing
+    page is the entry. The PDFs carry a text layer (Q1 2026: 1 page, 247 text operators, fonts with ToUnicode maps; Q1 2010:
+    2 pages, 337 text operators), so tables are read by text-layer extraction, without OCR. Full load: 65 files, a few hundred
+    KB each. No API.'
+  incremental: Snapshot of the listing page; a new quarter is a new PDF link; version = Last-Modified and ETag of the file;
+    check monthly.
+  identifiers: Airport name (no ICAO or IATA code in the tables), quarter.
+modelling:
+  notes: 'Smallest Gold selection: passengers and aircraft operations per airport and for Poland, quarterly from Q1 2010
+    (about 15 airports; airport names mapped to ICAO codes and voivodeships by a small seed). Frequency: quarterly only;
+    each PDF repeats the two previous years, so the same quarter appears in up to three files: keep the newest file per
+    quarter. Overlap: Eurostat avia_paoa (in Silver, 301.6 million rows, to 2026-Q3) carries passengers of Polish airports
+    and was more current than ULC on 12 Nov 2026 (ULC: Q1 2026); keep both series (O31). Effort M (PDF layouts differ over
+    16 years).'
+  overlap: Airport totals can overlap port/route reports; do not sum views without definition checks.
+research:
+  priority: review-next
+  evidence: documented
+  connection: tested
+  blockers:
+  - 'Dev probe run 43282997907 (job 131408942570, branch test/src-dfh-probe, 12 Nov 2026): the listing and two PDFs answered
+    200 to a GitHub runner. Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py,
+    12 Nov 2026): the newest and the oldest PDF were downloaded and have a text layer.'
+  - 'Licence unresolved: no reuse terms are stated on ulc.gov.pl. Internal build only; a reuse request to ULC is an owner
+    option.'
+  - 'The platform has no PDF table reader yet: the build adds text-layer extraction and checks each table against its total
+    row. The pages carry the Incapsula script; plain requests were served. If the site starts refusing, the refusal is recorded
+    and not worked around.'
+  references:
+  - https://ulc.gov.pl/statystyki-analizy/statystyki-wg-portow-lotniczych
+  - https://ulc.gov.pl/udostepnianie-informacji-w-celach-naukowych
+  - https://ec.europa.eu/eurostat/databrowser/view/avia_paoa/default/table

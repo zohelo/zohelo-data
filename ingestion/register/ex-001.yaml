@@ -1,0 +1,118 @@
+id: EX-001
+name: Industrial-property statistical APIs
+short_name: UPRP industrial-property statistics
+provider: Patent Office of the Republic of Poland (UPRP)
+source_system: uprp_statistics
+status: built
+family: B
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [innovation, intellectual-property]
+entities: [region, applicant-aggregate]
+granularity: 'Annual counts of applications and of rights granted for inventions, utility models, trademarks and
+  industrial designs, and of European-patent validations, as labelled figures, charts and tables in the annual
+  report. The ten API aggregates (by origin, by type of domestic applicant, by voivodeship) were not read
+  (robots.txt).'
+coverage: 'Annual reports for 2003 to 2025 (23 years, 30 PDF files; 2019 to 2025 in Polish and in English). Patents
+  granted by UPRP to domestic applicants by voivodeship, 2009 to 2025, are also in GUS BDL subgroup P3005
+  (PLS-001).'
+access:
+  endpoint: https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp
+  kind: bulk_file
+  interfaces: [PDF, API, HTML-iframe-charts]
+  auth: Public download of the report files, no key or account.
+  cost: free
+  limits: 'None documented. robots.txt of uprp.gov.pl let the probe read the report page and files (generic agent
+    and Claude agents). The "API do statystyk" and the chart iframes are on statystyka.pue.uprp.gov.pl, whose
+    robots.txt is "User-agent: *" / "Disallow: /": no automated request is made there.'
+licence:
+  status: unresolved
+  notes: 'Terms:
+    https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
+    ("Warunki korzystania z Portalu Informacyjnego Urzędu Patentowego RP i Platformy Usług Elektronicznych Urzędu
+    Patentowego RP", "Data publikacji: 12.09.2023 r. wersja 3.0."; they cover uprp.gov.pl and "ich subdomen
+    *.uprp.gov.pl", read in full on 12 Nov 2026). They do not address reuse: no sentence on reusing content or data,
+    no attribution sentence, commercial reuse not stated, modification not stated. What they say: "Korzystanie z PI
+    i PUEUP jest bezpłatne.", "Użytkownik korzysta z zasobów PI i PUEUP na własną odpowiedzialność." and "W sprawach
+    nieuregulowanych w niniejszych Warunkach Korzystania zastosowanie mają obowiązujące przepisy prawa." The page
+    "Zasady udostępniania danych statystycznych"
+    (https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych) gives no reuse terms
+    either; requests for other compilations "są rozpatrywane zgodnie z przepisami Ustawy o dostępie do informacji
+    publicznej". The annual-report page states no terms of its own. No licence is claimed: the source is built and
+    stays internal (licence gate) until UPRP states terms; the owner question in research.blockers asks for them. No
+    owner decision exists on these terms.'
+updates: 'Yearly: the report for a year appears in the following summer (2025 edition: Polish file Last-Modified 31
+  Aug 2026, English file 11 Sep 2026).'
+ingestion:
+  history: 'Bulk: the page https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp links 30 PDF files for 2003 to 2025
+    (the file addresses follow no pattern, so read the links from the page); all 30 answered HEAD 200 from a GitHub
+    runner, 298,429,334 bytes in total. The 2025 Polish report (10,143,966 bytes, 94 page objects) has a text layer
+    with the figures as labelled text, for example "patenty na wynalazki 2283", "prawa ochronne na wzory użytkowe
+    490", "walidacje patentów europejskich 10 580", "prawa ochronne na znaki towarowe 12 048", "prawa z rejestracji
+    wzorów przemysłowych 712" (diacritics restored here: the raw strings lose them to the font encoding, so the
+    build needs a PDF library that applies the font maps, which the pipeline does not have yet). The reports for
+    2003 to 2024 were not opened. Dev probe run 43295075918 (job 131451094958) and Dev probe run 43299743376 (job
+    131467412298), branch test/src-fix-probe, 12 Nov 2026. Not a route: the ten API endpoints
+    https://statystyka.pue.uprp.gov.pl/team/uprp/<name> (zgl_kraj_zag, zgl_rodz_pod, zgl_woj, udziel_kraj_zag,
+    udziel_rodz_pod, udziel_woj, zt_zgl_kraj_zag, zt_udz_kraj_zag, wp_zgl_kraj_zag, wp_udz_kraj_zag) and the
+    statistics pages of uprp.gov.pl, which are iframes from the same host: its robots.txt disallows all robots (Dev
+    probe run 43287937228, job 131426191655, branch test/src-ex-probe, 12 Nov 2026), honoured. dane.gov.pl timed out
+    from the runner again (75 s).'
+  incremental: 'Entity = one annual report (year, Polish edition), version = Last-Modified of the file; one new file
+    a year, unchanged bytes skipped by SHA-256. Small source: full refresh.'
+  identifiers: 'Year + right type (invention, utility model, trademark, industrial design, European-patent
+    validation) + event (application, grant or registration) + applicant origin where the report gives it.'
+modelling:
+  notes: 'Counts in single units, annual only (frequency A). Applications, grants and rights in force are distinct
+    events counted by different dates (filing date; date the right number is assigned). Smallest Gold selection,
+    Poland first: (1) patents granted by UPRP to domestic applicants, Poland and the 16 voivodeships, 2009 to 2025,
+    from GUS BDL P3005 (variable 271227; by applicant type 782881 to 782883 from 2018), a loaded source, so no
+    EX-001 code is needed for it; (2) from the annual reports, the Poland totals BDL does not carry: trademark and
+    industrial-design applications and registrations, utility models and European-patent validations, 2003 to 2025.
+    New KPIs in the domain group education.science (Science, R&D & patents); none is in kpi.csv today, so no
+    published KPI changes. The 2025 report gives 2,283 patents granted and BDL gives 2,242 for Poland in 2025:
+    different scopes (not reconciled), so the two are separate series and never mixed. Suppression markers: none
+    seen in the 2025 totals; older reports unknown. Duplicates: later reports restate earlier years; keep the newest
+    report''s value per year. Effort L for the PDF route (23 yearly layouts, no PDF reader in the pipeline); S if
+    UPRP allows the API.'
+  overlap: 'UPRP says it passes its survey results to GUS ("dane wynikowe są przekazywane do Głównego Urzędu
+    Statystycznego"). Checked on 12 Nov 2026 (Dev probe run 43295075918 (job 131451094958) and Dev probe run
+    43299743376 (job 131467412298)): GUS BDL (PLS-001) group G483 "Ochrona własności przemysłowej w Polsce" has the
+    subgroups P3005 "Wynalazki" (2009 to 2025, last update 21 May 2026; 11 variables seen: patents granted by UPRP
+    in total and by type of applicant, per 100 thousand and per million inhabitants, shares, applications per
+    million inhabitants; Poland and 16 voivodeships) and P3006 "Wzory użytkowe" (variables not listed: HTTP 429); a
+    variable-name search found no trademark or industrial-design variable in BDL. World Bank WDI (GL-005, bulk) has
+    IP.PAT.RESD and IP.PAT.NRES for Poland, 1980 to 2024 (3,363 and 90 in 2024); the five trademark and design codes
+    tried returned no data for Poland. UNdata (GL-017) declares SYB table 264 "Patents" (not queried). Eurostat
+    (GL-001): 34 patent or intellectual-property tables in the catalogue, the EPO patent tables end in 2012 or 2013
+    and none carries UPRP filings. WIPO IP Statistics (GL-032) is parked on its licence. O31: each source stays its
+    own series; do not sum providers.'
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (it does not block the internal build; a yes from UPRP replaces PDF reading with ten small API
+    reads and can resolve the licence): will you send this to UPRP (Centrum.Kontaktowe@uprp.gov.pl)? "Szanowni
+    Państwo, na stronie »API do statystyk« (https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk)
+    udostępniają Państwo dziesięć zestawień pod adresami w domenie statystyka.pue.uprp.gov.pl, ale plik robots.txt
+    tej domeny zabrania dostępu programom (Disallow: /). Proszę o informację: (1) czy mogę pobierać te dziesięć
+    zestawień programem raz w miesiącu; (2) na jakich warunkach mogę je ponownie wykorzystywać i publikować w
+    serwisie zohelo.com z adnotacją »Źródło: Urząd Patentowy RP«."'
+  - 'Built (#3265): the Polish reports 2019 to 2025 are read with pypdf (statistics tables, each cell checked by its
+    table''s sums; docs/sources/uprp_statistics.md); the 2003 to 2018 reports have other layouts and are not read,
+    so years before 2015 (validations before 2017) are not loaded.'
+  - 'Not verified: whether P3005 and P3006 are already in Bronze (the GUS BDL initial load is in progress); the
+    variables of P3006; everything inside the ten API endpoints.'
+  references:
+  - https://uprp.gov.pl/pl/publikacje/raport-roczny-uprp
+  - https://uprp.gov.pl/sites/default/files/2026-08/Raport%20roczny%202025.pdf
+  - https://uprp.gov.pl/pl/o-urzedzie/statystyki/api-do-statystyk
+  - https://statystyka.pue.uprp.gov.pl/robots.txt
+  - https://uprp.gov.pl/pl/o-urzedzie/statystyki/modul-statystyczny
+  - https://uprp.gov.pl/pl/o-urzedzie/statystyki/zasady-udostepniania-danych-statystycznych
+  - https://uprp.gov.pl/pl/o-urzedzie/statystyki/metodologia-i-slownik-pojec
+  - https://uprp.gov.pl/pl/warunki-korzystania-z-portalu-informacyjnego-urzedu-patentowego-rp-i-platformy-uslug-elektronicznych-urzedu-patentowego-rp
+  - https://bdl.stat.gov.pl/api/v1/subjects/P3005?format=json&lang=pl
+  - https://api.worldbank.org/v2/country/POL/indicator/IP.PAT.RESD?format=json

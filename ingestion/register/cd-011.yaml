@@ -1,0 +1,65 @@
+id: CD-011
+name: GPW Benchmark index and reference-rate data
+short_name: GPW Benchmark
+provider: GPW Benchmark
+status: reviewing
+family: I
+kpi: false
+geography: Poland
+provider_type: commercial
+domains: [financial-markets, interest-rates]
+entities: [benchmark, index, security-basket]
+granularity: Benchmark value by tenor/date and index value/composition by effective period.
+coverage: Website publishes current, delayed and annual historical files for selected benchmarks; series start varies.
+access:
+  endpoint: https://gpwbenchmark.pl/dane_historyczne
+  kind: bulk_file
+  interfaces: [HTML, bulk-files, PDF]
+  auth: 'Data agreements with GPW Benchmark ("Umowa na korzystanie z danych niebędących danymi wskaźników referencyjnych",
+    "Umowa o stosowanie") and the GPW Market Data License Agreement for distribution; annual historical files are
+    public PDFs.'
+  cost: mixed
+  limits: No public API limit documented.
+licence:
+  status: restricted
+  notes: 'Terms: https://gpwbenchmark.pl/korzystanie_stawek_referencyjnych and
+    https://gpwbenchmark.pl/stosowanie_stawek_referencyjnych (read by the runner 26 Nov 2026): use of benchmark and
+    non-benchmark data is offered through agreements ("Umowa na korzystanie z danych niebędących danymi wskaźników
+    referencyjnych", "Umowa o stosowanie" with annexes); GPW fee schedule from 1 Jan 2027: distribution licence for "I
+    – GPWB Information (WIBID and WIBOR, WIRON ON, WIRON CR, POLSTR ON, POLSTR CI, POLSTR CR)" 82,430 PLN a year (real
+    time), delayed distribution also fee-bearing. https://gpwbenchmark.pl/dane_historyczne publishes annual PDF files
+    (POLSTR 2021 to 2025, WIRON 2019 to 2025) with no reuse statement. No open licence; attribution sentence: none
+    given. Not reusable without an agreement: stays out.'
+updates: Benchmark-specific fixing/publication calendar; revisions are separately reported.
+ingestion:
+  history: 'PROPOSAL: load published annual files with methodology/version metadata.'
+  incremental: 'PROPOSAL: append fixing values and ingest revision notices.'
+  identifiers: Benchmark/index code, tenor, date and methodology version.
+modelling:
+  notes: Rates and index levels are non-additive; compositions use effective dating.
+  overlap: Index values may also appear in GPW market feeds and vendors.
+research:
+  priority: specialist
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (agreement): GPW Benchmark offers WIBOR, WIRON and POLSTR data only under its data agreements,
+    and the GPW fee schedule prices their distribution (82,430 PLN a year in real time; delayed distribution also
+    charged); the public historical files are annual PDFs without reuse terms. Ask GPW Benchmark for an agreement to
+    show daily or monthly WIBOR, WIRON and POLSTR on zohelo, or park CD-011? Recommendation: include it in the one
+    letter to the GPW group proposed under CD-005; otherwise park.'
+  - 'Re-review 26 Nov 2026 (Task #2913): the parking reason was a benchmark licence, which is an owner question, so
+    the entry is `reviewing`. Dev probe run 45879796136 (job 140115959895, branch test/src-parked-probe, script
+    dev/src_parked1_probe.py, 26 Nov 2026): https://gpwbenchmark.pl/dane_historyczne HTTP 200 (12 annual PDFs
+    linked); https://www.gpwbenchmark.pl/en-dokumentacja HTTP 200 (benchmark statements and regulations, PDFs read);
+    https://gpwbenchmark.pl/licencje answered 404. Dev probe run 45880748620 (job 140119185484, same branch and
+    script, argument `two`, 26 Nov 2026): https://gpwbenchmark.pl/dane_opoznione,
+    https://gpwbenchmark.pl/stosowanie_stawek_referencyjnych and
+    https://gpwbenchmark.pl/korzystanie_stawek_referencyjnych HTTP 200 (agreements listed). robots.txt of
+    gpwbenchmark.pl disallows only /pub/NEWCONNECT/DI/EUROSNACK.'
+  - 'Earlier parking reason: index and benchmark data, publication does not settle licensing for product use'
+  references:
+  - https://gpwbenchmark.pl/dane_historyczne
+  - https://gpwbenchmark.pl/korzystanie_stawek_referencyjnych
+  - https://gpwbenchmark.pl/stosowanie_stawek_referencyjnych
+  - https://www.gpwbenchmark.pl/en-dokumentacja

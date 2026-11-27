@@ -4,7 +4,7 @@ Iceberg metadata names those files, so the planner (pyiceberg) picks the activat
 DuckDB streams just them. The dbt-duckdb SQL path scanned every file (trial 1 and 2).
 In v1 this is the per-block builder. Without a catalog (local harness) it reads the source table.
 
-Keep the dataset list in step with macros/poc_blocks.sql (poc_eurostat_blocks)."""
+Keep the dataset list in step with macros/sources/eurostat.sql (poc_eurostat_blocks)."""
 
 # dataset -> (frequency, the sample filter of the PoC, pushed down so the extraction stays small)
 HAS = "list_contains(string_split(breakdown_codes, ','), '{}')"

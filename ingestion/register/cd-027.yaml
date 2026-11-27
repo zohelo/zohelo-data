@@ -1,0 +1,48 @@
+id: CD-027
+name: OpenStreetMap Planet, history and replication diffs
+short_name: OpenStreetMap
+provider: OpenStreetMap contributors and OpenStreetMap Foundation
+status: approved
+family: J
+kpi: false
+geography: worldwide
+provider_type: community-academic
+domains: [geospatial, transport, places]
+entities: [node, way, relation, changeset]
+granularity: Tagged nodes, ways and relations; full-history files include versions and changesets.
+coverage: Global planet and history; archive documentation points to coverage from 2006 with gaps/quality varying by place.
+access:
+  endpoint: https://wiki.openstreetmap.org/wiki/Planet.osm
+  kind: api
+  interfaces: [bulk-files, replication-diffs, API, PBF, XML]
+  auth: Public downloads; bulk users should use planet/diffs, not operational map APIs or tiles.
+  cost: free
+  limits: Operational API/tile/geocoder policies apply; planet delivery is the bulk route.
+licence:
+  status: open-conditional
+  notes: 'Terms: https://www.openstreetmap.org/copyright says OpenStreetMap is open data "rozpowszechniany na licencji Open
+    Data Commons Open Database License (ODbL)" and may be copied, distributed and adapted "pod warunkiem podania OpenStreetMap
+    i jego autorów jako źródła" (page in Polish) (page read 11 Nov 2026 from a GitHub runner). Attribution: "© OpenStreetMap
+    contributors" with the ODbL link; share-alike applies to derived databases, produced works and third-party layers need
+    separate analysis. Geofabrik extracts carry the same ODbL.'
+updates: Weekly planet, minute/hour/day diffs; community edits may revert or delete objects.
+ingestion:
+  history: 'Poland extract poland-latest.osm.pbf from Geofabrik (https://download.geofabrik.de/europe/poland.html): 2.0
+    GB, refreshed daily (data up to 2026-11-10T21:21:39Z at the check), per-voivodeship extracts 80-180 MB; the official
+    full planet file is the alternative route (https://planet.openstreetmap.org/, about 80 GB, not measured).'
+  incremental: 'PROPOSAL: apply replication sequence diffs idempotently; periodic checksum/reseed.'
+  identifiers: OSM type+ID+version; spatial links are probabilistic unless tagged identifiers exist.
+modelling:
+  notes: Bitemporal feature/tag model; geometry and semantics change independently.
+  overlap: May underlie geocoders and map products; avoid duplicate-derived counting.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - ODbL attribution/share-alike design
+  - Select extract boundary
+  - Handle deletions/redactions
+  references:
+  - https://wiki.openstreetmap.org/wiki/Planet.osm
+  - https://www.openstreetmap.org/copyright

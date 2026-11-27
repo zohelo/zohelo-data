@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-practices,prakt.,practices,praktyki,false,practices,1
-organisational_units,jedn.,organisational units,jednostki organizacyjne,false,organisational_units,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+practices,prakt.,practices,praktyki,false,practices,1,practices
+organisational_units,jedn.,organisational units,jednostki organizacyjne,false,organisational_units,1,units

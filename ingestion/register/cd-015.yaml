@@ -1,0 +1,43 @@
+id: CD-015
+name: Global LEI Index, GLEIF API and Golden Copy/Delta Files
+short_name: GLEIF
+provider: Global Legal Entity Identifier Foundation
+source_system: gleif
+status: silver
+family: E
+kpi: false
+geography: worldwide
+provider_type: international-public
+domains: [business-register, entity-resolution, financial-markets]
+entities: [legal-entity, relationship, identifier]
+granularity: LEI record and direct/ultimate-parent relationship with reference-data status and provenance.
+coverage: Historical and current LEI records globally; Golden Copy deltas identify changes three times daily.
+access:
+  endpoint: https://www.gleif.org/en/lei-data/access-and-use-lei-data
+  kind: bulk_file
+  interfaces: [API, bulk-files, HTML, XML, JSON]
+  auth: Public; search needs no registration and downloads/API are openly available.
+  cost: free
+  limits: No numerical limit relied on.
+licence:
+  status: open-conditional
+  notes: 'Terms: CC0 1.0, https://www.gleif.org/en/meta/lei-data-terms-of-use (section II.3; section IV: claim no rights
+    in LEIs, access only through the Access Service, imply no GLEIF endorsement, no GLEIF logo). Attribution: "Source:
+    GLEIF" (not required under CC0).'
+updates: Issuers report daily; Golden Copy and delta files publish three times daily.
+ingestion:
+  history: 'PROPOSAL: seed Golden Copy/concatenated files and certified mappings.'
+  incremental: 'PROPOSAL: apply delta files idempotently; periodic full reconciliation.'
+  identifiers: LEI; map BIC, ISIN, MIC, OpenCorporates and registration-authority IDs where certified.
+modelling:
+  notes: Slowly changing entity and relationship dimensions; exceptions are data, not nulls.
+  overlap: Complements registries; do not infer universal coverage or current ownership from missing Level 2 data.
+research:
+  priority: review-first
+  evidence: documented
+  connection: not-tested
+  blockers: []
+  references:
+  - https://www.gleif.org/en/lei-data/access-and-use-lei-data
+  - https://www.gleif.org/en/lei-data/gleif-api
+  - https://www.gleif.org/en/meta/lei-data-terms-of-use

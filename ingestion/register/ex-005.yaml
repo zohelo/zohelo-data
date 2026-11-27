@@ -1,0 +1,44 @@
+id: EX-005
+name: OpenData organizations, people and locations (bulk ZIP)
+short_name: OpenData organisations
+provider: OpenData
+source_system: opendata_org
+status: silver
+family: E
+kpi: false
+geography: Poland
+provider_type: unknown
+domains: [organizations]
+entities: [organization, person, location]
+granularity: Organization, person and location records from a bulk ZIP.
+coverage: Not yet researched.
+access:
+  endpoint: see ingestion/sources/opendata_org.yaml
+  kind: bulk_file
+  interfaces: [bulk-files, ZIP]
+  auth: unknown
+  cost: unknown
+  limits: unknown
+licence:
+  status: unresolved
+  notes: 'Terms: CDLA-Permissive-2.0, https://opendata.org/terms/ (section 8). Attribution: "Source: OpenData.org
+    (BrightQuery), CDLA-Permissive-2.0". Owner decision #906 (25 Oct 2026): keep and process; private use
+    only (data.zohelo.com) until the owner approves public display. Person records (business contacts)
+    included: never published.'
+updates: Not yet researched.
+ingestion:
+  history: Bulk ZIP snapshot (legacy loader).
+  incremental: Not yet decided.
+  identifiers: Not yet researched.
+modelling:
+  notes: Not yet researched.
+  overlap: May overlap GLEIF, KRS and REGON registers.
+research:
+  priority: existing
+  evidence: none
+  connection: tested
+  blockers:
+  - 'Public display: owner decision pending (licence found 28 Oct 2026; archive provenance unconfirmed)'
+  - 'Person data: privacy review before any publication'
+  references:
+  - https://opendata.org/terms/

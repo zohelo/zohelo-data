@@ -1,10 +1,12 @@
 # Sources: download and discovery routes
 
-All candidate sources (about 180) are listed in the source register
-`ingestion/register.yaml`: one entry per source with the same fields (provider, access
+All candidate sources (about 200) are listed in the source register
+`ingestion/register/`: one file per source, `<id lower>.yaml` (D42), with the same fields (provider, access
 kind, endpoint, interfaces, auth, limits, licence status, update behaviour, history and
 incremental load approach, identifiers, research priority and blockers) and a `status`
-(table below). The id prefix (GL, PLS, PL-ENV, PLG, CD, EX) groups the entries. An onboarded source links to its declaration
+(table below). A new entry is a new file; a review or build edits only its own entry's file. `family`,
+`short_name` and `kpi` follow `.github/backlog/assets/register-fields.md`. The id prefix (GL, PLS, PL-ENV, PLG,
+CD, EX, TP) groups the entries. An onboarded source links to its declaration
 via `source_system`. The route of each onboarded source is its own file
 [`docs/sources/<source_system>.md`](sources/) ([source-registration.md](source-registration.md)); this page takes
 no sections of single sources.

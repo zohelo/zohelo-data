@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-agreements,umowy,agreements,umowy,false,agreements,1
-healthcare_providers,świadcz.,healthcare providers,świadczeniodawcy,false,healthcare_providers,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+agreements,umowy,agreements,umowy,false,agreements,1,agreements
+healthcare_providers,świadcz.,healthcare providers,świadczeniodawcy,false,healthcare_providers,1,providers

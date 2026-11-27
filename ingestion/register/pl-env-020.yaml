@@ -1,0 +1,65 @@
+id: PL-ENV-020
+name: Energy price indicators and small-renewable-installation reports
+short_name: URE energy prices
+provider: Urząd Regulacji Energetyki (URE)
+source_system: ure_prices
+status: built
+family: G
+kpi: true
+geography: Poland
+provider_type: national-public
+domains: [electricity prices, renewable energy, regulation]
+entities: [market indicator, installation aggregate, technology]
+granularity: Quarterly/annual price indicators and annual aggregates for small renewable installations.
+coverage: 'Built: average electricity price on the competitive market yearly 2008-2025 and quarterly 2015 Q2-2026 Q2 (page
+  7852), average household electricity price yearly 2012-2025 (page 7853), imported gas purchase prices quarterly, EU/EFTA
+  states 2013 Q3-2026 Q3 and other states 2023 Q1-2026 Q3 (page 7859); tables read 26 Nov 2026 (Dev probe 45790234209).
+  Small-installation reports are annual since 2016, with a definition change from 2021 (not built).'
+access:
+  endpoint: https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
+  kind: bulk_file
+  interfaces: [HTML tables, PDF]
+  auth: Public pages.
+  cost: Free.
+  limits: None published.
+licence:
+  status: unresolved
+  notes: 'Terms: none found. The ure.gov.pl pages read on 12 Nov 2026 (indicator pages, the news item on small installations,
+    and the privacy policy https://www.ure.gov.pl/pl/wolnytekst/5192,dok.html) state no licence, no attribution wording
+    and nothing on reuse, commercial use or modification of the content; the footer has only privacy, accessibility, RSS
+    and BIP links. The source stays internal. Attribution if used: "Źródło: Urząd Regulacji Energetyki, www.ure.gov.pl"
+    with the page''s modification date. Dev probe 45790234209 (26 Nov 2026) read robots.txt (empty), both list pages, the
+    privacy policy and the two auction-rule pages linked there: no licence or reuse wording.'
+updates: 'Per indicator: quarterly prices are added to the same page after each quarter (page 7852: "Data modyfikacji: 25.09.2026"
+  with Q2 2026), yearly values once a year.'
+ingestion:
+  history: 'Fixed public pages, each with one HTML table holding the whole series (no export, no session): average competitive-market
+    electricity price https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html
+    (200, 60,588 bytes, 21 table rows from a GitHub runner, Dev probe run 43203166665 (job 131131537831, branch test/src-cg-probe,
+    12 Nov 2026)), nine more electricity indicator pages listed on the endpoint (household price 7853, wholesale 8425, tariff
+    averages 10600, capacity charge 9165 and others) and the gas page https://www.ure.gov.pl/pl/paliwa-gazowe/ceny-wskazniki/7859
+    (quarterly gas purchase prices). Under 1 MB in total. The small-installation report is a document on bip.ure.gov.pl,
+    not a table (not included).'
+  incremental: Entity = indicator page; Landing version = download time (no Last-Modified), the page's modification date
+    is kept in Bronze; fetched monthly and landed when the bytes without the request-time trailer change (snapshot,
+    changed_since_last); the HTML tables are parsed in Bronze and an unknown layout rejects the file. Refresh full.
+  identifiers: Indicator name, period, unit, tariff/customer scope and report year.
+modelling:
+  notes: 'Keep legal definition/version with each indicator; do not compare redefined installation classes without adjustment.
+    Grain: indicator x year or quarter, Poland only, PLN/MWh. Smallest Gold selection: average electricity sale price on
+    the competitive market (yearly and quarterly) and the average household electricity price as new KPIs in environment.energy.'
+  overlap: No KPI of kpi.csv is published here yet. Eurostat electricity and gas price statistics (half-yearly, by consumption
+    band) carry the EU comparison; PSE prices (PL-ENV-019) are balancing-market prices.
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'URE reuse terms not found: internal only until the owner or URE confirms them.'
+  - 'Left out of the build: eight other electricity indicator pages (12418, 11063, 7851, 10600, 8425, 7854, 9165, 9962;
+    layouts in Dev probe 45790234209) and the small-installation reports; docs/sources/ure_prices.md.'
+  references:
+  - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki
+  - https://www.ure.gov.pl/pl/energia-elektryczna/ceny-wskazniki/7852,Srednia-cena-sprzedazy-energii-elektrycznej-na-rynku-konkurencyjnym-roczna-i-kwa.html
+  - https://www.ure.gov.pl/pl/urzad/informacje-ogolne/aktualnosci/12642,Male-instalacje-OZE-w-2024-r.html
+  - https://www.ure.gov.pl/pl/wolnytekst/5192,dok.html

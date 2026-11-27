@@ -52,7 +52,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 |---|---|
 | `dbt parse` succeeds | [auto] |
 | Every model and data test compiles with the prod target offline (in-memory DuckDB, the R2 catalog replaced by an empty local `r2` with stub Gold block tables, the `topics` var of `build.py`), and its compiled SQL is exactly one statement that DuckDB's parser accepts; compiled Python models parse. `dbt parse` neither renders model Jinja nor parses SQL | [auto] repo_check `dbt compile` (`ops/dbt_compile.py`; on its own `python -m ops.dbt_compile`) |
-| sqlfluff (dialect duckdb, jinja templater with dbt built-ins, no lakehouse connection; settings in `pyproject.toml`): lowercase keywords, explicit aliases, qualified columns when several tables are joined; RF04 (keyword-named columns such as `year`) and AL05 are off on purpose | [auto] |
+| sqlfluff (dialect duckdb, jinja templater with dbt built-ins, no lakehouse connection; settings in `pyproject.toml`): lowercase keywords, explicit aliases, qualified columns when several tables are joined; RF04 (keyword-named columns such as `year`) and AL05 are off on purpose. It lints the models a pull request adds or edits and the models that call a macro it changes; every model when `pyproject.toml` or `ops/repo_check.py` changes or there is no base branch to compare with (#3336) | [auto] repo_check `sqlfluff` |
 | No `select *` in a Gold model's output from upstream models; import CTEs (`x as (select * from ref(...))`) and unions of the model's own CTEs are allowed | [review] |
 | Every model has a YAML entry with description, column descriptions for keys, and at least one test (`not_null`/`unique` on the grain) | [auto] |
 | A model that is not incremental (full rebuild) has a row ceiling under `full_rebuild`, in its source's `ingestion/sources/<source>.yaml` or in `warehouse.yaml` for a shared model, in one place only; above 1M rows only with an `exception:` issue (owner policy #822); prod builds warn above the ceiling and fail above twice it | [auto] repo_check `configuration`, `build.py` |
@@ -76,7 +76,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 | Rule | Check |
 |---|---|
-| Exactly the five workflows; actions pinned by full SHA with version comment; `runs-on` pinned | [auto] |
+| Exactly the six workflows (`WORKFLOWS` in repo_check; the sixth, `batch-labels.yml`, by O47); actions pinned by full SHA with version comment; `runs-on` pinned | [auto] |
 | Every workflow declares `permissions:`; none uses `write-all` or `read-all` | [auto] repo_check `workflows` |
 | Least privilege `permissions:` per job | [review] |
 | The Pipeline's `notify` job needs every other job and blanks every workflow-level secret | [auto] repo_check `workflows` |
@@ -94,7 +94,7 @@ and runnable by a person or another AI when Claude is not available. Rules marke
 
 1. `check` job once per pull request, on the label `merge:check` (docs/flow.md, merge gate; from the owner's `dev.yml` change; until then the
    job runs compile, pyflakes, YAML parse, configuration, dbt parse): `python -m ops.repo_check` (root allowlist and file
-   rules, no `dev/`, five workflows with pinned actions, compile, ruff check + format,
+   rules, no `dev/`, the six workflows with pinned actions, compile, ruff check + format,
    yamllint, configuration and schedules), `dbt parse`, and a gitleaks secret scan.
    Rule changes are made in `ops/repo_check.py` and `pyproject.toml`, not in the workflow.
 2. sqlfluff on the dbt models (14 Oct) and the offline `dbt compile` with a DuckDB parse of every compiled

@@ -1,0 +1,62 @@
+id: PLS-024
+name: Ogólnopolski system monitorowania Ekonomicznych Losów Absolwentów (ELA)
+short_name: ELA graduate outcomes
+provider: Ministerstwo Nauki i Szkolnictwa Wyższego / OPI PIB
+status: reviewing
+family: B
+kpi: true
+geography: Poland; institution and field of study
+provider_type: national-public
+domains: [graduate outcomes, earnings, employment, higher education]
+entities: [graduate-cohort aggregate, institution, study programme, field of study]
+granularity: Graduate cohort/programme outcome indicator, with reports and rankings; privacy-protected aggregates only.
+coverage: Tracks outcomes shortly after graduation and up to five years after diploma; editions/cohorts vary.
+access:
+  endpoint: https://ela.nauka.gov.pl/sla-server/v6.0/
+  kind: web
+  interfaces: [HTML, interactive reports, 'application JSON service (GET, no key)', PDF reports per major]
+  auth: Public aggregate results.
+  cost: free
+  limits: Unknown.
+licence:
+  status: unresolved
+  notes: 'Terms: none found. https://ela.nauka.gov.pl/pl (read by the runner 26 Nov 2026) is an Angular application with
+    the footer "Copyrights © 2026 Ministerstwo Nauki i Szkolnictwa Wyższego" and no licence or data-download page; the edition
+    description https://ela.nauka.gov.pl/ELA10_opis_badania_20250625.pdf offers no data download or terms (session read
+    26 Nov 2026). Not reusable as data today.'
+updates: New cohorts/editions and follow-up years are added periodically.
+ingestion:
+  history: Backfill public cohort aggregates/reports once export format and terms are confirmed.
+  incremental: Poll editions; append follow-up year while versioning revised indicators.
+  identifiers: Cohort graduation year + institution/programme/field identifiers + years since diploma.
+modelling:
+  notes: Relative earnings/unemployment indicators depend on local benchmarks; cohort suppression and programme changes
+    must remain visible.
+  overlap: Derived from ZUS and POL-on; do not join back to individuals or treat as independent counts of either source.
+research:
+  priority: review-first
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question: ELA (OPI PIB for the Ministry of Science) publishes no file, bulk download or documented API and states
+    no reuse terms ("Copyrights © 2026 Ministerstwo Nauki i Szkolnictwa Wyższego"). Its public application ela.nauka.gov.pl
+    reads the data from its own JSON service by plain GET requests without a key (https://ela.nauka.gov.pl/sla-server/v6.0/,
+    for example major/filter for the lists of institutions and majors and major/value for one major''s outcomes: salary,
+    salary relative to the local benchmark, time to first job, unemployment risk, graduates per year); robots.txt allows
+    all. That is a "page''s own request" route (as D40 and D41), which needs a D row per source; a full read is one request
+    per major, institution, level, form and graduation year (thousands of requests, spread over days). Which do you want:
+    (a) a web-route D row for PLS-024 that reads the ELA service politely (one request at a time, aggregates only, internal
+    while the licence is unresolved), (b) a re-use request to the Ministry (or OPI PIB) for the ELA aggregate tables per
+    field of study, institution and cohort with their reuse terms, or (c) leave ELA out?'
+  - 'Dev probe runs on branch test/src-parked-probe, script dev/src_parked3fix_probe.py, 26 Nov 2026 (fix of the review of
+    #3268; the earlier "no data address in the bundles" was wrong, the extractor had looked for absolute addresses only):
+    45852736337 (job 140023061088, argument `two`) found apiUrl "/sla-server/v6.0/" in the main bundle and read the 35
+    lazy chunks; 45854625135 (job 140029691360, argument `four`) answered infographic/value and report-dropOut/filterList
+    with HTTP 200 JSON; 45855480360 (job 140032605492, argument `five`) answered major/filter (201,378 bytes), report/filter
+    (188,518 bytes), ranking/filter (78,360 bytes), infographic/filter and major/value (2,127 bytes, one major with graduationYear
+    2020, graduatesNumber 17 and five outcome values, plus PDF report links /sla-server/v6.0/report/pdfR?...) with HTTP
+    200; major/filterList 500 and ranking/value and report/filterList 400 without parameters. The pupil application ela-uczen.nauka.gov.pl
+    uses https://ela-uczen.nauka.gov.pl/api/filter and /details by POST (not used: probes are GET only). Earlier runs 45813307617
+    and 45815140983: dane.gov.pl searches found no ELA dataset. Not parked: route (a) or (b) is legitimate.'
+  references:
+  - https://ela.nauka.gov.pl/pl

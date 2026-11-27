@@ -1,3 +1,3 @@
-unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor
-deposits,złoża,mineral deposits,złoża kopalin,false,deposits,1
-mining_areas,OG,mining areas,obszary górnicze,false,mining_areas,1
+unit_key,symbol,name_en,name_pl,is_rate,base_unit_key,factor,symbol_en
+deposits,złoża,mineral deposits,złoża kopalin,false,deposits,1,deposits
+mining_areas,OG,mining areas,obszary górnicze,false,mining_areas,1,mining areas

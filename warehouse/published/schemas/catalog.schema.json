@@ -71,6 +71,7 @@
         "properties": {
           "unit_key": {"type": "string", "pattern": "^[a-z0-9_]+$"},
           "symbol": {"type": "string"},
+          "symbol_en": {"type": "string", "minLength": 1},
           "name_en": {"type": "string"},
           "name_pl": {"type": "string"},
           "is_rate": {"type": "boolean"},

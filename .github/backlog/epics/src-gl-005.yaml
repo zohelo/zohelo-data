@@ -33,12 +33,12 @@ deliverables:
     state: open
     contract: false
     owner_action: null
-    context: 'The register entry GL-005 in ingestion/register.yaml is the source of truth for licence and public
+    context: 'The register entry GL-005 in ingestion/register/gl-005.yaml is the source of truth for licence and public
       display. zohelo.com and bi.zohelo.com will show this source''s data, so licence.notes must give the terms
       URL and the exact attribution sentence, and research.blockers must list only open problems. Terms pages to
       read: https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators, https://datacatalog.worldbank.org/public-licenses?fragment=cc.'
     files:
-    - edit: ingestion/register.yaml
+    - edit: ingestion/register/gl-005.yaml
     steps:
     - Open https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators and confirm the
       dataset licence (docs/sources.md records Creative Commons Attribution 4.0).
@@ -53,8 +53,7 @@ deliverables:
     verify:
     - run: python -m ops.repo_check
       expect: exit code 0
-    - run: python3 -c "import yaml;print([s['licence'] for s in yaml.safe_load(open('ingestion/register.yaml'))['sources']
-        if s['id']=='GL-005'])"
+    - run: python3 -c "import yaml;print(yaml.safe_load(open('ingestion/register/gl-005.yaml'))['licence'])"
       expect: notes include the terms URL and 'Attribution:'
     out_of_scope:
     - Other register entries

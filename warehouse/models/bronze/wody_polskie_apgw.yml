@@ -1,0 +1,22 @@
+version: 2
+sources:
+- name: wody_polskie_apgw
+  description: >-
+    Wody Polskie water-management planning data (register PL-ENV-013): the File Geodatabase of the update of the river
+    basin management plans (aPGW) on dane.gov.pl dataset 599, one ZIP per plan cycle; the attributes of the planning
+    layers as published text, no geometry.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/wody_polskie_apgw/
+    loaded_by: ingestion/to_bronze/wody_polskie_apgw/
+    config: ingestion/sources/wody_polskie_apgw.yaml
+  tables:
+  - name: wody_polskie_apgw_attributes
+    description: >-
+      One row per feature x field of the loaded layers of the newest copy of each plan-cycle geodatabase (entity
+      geobaza_<n>apgw): layer, feature_number (position in the layer scan, ties the fields of a feature together),
+      field name and value as published text, gdb_name (the geodatabase folder, with the edition date); partitioned by
+      entity.
+  - name: wody_polskie_apgw_rejected_files
+    description: Files of wody_polskie_apgw the Bronze decoder rejected, with the reason.

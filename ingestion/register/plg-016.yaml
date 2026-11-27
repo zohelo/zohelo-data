@@ -1,0 +1,125 @@
+id: PLG-016
+name: Supervised-entity registers and search
+short_name: KNF supervised entities
+provider: Polish Financial Supervision Authority (KNF)
+source_system: knf_entities
+status: built
+family: E
+kpi: false
+geography: Poland
+provider_type: national-public
+domains: [financial regulation, business registry]
+entities: [financial institution, enterprise, person]
+granularity: 'One register entry (institution, intermediary, agent or branch) per sector register, with type, status
+  and a register number. In the ESMA register: one authorised entity or branch with type, status, authorisation date
+  and LEI.'
+coverage: 'Current state of each register; no dated history files. ESMA register, home member state Poland: 623
+  entries (478 active, 145 inactive), capital-market entities only. KNF''s own pages also list banks, credit unions,
+  insurers, pension societies and notified foreign entities.'
+access:
+  endpoint: https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+  kind: api
+  interfaces: [REST API, JSON, XML, HTML tables, JavaScript register applications]
+  auth: 'Public, no key or account (ESMA registers; KNF pages).'
+  cost: free
+  limits: 'ESMA: none stated in the application-to-application help
+    (https://registers.esma.europa.eu/publication/helpApp, desk fetch); requests carry a rows parameter (its
+    examples use 1000 and 100000); the robots.txt address of registers.esma.europa.eu returns the application page,
+    not rules. KNF: robots.txt of www.knf.gov.pl is "User-agent: * Allow: /"; the register sub-sites have no
+    robots.txt (HTTP 404), except ewidencjaakcji.knf.gov.pl and rejestracjaakcji.knf.gov.pl ("Disallow: /", not
+    read).'
+licence:
+  status: open-conditional
+  notes: 'Terms (route 1, the built source knf_entities): the "Legal Notice" footer link of registers.esma.europa.eu
+    leads to https://registers.esma.europa.eu/publication/legalNoticePage, the registers site''s own ESMA legal notice
+    (read from a GitHub runner, Dev probe 45811335888, 26 Nov 2026): "Reproduction of all information on this site
+    (REGISTERS information) is authorised except as otherwise stated, provided the source is acknowledged and: where
+    the original REGISTERS information is incorporated in documents that are sold (regardless of the medium), the
+    publisher must inform buyers that it may be obtained free of charge through the REGISTERS; if the REGISTERS
+    information is transformed by the user (e.g. by seasonal adjustment of statistical data, calculation of growth
+    rates) and republished this must be stated explicitly"; documents showing it must not imply ESMA endorsement or
+    present false or misleading information. Commercial reuse allowed (sold documents named), modification allowed
+    if stated; no named licence, so open-conditional (licence key esma_registers_notice). Route 2 (KNF pages) stays
+    unresolved: KNF legal notice https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna (read from a GitHub runner,
+    12 Nov 2026): "Przy wykorzystywaniu materiałów ze strony internetowej KNF wymagane jest podanie źródła wraz z
+    linkiem do serwisu www.knf.gov.pl." No licence is named and the notice grants no reuse: commercial reuse not
+    stated, modification not stated, so the terms are unresolved (as for PLG-017). Disclaimer: the UKNF "nie ponosi
+    żadnej odpowiedzialności za jakiekolwiek szkody powstałe w wyniku korzystania z nich". Attribution: "Źródło:
+    Komisja Nadzoru Finansowego, www.knf.gov.pl". For the ESMA route: ESMA legal notice
+    https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection (read from a GitHub runner, 12 Nov 2026):
+    "Reproduction of all information on this site (ESMA Library) is authorised except as otherwise stated, provided
+    the source is acknowledged and: where the original material is incorporated in documents that are sold
+    (regardless of the medium), the publisher must inform buyers that it may be obtained free of charge through ESMA
+    website; if the original material is transformed by the user (e.g. by making a summary of it or by translating
+    it) and republished, this must be stated explicitly through the following disclaimer: ‘This document has been
+    drafted using material downloaded from ESMA’s website’"; that notice is on www.esma.europa.eu, the registers
+    site has its own (above), which decides route 1. Some KNF registers name natural persons (agents,
+    advisers, brokers, actuaries): personal data, not loaded.'
+updates: 'Continuous: entries change with KNF decisions; no change feed or release calendar. ESMA entries carry
+  ae_lastUpdate per entity. Dated KNF pages show "Data aktualizacji" (for example 16 May 2026, 14 July 2026).'
+ingestion:
+  history: 'Route 1, approved (API of the official EU republisher):
+    https://registers.esma.europa.eu/solr/esma_registers_upreg/select, the documented application-to-application
+    interface of the ESMA registers (Solr; JSON with wt=json). The filter fq=ae_homeMemberState:"POLAND" with
+    fq=type_s:parent returned 623 entries: AIF 515, MIF 60, UCI 24, MIR 10, CSP 5, MIT 3, MIE 2, ESF 1, MIA 1, MIO
+    1, MIS 1; competent authority KNF for 622; active 478, inactive 145; fields ae_entityName, ae_entityTypeCode,
+    ae_entityTypeLabel, ae_lei, ae_headOfficeLei, ae_competentAuthority, ae_homeMemberState, ae_hostMemberStates,
+    ae_officeType, ae_status, ae_authorisationNotificationDate, ae_lastUpdate, addresses (Dev probe run 43295075918
+    (job 131451094958), branch test/src-fix-probe, 12 Nov 2026); the whole core holds 101,553 entries. ae_lei is
+    empty on some entries (the one printed had none). Route 2, waits for the owner (question in research.blockers):
+    KNF''s fixed HTML pages below https://www.knf.gov.pl/podmioty: 117 pages read, 61 with tables (17,705 table
+    rows), 19 of them paged with ?page=n (cooperative banks: 25 pages); one small table per entity with name,
+    address, website and, where KNF gives one, its own number ("Numer centrali" for banks, "Numer zakładu w systemie
+    UKNF" and "Data zezwolenia" for insurers); no NIP, KRS or LEI (Dev probe run 43299743376 (job 131467412298)).
+    Not routes: the register applications (e-rup, rpkip, wpn, rdl, pok, zasi, euafi, depo, at, pzf, dystr, rfz, afi,
+    tfi, ppk .knf.gov.pl) are script pages of one family; in the scripts that were read (e-rup, rpkip, wpn, rdl,
+    pok, zasi, dystr) the tables are filled by POST data calls, and the script of rpu.knf.gov.pl (insurance
+    intermediaries) refers to reCAPTCHA: none was called. EBA:
+    https://euclid.eba.europa.eu/register/pir/registerDownload and the credit-institutions register answered the
+    runner with the same 685-byte application page on every address, so no file was obtained; EIOPA:
+    register.eiopa.europa.eu answers robots.txt with HTTP 403, nothing requested; dane.gov.pl timed out (75 s). The
+    two XLS files on the page Ewidencja akcji date from 2021 and 2017 and are not entity registers.'
+  incremental: 'ESMA route: entity = the Polish slice of the register, version = download date (the source gives
+    ae_lastUpdate per entry, no slice version); snapshot once a week, a few requests of 1000 rows; unchanged bytes
+    skipped by SHA-256. Small source: full refresh.'
+  identifiers: 'ESMA: id (ae<number>) and ae_dbId per entry, ae_lei where filled. KNF pages: KNF''s own numbers only
+    (bank routing number, insurer number); no NIP, KRS or LEI.'
+modelling:
+  notes: 'kpi false: an entity table, no statistics. Smallest valuable selection for Gold: the active Polish
+    investment firms (MIF), UCITS management companies (UCI) and alternative fund managers (AIF) from the ESMA
+    register with a filled LEI, as attributes (authorisation type, status, authorisation date) of the legal-entity
+    dimension keyed by LEI (GLEIF, CD-015, is in Silver); entries without an LEI stay in Silver and are never
+    matched by name. Branch rows (ae_officeType Branch) are separate entries of the same firm. No suppression
+    markers; an empty ae_lei is a missing value. Banks, insurers and pension societies come only with route 2 and
+    have no official identifier there. Effort S for the ESMA route; M for the KNF pages.'
+  overlap: 'Entity identity is covered by KRS (PLG-012), CEIDG (PLG-014) and GLEIF (CD-015, in Silver), but none of
+    them holds the KNF authorisation type, status or register number, so this source is not contained in a loaded
+    one. KNF sector statistics are PLG-017 and PLG-018; the public warning list is PLG-019 (parked). No kpi.csv KPI
+    overlaps.'
+research:
+  priority: review-next
+  evidence: tested
+  connection: tested
+  blockers:
+  - 'Owner question (it does not block the ESMA route): may the pipeline read KNF''s fixed HTML entity lists below
+    https://www.knf.gov.pl/podmioty (robots.txt "User-agent: * Allow: /"; 61 pages with tables, 19 of them paged, a
+    few hundred page requests per full read, one request every two seconds, once a month), for legal persons only
+    (banks, cooperative banks, credit unions, insurers, pension societies, brokerage houses, fund companies), never
+    the pages that list natural persons (investment advisers, brokers, actuaries, agents who are natural persons)
+    and never the register applications?'
+  - 'Build task done (#2994): the Legal Notice link in the footer of registers.esma.europa.eu leads to the registers
+    site''s own ESMA legal notice (quoted in licence.notes); the ESMA route is open-conditional.'
+  - 'Lead for a separate entry, not read: KNF''s investment-fund API https://wybieramfundusze-api.knf.gov.pl (its
+    robots.txt names documentation.html and terms.pdf).'
+  - 'Not analysed: the register entries themselves and the regulations of the register sites; the pages that list
+    natural persons were only counted (tables and rows), their content was not printed.'
+  references:
+  - https://www.knf.gov.pl/podmioty
+  - https://www.knf.gov.pl/o_nas/urzad_komisji/nota_prawna
+  - https://registers.esma.europa.eu/publication/helpApp
+  - https://registers.esma.europa.eu/solr/esma_registers_upreg/select
+  - https://www.esma.europa.eu/about-esma/legal-notice-and-data-protection
+  - https://www.eba.europa.eu/risk-and-data-analysis/data/registers/payment-institutions-register
+  - https://www.knf.gov.pl/en/ENTITIES/entities_search
+  - https://rpkip.knf.gov.pl/index.html?type=RPK
+  - https://bip.knf.gov.pl/knf/pl/komponenty/img/Instrukcja_dla_uzytkownika_RPKIP.pdf
