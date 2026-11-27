@@ -3,6 +3,9 @@
    each file). Grain: forecast_year x area_code x occupation_name.
    - Poland: the national poster (plakat_<year>); the 16 voivodeships: the poster of each voivodeship page
      (plakat_p<NN>_<year>). One file per area and year; a second file for an area fails the unique test.
+   - A line printed twice in the same block of one poster (Bronze repeat_of_item, the same name and category; łódzkie
+     2021 "Administratorzy stron internetowych") is the same classification printed again: only the first is kept.
+     A name printed in two categories never reaches Silver (Bronze rejects the file).
    - A forecast, not an observation: the edition is the forecast year (survey in Q3/Q4 of the year before); an
      occupation is named as printed on that edition's posters (the Barometr's own list, no code on the posters;
      names and the list change between editions, so there is no cross-year mapping).
@@ -27,6 +30,7 @@ picked as (
             'g'
         ) as name_key
     from occupations
+    where repeat_of_item is null
 ),
 
 voivodeships as (
