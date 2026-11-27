@@ -12,7 +12,6 @@ select
     krs_numbers,
     krs_count,
     prosecutor_office,
-    prosecutor_office_listed,
     prosecutor_level,
     final_ruling_mentioned,
     snapshot_date as date_key,
