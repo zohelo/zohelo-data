@@ -36,6 +36,8 @@ import re
 from typing import Any
 import unicodedata
 
+INNER_HYPHEN = re.compile(r"(?<=\w) ?- ?(?=[a-ząćęłńóśźż])")
+LONE_DIACRITIC = re.compile(r"(?<!\w)([ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]) (?=[a-ząćęłńóśźż])")
 TITLE = re.compile(r"^Barometr zawodów (20\d\d)$")
 LETTER = re.compile(r"[^\W\d_]")
 AREA = re.compile(r"^(Polska|województwo\s+\S.*)$")
@@ -49,8 +51,12 @@ BASE, GAP = 10000.0, 1000.0  # where each line piece is placed for decoding (one
 
 
 def clean(text: str) -> str:
-    """NFKC (the ligatures "ﬁ", "ﬂ" of the posters' fonts become "fi", "fl"), one space between words."""
-    return " ".join(unicodedata.normalize("NFKC", text).split())
+    """NFKC (the ligatures "ﬁ", "ﬂ" of the posters' fonts become "fi", "fl"), one space between words, the hyphens
+    U+2010 and U+2011 as "-" without spaces inside a word ("społeczno ‐ekonomicznych"), and a diacritic letter drawn
+    as its own glyph joined to its word ("ś ląskie": no Polish word is a lone ś, ł, ż ...)."""
+    text = " ".join(unicodedata.normalize("NFKC", text).replace("\u2010", "-").replace("\u2011", "-").split())
+    text = INNER_HYPHEN.sub("-", text)
+    return LONE_DIACRITIC.sub(r"\1", text)
 
 
 def _mul(m: list[float], n: list[float]) -> list[float]:
@@ -418,7 +424,8 @@ def parse(page, reader) -> dict[str, Any] | None:
             if key not in last_in_column:
                 raise ValueError(f"continuation line without a line above it: {line['text'][:60]!r}")
             i = last_in_column[key]
-            rows[i] = (rows[i][0], f"{rows[i][1]} {line['text']}")
+            joint = "" if rows[i][1].endswith("-") else " "  # "społeczno-" + "ekonomicznych"
+            rows[i] = (rows[i][0], f"{rows[i][1]}{joint}{line['text']}")
             continue
         last_in_column[key] = len(rows)
         rows.append((name, line["text"]))
@@ -434,7 +441,7 @@ def parse(page, reader) -> dict[str, Any] | None:
     return {
         "year": titles[0],
         "area": areas[0]["text"],
-        "categories": [name for _, name in sorted(named, key=lambda bn: -bn[0]["y1"])],
+        "categories": list(dict.fromkeys(name for _, name in sorted(named, key=lambda bn: -bn[0]["y1"]))),
         "rows": rows,
         "repeat_of_item": repeats,
         "hidden_text": hidden,
