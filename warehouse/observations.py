@@ -400,6 +400,20 @@ SOURCES.update(
         },
     }
 )
+# Polish public finance from the Ministry of Finance: the public debt and State Treasury debt workbooks (every sheet,
+# block and item) and the state budget execution reports (every line of table 1), one Silver dbt table each, every
+# series by rule; the curated build_public_finance (hand-picked sheets and lines, with KRUS, which it holds whole)
+# stays the KPI layer. Poland's own accounts: geography PL, no lookup, as NBP's balance of payments.
+SOURCES.update(
+    {
+        source: {"tables": {table: (("silver", table), f"gold_{source}_build")}, "lookups": {}, "keyed_by": ()}
+        for source, table in (
+            ("mf_public_debt", "public_debt"),
+            ("mf_treasury_debt", "treasury_debt"),
+            ("mf_state_budget", "budget_execution"),
+        )
+    }
+)
 SOURCES["world_bank_wgi"] = {
     "tables": {"wgi_observations": (("silver", "wgi_observations"), "gold_world_bank_wgi_build")},
     "lookups": {

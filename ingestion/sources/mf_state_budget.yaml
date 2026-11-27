@@ -40,7 +40,10 @@ archive_policy:
   prune: report
 bronze: [bronze.mf_state_budget_cells, bronze.mf_state_budget_rejected_files]
 silver: [silver.budget_execution]
-gold: [gold.build_public_finance]
+# Full coverage (O43, D35, docs/gold-coverage.md): every series of silver.budget_execution by rule, written by
+# gold.observations (warehouse/observations.py), not by dbt; the block is the Silver table budget_execution.
+gold: [gold.build_public_finance, gold.mf_state_budget_observations, gold.mf_state_budget_series,
+       gold.mf_state_budget_measures, gold.mf_state_budget_geography, gold.observations_rejected]
 full_rebuild:   # model: {rows: ceiling} (owner policy #822)
   budget_execution: {rows: 2800}  # 1,845 (Dev trial 43099813876), 2018-2026, ~200 a year
 
@@ -48,4 +51,8 @@ bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded 
 # Refresh policy for all layers (D32): small workbooks (under 200,000 cells), rebuilt in full.
 refresh: {mode: full, decided: "D32 + #2766"}
 
-activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+# gold.observations (owner decisions O36, O43; D35): the last step of the full dataflow keeps the
+# per-block Gold tables current with the Silver table dbt rebuilt; the first load is started by hand
+# (Pipeline run "gold: observations" with filter *) and continued by every later run.
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune,
+             gold.observations]
