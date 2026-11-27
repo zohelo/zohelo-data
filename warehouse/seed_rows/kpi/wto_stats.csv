@@ -1,0 +1,2 @@
+kpi_key,name_en,name_pl,unit_key,subgroup_key,frequency_default,status,definition_en,definition_pl
+imports_services,"Services imports",Import usług,mln_usd,economy.trade_bop,A,draft,"Value of services imported in the year (EBOPS 2010 total), US$ at current prices (OECD-WTO BaTIS, final value).","Wartość importu usług w roku (EBOPS 2010 ogółem), w USD w cenach bieżących (OECD-WTO BaTIS, wartość końcowa)."
