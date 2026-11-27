@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+- name: knf_warnings
+  description: >-
+    KNF public warning list (register PLG-019), https://www.knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne: one
+    reduced JSON document per changed copy of the list page (no names, no free text), every copy kept.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/knf_warnings/
+    loaded_by: ingestion/to_bronze/knf_warnings/
+    config: ingestion/sources/knf_warnings.yaml
+  tables:
+  - name: knf_warnings_entries
+    description: >-
+      One row per entry of every landed copy (entity warning_list), values as text: section_key (legal basis, slug),
+      section_position, section_title and section_entries (the section's heading and entry count on the page), lp
+      (the entry's number in its section), identifier_kind (krs, nip_regon, not_registered_pl, no_data, other),
+      krs_numbers (ten-digit KRS numbers, space separated; no other identifier is kept), prosecutor_office as listed,
+      final_ruling_mentioned (true when the column "Wzmianki o prawomocnych orzeczeniach" is not "-"), stated_total
+      (the page's "Liczba znalezionych ostrzeżeń"); provenance raw_sha256, source_version, ingested_at,
+      source_row_number. No names, no free-text columns. Partitioned by entity.
+  - name: knf_warnings_rejected_files
+    description: KNF warning-list Landing files the Bronze decoder rejected (unknown document shape), with the reason.
