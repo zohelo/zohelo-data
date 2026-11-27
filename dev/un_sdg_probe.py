@@ -134,36 +134,101 @@ def part1() -> None:
 
 
 def part2(minutes: float) -> None:
+    """Every series for Poland and the EU countries, paged, analysed in memory (nothing stored)."""
     deadline = time.monotonic() + minutes * 60
     items = json.loads(call(f"{API}/Series/List", {"allreleases": "false"})["text"])
     codes = sorted({i["code"] for i in items})
     totals: dict[str, int] = {}
     errors: dict[str, str] = {}
+    c: dict[str, Counter] = {k: Counter() for k in (
+        "value_non_numeric", "value_type", "nature", "reporting", "dims", "attrs", "time_detail_shape", "units",
+        "pages", "bytes_bucket", "start_frac")}
+    units_per_series: dict[str, set] = {}
+    dup_keys = dup_keys_td = dup_keys_full = rows = 0
+    dup_examples: list = []
+    nbytes = 0
     start = time.monotonic()
     for code in codes:
         if time.monotonic() > deadline:
             break
-        r = call(f"{API}/Series/Data", [("seriesCode", code), *[("areaCode", str(a)) for a in EU], ("pageSize", "1")])
-        try:
-            totals[code] = int(json.loads(r["text"])["totalElements"])
-        except (KeyError, ValueError, TypeError):
-            errors[code] = str(r.get("st", r.get("err")))
+        data: list = []
+        page, pages = 1, 1
+        while page <= pages:
+            r = call(f"{API}/Series/Data", [("seriesCode", code), *[("areaCode", str(a)) for a in EU],
+                                            ("pageSize", "50000"), ("page", str(page))])
+            try:
+                j = json.loads(r["text"])
+                pages = int(j.get("totalPages") or 1)
+                totals[code] = int(j["totalElements"])
+                data += j.get("data") or []
+                nbytes += r["n"]
+            except (KeyError, ValueError, TypeError):
+                errors[code] = f"{r.get('st', r.get('err'))} {str(r.get('body', ''))[:80]}"
+                break
+            page += 1
+        c["pages"][pages] += 1
+        keys, keys_td, keys_full = Counter(), Counter(), Counter()
+        for x in data:
+            rows += 1
+            v = str(x.get("value"))
+            if not re.fullmatch(r"-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?", v):
+                c["value_non_numeric"][v[:20]] += 1
+            c["value_type"][str(x.get("valueType"))] += 1
+            a, d = x.get("attributes") or {}, x.get("dimensions") or {}
+            c["nature"][str(a.get("Nature"))] += 1
+            c["reporting"][str(d.get("Reporting Type"))] += 1
+            c["units"][str(a.get("Units"))] += 1
+            units_per_series.setdefault(code, set()).add(str(a.get("Units")))
+            for k in d:
+                c["dims"][k] += 1
+            for k in a:
+                c["attrs"][k] += 1
+            td = x.get("time_detail")
+            c["time_detail_shape"][re.sub(r"\d", "9", str(td))[:15]] += 1
+            ts = x.get("timePeriodStart")
+            c["start_frac"][str(isinstance(ts, float) and not float(ts).is_integer())] += 1
+            dk = json.dumps(d, sort_keys=True)
+            base = (x.get("geoAreaCode"), dk, ts)
+            keys[base] += 1
+            keys_td[(*base, td)] += 1
+            keys_full[(*base, td, x.get("source"), json.dumps(a, sort_keys=True))] += 1
+        for name, counter in (("base", keys), ("td", keys_td), ("full", keys_full)):
+            n = sum(1 for v in counter.values() if v > 1)
+            if name == "base":
+                dup_keys += n
+                if n and len(dup_examples) < 6:
+                    k = next(k for k, v in counter.items() if v > 1)
+                    dup_examples.append({"series": code, "key": str(k)[:200], "rows": [
+                        {kk: str(vv)[:60] for kk, vv in x.items() if kk in ("value", "time_detail", "source",
+                                                                           "attributes", "timeCoverage")}
+                        for x in data if (x.get("geoAreaCode"), json.dumps(x.get("dimensions") or {}, sort_keys=True),
+                                          x.get("timePeriodStart")) == k][:3]})
+            elif name == "td":
+                dup_keys_td += n
+            else:
+                dup_keys_full += n
     vals = sorted(totals.values(), reverse=True)
-    top = sorted(totals.items(), key=lambda kv: -kv[1])[:25]
-    annotate("notice", "sdg probe 6 EU row counts", {
-        "series_listed": len(codes), "series_counted": len(totals), "errors": len(errors),
-        "error_sample": dict(list(errors.items())[:10]), "rows_total": sum(vals),
-        "series_with_rows": sum(1 for v in vals if v), "series_empty": sum(1 for v in vals if not v),
-        "over_10k": sum(1 for v in vals if v > 10_000), "over_50k": sum(1 for v in vals if v > 50_000),
-        "max": vals[:1], "top25": top, "minutes": round((time.monotonic() - start) / 60, 1)})
-    print(json.dumps(totals), flush=True)
+    top = sorted(totals.items(), key=lambda kv: -kv[1])[:12]
+    annotate("notice", "sdg probe 6 EU rows", {
+        "series_listed": len(codes), "series_read": len(totals), "errors": len(errors),
+        "error_sample": dict(list(errors.items())[:8]), "rows_total": sum(vals), "rows_read": rows,
+        "json_bytes": nbytes, "series_with_rows": sum(1 for v in vals if v), "series_empty": sum(1 for v in vals if not v),
+        "over_10k": sum(1 for v in vals if v > 10_000), "max": vals[:1], "top": top, "pages": dict(c["pages"]),
+        "minutes": round((time.monotonic() - start) / 60, 1)})
+    annotate("notice", "sdg probe 7 EU profile", {"truncated": json.dumps({
+        "dup_area_dims_start": dup_keys, "dup_plus_time_detail": dup_keys_td, "dup_plus_source_attrs": dup_keys_full,
+        "dup_examples": dup_examples,
+        "series_with_several_units": sum(1 for s in units_per_series.values() if len(s) > 1),
+        "several_units_sample": dict(list({k: sorted(v) for k, v in units_per_series.items() if len(v) > 1}.items())[:6]),
+        **{k: dict(v.most_common(25)) for k, v in c.items() if k not in ("pages", "bytes_bucket")}},
+        default=str)[:3900]})
 
 
 def main(argv: list[str]) -> int:
-    if argv and argv[0] == "count":
-        part2(float(argv[1]) if len(argv) > 1 else 60)
-    else:
+    if not argv or argv[0] != "count":
         part1()
+    if argv and argv[0] in ("count", "all"):
+        part2(float(argv[1]) if len(argv) > 1 else 100)
     return 0
 
 
