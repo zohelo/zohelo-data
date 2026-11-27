@@ -1,12 +1,12 @@
-"""Read-only probe of the WTO bulk files (GL-020, Task #3317), 27 Nov 2026. GET only, one request at a time.
+"""Read-only probe of the WTO bulk files (GL-020, Task #3317), 27 Nov 2026, second pass. GET only, one request.
 
-Downloads to the runner's disk only (nothing written to R2): robots.txt, the bulk page, the BaTIS BPM6 codes and data
-ZIPs; lists members and profiles the data CSV with DuckDB. Deleted before merge (never on the PR branch).
+Downloads the BaTIS BPM6 data ZIP to the runner's disk only (nothing written to R2), and profiles its CSV member
+(3.1 GB) and the codes workbook with DuckDB and xlsx_cells. Deleted before merge (never on the PR branch).
 """
 
+from collections import defaultdict
 import json
 from pathlib import Path
-import re
 import sys
 import tempfile
 import time
@@ -15,17 +15,11 @@ import zipfile
 import duckdb
 import requests
 
+from ingestion.common import xlsx_cells
 from ingestion.common.report import annotate
 
 UA = "zohelo-data/1.0 (+https://github.com/zohelo/zohelo-data; public statistics platform)"
-PAGE = "https://www.wto.org/english/res_e/statis_e/trade_datasets_e.htm"
-S = requests.Session()
-S.headers["User-Agent"] = UA
-
-
-def get(url, stream=False):
-    time.sleep(2)
-    return S.get(url, timeout=(30, 900), stream=stream)
+URL = "https://www.wto.org/english/res_e/statis_e/daily_update_e/OECD-WTO_BATIS_data_BPM6-1.zip"
 
 
 def note(title, data):
@@ -34,65 +28,65 @@ def note(title, data):
     annotate("notice", title, data if len(text) <= 3800 else {"truncated": text[:3700]})
 
 
+def q(con, sql):
+    return [[str(v) for v in r] for r in con.sql(sql).fetchall()]
+
+
 def main(argv):
-    out = {}
-    r = get("https://www.wto.org/robots.txt")
-    out["robots"] = {"status": r.status_code, "text": r.text[:1000]}
-    r = get(PAGE)
-    links = sorted(set(re.findall(r'href="([^"]+\.(?:zip|csv|xlsx|pdf)[^"]*)"', r.text, re.I)))
-    out["page"] = {"status": r.status_code, "links": links[:40]}
-    note("wto page and robots", out)
     work = Path(tempfile.mkdtemp())
-    codes = [x for x in links if "BATIS_codes_BPM6" in x]
-    data = [x for x in links if "BATIS_data_BPM6" in x]
-    info = {}
-    for label, link in (("codes", codes[0]), ("data", data[0])):
-        url = requests.compat.urljoin(PAGE, link)
-        t = time.monotonic()
-        path = work / f"{label}.zip"
-        with get(url, stream=True) as resp:
-            with path.open("wb") as fh:
-                for chunk in resp.iter_content(1 << 20):
-                    fh.write(chunk)
-            info[label] = {"url": url, "status": resp.status_code, "bytes": path.stat().st_size,
-                           "lm": resp.headers.get("last-modified"), "etag": resp.headers.get("etag"),
-                           "ct": resp.headers.get("content-type"), "s": round(time.monotonic() - t)}
-        with zipfile.ZipFile(path) as z:
-            info[label]["members"] = [(i.filename, i.file_size, i.compress_size) for i in z.infolist()][:20]
-    note("wto batis downloads", info)
-    with zipfile.ZipFile(work / "codes.zip") as z:
-        for name in z.namelist()[:6]:
-            body = z.read(name)
-            if name.lower().endswith((".csv", ".txt")):
-                note(f"codes member {name}", {"head": body[:3200].decode("utf-8", "replace")})
-            else:
-                note(f"codes member {name}", {"bytes": len(body), "magic": body[:8].hex()})
-    with zipfile.ZipFile(work / "data.zip") as z:
-        name = z.namelist()[0]
-        with z.open(name) as fh:
-            head = fh.read(3000).decode("utf-8", "replace")
-        note("data head", {"member": name, "head": head})
-        z.extract(name, work)
-    csv = work / name
-    con = duckdb.connect()
+    path = work / "data.zip"
+    t = time.monotonic()
+    with requests.get(URL, headers={"User-Agent": UA}, timeout=(30, 900), stream=True) as resp:
+        resp.raise_for_status()
+        with path.open("wb") as fh:
+            for chunk in resp.iter_content(8 << 20):
+                fh.write(chunk)
+    seconds = round(time.monotonic() - t)
+    with zipfile.ZipFile(path) as z:
+        csvs = [n for n in z.namelist() if n.lower().endswith(".csv")]
+        xlsx = [n for n in z.namelist() if n.lower().endswith(".xlsx")]
+        with z.open(csvs[0]) as fh:
+            head = fh.read(2500).decode("utf-8", "replace")
+        z.extract(csvs[0], work)
+        book = z.read(xlsx[0])
+    note("data head", {"download_s": seconds, "csv": csvs, "head": head})
+    sheets = defaultdict(list)
+    for c in xlsx_cells.cells(book):
+        sheets[c["sheet_name"]].append(c)
+    summary = {}
+    for name, cells in sheets.items():
+        rows = defaultdict(dict)
+        for c in cells:
+            rows[c["row_number"]][c["column_number"]] = c["value_text"]
+        keys = sorted(rows)
+        summary[name] = {"rows": len(keys), "first": [rows[k] for k in keys[:6]]}
+    note("codes workbook sheets", {k: v["rows"] for k, v in summary.items()})
+    note("codes workbook heads", summary)
+    eu = {}
+    for name, cells in sheets.items():
+        hits = [c["value_text"] for c in cells if any(s in str(c["value_text"]) for s in ("EU", "Euro", "Poland", "World"))]
+        eu[name] = hits[:30]
+    note("codes workbook EU/Poland/World", eu)
+    csv = work / csvs[0]
+    con = duckdb.connect(str(work / "p.duckdb"))
+    con.sql("set preserve_insertion_order = false")
     con.sql(f"create table d as select * from read_csv('{csv}', all_varchar=true, header=true)")
     cols = [c[0] for c in con.sql("describe d").fetchall()]
-    prof = {"columns": cols, "rows": con.sql("select count(*) from d").fetchone()[0]}
+    prof = {"columns": cols, "rows": q(con, "select count(*) from d")[0][0]}
     for c in cols:
-        prof[f"distinct:{c}"] = con.sql(f'select count(distinct "{c}") from d').fetchone()[0]
+        prof[f"distinct:{c}"] = q(con, f'select approx_count_distinct("{c}") from d')[0][0]
+        prof[f"nulls:{c}"] = q(con, f'select count(*) from d where "{c}" is null')[0][0]
     note("data profile 1", prof)
     p2 = {}
     for c in cols:
-        if prof[f"distinct:{c}"] <= 40:
-            p2[c] = con.sql(f'select "{c}", count(*) from d group by 1 order by 2 desc').fetchall()
+        if int(prof[f"distinct:{c}"]) <= 30:
+            p2[c] = q(con, f'select "{c}", count(*) from d group by 1 order by 2 desc')
         else:
-            p2[c] = con.sql(f'select min("{c}"), max("{c}") from d').fetchall()
+            p2[c] = q(con, f'select min("{c}"), max("{c}") from d')
     note("data profile 2", p2)
-    pl = " or ".join(f"\"{c}\" in ('PL','POL','616')" for c in cols)
-    p3 = {c: con.sql(f"select count(*) from d where \"{c}\" in ('PL','POL','616')").fetchone()[0] for c in cols}
-    p3["sample_pl"] = con.sql(f"select * from d where {pl} limit 6").fetchall()
-    p3["pl_any"] = con.sql(f"select count(*) from d where {pl}").fetchone()[0]
-    note("data poland", p3)
+    hits = {c: q(con, f"select \"{c}\", count(*) from d where \"{c}\" in ('PL','POL','616','Poland') group by 1")
+            for c in cols}
+    note("data poland columns", hits)
     return 0
 
 
