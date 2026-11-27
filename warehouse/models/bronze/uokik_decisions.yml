@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+- name: uokik_decisions
+  description: >-
+    Database of decisions of the President of UOKiK (register PLG-020, PLG-021), https://decyzje.uokik.gov.pl/bp/dec_prez.nsf,
+    view WWW-wszystkie: one reduced JSON document per subject-area category (index fields only), newest copy.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/uokik_decisions/
+    loaded_by: ingestion/to_bronze/uokik_decisions/
+    config: ingestion/sources/uokik_decisions.yaml
+  tables:
+  - name: uokik_decisions_index
+    description: >-
+      One row per decision of the newest landed copy of each category (entity category_<slug>), values as text:
+      unid and noteid (the view entry's @unid and @noteid), category (subject area as listed), year_category (the
+      view's year category), decision_number and decision_date as the cell labels them (closed shapes; no free-text label is kept); descendants =
+      the entries (years and decisions) the view states for the category; provenance raw_sha256, source_version,
+      ingested_at, source_row_number. No party names (they can be natural persons), no PDFs. Partitioned by entity.
+  - name: uokik_decisions_rejected_files
+    description: UOKiK decisions Landing files the Bronze decoder rejected (unknown document shape), with the reason.

@@ -2,7 +2,8 @@ id: PLG-021
 name: Concentration decisions and notifications
 short_name: UOKiK concentration decisions
 provider: Office of Competition and Consumer Protection (UOKiK)
-status: approved
+source_system: uokik_decisions
+status: reviewing
 family: F
 kpi: false
 geography: Poland
@@ -42,6 +43,10 @@ research:
   evidence: documented
   connection: tested
   blockers:
+  - 'Waits for the owner question in the first blocker of PLG-020 (27 Nov 2026, #3319): the decisions host refuses GitHub''s
+    runners, so the categories were not listed and whether the DKK signature selects the concentration decisions is still
+    not verified. Built with PLG-020 as source uokik_decisions (block concentration: decisions whose number starts DKK),
+    not scheduled.'
   - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
     the decisions host answered (robots.txt HTTP 404, the view WWW-wszystkie as JSON 200). Build together with PLG-020 as
     one source system.'

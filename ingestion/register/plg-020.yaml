@@ -2,7 +2,8 @@ id: PLG-020
 name: Database of decisions of the President of UOKiK
 short_name: UOKiK decisions
 provider: Office of Competition and Consumer Protection (UOKiK)
-status: approved
+source_system: uokik_decisions
+status: reviewing
 family: F
 kpi: false
 geography: Poland
@@ -46,14 +47,22 @@ research:
   evidence: documented
   connection: tested
   blockers:
+  - 'Owner question (27 Nov 2026, #3318; it replaces the robots question of 12 Nov): decyzje.uokik.gov.pl, the only public
+    copy of the decisions index, refuses every connection from GitHub''s runners, and uokik.gov.pl''s robots.txt names ClaudeBot
+    and anthropic-ai. Will you write to UOKiK asking for (a) written permission to read the decisions index on decyzje.uokik.gov.pl
+    weekly with the platform''s scheduled program and (b) access from GitHub''s runners or the index as a file, so that the
+    built code (source uokik_decisions) can be scheduled: yes or no?'
+  - 'Not reachable from the runner (O44 checked, 27 Nov 2026): TCP to decyzje.uokik.gov.pl (89.174.81.157) ports 443 and 80
+    is refused (ConnectionRefusedError) in Dev runs 45814788158, 45818559613, 45823222315, 45833730203, 45838779384 (26 Nov,
+    11:33 to 14:24 UTC), 45922861093 (27 Nov, four tries 2, 5 and 10 minutes apart, 01:30 to 01:47 UTC, 45 s timeouts),
+    45924755912 and 45928554176 (01:50, 02:29 UTC); run 45922861093 reached dane.gov.pl, www.gov.pl and github.com. Other
+    routes: dane.gov.pl lists 129 datasets of UOKiK (institution 26), none of decisions or concentrations (run 45928554176);
+    UOKiK''s official journal host dziennikurzedowy.uokik.gov.pl failed TLS (not bypassed) and publishes selected
+    decisions only. No bypass was tried. The code is built (source uokik_decisions, #3318) and not scheduled.'
   - 'Dev probe run 43288930412 (job 131429683337, branch test/src-dfh-probe, script dev/src_dfh_fix_probe.py, 12 Nov 2026):
     decyzje.uokik.gov.pl answered: robots.txt HTTP 404, entry page 200, the view WWW-wszystkie as JSON 200. In the first
     probe (run 43282997907) the same host timed out, so the build uses long timeouts and reports a timeout instead of retrying
     hard.'
-  - 'Owner question: the main UOKiK site uokik.gov.pl names ClaudeBot and anthropic-ai (with other AI crawlers) in its robots.txt,
-    while the decisions database sits on another host, decyzje.uokik.gov.pl, which has no robots.txt. The build would read
-    only the decisions host, with a scheduled program and not an AI crawler. Do you accept that, or do you read the robots
-    rule as UOKiK''s wish for all its hosts, in which case PLG-020 and PLG-021 wait for a reuse request to UOKiK?'
   - 'Licence unresolved: UOKiK''s terms are not read (uokik.gov.pl names the Claude crawlers in robots.txt). Internal build
     only.'
   - 'Dev probe run 43294572845 (job 131449333769, branch test/src-dfh-probe, script dev/src_dfh_gunb_probe.py, 12 Nov 2026,

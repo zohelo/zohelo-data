@@ -1,0 +1,51 @@
+source_system: uokik_decisions
+description: "Database of decisions of the President of UOKiK (decyzje.uokik.gov.pl), index of the view WWW-wszystkie: one row per decision — number, date, department, subject-area category; concentration decisions (DKK) among them"
+
+# Extraction strategy (docs/landing.md). Register PLG-020 (decisions) and PLG-021 (concentration decisions): one
+# extraction for both. No bulk file, export or dane.gov.pl copy: the Lotus Domino database
+# https://decyzje.uokik.gov.pl/bp/dec_prez.nsf answers its view WWW-wszystkie as JSON (?ReadViewEntries&OutputFormat=
+# JSON&start=<position>&count=<n>), categorised by subject area, then year, then one entry per decision whose cell is
+# an HTML fragment starting "Numer decyzji:". Only this host is read (robots.txt HTTP 404); uokik.gov.pl, whose
+# robots.txt names AI crawlers, is never requested, and no decision PDF is downloaded. One request at a time, 1 s
+# apart, timeouts 45 s / 180 s, at most 3 tries; a refusal, timeout or unknown layout stops the run. Each category
+# lands as one reduced JSON document (@unid, @noteid, category, year, decision number, date, department; never the
+# parties, who can be natural persons), written only when its SHA-256 changed. Restart unit: the category. Code:
+# ingestion/to_landing/uokik_decisions/.
+# NOT SCHEDULED: the host refuses TCP connections (ports 443 and 80) from GitHub's runners since 26 Nov 2026 (Dev runs
+# 45814788158 to 45838779384, 45922861093, 45924755912); it answered on 12 Nov (Dev run 43288930412). Register status
+# reviewing with the owner question. When a run can reach the host, add the weekly slot (O46), Wednesday 16:40 UTC
+# (decisions arrive a few a week at irregular times; the whole index is read on every run):
+#   - {cron: "40 16 * * 3", run: "full dataflow: landing → bronze → silver → gold → portal"}
+extraction:
+  initial: api
+  production: snapshot                    # each category document is the category's complete index
+  incremental_policy: changed_since_last  # every category is read on every run; written only when the SHA-256 changed
+  schedule: []
+
+landing: 01_landing/uokik_decisions/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.uokik_decisions_index, bronze.uokik_decisions_rejected_files]
+silver: [silver.uokik_decisions]
+gold: [gold.uokik_decision, gold.build_uokik_decisions]
+# Row ceilings (owner policy #822). NOT MEASURED: no run has read the whole view yet. Estimate from Dev probe 43294572845
+# (12 categories, the first with 1,408 entries, so about 17,000 decisions if the others are alike; decisions since 2003):
+# Silver and the entity table 30,000; build 24 years x (total + 12 categories + concentration) x 1.5 = 600. Reset them
+# to 1.5 x the first load.
+full_rebuild:
+  uokik_decisions: {rows: 30000}
+  uokik_decision: {rows: 30000}
+  poc_build_uokik_decisions: {rows: 600}
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded copies of a category
+# Refresh policy for all layers (D32): small (the whole index is some thousands of decisions, a few new ones a week, no
+# changed-since filter): every run reads the index, a changed category replaces its copy, Silver and Gold are rebuilt
+# in full.
+refresh: {mode: full, decided: "D32 + #3318"}
+
+# No activities until the owner answers the question in PLG-020's first blocker (#3330 review): the activities list on
+# main is the authorization (AGENTS.md), and no hand dispatch may reach the host before then. When answered yes:
+#   activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
+activities: []
