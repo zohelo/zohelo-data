@@ -65,13 +65,7 @@ jobs:
       ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
       ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
       ANTHROPIC_IDENTITY_TOKEN_FILE: /tmp/gha-jwt
-      # Read-only credentials: gold.dim_measure is attached READ_ONLY.
-      STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN }}
-      STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY }}
-      STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY }}
-      STORAGE_LAKEHOUSE_CATALOG_URL: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_URL }}
-      STORAGE_LAKEHOUSE_CATALOG_NAME: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_NAME }}
-      STORAGE_ENDPOINT_URL: ${{ vars.STORAGE_ENDPOINT_URL }}
+    # The R2 read secrets are given only to the step that reads, not to checkout, setup-python or the installs.
     steps:
       - name: Federation variables present
         run: |
@@ -109,6 +103,13 @@ jobs:
         env:
           SCOPE: ${{ inputs.scope }}
           MODEL: ${{ inputs.model }}
+          # Read-only credentials: gold.dim_measure is attached READ_ONLY.
+          STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN: ${{ secrets.STORAGE_LAKEHOUSE_CATALOG_READ_TOKEN }}
+          STORAGE_LAKEHOUSE_READ_ACCESS_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_ACCESS_KEY }}
+          STORAGE_LAKEHOUSE_READ_SECRET_KEY: ${{ secrets.STORAGE_LAKEHOUSE_READ_SECRET_KEY }}
+          STORAGE_LAKEHOUSE_CATALOG_URL: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_URL }}
+          STORAGE_LAKEHOUSE_CATALOG_NAME: ${{ vars.STORAGE_LAKEHOUSE_CATALOG_NAME }}
+          STORAGE_ENDPOINT_URL: ${{ vars.STORAGE_ENDPOINT_URL }}
         run: |
           set -euo pipefail
           if ! printf '%s' "$MODEL" | grep -Eq '^[a-z0-9][a-z0-9.-]{2,63}$'; then
@@ -183,9 +184,14 @@ jobs:
           set -euo pipefail
           query="per_page=100"
           [ -n "$BATCH_ID" ] && query="$query&name=measure-names-$BATCH_ID"
-          # Newest first; expired artifacts (older than 29 days) cannot be collected any more.
-          id=$(gh api "repos/$REPO/actions/artifacts?$query" \
-            --jq '[.artifacts[] | select(.name | startswith("measure-names-")) | select(.expired | not)][0].id // empty')
+          # Newest first, page by page until a manifest turns up (Dev runs add many other artifacts); expired
+          # artifacts (older than 29 days) cannot be collected any more. At most 50 pages (5,000 artifacts).
+          id=""
+          for page in $(seq 1 50); do
+            gh api "repos/$REPO/actions/artifacts?$query&page=$page" > /tmp/artifacts.json
+            id=$(jq -r '[.artifacts[] | select(.name | startswith("measure-names-")) | select(.expired | not)][0].id // empty' /tmp/artifacts.json)
+            if [ -n "$id" ] || [ "$(jq '.artifacts | length' /tmp/artifacts.json)" -lt 100 ]; then break; fi
+          done
           if [ -z "$id" ]; then
             echo "::error title=no manifest::no artifact measure-names-${BATCH_ID:-*} from a submit run (or it expired): run step submit first" >&2
             exit 1
@@ -208,8 +214,13 @@ jobs:
           set -uo pipefail
           python -m ops.measure_names collect --manifest /tmp/measure-names/in/manifest.json --out /tmp/measure-names/out
           status=$?
-          # 0 every measure passed, 1 some did not (left out and listed), 2 bad input, 3 batch not ended.
+          # 0 every measure passed, 1 some did not (left out and listed), 2 bad input or an unexpected error,
+          # 3 batch not ended. Only 0 and 1 go on to the pull request, and only with the report written.
           if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then exit "$status"; fi
+          if [ ! -s /tmp/measure-names/out/report.md ]; then
+            echo "::error title=measure names::collect ended $status without its report; no pull request" >&2
+            exit 2
+          fi
           echo "problems=$status" >> "$GITHUB_OUTPUT"
           if [ -z "$(git status --porcelain -- warehouse/seed_rows/measure_name)" ]; then
             echo "::warning title=measure names::no row changed; no pull request"
@@ -248,7 +259,7 @@ jobs:
           git push -q "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/$branch"
           {
             printf 'Lane: structure\n\nCloses #%s\n\n' "$ISSUE"
-            printf 'Written by [batch-labels.yml run](%s) (step collect). Seed rows only: no model reads `warehouse/seed_rows/measure_name/` yet (the data-model change is a separate pull request).\n\n' "$RUN_URL"
+            printf 'Written by [batch-labels.yml run](%s) (step collect). Seed rows only: the model `gold.measure_name` reads `warehouse/seed_rows/measure_name/`; nothing joins it to `dim_measure` yet (a separate pull request).\n\n' "$RUN_URL"
             cat /tmp/measure-names/out/report.md
           } > /tmp/measure-names/body.md
           head -c 60000 /tmp/measure-names/body.md > /tmp/measure-names/body-cut.md

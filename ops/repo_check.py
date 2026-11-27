@@ -1271,6 +1271,7 @@ SEED_KEYS = {
     "kpi_measure": ["kpi_key", "source_system", "measure_key_pattern"],
     "kpi_v2_map": ["v2_key", "source_key"],
     "licence": ["licence_key"],
+    "measure_name": ["measure_key"],
     "news_outlet": ["outlet_key"],
     "sex": ["sex_key"],
     "source": ["source_key"],

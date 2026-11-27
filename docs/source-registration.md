@@ -177,6 +177,9 @@ Since 13 November each of the eight lists is a folder, `warehouse/seed_rows/<lis
   pull request adds it (a unit that two sources need is added once; the second pull request finds it there).
 - A file is created by `git add`; nobody appends to a file another pull request appends to, so GitHub has
   nothing to merge. Two pull requests for the same source can still meet in that source's file.
+- A ninth list, `measure_name` (O47), uses the same layout but is not edited by source pull requests:
+  `batch-labels.yml` step `collect` writes each source's `<source_system>.csv` from the Message Batches run, and
+  its `_shared.csv` is the header line only.
 
 How the rows reach Gold. The lists are no longer dbt seeds (dbt builds one table per CSV file and cannot union
 files it finds by name). `warehouse/models/gold/seed_rows/<list>.sql` is a dbt model named like the seed was, so

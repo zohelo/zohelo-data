@@ -72,3 +72,17 @@ models:
         tests: [not_null, unique, {relationships: {arguments: {to: ref('unit'), field: unit_key}}}]
       - name: decimals
         tests: [not_null]
+  - name: measure_name
+    description: >-
+      Bilingual measure names (O47): one row per measure_key of gold.dim_measure that the batch-labels.yml run
+      named, written by its step collect (ops/measure_names.py) into the measure's source file and reviewed in that
+      pull request. unclear marks names given for an opaque source label. Not joined to dim_measure yet.
+    columns:
+      - name: measure_key
+        tests: [not_null, unique]
+      - name: name_pl
+        tests: [not_null]
+      - name: name_en
+        tests: [not_null]
+      - name: unclear
+        tests: [not_null]
