@@ -1,0 +1,39 @@
+version: 2
+models:
+  - name: un_sdg_observations
+    description: >-
+      UN Global SDG Indicators Database (register GL-018; licence unresolved, internal): every series record of Poland
+      and the other 26 EU countries in the newest release (bulk CSV of the database archive), one row per ObservationID
+      with the indicators it is listed under, values as published (value null with value_kind 'no_value' for NaN and
+      'below' for censored values such as '<2.5', never 0), units, nature, observation status and the disaggregation
+      dimensions as published. Grain: series_code x geo_area_code x time_period x dimensions.
+    tests:
+      - unique:
+          column_name: "series_code || '|' || geo_area_code || '|' || time_period || '|' || dimensions"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [alldata_csv]}}}]
+      - name: observation_id
+        tests: [not_null, unique]
+      - name: series_code
+        tests: [not_null]
+      - name: geo_area_code
+        tests: [not_null]
+      - name: time_period
+        tests: [not_null]
+      - name: dimensions
+        tests: [not_null]
+      - name: unit_code
+        tests: [not_null]
+      - name: release_name
+        tests: [not_null]
+      - name: value_kind
+        tests: [not_null, {accepted_values: {arguments: {values: [number, no_value, below]}}}]
+      - name: nature
+        tests: [not_null, {accepted_values: {arguments: {values: [C, CA, E, G, M, N, NA]}}}]
+      - name: observation_status
+        tests: [{accepted_values: {arguments: {values: [A, B, D, E, I, M, O, Q, U]}}}]
+      - name: reporting_type
+        tests: [not_null, {accepted_values: {arguments: {values: [G]}}}]
+      - name: raw_sha256
+        tests: [not_null]

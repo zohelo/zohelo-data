@@ -1,0 +1,52 @@
+source_system: un_sdg
+description: "UN Global SDG Indicators Database (UN DESA Statistics Division): every SDG series by area, year and disaggregation, the release's bulk CSV (register GL-018)"
+
+# Extraction strategy (docs/landing.md). Register GL-018. Bulk first: the database archive page
+# https://unstats.un.org/sdgs/indicators/database/archive lists, newest first, one CSV ZIP per release state
+# (<release>_AllData_After_<date>_CSV.zip, the database as published after that date's update; *_Before_* is the state
+# the update replaced). The newest *_After_* file is the current release: 2026_Q3.1_AllData_After_20260930_CSV.zip
+# (68,233,529 bytes, Last-Modified 1 Oct 2026; one CSV of 1,833,481,866 bytes, 3,198,008 rows, 713 series, 406 areas,
+# ReleaseName 2026.Q3.G.01 = the SDG API's Series/List release; Dev probes 45934927923 and 45935478568, 27 Nov 2026).
+# So kind bulk_file and no extractor code; the SDG API (Series/Data per series code) is not used for the load: the
+# same Poland + EU selection took 713 requests and 68 minutes (330 MB of JSON, rows repeated once per indicator; Dev
+# probe 45924741004). robots.txt of unstats.un.org disallows only /wiki/ (Dev probe 45935909818). Entity = the
+# release's CSV ZIP; version = its Last-Modified; a copy is written only when the SHA-256 changed. Restart unit: the file.
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      - entity: alldata_csv   # the whole database of the current release: every series, area, year and disaggregation
+        url_from:
+          page: https://unstats.un.org/sdgs/indicators/database/archive
+          pattern: /archive/[0-9]{4}_Q[0-9.]+_AllData_After_[0-9]{8}_CSV\.zip$
+          pick: first        # the page lists the newest release first
+        format: zip
+        version: last_modified
+  initial: bulk
+  production: snapshot                    # the file is the complete database of one release
+  incremental_policy: changed_since_last  # Last-Modified / SHA-256
+  schedule: # UTC; UNSD updates the database several times a year (2026: 27 Mar, 4 Jun, 7 Jul, 24 Aug, 30 Sep), no fixed
+    # calendar; a monthly check on the 6th. The run ends with Bronze; the platform's weekly Sunday run builds Silver and
+    # Gold (O46).
+    - {cron: "40 4 6 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/un_sdg/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.un_sdg_observations, bronze.un_sdg_rejected_files]
+silver: [silver.un_sdg_observations]
+gold: [gold.build_un_sdg, gold.metrics_women_in_parliament]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822); measured in the Dev trial (27 Nov 2026), 1.5 x
+  un_sdg_observations: {rows: 665000}  # 442,595: one row per ObservationID of Poland and the 27 EU countries (Dev probe 45935478568)
+  poc_build_un_sdg: {rows: 600000}  # trial
+  poc_metrics_women_in_parliament: {rows: 1100}  # 729 rows of SG_GEN_PARL, 27 countries, 2000-2026 (Dev probe 45935909818)
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions
+# Refresh policy for all layers (D32): one ZIP of about 68 MB replaced whole by each release (no changed-since); Bronze
+# holds every row of it (3.2 M rows, about 30 MB of Parquet), Silver and Gold the 27 EU countries (Poland among them);
+# small enough to rebuild in full.
+refresh: {mode: full, decided: "D32 + #3316"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
