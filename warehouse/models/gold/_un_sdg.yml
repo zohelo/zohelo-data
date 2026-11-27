@@ -1,0 +1,19 @@
+version: 2
+models:
+  - name: poc_build_un_sdg
+    description: >-
+      Build stage — UN Global SDG Indicators Database (register GL-018), block sdg_observations: every series of the
+      newest release for Poland and the other 26 EU countries, one measure per SDG series code (unit as published),
+      the disaggregation dimensions as the breakdown, annual, values as published; rows without a number, multi-year
+      periods, missing-value statuses and nature N are not loaded; licence unresolved (internal).
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+  - name: poc_metrics_women_in_parliament
+    description: KPI women_in_parliament (draft) from gold.build_un_sdg (macros/poc_metrics.sql).

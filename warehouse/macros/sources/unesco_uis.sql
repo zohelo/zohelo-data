@@ -18,3 +18,21 @@ unesco_uis as (
     left join geo as g on a.is_country_code and g.level_name = 'country' and a.geo_unit = g.iso3
 )
 {% endmacro %}
+
+{# UNESCO UIS blocks (gold.build_unesco_uis): one per Data API selection; areas: EU27 members (ISO alpha-3 through
+   dim_geography.iso3). #}
+{% macro poc_unesco_uis_blocks() %}
+    select * from (
+        values
+        ('gerd_gdp', 'EXPGDP.TOT', 'GERD as a percentage of GDP (UIS)', 'pct_gdp'),
+        ('tertiary_attainment', 'EA.5T8.AG25T99', 'Completed short-cycle tertiary or higher, population 25+ (UIS)', 'pct')
+    ) as t (entity, indicator_id, block_name, unit_code)
+{% endmacro %}
+
+{# Gold block (D34; moved here from the shared lists of macros/poc_blocks.sql on 27 November). #}
+{% macro poc_source__unesco_uis() %}
+    {{ return({
+        'block_model': 'poc_build_unesco_uis',
+        'activated': "select 'unesco_uis', entity, block_name from (" ~ poc_unesco_uis_blocks() ~ ")",
+    }) }}
+{% endmacro %}

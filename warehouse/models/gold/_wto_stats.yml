@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: poc_build_wto_stats
+    description: >-
+      Build stage — WTO Stats, OECD-WTO BaTIS BPM6 (register GL-020): Poland's annual trade in services by partner,
+      total services and the twelve EBOPS 2010 main items, exports and imports, final and balanced values as separate
+      measures, in millions of US dollars as published. Partner World is the total.
+    tests:
+      - unique:
+          column_name: "measure_key || '|' || geography_key || '|' || breakdown_json || '|' || cast(date_key as varchar)"
+    columns:
+      - name: measure_key
+        tests: [not_null]
+      - name: date_key
+        tests: [not_null]
+      - name: geography_key
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: observation_status_key
+        tests: [not_null, {accepted_values: {arguments: {values: [ok, estimated, flagged]}}}]

@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: barometr_zawodow
+  description: Barometr Zawodów (register PLS-030), national and voivodeship poster PDFs per forecast year
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/barometr_zawodow/
+    loaded_by: ingestion/to_bronze/barometr_zawodow/
+    config: ingestion/sources/barometr_zawodow.yaml
+  tables:
+  - name: barometr_zawodow_occupations
+    description: >-
+      One row per occupation printed on a poster (national poster: Polska; voivodeship posters): forecast year and
+      area as printed, the label of the occupation's category block, the labels of all blocks of the poster, the
+      occupation name as printed; newest copy of each file, partitioned by entity (plakat_<year>,
+      plakat_p<NN>_<year>).
+  - name: barometr_zawodow_rejected_files
+    description: Files of barometr_zawodow the Bronze decoder rejected, with the reason.

@@ -137,7 +137,8 @@ def text(cell: list[str]) -> str:
 
 
 def slug(value: str) -> str:
-    ascii_value = unicodedata.normalize("NFKD", value.replace("ł", "l").replace("Ł", "L")).encode("ascii", "ignore")
+    value = re.sub(r"[–—]", "-", value.replace("ł", "l").replace("Ł", "L"))  # 1–3 → 1_3, not 13
+    ascii_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore")
     return re.sub(r"[^a-z0-9]+", "_", ascii_value.decode().lower()).strip("_")[:80]
 
 

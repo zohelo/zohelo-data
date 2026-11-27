@@ -1,7 +1,7 @@
 {{ config(alias='build_oecd', tags=['gold_block']) }}
 {# Gold build stage: OECD composite leading indicators and confidence indicators (silver.oecd_cli,
    dataflow DSD_STES@DF_CLI) in the common shape, monthly. The measures are listed in
-   poc_oecd_measures (macros/poc_blocks.sql): business and consumer confidence (Poland from 1997 / 2001)
+   poc_oecd_measures (macros/sources/oecd.sql): business and consumer confidence (Poland from 1997 / 2001)
    and the amplitude-adjusted CLI (22 areas, not Poland or the EU). measure_key
    oecd:cli:<unit>:<measure>:<adjustment>; no breakdowns, every series is a total. Areas through
    map_geography (ISO 3166 alpha-3, OECD aggregates). SDMX OBS_STATUS → Gold status. #}

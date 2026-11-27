@@ -1,0 +1,19 @@
+version: 2
+sources:
+- name: gios_surface_water
+  description: >-
+    GIOŚ surface-water status assessment 2019-2024 (register PL-ENV-011): pages of the 19 status layers of the PJWP
+    ArcGIS services, attributes as published text.
+  database: r2
+  schema: bronze
+  meta:
+    landing: 01_landing/gios_surface_water/
+    loaded_by: ingestion/to_bronze/gios_surface_water/
+    config: ingestion/sources/gios_surface_water.yaml
+  tables:
+  - name: gios_surface_water_features
+    description: >-
+      One row per feature of the newest copy of each page (entity <category>_<assessment>_p<nn>): FID, KOD_JCWP,
+      NAZWA_JCWP, STATUS and the class fields S_P_EKO, STAN_CHEM, OCENA as published; partitioned by entity.
+  - name: gios_surface_water_rejected_files
+    description: Files of gios_surface_water the Bronze decoder rejected, with the reason.
