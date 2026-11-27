@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import Counter
 from html.parser import HTMLParser
+import html
 import json
 import re
 
@@ -71,6 +72,39 @@ def shape(value: str) -> str:
     out = re.sub(r"\b(?!KRS\b|NIP\b|REGON\b|nr\b|Nr\b)[^\W\d_]+", "a", out)
     return re.sub(r"a( a)+", "a+", out)[:60]
 
+def second(body: str, p: Tables) -> None:
+    """Section titles before each table, Lp. shapes, short repeated values of the identifier and judgment columns."""
+    starts = [m.start() for m in re.finditer(r"<table", body)]
+    before = []
+    for i, st in enumerate(starts):
+        prev = body[max(0, st - 4000):st]
+        txt = " ".join(re.sub(r"(?s)<script.*?</script>|<[^>]+>", " ", prev).split())
+        before.append({"i": i, "tail": html.unescape(txt[-260:])})
+    annotate("notice", "knf_warnings probe2 sections", {"n": len(starts), "before": before})
+    lp = []
+    for i, t in enumerate(p.tables):
+        vals = [text(rw[0]) for rw in t["rows"][1:]]
+        lp.append({"i": i, "first": vals[:2], "last": vals[-1:], "shapes": dict(Counter(re.sub(r"\d", "9", v) for v in vals).most_common(4))})
+    m = re.search(r"Liczba znalezionych.{0,120}", re.sub(r"<[^>]+>", " ", body), re.S)
+    annotate("notice", "knf_warnings probe2 numbering", {"lp": lp, "count_text": " ".join(m.group(0).split()) if m else None})
+    rows = [rw for t in p.tables for rw in t["rows"][1:]]
+    idv = Counter(text(rw[2]) for rw in rows if re.fullmatch(r"[^\d]*", text(rw[2])))
+    jdv = Counter(text(rw[4]) for rw in rows if len(text(rw[4]).split()) <= 3)
+    annotate("notice", "knf_warnings probe2 short values", {
+        "identifier_no_digits_repeated": [(v[:40], c) for v, c in idv.most_common() if c >= 3],
+        "identifier_no_digits_lengths": sorted(Counter(len(v) for v, c in idv.items() if c < 3).items())[:30],
+        "judgment_short_repeated": [(v[:40], c) for v, c in jdv.most_common() if c >= 3],
+        "judgment_short_once": sum(1 for v, c in jdv.items() if c < 3),
+    })
+    # do judgment cells name persons? count capitalised word pairs (shape only)
+    caps = Counter()
+    for rw in rows:
+        v = text(rw[4])
+        caps["cells_with_capital_pair"] += bool(re.search(r"\b[A-ZŁŚŻŹĆ][a-ząćęłńóśźż]+ [A-ZŁŚŻŹĆ][a-ząćęłńóśźż]+", v))
+        caps["cells_with_sygn"] += "sygn" in v.lower()
+        caps["cells_with_date"] += bool(re.search(r"\d{1,2}[ .]\w+[ .]\d{4}", v))
+    annotate("notice", "knf_warnings probe2 judgment shapes", dict(caps))
+
 
 def main() -> int:
     r = requests.get(URL, headers={"User-Agent": UA}, timeout=(30, 120))
@@ -94,7 +128,7 @@ def main() -> int:
                         "widths": dict(widths), "header": header,
                         "th_rows": sum(1 for rw in rows if rw and all(c["tag"] == "th" for c in rw))})
     print(json.dumps(summary, ensure_ascii=False), flush=True)
-    annotate("notice", "knf_warnings probe tables", {"n": len(summary), "tables": summary[:30]})
+    print("TABLES"); (lambda *a: None)("notice", "knf_warnings probe tables", {"n": len(summary), "tables": summary[:30]})
     big = sorted(p.tables, key=lambda t: -len(t["rows"]))
     data_rows = [rw for t in p.tables for rw in t["rows"][1:]]
     widths = Counter(len(rw) for rw in data_rows)
@@ -127,7 +161,7 @@ def main() -> int:
                 kw["empty"] += not v
         jshapes = Counter(len(text(rw[jdc]).split()) for rw in data_rows if len(rw) == ncol)
         annotate("notice", "knf_warnings probe identifiers", {"column": idc, "shapes": ids.most_common(25), "distinct": len(ids)})
-        annotate("notice", "knf_warnings probe prosecutors", {"column": prc, "distinct": len(pro), "top": pro.most_common(45)})
+        (lambda *a: None)("notice", "knf_warnings probe prosecutors", {"column": prc, "distinct": len(pro), "top": pro.most_common(45)})
         annotate("notice", "knf_warnings probe judgments", {"column": jdc, "keywords": dict(kw), "word_counts": sorted(jshapes.items())[:30]})
         # skeleton of first 2 data rows of the biggest table
         sk = []
@@ -135,6 +169,7 @@ def main() -> int:
             sk.append([(c["tag"], c["colspan"], c["rowspan"], len(text(c)), c["inner"][:6]) for c in rw])
         annotate("notice", "knf_warnings probe skeleton", {"rows": sk, "table_headings_by_rows": Counter(t["heading"][:80] for t in p.tables).most_common(20)})
         print("SKELETON", sk, flush=True)
+    second(body, p)
     return 0
 
 
