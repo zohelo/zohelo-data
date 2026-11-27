@@ -3860,7 +3860,8 @@ sources:
   name: Barometr Zawodów
   short_name: Barometr Zawodów
   provider: Ministerstwo Rodziny, Pracy i Polityki Społecznej / regional labour offices
-  status: approved
+  source_system: barometr_zawodow
+  status: built
   family: B
   kpi: true
   geography: powiat, voivodeship and Poland
@@ -3907,8 +3908,10 @@ sources:
       139886485577, branch test/src-parked-probe, script dev/src_parked_probe.py, 26 Nov 2026): the home page links the national
       publication pages for 2016-2025; the table and map modules load their data by script (no address in custom.js, Dev probe
       run 45815892766 (job 139895407895, same branch, argument `three`, 26 Nov 2026)).'
-    - 'Builder: check that the report tables list every occupation with its category per voivodeship (the 2026 report was
-      read in part); the PDF text layer is the source, one file per year and region.'
+    - 'Built 26 Nov 2026 (#454): the national report has no occupation x voivodeship table; it reprints the 17 posters
+      (with hidden remnants of other posters on some pages, 2018-2023). The source is the posters: the national poster and
+      the poster of each voivodeship page (publication=province&province=<1-16>), each occupation in a coloured block per
+      category with the category name on the block''s tab (docs/sources/barometr_zawodow.md).'
     references:
     - https://barometrzawodow.pl/
     - https://barometrzawodow.pl/modul/publikacje?publication=national&year=2025

@@ -1,0 +1,72 @@
+source_system: barometr_zawodow
+description: "Barometr Zawodów (MRPiPS, coordinated by WUP Kraków) — annual expert forecast of occupational shortage and surplus: the national and the 16 voivodeship poster PDFs of each forecast year"
+
+# Extraction strategy (docs/landing.md). Register PLS-030 (Epic #454). No bulk file, API or table download: the
+# portal's tables and maps load their data by script (register research). Each forecast year has fixed publication
+# pages (robots.txt allows all): https://barometrzawodow.pl/modul/publikacje?publication=national&year=<year> links
+# the national report and the national poster "BAROMETR_ZAWODOW_ogolnopolski_<year>.pdf" (1-2 pages, 0.13-0.27 MB);
+# the page of a voivodeship (publication=province&province=<1-16>&year=<year>, the fields of the page's own
+# publication form) links that voivodeship's poster. The directory /forecast-card-zip/ answers 403, so files are read
+# only by the pages' own links. Dev probe 45896169831 (26 Nov 2026, test/454-barometr-zawodow): the national pages
+# 2016-2026 link the report and the poster, the page for 2027 none yet. The national report (48-80 pages, 3-11 MB)
+# has no occupation x voivodeship table: it reprints the 17 posters, with hidden remnants of other posters on some
+# pages (2018-2023), so the standalone posters are read instead (Dev trial 45905434315). Entity = poster and forecast
+# year (plakat_<year> for Polska, plakat_p<NN>_<year> for the voivodeship page NN), version = Last-Modified, written
+# only when the SHA-256 changed. Restart unit: one file. The two newest years are downloaded again (open: 2, a
+# corrected file lands as a new version), older years only while missing; the next year's pages are read as optional
+# (the edition for year N is published in December or January; ingestion/to_landing/barometr_zawodow/). One request at
+# a time, 3 s apart. Bronze reads each poster's occupations with their forecast category
+# (ingestion/to_bronze/barometr_zawodow/).
+extraction:
+  kind: bulk_file
+  bulk_file:
+    files:
+      # Polska: the national poster on the national page; voivodeships: the poster on the page of each voivodeship
+      # (publication=province&province=<1-16>, the publication form's own fields; Bronze checks the area printed). The
+      # mazowieckie page links its subregions' posters too ("..._region_warszawski_stoleczny_2020.pdf", 2019
+      # "..._powiat_regionalny_mazowiecki_2019.pdf", diag run 45932806301): those names are left out by the pattern
+      - {entity: plakat, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=national&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/BAROMETR_ZAWODOW_ogolnopolski_{year}\\.pdf$"}, format: raw}
+      - {entity: plakat_p01, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=1&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p02, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=2&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p03, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=3&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p04, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=4&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p05, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=5&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p06, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=6&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p07, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=7&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p08, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=8&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p09, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=9&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p10, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=10&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p11, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=11&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p12, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=12&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p13, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=13&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p14, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=14&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p15, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=15&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+      - {entity: plakat_p16, years: {from: 2016, open: 2}, url_from: {page: "https://barometrzawodow.pl/modul/publikacje?publication=province&province=16&year={year}", pattern: "/forecast-card-zip/{year}/poster_pl/(?![^/]*_(?:region|powiat)_)[^/]+\\.pdf$"}, format: raw}
+  initial: bulk
+  production: snapshot                    # each file is its forecast year's edition as published
+  incremental_policy: changed_since_last  # SHA-256 of the two newest years' files; missing years
+  # UTC; one edition a year, published in December or January (the 2026 edition: survey in Q3/Q4 2025). Monthly on
+  # the 13th, 05:50 (O46: at most one run a week past Landing; a free slot), so a new edition is in Silver within a
+  # month of its publication.
+  schedule:
+    - {cron: "50 5 13 * *", run: "full dataflow: landing → bronze → silver → gold → portal"}
+
+landing: 01_landing/barometr_zawodow/
+archive_policy:
+  move: true
+  retention: {keep_latest: 1, keep_days: 90}
+  prune: report
+bronze: [bronze.barometr_zawodow_occupations, bronze.barometr_zawodow_rejected_files]
+silver: [silver.barometr_zawodow_forecasts]
+gold: [gold.build_barometr_zawodow, gold.metrics_occupations_deficit_forecast]
+full_rebuild:   # model: {rows: ceiling} (owner policy #822)
+  barometr_zawodow_forecasts: {rows: 45000}  # 30,198 in the Dev trial
+  poc_build_barometr_zawodow: {rows: 850}  # 561 in the Dev trial
+  poc_metrics_occupations_deficit_forecast: {rows: 280}  # 187 in the Dev trial
+
+bronze_latest_only: true   # policy #822/#845: a Bronze load removes superseded versions of a file
+# Refresh policy for all layers (D32): 17 posters a year (about 0.2 MB each), one edition a year, some 31,000 Bronze
+# rows; small, rebuilt in full.
+refresh: {mode: full, decided: "D32 + #454"}
+
+activities: [landing.inspect, landing.extract, landing.verify, bronze.load, bronze.verify, landing.archive, archive.prune]
