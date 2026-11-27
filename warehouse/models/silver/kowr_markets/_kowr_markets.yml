@@ -35,12 +35,12 @@ models:
       KOWR weekly grain report (register PLS-033), table "Ceny zakupu zbóż w krajach UE": purchase prices of wheat,
       barley and maize in EUR/t in the 27 member states and the EU average, per report week (Monday to Sunday).
       Stated source Komisja Europejska (stated_source). "-", "0" and a cell whose PLN price disagrees with its EUR price
-      keep value null (value_flag).
-      Weekly, so Silver only (no weekly fact model in curated Gold). Grain: commodity_code x country_name x
-      report_week. History from the report week 20-26.03.2023.
+      keep value null (value_flag). Per period the table names (one week, once two; often the week before the
+      report's); a period in two reports keeps the newer report. Weekly, so Silver only (no weekly fact model in
+      curated Gold). Grain: commodity_code x country_name x period_start. History from the week 20-26.03.2023.
     tests:
       - unique:
-          column_name: "concat_ws('|', commodity_code, country_name, report_week)"
+          column_name: "concat_ws('|', commodity_code, country_name, period_start)"
     columns:
       - name: commodity_code
         tests: [not_null, {accepted_values: {arguments: {values: [wheat, barley, maize]}}}]
@@ -52,6 +52,10 @@ models:
                 values: [Austria, Belgia, Bułgaria, Chorwacja, Cypr, Czechy, Dania, Estonia, Finlandia, Francja, Grecja,
                          Hiszpania, Holandia, Irlandia, Litwa, Luksemburg, Łotwa, Malta, Niemcy, Polska, Portugalia,
                          Rumunia, Słowacja, Słowenia, Szwecja, Węgry, Włochy, Średnio w UE]
+      - name: period_start
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
       - name: report_week
         tests: [not_null]
       - name: unit_code
@@ -65,22 +69,28 @@ models:
   - name: kowr_markets_exchange_offers
     description: >-
       KOWR weekly grain report (register PLS-033), table "Ceny wybranych zbóż na krajowych giełdach towarowych":
-      minimum, maximum and average sale offers in zł/t on Polish commodity exchanges, per commodity and report week
-      (Monday to Sunday). Stated source: national commodity exchanges (stated_source). "-" keeps a price null.
-      Weekly, so Silver only. Grain: commodity_name x report_week. History from the report week 20-26.03.2023.
+      minimum, maximum and average sale offers in zł/t on Polish commodity exchanges, per commodity and the period the
+      table names (Monday to Sunday). Stated source: national commodity exchanges (stated_source; null where a report
+      prints none). "-" keeps a price null; an average outside its minimum and maximum keeps all three null
+      (value_flag). A period in two reports keeps the newer report. Weekly, so Silver only. Grain: commodity_name x
+      period_start. History from the week 20-26.03.2023.
     tests:
       - unique:
-          column_name: "concat_ws('|', commodity_name, report_week)"
+          column_name: "concat_ws('|', commodity_name, period_start)"
     columns:
       - name: commodity_name
         tests: [not_null, {accepted_values: {arguments: {values: [pszenica konsumpcyjna, pszenica paszowa, żyto konsumpcyjne, jęczmień paszowy, kukurydza]}}}]
+      - name: period_start
+        tests: [not_null]
+      - name: period_end
+        tests: [not_null]
       - name: report_week
         tests: [not_null]
       - name: unit_code
         tests: [not_null, {accepted_values: {arguments: {values: [PLN_T]}}}]
+      - name: value_flag
+        tests: [{accepted_values: {arguments: {values: [avg_outside_range]}}}]
       - name: cells
         tests: [not_null, {accepted_values: {arguments: {values: [3], quote: false}}}]
-      - name: stated_source
-        tests: [not_null]
       - name: raw_sha256
         tests: [not_null]

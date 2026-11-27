@@ -13,7 +13,7 @@ with cells as (
     select
         entity,
         cast(strptime(substr(entity, 7), '%Y%m%d') as date) as report_week,
-        cast(strptime(period_text, '%d.%m.%Y') as date) as quote_date,
+        cast(period_start as date) as quote_date,
         row_group,
         row_label,
         value_text,
