@@ -1,0 +1,62 @@
+version: 2
+models:
+  - name: world_bank_es_observations
+    description: >-
+      World Bank Enterprise Surveys indicators (register GL-010; licence unresolved, internal) as published in World
+      Bank Data360 dataset WB_ES (file WB_ES.csv): firm-survey estimates (corruption, finance, infrastructure,
+      regulation, competition, gender, innovation, performance, …) by economy (ISO3 as published) and survey year,
+      annual with irregular survey years; WB_ES_T_* indicators cover all firms, WB_ES_M_* and WB_ES_S_* manufacturing
+      or services firms only. Breakdowns as published: sector (comp_breakdown_1), firm size (comp_breakdown_2) and
+      other firm characteristics such as exporter and ownership type (comp_breakdown_3); '_T' total, '_Z' not
+      applicable. Values as published, never 0 for a missing number. Grain: indicator x ref_area x sex x age x
+      urbanisation x comp_breakdown_1 x comp_breakdown_2 x comp_breakdown_3 x unit_measure x time_period. Dev trial
+      45932158707: 1,195,422 rows, 561 indicators, 181 economies, survey years 2006-2026.
+    tests:
+      - unique:
+          column_name: "indicator || '|' || ref_area || '|' || sex || '|' || age || '|' || urbanisation || '|' || comp_breakdown_1 || '|' || comp_breakdown_2 || '|' || comp_breakdown_3 || '|' || unit_measure || '|' || time_period"
+    columns:
+      - name: entity
+        tests: [not_null, {accepted_values: {arguments: {values: [wb_es]}}}]
+      - name: database_id
+        tests: [not_null, {accepted_values: {arguments: {values: [WB_ES]}}}]
+      - name: indicator
+        tests: [not_null]
+      - name: ref_area
+        tests: [not_null]
+      - name: sex
+        tests: [not_null, {accepted_values: {arguments: {values: ['_Z']}}}]
+      - name: age
+        tests: [not_null, {accepted_values: {arguments: {values: ['_Z']}}}]
+      - name: urbanisation
+        tests: [not_null, {accepted_values: {arguments: {values: ['_Z']}}}]
+      - name: comp_breakdown_1
+        tests: [not_null]
+      - name: comp_breakdown_2
+        tests: [not_null, {accepted_values: {arguments: {values: ['_T', '_Z', WB_ES_SIZE_1, WB_ES_SIZE_2, WB_ES_SIZE_3]}}}]
+      - name: comp_breakdown_3
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['_T', '_Z', WB_ES_OTHER_1, WB_ES_OTHER_2, WB_ES_OTHER_3, WB_ES_OTHER_4, WB_ES_OTHER_5,
+                         WB_ES_OTHER_6, WB_ES_OTHER_7, WB_ES_OTHER_8, WB_ES_OTHER_9]
+      - name: unit_measure
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [PT_F, PT, D, IX, SCORE, COUNT, YR, H, WK, M]
+      - name: unit_mult
+        tests: [not_null, {accepted_values: {arguments: {values: [0], quote: false}}}]
+      - name: freq
+        tests: [not_null, {accepted_values: {arguments: {values: [A]}}}]
+      - name: time_period
+        tests: [not_null]
+      - name: year
+        tests: [not_null]
+      - name: obs_status
+        tests: [{accepted_values: {arguments: {values: [A]}}}]
+      - name: obs_conf
+        tests: [{accepted_values: {arguments: {values: [PU]}}}]
+      - name: raw_sha256
+        tests: [not_null]
