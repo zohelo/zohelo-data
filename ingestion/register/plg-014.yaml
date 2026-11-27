@@ -43,7 +43,13 @@ research:
   evidence: tested
   connection: tested
   blockers:
-  - 'Owner action: create the data-warehouse account and obtain the API token (secret), then add it as a repository secret'
+  - 'Owner question (26 Nov 2026, sources lane, #2873): will you create the account on the CEIDG and Biznes.gov.pl data
+    warehouse (https://dane.biznes.gov.pl/), obtain an API v2 token and add it as the repository secret SOURCE_CEIDG_API_TOKEN?
+    Every route to the data needs that account: the API v2 takes a token and the site says "Aby skorzystać z Hurtowni danych
+    CEIDG i Biznes.gov.pl musisz posiadać konto"; no workflow passes a CEIDG secret (.github/workflows/dev.yml and
+    pipeline.yml on main, 26 Nov 2026), so nothing can be extracted or proven. The route is approved; the build starts
+    when the secret exists and keeps business attributes and counts only (no names or addresses of natural persons).
+    Open issue for this question: #3049.'
   - 'Licence unresolved: no reuse terms for the data; personal-data allowlist for natural persons'
   - Document change semantics (current-state service, no CDC)
   references:
