@@ -238,14 +238,19 @@ def codes_profile(con) -> dict:
         "rows_by_sheet": rows(con, f"select sheet_name, count(*), max(row_number) from {v} group by 1 order by 1"),
         "notes": rows(
             con,
-            f"select row_number, column_number, left(value_text, 230) from {v} where sheet_name = 'notes' order by 1, 2",
-            25,
+            f"select row_number, left(value_text, 120) from {v} where sheet_name = 'notes' and row_number >= 14 order by 1, 2",
+            12,
         ),
-        "methodology": rows(
+        "methodology_cells(row,col,text)": rows(
             con,
-            f"select max(value_text) filter (where column_number = 1), left(max(value_text) filter (where column_number = 2), 70) "
-            f"from {v} where sheet_name = 'methodology codes' and row_number > 1 group by row_number order by row_number",
-            30,
+            f"select row_number, column_number, left(value_text, 60) from {v} where sheet_name = 'methodology codes' "
+            f"order by 1, 2",
+            60,
+        ),
+        "bronze_methods_without_code_row(code,rows)": rows(
+            con,
+            f"select final_value_methodology, count(*) from bronze where final_value_methodology not in "
+            f"(select value_text from {v} where sheet_name = 'methodology codes' and column_number = 1) group by 1",
         ),
         "items": rows(
             con,
@@ -615,7 +620,8 @@ def main(argv: list[str]) -> int:
         con = duckdb.connect()
         con.register("bronze", arrow)
         con.register("codes", codes)
-        note(f"{SOURCE} bronze profile", {**bronze_profile(con), "codes": codes_profile(con)})
+        note(f"{SOURCE} bronze profile", bronze_profile(con))
+        note(f"{SOURCE} bronze codes workbook", codes_profile(con))
         con.close()
         work = Path(tempfile.mkdtemp(prefix="wto-dbt-"))
         try:
